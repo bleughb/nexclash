@@ -899,6 +899,7 @@ def tools_check(src):
         rom_paths_check(src, ez, er, work, ok)
         altrom0_check(src, work, ok)
         rom3_v210_check(src, work, ok)
+        automap_off_check(src, work, ok)
     finally:
         sys.stderr = old
     shutil.rmtree(work, ignore_errors=True)
@@ -960,6 +961,41 @@ def altrom0_check(src, work, ok):
                % (game, kind), zt.altrom0(p) == (0x3500, 0x3600) and bytes(st['alt'][0]) == bytes(want), zt.altrom0(p))
         finally:
             zt.ALTROM_FILL = fill
+
+
+def automap_off_check(src, work, ok):
+    """DivMMC automap off at start (z80tonex.automap_off, 2026-11-20): Chuckie Egg converted, then automap_off: the
+    code at 0xDE00 of the entry bank and the header PC on it, idempotent, undone to the same bytes; booted with
+    NextReg $0A as NextZXOS leaves it (0x11) it reaches the game with automap off, and the build without the code
+    reaches it with automap still on (negative); a window that is not zero is refused."""
+    import copy
+    from nexclash import chuckie, nextboot as nb, z80tonex as zt
+    rec = R.load('chuckie_egg')
+    z80 = os.path.join(src, rec['inputs']['snapshot']['path'])
+    if not os.path.isfile(z80) or md5(z80) != rec['inputs']['snapshot']['md5']:
+        print('SKIP tools: automap off on chuckie_egg (reference snapshot not found)')
+        return
+    old_p, new_p = os.path.join(work, 'automap_old.nex'), os.path.join(work, 'automap_new.nex')
+    zt.convert(z80, old_p, quiet=True, patch=copy.deepcopy(chuckie.ChuckiePatch()))
+    old = open(old_p, 'rb').read()
+    new = zt.automap_off(old)
+    open(new_p, 'wb').write(new)
+    pc = zt.Z80Snapshot(z80).pc
+    on = nb.boot(old_p, pc, nr={0x0A: nb.NEXTZXOS_NR0A})['nr'][0x0A]
+    off = nb.boot(new_p, pc, nr={0x0A: nb.NEXTZXOS_NR0A})['nr'][0x0A]
+    ok('automap off: chuckie_egg: PC 0xDE00, idempotent, undone exactly; booted from $0A = 0x11: 0x%02X at the game '
+       '(without the code: 0x%02X)' % (off, on),
+       new[14:16] == b'\x00\xde' and zt.automap_off(new) == new and zt.automap_off_undo(new) == old
+       and not off & 0x10 and on & 0x10 and nb.automap_check(new_p) == [] and nb.automap_check(old_p) != [],
+       (new[14:16].hex(), hex(on), hex(off), nb.automap_check(new_p)))
+    full = bytearray(old)
+    full[new.index(zt.automap_off_code(old[14] | old[15] << 8))] = 1
+    try:
+        zt.automap_off(bytes(full))
+        refused = False
+    except ValueError:
+        refused = True
+    ok('automap off: a window that is not zero is refused', refused)
 
 
 def rom3_v210_check(src, work, ok):

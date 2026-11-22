@@ -136,3 +136,31 @@ verifier executes DMA effects, adds explicitly assumed elapsed stalls, and check
 pixel/register/memory/AY/commit models. Legacy Spectrum IM2 runs with $C0=0; unexpected hardware
 IM2 falls back without changing interrupt masks. Source and mutable packets are ordinary RAM.
 Experimental timing and partial/full replay scope are recorded separately; hardware is untested.
+
+## Blitter against a dithered fill (Castle Master, 2026-11-21)
+
+A benchmark program (CSpect 4.5.9) timed each technique on a 192 x 64 Layer 2 block (row pitch 256) at 28 MHz, in video
+lines (64 us each) with a checksum of the destination. CSpect values; not yet run on a board. JNext 1.3.0
+does not emulate the blitter. Source and full table: specnext reference/castle_master/build/timing_map.md.
+
+| Technique | Lines | us a byte |
+|---|---:|---:|
+| LDIR, row by row | 146 | 0.76 |
+| classic DMA copy, 3-cycle / 2-cycle (copies the 64 unused bytes of each row too) | 54 / 45 | 0.21 / 0.18 |
+| blitter 2D copy, 3-cycle / 2-cycle | 41 / 34 | 0.21 / 0.18 |
+| CPU PUSH fill (two-colour dither) | 38 | 0.20 |
+| blitter 2D constant fill, 3-cycle / 2-cycle | 21 / 14 | 0.11 / 0.07 |
+| dither rows by blitter copy from a pattern row (4 jobs) | 36 | 0.19 |
+| one DMA job per row (64 jobs) | 60 | about 26 us set-up a job |
+| 64 short fills re-arming one program (5 bytes each) | 11 | about 11 us a span |
+
+Reading for a renderer:
+- A constant fill is 2.7 times the CPU's PUSH fill, but it cannot write a dither pattern; filling from a
+  pattern row is a copy, and a blitter copy is no faster than PUSH. Flat-shaded faces would gain.
+- A job per row does not pay: starting one costs what the CPU needs for 55-130 pixels (rows average 80).
+- A 2D copy skips the unused bytes between rows: about a third faster than a classic DMA copy of a view.
+- Classic zxnDMA holds the bus, so the CPU cannot see the frame interrupt during a job. Castle Master copies
+  its view in 8-row chunks and uses LDIR for a chunk that could cover the interrupt (line & 255 in 238-255 or
+  0-3): 458,000 -> 114,000 T a copy, no lost frame in 5,233 updates (simulator).
+- Whole-update effect of that copy: 3.4 % -> 1.2 % of an update. The larger gains were CPU-side (card
+  optimise.layer2-renderer-speed).

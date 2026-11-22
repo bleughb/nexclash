@@ -66,15 +66,15 @@
  "outputs": {
   "plain": {
    "file": "olli_and_lissa.nex",
-   "md5": "12be0e0aa24eb85e39da957cc530edbe"
+   "md5": "cc6e717b9aa35e6d08d5a772bd5c7310"
   },
   "sprites": {
    "file": "olli_and_lissa_sprites.nex",
-   "md5": "61e0b6d025f05c108a4d7196d4482868"
+   "md5": "76d0bbf64039237d7270eb181f7c4919"
   },
   "enhanced": {
    "file": "olli_and_lissa_enhanced.nex",
-   "md5": "b9c71476d1925e291a08a0673f455116"
+   "md5": "75c66a0ddedf6c218b5d55cde3bc51a0"
   }
  },
  "repro": [],

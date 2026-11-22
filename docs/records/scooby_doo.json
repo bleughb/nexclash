@@ -144,19 +144,19 @@
  "outputs": {
   "plain": {
    "file": "scooby_doo.nex",
-   "md5": "994ad69a87d395fadd862205e4d75d52"
+   "md5": "4554d6885e020aad0524671b299a8546"
   },
   "loading": {
    "file": "scooby_doo_loading.nex",
-   "md5": "6c52221ef73d17ebd46d31e35f5da963"
+   "md5": "d0cc766ed1cf99af5b4764d4b35008c1"
   },
   "enhanced": {
    "file": "scooby_doo_enhanced.nex",
-   "md5": "37d3a6c44423317fd434e969c7d35c4b"
+   "md5": "03425207a4562dc6de85cbee19a2434e"
   },
   "enhanced_loading": {
    "file": "scooby_doo_enhanced_loading.nex",
-   "md5": "a81865abef2f1022ea448b5a022c56c6"
+   "md5": "66f664b0198e7beef5ec783513ffdbdd"
   }
  },
  "repro": [],
@@ -183,19 +183,19 @@
   "deps": {
    "asm/scooby_doo_hooks.asm": "edf92e63fbf6f5db",
    "docs/profiles/scooby_doo.json": "7b4d310cba00d224",
-   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash.py": "04157df11540c17d",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "bf75ad27e5bfabce",
+   "nexclash/engines.py": "2abd23b537c0b5d4",
    "nexclash/hooklib.py": "24241497925658d6",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
    "nexclash/machine.py": "659903f13de0fcee",
-   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
-   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/recolour.py": "6f27e87ef0c47a17",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/rzx.py": "e018e000440e0274",
    "nexclash/scooby_doo.py": "a963dd9b251d20bf",
@@ -203,31 +203,31 @@
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "3dd57aa2130009da",
+   "recipe": "de8ed1530a871224",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-17"
+  "date": "2026-11-20"
  },
  "verified": {
   "deps": {
    "asm/scooby_doo_hooks.asm": "edf92e63fbf6f5db",
    "docs/profiles/scooby_doo.json": "7b4d310cba00d224",
-   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash.py": "04157df11540c17d",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "112c3b17a78ace9a",
+   "nexclash/engines.py": "2abd23b537c0b5d4",
    "nexclash/hooklib.py": "24241497925658d6",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
    "nexclash/machine.py": "659903f13de0fcee",
-   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
-   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/recolour.py": "6f27e87ef0c47a17",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/rzx.py": "e018e000440e0274",
    "nexclash/scooby_doo.py": "a963dd9b251d20bf",
@@ -235,12 +235,12 @@
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "3dd57aa2130009da",
+   "recipe": "de8ed1530a871224",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-12"
+  "date": "2026-11-20"
  }
 }

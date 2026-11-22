@@ -74,11 +74,11 @@
  "outputs": {
   "plain": {
    "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a.nex",
-   "md5": "e710fa8785802f1aa51f214d95c82343"
+   "md5": "3a10ced8b127d09de3c68b411f8283da"
   },
   "sprites": {
    "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_sprites.nex",
-   "md5": "6aa7e780f4ec7892d862c675e61b7fba"
+   "md5": "5ec3d88fb2a28ab604aa9f0bdf42d667"
   }
  },
  "repro": [],
@@ -149,19 +149,19 @@
    "outputs": {
     "sprites": {
      "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_sprites.nex",
-     "md5": "1e4bf321b4c966ad29122af27ee78ae5"
+     "md5": "976d48b6d6849e2ae0a57248cbca422f"
     },
     "enhanced": {
      "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_enhanced.nex",
-     "md5": "7d1c3edb6ec45d65051cd80bf281e3ac"
+     "md5": "a02f6018ebd1aad58023b56d80cd99b2"
     },
     "sprites_qaop": {
      "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_sprites_qaop.nex",
-     "md5": "790913d272dff61612a04276d10609d3"
+     "md5": "90adf4a7055dbc66e2f07408109bfee3"
     },
     "enhanced_qaop": {
      "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_enhanced_qaop.nex",
-     "md5": "3ec65a501753f603bdcc570d0f02a9f6"
+     "md5": "645eb2568dd1b44d2abc1a2dc383352c"
     }
    },
    "proof": "walk1, walk2 and t IDENTICAL for every build (toggle builds with each QWERT read translated), unit tests + 3 negative controls and 7 rework negatives per colour set, 4 incoming clocks, the toggle's key / pause units with 2 negatives, 3 replay negatives on t",
@@ -229,19 +229,19 @@
    "outputs": {
     "sprites": {
      "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_sprites.nex",
-     "md5": "ef3f16215ebe79962693a4cdb2a62d39"
+     "md5": "7acb0d3dab51ec6bae5050511b279ce3"
     },
     "enhanced": {
      "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_enhanced.nex",
-     "md5": "40862989c581e16afc24eb70c1ee0d05"
+     "md5": "40c94903ef29dd287c857b93dcb758d2"
     },
     "sprites_qaop": {
      "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_sprites_qaop.nex",
-     "md5": "14e5e6c2e475f8525ce83999563fa5bf"
+     "md5": "bbd70cad2756667301692da9ed4dadb0"
     },
     "enhanced_qaop": {
      "file": "Atic_Atac_1983_Ultimate_Play_The_Game_a_enhanced_qaop.nex",
-     "md5": "3a9025e251c2e98cbf8996bb99c24eab"
+     "md5": "cb66f86d3af333cf30ec8de1074d926a"
     }
    },
    "proof": "walk1, walk2 and t IDENTICAL for every build (the limiter, the room window and catch-up run in the replay, the video line modelled), unit tests + 3 negative controls and 22 rework negatives per colour set, 464 incoming-clock cases, the limiter on 72 setup cases with the limiter removed detected, catch-up units (room window, catch-up on and off, a credit, the two sound routines) with 4 negatives, the toggle's key / pause units with 2 negatives, 3 replay negatives on t; JNext pace (audit fixture, both arms, game state equal at every pass, 4 seeds): whole -0.16 to +0.45%, quiet -0.24 to +0.45%, busy -0.15 to +0.77%, stretches of 20 passes -4.1 to +1.7%",

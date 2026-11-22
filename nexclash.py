@@ -171,7 +171,45 @@ def _record_pin(z80, a):
     return rec
 
 
+def finish_outputs(paths, since=None):
+    """Last step of every build: each .nex starts with DivMMC automap off (z80tonex.automap_off), then is booted from
+    NextReg $0A as NextZXOS leaves it (nextboot.automap_check). paths: files or folders (their own .nex files);
+    since: only files written at or after this time (a folder may hold older builds)."""
+    from nexclash import nextboot
+    done, unmodelled = [], []
+    for p in paths:
+        for f in ([os.path.join(p, n) for n in sorted(os.listdir(p)) if n.endswith('.nex')] if os.path.isdir(p)
+                  else [p] if os.path.isfile(p) else []):
+            if since is not None and os.path.getmtime(f) < since:
+                continue
+            old = open(f, 'rb').read()
+            new = zt.automap_off(old)
+            if new != old:
+                open(f, 'wb').write(new)
+            try:
+                bad = nextboot.automap_check(f)
+            except (ValueError, RuntimeError, KeyError) as e:      # a start the boot model does not follow
+                unmodelled.append('%s (%s)' % (os.path.basename(f), e))
+                bad = []
+            if bad:
+                raise ValueError('%s: %s' % (f, '; '.join(bad)))
+            done.append(os.path.basename(f))
+    if done:
+        print('Automap   : DivMMC automap off at start, booted from $0A = 0x11: %d build(s)%s' % (
+            len(done), '; boot not followed for %s' % ', '.join(unmodelled) if unmodelled else ''))
+
+
 def cmd_auto(a):
+    """auto, then every output starts with DivMMC automap off (finish_outputs)."""
+    started = time.time() - 2                    # mtime resolution: a build written in this run is at or after this
+    r = _cmd_auto(a)
+    if r is not False:
+        name = os.path.splitext(os.path.basename(a.z80))[0]
+        finish_outputs([a.out or os.path.join(os.path.dirname(os.path.abspath(a.z80)), name + '_nexclash')], started)
+    return r
+
+
+def _cmd_auto(a):
     from nexclash.analyse import analyse
     from nexclash.verify import verify
     z80 = a.z80
@@ -704,11 +742,13 @@ def main():
         try:
             if a.tail is not None:
                 zt.convert(a.z80, out, a.tail, True, quiet=True)
+                finish_outputs([out])
                 print('tail at 0x%04X (requested) ->' % a.tail, out)
                 return
             s = Snapshot.get(a.z80)
             an = _combine([analyse(None, r, s.sp) for r in a.rzx]) if a.rzx else None
             print(B.plain(a.z80, out, an), '->', out)
+            finish_outputs([out])
         except ValueError as e:
             sys.exit('Error: %s' % e)
     elif a.cmd == 'verify':

@@ -61,11 +61,11 @@
  "outputs": {
   "plain": {
    "file": "match_day.nex",
-   "md5": "612761ec2772c5a7dcd27f939588d227"
+   "md5": "7241054fac66f2752c4f7375de91a874"
   },
   "sprites": {
    "file": "match_day_sprites.nex",
-   "md5": "0ec500534baae17cd5ce91eae3c13a7d"
+   "md5": "f7a8e6ad4f2e8c7ff7c9f3e37c955cfc"
   }
  },
  "repro": [],
@@ -110,11 +110,11 @@
    "outputs": {
     "plain": {
      "file": "match_day.nex",
-     "md5": "02fd183587897ea65aaaca5a0d1db36e"
+     "md5": "d6d9e6252c3b69215b7b984bd49a776c"
     },
     "sprites": {
      "file": "match_day_sprites.nex",
-     "md5": "ec0706e98fd681333b49fcb08bcc6a72"
+     "md5": "fc855f723d7106527481698c762fbf6c"
     }
    },
    "proof": "both recordings IDENTICAL with the IM 1 handler compared at every 0x0038 against NextZXOS's ROM3, unit tests + controls, ROM paths with the start-up tail proof, negatives rom3_left and the old tail",
@@ -157,11 +157,11 @@
    "outputs": {
     "plain": {
      "file": "match_day.nex",
-     "md5": "02fd183587897ea65aaaca5a0d1db36e"
+     "md5": "d6d9e6252c3b69215b7b984bd49a776c"
     },
     "sprites": {
      "file": "match_day_sprites.nex",
-     "md5": "0b10aeb4219b470a3d9de97b05a9daa1"
+     "md5": "c2af178d812ee50fdd5cafad7c60d964"
     }
    },
    "proof": "both recordings IDENTICAL with R compared at every event and every e_objs call (0x8194) checked against the original, every build / draw / copier target against the original T; unit tests + controls, rom3_left and the old tail; the every-site clock matrix (4 incoming clocks) and the forced 3.5 MHz exit, limiter removed and R one off negatives (pilot runs/dean_match_day work/v21); isr_w / isr_x on the simulator with 3 negatives",

@@ -125,19 +125,19 @@
  "outputs": {
   "plain": {
    "file": "silkworm.nex",
-   "md5": "36a148b54bce181c39c94899f7809c20"
+   "md5": "ebfedb75fe5d04df236e3e28bb0d58c2"
   },
   "loading": {
    "file": "silkworm_loading.nex",
-   "md5": "6ae12fd66946724d9ef6c1e089a6b163"
+   "md5": "696d4c1811af50f822fdcbd0080602cb"
   },
   "enhanced": {
    "file": "silkworm_enhanced.nex",
-   "md5": "5fb64654de2377b2a8e15611a0dbe5f5"
+   "md5": "b90dbd935048c4d63f4f0ae18778b244"
   },
   "enhanced_loading": {
    "file": "silkworm_enhanced_loading.nex",
-   "md5": "a710134b4a0040eb03b66ea4c36e0b9a"
+   "md5": "48fc71b1f87b360ec497e8d787f7f522"
   }
  },
  "repro": [],
@@ -166,20 +166,20 @@
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "asm/silkworm_hooks.asm": "66cfa2e937b31934",
-   "docs/profiles/silkworm.json": "ab0caa326c273861",
-   "nexclash.py": "cc1297e9104ece5f",
+   "asm/silkworm_hooks.asm": "c5f11bb2322828de",
+   "docs/profiles/silkworm.json": "d2fb4cd1fac8b188",
+   "nexclash.py": "04157df11540c17d",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "b22123bdf2572c9b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "e7bf4d8d4de708a6",
+   "nexclash/engines.py": "2abd23b537c0b5d4",
    "nexclash/hooklib.py": "24241497925658d6",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
-   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
-   "nexclash/recolour.py": "e0c2de6bfad5c6fb",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/recolour.py": "6f27e87ef0c47a17",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/rzx.py": "e018e000440e0274",
    "nexclash/silkworm.py": "8c6642cfe78e19af",
@@ -187,13 +187,13 @@
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "ef03060308c340a3",
-   "rom": "sinclair"
+   "recipe": "8e6b05c4147931f3",
+   "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-21"
+  "date": "2026-11-20"
  },
  "verified": {
   "deps": {
@@ -201,20 +201,20 @@
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "asm/silkworm_hooks.asm": "66cfa2e937b31934",
-   "docs/profiles/silkworm.json": "ab0caa326c273861",
-   "nexclash.py": "cc1297e9104ece5f",
+   "asm/silkworm_hooks.asm": "c5f11bb2322828de",
+   "docs/profiles/silkworm.json": "d2fb4cd1fac8b188",
+   "nexclash.py": "04157df11540c17d",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "b22123bdf2572c9b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "e7bf4d8d4de708a6",
+   "nexclash/engines.py": "2abd23b537c0b5d4",
    "nexclash/hooklib.py": "24241497925658d6",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
-   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
-   "nexclash/recolour.py": "e0c2de6bfad5c6fb",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/recolour.py": "6f27e87ef0c47a17",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/rzx.py": "e018e000440e0274",
    "nexclash/silkworm.py": "8c6642cfe78e19af",
@@ -222,12 +222,12 @@
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "ef03060308c340a3",
-   "rom": "sinclair"
+   "recipe": "8e6b05c4147931f3",
+   "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-21"
+  "date": "2026-11-20"
  }
 }

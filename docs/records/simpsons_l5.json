@@ -59,15 +59,15 @@
  "outputs": {
   "plain": {
    "file": "simpsons_l5.nex",
-   "md5": "8d894a9cca70cf52def364cb6953d1d6"
+   "md5": "10d969b7422baa73a56d6ca966d5ab1a"
   },
   "sprites": {
    "file": "simpsons_l5_sprites.nex",
-   "md5": "bbe3b9b883c57a665f8bb66de8dfaf8a"
+   "md5": "bd94f22adc91666f0f246aa59d6dd14e"
   },
   "enhanced": {
    "file": "simpsons_l5_enhanced.nex",
-   "md5": "a9e3b97ed28bc36d682651e79f3629e4"
+   "md5": "05a6527d7607b730667358be7fd2fea5"
   }
  },
  "repro": [],

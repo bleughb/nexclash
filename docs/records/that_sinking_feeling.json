@@ -311,19 +311,19 @@
  "outputs": {
   "sprites": {
    "file": "that_sinking_feeling_sprites.nex",
-   "md5": "a5bd5b3ff7dd75c1f063d06b2d1bd030"
+   "md5": "95585c91e3603dc68deaffde7fee7664"
   },
   "loading": {
    "file": "that_sinking_feeling_sprites_loading.nex",
-   "md5": "b9982c80b74a3644231e642ed37e1a87"
+   "md5": "8c5de872254801323acd7c1fd2916cce"
   },
   "enhanced": {
    "file": "that_sinking_feeling_enhanced.nex",
-   "md5": "123a2e3b3a2e448c60335b8362c6e3a8"
+   "md5": "eb9baa5c0a847826b5d47daa72eff769"
   },
   "enhanced_loading": {
    "file": "that_sinking_feeling_enhanced_loading.nex",
-   "md5": "f34d7eb147cfa1ba7411bc0e844426d8"
+   "md5": "c7d2a28d655190b7c7aae295641aa236"
   }
  },
  "rom_paths_known": [
@@ -356,21 +356,21 @@
  ],
  "checked": {
   "deps": {
-   "asm/that_sinking_feeling_hooks.asm": "89f8b2345abe8e96",
-   "docs/profiles/that_sinking_feeling.json": "86706a00eeed41db",
+   "asm/that_sinking_feeling_hooks.asm": "1fee439de3c7a86a",
+   "docs/profiles/that_sinking_feeling.json": "1e8ac3885f8f0272",
    "docs/profiles/that_sinking_feeling_palette.json": "06e4ffeca9e79d3c",
-   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash.py": "04157df11540c17d",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "b22123bdf2572c9b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "e7bf4d8d4de708a6",
+   "nexclash/engines.py": "2abd23b537c0b5d4",
    "nexclash/hooklib.py": "24241497925658d6",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
-   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
-   "nexclash/recolour.py": "e0c2de6bfad5c6fb",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/recolour.py": "6f27e87ef0c47a17",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/rzx.py": "e018e000440e0274",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
@@ -378,31 +378,31 @@
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/that_sinking_feeling.py": "b49b623e9d9ef31b",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "c6e28c65bb0be598",
-   "rom": "sinclair"
+   "recipe": "086c2f060f25e364",
+   "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-21"
+  "date": "2026-11-20"
  },
  "verified": {
   "deps": {
-   "asm/that_sinking_feeling_hooks.asm": "89f8b2345abe8e96",
-   "docs/profiles/that_sinking_feeling.json": "86706a00eeed41db",
+   "asm/that_sinking_feeling_hooks.asm": "1fee439de3c7a86a",
+   "docs/profiles/that_sinking_feeling.json": "1e8ac3885f8f0272",
    "docs/profiles/that_sinking_feeling_palette.json": "06e4ffeca9e79d3c",
-   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash.py": "04157df11540c17d",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "b22123bdf2572c9b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "e7bf4d8d4de708a6",
+   "nexclash/engines.py": "2abd23b537c0b5d4",
    "nexclash/hooklib.py": "24241497925658d6",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
-   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
-   "nexclash/recolour.py": "e0c2de6bfad5c6fb",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/recolour.py": "6f27e87ef0c47a17",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/rzx.py": "e018e000440e0274",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
@@ -410,12 +410,12 @@
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/that_sinking_feeling.py": "b49b623e9d9ef31b",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "c6e28c65bb0be598",
-   "rom": "sinclair"
+   "recipe": "086c2f060f25e364",
+   "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-21"
+  "date": "2026-11-20"
  }
 }
