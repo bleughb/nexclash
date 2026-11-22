@@ -1,0 +1,34 @@
+{
+ "id": "lesson.pace-catch-up-credit",
+ "kind": "method",
+ "claim": "Credit a catch-up gap by line count only when the gap is under a frame and end it before any longer stretch; run the catch-up clock low, since a gap's real gain differs by clock.",
+ "evidence": [
+  {
+   "game": "games/nightshade.md",
+   "text": "Credit by line count only over gaps under a frame, ended before any longer stretch; catch-up credits the gap x 2 at 7 MHz.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/atic_atac.md",
+   "text": "At 28 MHz a gap's real gain runs 3 to 8 times its lines (hooks against contended writes); at 7 MHz near 2 whatever the gap holds.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "when": [
+  "hook.faster_than_original"
+ ],
+ "card": "patch.pace-limiter",
+ "words": [
+  "pace",
+  "catch-up",
+  "credit",
+  "gap",
+  "28 MHz",
+  "7 MHz",
+  "limiter"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

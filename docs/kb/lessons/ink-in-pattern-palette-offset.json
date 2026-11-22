@@ -1,0 +1,24 @@
+{
+ "id": "lesson.ink-in-pattern-palette-offset",
+ "kind": "fact",
+ "claim": "A palette bank laid out like the Next default ULA levels (1 black, 2-8 inks, 9-15 bright inks) lets a tile's palette offset select the cell ink, so no per-ink patterns are needed.",
+ "limit": "Transparency of index 0 was not confirmed per emulator in the notes.",
+ "evidence": [
+  {
+   "game": "games/rainbow_islands.md",
+   "text": "Tilemap palette bank 0: 0 transparent, 1 black, 2-8 inks 1-7, 9-15 bright inks; bank n is bank 0 with pixel 2 as ink n, so a one-ink tile's palette offset is the ink.",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "palette offset",
+  "ink",
+  "tilemap palette",
+  "bright ink",
+  "pattern palette"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

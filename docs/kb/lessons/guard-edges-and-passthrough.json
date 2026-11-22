@@ -1,0 +1,29 @@
+{
+ "id": "lesson.guard-edges-and-passthrough",
+ "kind": "method",
+ "claim": "Unit-test every guard edge: cases a guard turns into unchanged ULA passthrough (overflow, table full, no sprites left) need tests showing converted versus passthrough matches the guard exactly.",
+ "evidence": [
+  {
+   "game": "games/chuckie_egg.md",
+   "text": "Hen index >= 5 (no table entry) gives no sprite (guard); unit tests include hen guard 1,008 cases.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/everyones_a_wally.md",
+   "text": "Unit tests with 2,664 plot cases; negative control detected 12 of 12.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "guard",
+  "passthrough",
+  "unit test",
+  "edge case",
+  "negative control",
+  "table full"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,24 @@
+{
+ "id": "lesson.window-check-workflow",
+ "kind": "method",
+ "claim": "Iterate checks cheaply: rerun only failing states, then a 1-in-10 sample, then exactly one full run as the gate per commit, using parallel jobs.",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "Workflow: failed states, 1/10 sample, ONE gate (--jobs 6); JNext headless before hardware rounds.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "words": [
+  "check workflow",
+  "full run",
+  "sample",
+  "parallel jobs",
+  "failing states",
+  "gate"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

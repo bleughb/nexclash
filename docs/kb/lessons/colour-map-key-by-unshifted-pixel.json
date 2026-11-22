@@ -1,0 +1,25 @@
+{
+ "id": "lesson.colour-map-key-by-unshifted-pixel",
+ "kind": "method",
+ "claim": "Key per-pixel colour maps by a pixel of the unshifted picture, not by memory address, when the game shifts its graphics in memory.",
+ "evidence": [
+  {
+   "game": "games/rainbow_z80n.md",
+   "text": "Game shifts frame k in place (shift 0/2/4/6); resolved nibbles use each key bit's role in the unshifted picture; painted pieces use sprite palette offset 15.",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "card": "patch.runtime-colour-map",
+ "words": [
+  "colour map",
+  "painting sheet",
+  "shift",
+  "unshifted",
+  "sprite palette",
+  "per-pixel colour"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,29 @@
+{
+ "id": "lesson.back-buffer-displayed-frame",
+ "kind": "method",
+ "claim": "With a back buffer, place hardware sprites by the displayed frame (after the visible copy), and keep a figure's last displayed image when a partial copy misses it.",
+ "evidence": [
+  {
+   "game": "games/bruce_lee.md",
+   "text": "Commit C7D2 is after the three visible copies; C3CB is too early for a displayed position; a copy that misses a newly positioned figure retains the previous visible sprite instead of hiding it.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "facts": {
+  "draw": "back-buffer"
+ },
+ "when": [
+  "render.target.back_buffer"
+ ],
+ "words": [
+  "back buffer",
+  "dirty rectangle",
+  "visible copy",
+  "displayed frame",
+  "sprite position"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

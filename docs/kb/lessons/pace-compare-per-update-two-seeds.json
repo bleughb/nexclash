@@ -1,0 +1,24 @@
+{
+ "id": "lesson.pace-compare-per-update-two-seeds",
+ "kind": "method",
+ "claim": "Compare builds against the original per update over the updates in lockstep, on two input seeds, because small pace differences hide inside one run's spread.",
+ "evidence": [
+  {
+   "game": "games/cisco_heat.md",
+   "text": "Per update on two seeds found car_note's 1.2% loss that one run's spread hid; small differences between builds are within one run's spread.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "pace",
+  "per update",
+  "two seeds",
+  "lockstep",
+  "spread",
+  "compare builds"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

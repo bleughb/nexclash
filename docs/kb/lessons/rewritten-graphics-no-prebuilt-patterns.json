@@ -1,0 +1,36 @@
+{
+ "id": "lesson.rewritten-graphics-no-prebuilt-patterns",
+ "kind": "pitfall",
+ "claim": "A pre-built pattern table keyed by graphic address is right only while the bytes never change: scan for writers first, and edit in place a routine the game rewrites rather than copying it.",
+ "evidence": [
+  {
+   "game": "games/arc_of_yesod.md",
+   "text": "A graphic the game rewrites in place cannot have a pre-built pattern: scan the graphics for writers before trusting a catalogue.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/booty.md",
+   "text": "A table by the graphic's address is right only if the bytes never change; the replay's ULA check found the frame buffer in the first 500 frames.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/cookie.md",
+   "text": "A copy of a routine the game rewrites keeps the bytes it was assembled with; where every caller wants the change, the one instruction is changed in place.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "self-modifying",
+  "graphics",
+  "pattern",
+  "catalogue",
+  "writers",
+  "rewritten",
+  "table",
+  "address"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

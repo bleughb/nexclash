@@ -1,0 +1,40 @@
+{
+ "id": "lesson.alt-rom-spare-area-read",
+ "kind": "pitfall",
+ "claim": "Games and the ROM routines they call may read the ROM area where hooks would sit; run the ROM path check before placing code there.",
+ "evidence": [
+  {
+   "game": "games/that_sinking_feeling.md",
+   "text": "ROM calls run the calculator at 2Dxx; nextboot.rom_paths found it and entries moved to free space at 3880.",
+   "shown_on": "analysis"
+  },
+  {
+   "game": "games/solomons_key.md",
+   "text": "39194 copies ROM onto itself; one caller passes BC=16384, so it reads the alt ROM's hook bytes (harmless, accepted).",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/target_renegade.md",
+   "text": "ROM reads: only 0x3500-0x3508 (ROM 0), once, by the bank-3 sound code at 49204.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/smash_tv.md",
+   "text": "A game that reads the alt ROM as data pays for every library byte there; the library can assemble anywhere.",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "observed",
+ "area": "platform",
+ "words": [
+  "alt ROM",
+  "ROM reads",
+  "rom_paths",
+  "nextboot",
+  "hook area",
+  "calculator",
+  "LDIR"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

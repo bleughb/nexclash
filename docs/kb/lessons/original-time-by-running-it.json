@@ -1,0 +1,35 @@
+{
+ "id": "lesson.original-time-by-running-it",
+ "kind": "method",
+ "claim": "Derive a routine's original time by running the routine itself on the snapshot's memory at build time, or fit it to the drawing routines' time, rather than guessing a constant.",
+ "evidence": [
+  {
+   "game": "games/olli_and_lissa.md",
+   "text": "Time by size and shift comes from running the routine at build time: hooks within 0.01% at the first try, no fitting from recordings.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/new_zealand_story.md",
+   "text": "Fitting the original's update against the drawing routines' time left a residual of 0.4 ms of 70.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/nodes_of_yesod.md",
+   "text": "Copy target fitted as 21 T per row and column plus 140 T per row; fits by seed ran 19.9 to 23.0 T, attributed to screen contention.",
+   "shown_on": "jnext"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "card": "patch.pace-limiter",
+ "words": [
+  "original time",
+  "fit",
+  "routine time",
+  "K constant",
+  "contention",
+  "hook timing"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,29 @@
+{
+ "id": "lesson.ink-rectangle-sprites-car-colour",
+ "kind": "method",
+ "claim": "A figure the game colours by writing ink over a rectangle of attribute cells can be drawn as sprites of the game's own pixels, so only those pixels take the colour and the rest of the cells stay black.",
+ "limit": "Not yet run on hardware.",
+ "evidence": [
+  {
+   "game": "games/cisco_heat.md",
+   "text": "Red car as sprites using the ULA palette red, X mirror and a clip window: no clash, shadow black. 43 states/111 frames exact, plus 103 more car frames (mirrored included) in a separate run.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "design",
+ "when": [
+  "render.paints_figure_attributes"
+ ],
+ "card": "patch.ink-rectangle-sprites",
+ "words": [
+  "attribute clash",
+  "ink rectangle",
+  "sprite",
+  "car colour",
+  "clip window",
+  "mirror flag"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

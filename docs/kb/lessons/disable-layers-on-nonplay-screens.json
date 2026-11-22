@@ -1,0 +1,46 @@
+{
+ "id": "lesson.disable-layers-on-nonplay-screens",
+ "kind": "pitfall",
+ "claim": "Switch Layer 2, tilemap and sprites off on every non-play (ULA-drawn) screen; find every path that leaves play, including ones that never reach the figure plotter.",
+ "evidence": [
+  {
+   "game": "games/r_type.md",
+   "text": "The high-score check (92E8) turns Layer 2 and sprites off.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/el_capitan_trueno.md",
+   "text": "Pause menu draws in the ULA and Layer 2 and sprites covered it; stub e_mnu writes NEXTREG 0x15,0 and 0x69,0 around the menu call and restores both on return (checked in MAME).",
+   "shown_on": "mame"
+  },
+  {
+   "game": "games/inferno.md",
+   "text": "The hook at 9019 on return to gameplay stops Copper and hides all replacement layers.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/rainbow_islands.md",
+   "text": "Death, continue, round end and game over go through alt-ROM stubs that write NextReg $15 = 0 before the original call; the next commit sets it back to 1.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/ruff_and_reddy.md",
+   "text": "Layers hidden at a new room, title, game over, giving up, and the LEVEL COMPLETE message (D42B); without the D42B hide figures stayed over the message, and giving up in pause left the overlay over the title until FD75 was hidden too.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "hide layers",
+  "non-play screen",
+  "menu",
+  "exit hook",
+  "high score",
+  "tilemap",
+  "sprites off",
+  "layer 2"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

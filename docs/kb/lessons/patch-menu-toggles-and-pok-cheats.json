@@ -1,0 +1,24 @@
+{
+ "id": "lesson.patch-menu-toggles-and-pok-cheats",
+ "kind": "fact",
+ "claim": "A patch menu allows at most 4 toggles, cheats come from .pok files (none means no cheats), and a built patch is checked by reproducing the sprite build byte for byte.",
+ "evidence": [
+  {
+   "game": "sessions",
+   "text": "80 of 84 existing patches had cheats; one patch carried an English/Czech toggle and reproduced both builds.",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "patch menu",
+  "toggles",
+  "pok",
+  "cheats",
+  "nxc",
+  "byte for byte"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

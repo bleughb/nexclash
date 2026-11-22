@@ -1,0 +1,26 @@
+{
+ "id": "lesson.interrupt-pulse-in-original-di-window",
+ "kind": "pitfall",
+ "claim": "Added drawing can place a ULA interrupt pulse inside a DI window of the original sound code; trace the interrupted PC and recover the pending pulse between drawing spans instead of changing the sound routine.",
+ "evidence": [
+  {
+   "game": "games/head_over_heels.md",
+   "text": "Original 967B sound-bank DI window: trace the actual interrupted PC, then recover the pending pulse.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "facts": {
+  "interrupts": "on"
+ },
+ "words": [
+  "interrupt",
+  "DI window",
+  "pending pulse",
+  "sound routine",
+  "interrupted PC"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,32 @@
+{
+ "id": "lesson.copy-destination-and-beam",
+ "kind": "method",
+ "claim": "Read a copy routine's beam timing and per-row cost rather than assuming: compute row range and screen address once, and place any flip off the play area.",
+ "evidence": [
+  {
+   "game": "games/phantis.md",
+   "text": "Part 1 keeps its copy at the game's clock and flips mid copy: its writes show from the next frame's top, so the flip is at row 80, beam off the play area.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/nemesis_the_warlock.md",
+   "text": "Row address arithmetic per row cost 3x the copy (620 T/row); compute row range and screen address once and step with the next-line routine.",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "when": [
+  "render.target.back_buffer"
+ ],
+ "words": [
+  "copy",
+  "beam",
+  "flip",
+  "row address",
+  "back buffer",
+  "next-line"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

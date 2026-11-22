@@ -1,0 +1,32 @@
+{
+ "id": "lesson.clash-by-layer-and-no-clash",
+ "kind": "method",
+ "claim": "Check for real colour clash before design work: a cell copier changes attributes without clash (Trap Door), and a mostly monochrome look can still hold a little (Scooby-Doo).",
+ "evidence": [
+  {
+   "game": "games/trap_door.md",
+   "text": "Analysed and skipped: no colour clash to remove; a stage-0 measure of two-figure cells was proposed.",
+   "shown_on": "analysis"
+  },
+  {
+   "game": "games/scooby_doo.md",
+   "text": "Pending the owner's call on the default's small clash.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "inferred",
+ "area": "method",
+ "when": [
+  "render.paints_figure_attributes"
+ ],
+ "words": [
+  "clash",
+  "attributes",
+  "cell copier",
+  "monochrome",
+  "colour",
+  "stage 0"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

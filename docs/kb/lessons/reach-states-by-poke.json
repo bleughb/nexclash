@@ -1,0 +1,29 @@
+{
+ "id": "lesson.reach-states-by-poke",
+ "kind": "method",
+ "claim": "Poke the game's state (start room, stage byte) to reach rooms and stages cheaply, but use play recordings for collision numbers because poked states can place figures inside scenery.",
+ "evidence": [
+  {
+   "game": "games/dynamite_dan.md",
+   "text": "Dan spawned by poke gives a room census for coverage (169 of 736,272 cells over scenery in the census); recordings give the clash numbers.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/green_beret.md",
+   "text": "Poking 0xFFDF just after the start reaches a later stage.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "poke",
+  "coverage",
+  "census",
+  "stage",
+  "room",
+  "cheat"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

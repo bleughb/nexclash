@@ -1,0 +1,24 @@
+{
+ "id": "lesson.cheaper-beats-repaid",
+ "kind": "method",
+ "claim": "When the loop budget is the problem, make the loop cheaper (for example by compiling known sprites to code) before tuning how the overage is repaid.",
+ "evidence": [
+  {
+   "game": "games/jillys_farm.md",
+   "text": "The game has no frame wait, so its time is its pace; every known sprite is compiled to Z80 code, with two K windows at 28 MHz.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "pace",
+  "overage",
+  "limiter",
+  "tuning",
+  "compile sprites",
+  "cost"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

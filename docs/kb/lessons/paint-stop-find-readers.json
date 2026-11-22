@@ -1,0 +1,23 @@
+{
+ "id": "lesson.paint-stop-find-readers",
+ "kind": "pitfall",
+ "claim": "Once a paint stops writing the screen, find every reader of what it wrote, not only the ones the model engine hooks.",
+ "evidence": [
+  {
+   "game": "games/arc_of_yesod.md",
+   "text": "Reads of the screen that the first game never made appeared once the paint stopped writing; scan the screen's readers.",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "screen readers",
+  "paint",
+  "scan",
+  "reader",
+  "model engine"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

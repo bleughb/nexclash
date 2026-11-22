@@ -1,0 +1,36 @@
+{
+ "id": "lesson.jnext-28mhz-ratio-varies",
+ "kind": "fact",
+ "claim": "The speed ratio of 28 MHz to 3.5 MHz differs by game and by routine (wait states against contention), so measure the factor per game, and per routine when a fast window is used.",
+ "limit": "Hardware values unmeasured.",
+ "evidence": [
+  {
+   "game": "games/quazatron.md",
+   "text": "JNext 28 MHz ran routines only 5 to 6.5 times as fast; BE38 5.0 to 6.0 by strip, E656 about 6.2, C05A about 6.6.",
+   "shown_on": "jnext"
+  },
+  {
+   "game": "games/castle_master.md",
+   "text": "K 6.75 was calibrated on JNext only; the hardware value is still open.",
+   "shown_on": "jnext"
+  },
+  {
+   "game": "games/rainbow_z80n.md",
+   "text": "Simulated 28 MHz T times 8/6.5 turned 13 simulated overruns into 128 hardware ones in 1,043 frames (inferred from board figures, not measured on this game).",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "observed",
+ "area": "emulator",
+ "words": [
+  "28 MHz",
+  "ratio",
+  "K factor",
+  "wait states",
+  "JNext",
+  "contention",
+  "pace window"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

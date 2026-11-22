@@ -1,0 +1,23 @@
+{
+ "id": "lesson.pace-library-changes-move-bytes",
+ "kind": "pitfall",
+ "claim": "A newer shared pace library can move an engine's verified bytes; define HLIB_PACE_V1 to keep the verified build.",
+ "evidence": [
+  {
+   "game": "games/beyond_the_ice_palace.md",
+   "text": "Main's newer pace library moved every hook; the engine defines HLIB_PACE_V1 (as Cobra, Gryzor and Cauldron 1.1) to keep the bytes it was verified on.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "HLIB_PACE_V1",
+  "pace library",
+  "verified build",
+  "bytes",
+  "import"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

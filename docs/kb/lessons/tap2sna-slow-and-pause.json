@@ -1,0 +1,23 @@
+{
+ "id": "lesson.tap2sna-slow-and-pause",
+ "kind": "pitfall",
+ "claim": "tap2sna can hit its time limit on a loaded machine and needs --press 7:ENTER for a tape's PAUSE.",
+ "evidence": [
+  {
+   "game": "games/atom_ant.md",
+   "text": "tap2sna hit its first 200-second limit on a loaded machine; it needs --press 7:ENTER for the tape's PAUSE.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "tap2sna",
+  "PAUSE",
+  "--press",
+  "time limit",
+  "tape"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

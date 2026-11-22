@@ -1,0 +1,30 @@
+{
+ "id": "lesson.snapshot-kempston-flag",
+ "kind": "pitfall",
+ "claim": "A snapshot can carry a stored interface-detection result (Kempston present or absent), so choose the snapshot moment and clear or force the flag at start.",
+ "evidence": [
+  {
+   "game": "games/r_type.md",
+   "text": "The full build enables Kempston at start (flag 7A8B cleared, NR 05 mode 001).",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/fantasy_world_dizzy.md",
+   "text": "Byte 62569 = 255 in every 128K dump: Kempston is read as well as the keys; the keyboard always works.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "platform",
+ "words": [
+  "kempston",
+  "joystick",
+  "snapshot",
+  "interface detect",
+  "flag",
+  "title screen",
+  "joystick mode"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

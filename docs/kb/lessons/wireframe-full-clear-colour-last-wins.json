@@ -1,0 +1,27 @@
+{
+ "id": "lesson.wireframe-full-clear-colour-last-wins",
+ "kind": "fact",
+ "claim": "In a wireframe game that clears its buffer each frame and ORs lines in, the last-drawn line sets the colour where lines cross, and per-object colour needs no ownership map.",
+ "evidence": [
+  {
+   "game": "sessions",
+   "text": "Elite clears the viewport buffer with one block copy then ORs lines; IY holds the ship blueprint during each ship draw (11 models seen); re-running the ship draw must save and restore a flags byte.",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "facts": {
+  "draw": "back-buffer"
+ },
+ "words": [
+  "wireframe",
+  "back buffer",
+  "per-object colour",
+  "IY blueprint",
+  "interpolation",
+  "Elite"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

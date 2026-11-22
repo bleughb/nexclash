@@ -1,0 +1,30 @@
+{
+ "id": "lesson.eightbit-x-wrap-clipping",
+ "kind": "pitfall",
+ "claim": "Apply the original's 8-bit x wrap before clipping, and reject out-of-view x before an 8-bit x plus width test can wrap.",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "Apply eight-bit x wrap before clipping (255+1=0).",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/martianoids.md",
+   "text": "Renderer allows linear right-edge spill: clip against the 192-pixel original buffer before translating to the 256-pixel display; reject x beyond the viewport before an 8-bit x+width test can wrap.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "card": "detect.drawing-parameters",
+ "words": [
+  "clipping",
+  "x wrap",
+  "8-bit",
+  "edge spill",
+  "viewport",
+  "width"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

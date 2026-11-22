@@ -1,0 +1,28 @@
+{
+ "id": "lesson.lockstep-count-hook-instructions-out",
+ "kind": "method",
+ "claim": "Counting hook instructions as nothing keeps the original and patched machines in lockstep, so the whole 128K can be compared per frame with no per-site pairing; it works only where game instructions stay the same.",
+ "limit": "Only where game instructions are unchanged.",
+ "evidence": [
+  {
+   "game": "games/knight_tyme.md",
+   "text": "Whole 128K compared per frame with no per-site pairing, every hook counted as nothing; lockstep IDENTICAL on all 4 recordings (33,534 frames).",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "facts": {
+  "machine": "128K"
+ },
+ "card": "verify.model-reconstruction",
+ "words": [
+  "lockstep",
+  "hook instructions",
+  "128K compare",
+  "per-frame",
+  "pairing"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

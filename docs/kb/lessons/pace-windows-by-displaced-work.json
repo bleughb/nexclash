@@ -1,0 +1,34 @@
+{
+ "id": "lesson.pace-windows-by-displaced-work",
+ "kind": "method",
+ "claim": "One pace floor per update cannot pace a game whose displaced work varies by figure; use windows on the displaced work, sized from the plain build.",
+ "evidence": [
+  {
+   "game": "games/nodes_of_yesod.md",
+   "text": "One floor on a 332-line player update gave stretches of -13.1 to +13.9%; replaced by one window per displaced job (copy, attribute walk).",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/silkworm.md",
+   "text": "K alone: many-figure updates +10%, quiet -3%; a fixed debt per figure plus higher K flattened it, whole runs within 2%.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "when": [
+  "hook.faster_than_original"
+ ],
+ "card": "patch.pace-limiter",
+ "words": [
+  "pace",
+  "window",
+  "floor",
+  "displaced work",
+  "limiter",
+  "per figure",
+  "K"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

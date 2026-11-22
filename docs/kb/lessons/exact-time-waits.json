@@ -1,0 +1,26 @@
+{
+ "id": "lesson.exact-time-waits",
+ "kind": "method",
+ "claim": "Wait out each original routine's exact T states by path, taken from replays, rather than using a K ratio of body time.",
+ "limit": "Best where the time is a simple function of the arguments.",
+ "evidence": [
+  {
+   "game": "games/mad_mix_2.md",
+   "text": "A K window was wrong in both directions: the body's clock ratio differs by path (LDI heavy against register heavy). Windows wait each routine's exact T from replays by path; pace is within 0.1%.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "card": "patch.pace-limiter",
+ "words": [
+  "K window",
+  "exact T",
+  "replay",
+  "pace",
+  "LDI",
+  "ratio"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

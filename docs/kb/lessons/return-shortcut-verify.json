@@ -1,0 +1,24 @@
+{
+ "id": "lesson.return-shortcut-verify",
+ "kind": "method",
+ "claim": "To verify a hook on a long routine, start from the original's state at its RET (full runs for the first 20 calls); this cut full verify to 14 minutes instead of hours.",
+ "evidence": [
+  {
+   "game": "games/nemesis_the_warlock.md",
+   "text": "Return shortcut: verify from the original's state at its RET, first 20 calls run in full; full verify took 14 minutes instead of hours.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "words": [
+  "verify",
+  "return shortcut",
+  "long routine",
+  "RET",
+  "speed",
+  "state"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

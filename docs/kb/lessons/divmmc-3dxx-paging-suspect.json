@@ -1,0 +1,26 @@
+{
+ "id": "lesson.divmmc-3dxx-paging-suspect",
+ "kind": "open",
+ "claim": "Code relocated into 0x3Dxx may stop a native JNext run, with the DivMMC automatic-paging region as a suspected but unproven cause.",
+ "limit": "Cause not proven; only the move from 3D80 to 3600 is shown to help.",
+ "evidence": [
+  {
+   "game": "games/exolon.md",
+   "text": "Relocated padding copy at 3D80 passed the simple model but stopped native JNext after 17 updates; moved to 3600 it ran 180 updates matching state at every update. The 3Dxx automatic-paging cause is an inference.",
+   "shown_on": "jnext"
+  }
+ ],
+ "level": "inferred",
+ "area": "platform",
+ "words": [
+  "DivMMC",
+  "0x3D00",
+  "automatic paging",
+  "relocate",
+  "native",
+  "JNext",
+  "padding"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

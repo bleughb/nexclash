@@ -1,0 +1,34 @@
+{
+ "id": "lesson.kill-selftest-children",
+ "kind": "pitfall",
+ "claim": "Killing a selftest leaves worker processes, so kill the auto child's PID too and never use pkill -f; a wait loop built on kill -0 $(pgrep -o -f X) is the same warned pattern.",
+ "evidence": [
+  {
+   "game": "games/robin_of_the_wood.md",
+   "text": "Killing a selftest needs its auto child's PID too (never pkill -f).",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/knight_tyme.md",
+   "text": "Killing a selftest leaves its worker processes: kill them by PID.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/nemesis_the_warlock.md",
+   "text": "A wait loop written as kill -0 $(pgrep -o -f X) is the warned pattern in a new form.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "words": [
+  "selftest",
+  "kill",
+  "worker processes",
+  "pkill",
+  "pgrep",
+  "wait loop"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

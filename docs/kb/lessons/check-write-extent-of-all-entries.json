@@ -1,0 +1,24 @@
+{
+ "id": "lesson.check-write-extent-of-all-entries",
+ "kind": "pitfall",
+ "claim": "Measure the write extent of every dispatch entry, not only those a recording reaches: entries used by one figure kind can lose a column that replays never show.",
+ "evidence": [
+  {
+   "game": "games/rainbow_islands.md",
+   "text": "Boss-spider fix: an earlier build had the spider column missing (hardware fault); the fix is recorded in the build list.",
+   "shown_on": "hardware"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "plotter entries",
+  "write extent",
+  "dispatch",
+  "boss",
+  "missing column",
+  "hardware"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

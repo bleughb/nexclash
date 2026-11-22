@@ -1,0 +1,23 @@
+{
+ "id": "lesson.cache-pattern-init",
+ "kind": "pitfall",
+ "claim": "Zero mono cache bytes do not prove hardware patterns are initialised; initialise every used opaque-black pattern in setup.",
+ "evidence": [
+  {
+   "game": "games/gunfright.md",
+   "text": "Zero mono cache bytes do not prove hardware patterns are initialised; initialise every used opaque-black pattern during setup.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "pattern cache",
+  "initialise",
+  "opaque black",
+  "setup",
+  "hardware pattern"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

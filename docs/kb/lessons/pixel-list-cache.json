@@ -1,0 +1,24 @@
+{
+ "id": "lesson.pixel-list-cache",
+ "kind": "fact",
+ "claim": "At 28 MHz, cached per-graphic pixel lists beat recomputing rings by about a factor of 7, and clearing by replaying the list beats clearing a rectangle.",
+ "evidence": [
+  {
+   "game": "games/flying_shark.md",
+   "text": "A list costs 50,000 T once and about 7,000 T a figure once made; the first cell-by-cell version lost 3-frame updates in busy scenes.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "pixel list",
+  "cache",
+  "rings",
+  "28 MHz",
+  "clear",
+  "replay"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,24 @@
+{
+ "id": "lesson.z80n-opcodes-in-skoolkit",
+ "kind": "pitfall",
+ "claim": "SkoolKit treats unknown Z80N opcodes as silent NOPs, so install them in every simulator and add a control that runs hooks with the opcode as a NOP, which must fail.",
+ "evidence": [
+  {
+   "game": "games/rainbow_islands.md",
+   "text": "Z80N SWAPNIB (ED 23) simulated by rainbow._swapnib with an exhaustive self-test; a SWAPNIB-as-NOP control exists.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "emulator",
+ "words": [
+  "Z80N",
+  "SWAPNIB",
+  "SkoolKit",
+  "silent NOP",
+  "simulator",
+  "opcode"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

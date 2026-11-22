@@ -1,0 +1,40 @@
+{
+ "id": "lesson.clean-copy-capture",
+ "kind": "method",
+ "claim": "Take a clean scenery copy at the right moment: before the first plot when erases run in reverse, at reset not at commit, and after undoing plots if the game captures it with figures drawn.",
+ "evidence": [
+  {
+   "game": "games/ikari_warriors.md",
+   "text": "Main loop erases in exact reverse order of plots.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/herbert.md",
+   "text": "Reset freezes the clean image; edits after reset belong to the following game update.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/knight_tyme.md",
+   "text": "Characters are drawn before the room copies to the clean bank, so they are part of the clean copy.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "facts": {
+  "draw": "back-buffer"
+ },
+ "when": [
+  "render.target.back_buffer"
+ ],
+ "words": [
+  "clean copy",
+  "scenery",
+  "back buffer",
+  "erase",
+  "reset",
+  "undo"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

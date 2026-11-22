@@ -1,0 +1,24 @@
+{
+ "id": "lesson.loading-screen-hold-owner-rule",
+ "kind": "owner-rule",
+ "claim": "The owner wants the loading screen shown for at least 4 seconds on launching a standalone NEX; inside an NXC patch it shows the moment ENTER is pressed, with no fixed hold.",
+ "evidence": [
+  {
+   "game": "games/winter_sports.md",
+   "text": "Standalone NEX builds hold the screen 5.2 s (F=761) on top of the load time.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "loading screen",
+  "hold",
+  "4 seconds",
+  "NXC patch",
+  "ENTER",
+  "owner rule"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

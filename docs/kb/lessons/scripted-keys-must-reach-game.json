@@ -1,0 +1,51 @@
+{
+ "id": "lesson.scripted-keys-must-reach-game",
+ "kind": "pitfall",
+ "claim": "Check that scripted keys visibly move the player and change the game: a pace or recording run with keys the game never reads or that hit a menu measures nothing.",
+ "evidence": [
+  {
+   "game": "games/commando.md",
+   "text": "The published +0.38% pace figure used keys the game does not read; a pace run must show the player moving.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/exolon.md",
+   "text": "The keyboard decoder maps O/P left/right; an earlier recording sent Z/X, which tests only stationary firing.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/scooby_doo.md",
+   "text": "J opens a joystick menu where K picks Kempston; a script holding Kempston directions looks like it plays while nothing moves.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/dizzy_ultimate_cartoon_adventure.md",
+   "text": "P pauses this release; use Z/X/SPACE.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/fantasy_world_dizzy.md",
+   "text": "An ENTER tap opened the inventory during pace trials; held it reopens.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/three_weeks.md",
+   "text": "Pressing 3 at the menu toggles Wally's colour; in play 3 is colour, 4 pause, 5 tune.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "keys",
+  "script",
+  "input",
+  "joystick menu",
+  "pace",
+  "keypress",
+  "pause",
+  "check the game changed"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

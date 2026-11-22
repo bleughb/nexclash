@@ -1,0 +1,24 @@
+{
+ "id": "lesson.hidden-rom-model-bounds",
+ "kind": "pitfall",
+ "claim": "The model must expose only the actual hidden-ROM span when its page is unmapped, not the whole private page.",
+ "evidence": [
+  {
+   "game": "games/bruce_lee.md",
+   "text": "Exposing the whole private page 24 hid two native entry/exit failures; expose just the real span.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "hidden ROM",
+  "page 24",
+  "model",
+  "unmapped",
+  "native entry",
+  "verifier"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

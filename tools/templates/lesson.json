@@ -1,0 +1,19 @@
+{
+ "id": "lesson.REPLACE-with-the-file-name",
+ "kind": "REPLACE: fact | pitfall | failed-approach | method | owner-rule | open",
+ "claim": "REPLACE: one sentence, at most 240 characters, usable without the evidence. First: python tools/knowledge.py near WORDS (add evidence to a lesson that already says it)",
+ "limit": "OPTIONAL: where it does not hold, or what is unproven",
+ "evidence": [
+  {
+   "game": "games/REPLACE_WITH_GAME.md",
+   "text": "REPLACE: what this game saw, with its numbers as its notes give them (at most 300 characters)",
+   "shown_on": "REPLACE: simulator | jnext | cspect | mame | hardware | analysis | unknown"
+  }
+ ],
+ "level": "REPLACE: observed | inferred | demonstrated",
+ "area": "REPLACE: platform | emulator | toolkit | method | design | process",
+ "facts": {"OPTIONAL, only what the lesson needs": "machine 48K | 128K; interrupts on | off; draw back-buffer | cell-copier | one-routine | direct"},
+ "words": ["REPLACE", "four to nine search words"],
+ "review": "extracted",
+ "as_of": "REPLACE: the VERSION file"
+}

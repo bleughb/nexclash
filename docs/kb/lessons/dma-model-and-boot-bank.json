@@ -1,0 +1,24 @@
+{
+ "id": "lesson.dma-model-and-boot-bank",
+ "kind": "pitfall",
+ "claim": "Boot simulation must honour the NEX entry bank, or a loading-screen wrapper is bypassed.",
+ "evidence": [
+  {
+   "game": "games/rainbow_dma.md",
+   "text": "A bank-32 loading-screen wrapper was otherwise bypassed; wrapped and unwrapped game-entry states now compare equal.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "toolkit",
+ "words": [
+  "boot",
+  "NEX entry bank",
+  "loading wrapper",
+  "nextboot",
+  "model",
+  "simulation"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

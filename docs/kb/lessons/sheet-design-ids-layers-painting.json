@@ -1,0 +1,24 @@
+{
+ "id": "lesson.sheet-design-ids-layers-painting",
+ "kind": "owner-rule",
+ "claim": "Colour sheets come in two types, identification (with IDs) and painting, with painting sheets laid out like identification sheets, related figures grouped, and figures given stable IDs from what they are.",
+ "evidence": [
+  {
+   "game": "games/r_type.md",
+   "text": "Owner 2026-11-16: two sheets per level, IDENTIFY (2x, IDs) and PAINTING (1:1, same arrangement, every figure); related figures grouped; stable figure IDs L<n>-<nnn> with families.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "sprite sheet",
+  "identify sheet",
+  "painting sheet",
+  "figure id",
+  "related figures",
+  "design preference"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

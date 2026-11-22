@@ -1,0 +1,24 @@
+{
+ "id": "lesson.compressed-code-late-hook-install",
+ "kind": "method",
+ "claim": "If a game decompresses its code at load, hooks cannot be applied to the file in advance; install them by redirecting a later call to an installer that runs after decompression.",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "Original TZX/BASIC reaches the first USR 24200; decompressor at 86C5 is overwritten after use.",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "inferred",
+ "area": "method",
+ "words": [
+  "compressed tape",
+  "decompress",
+  "USR",
+  "installer",
+  "hook install",
+  "BASIC loader"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

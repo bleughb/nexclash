@@ -1,0 +1,28 @@
+{
+ "id": "lesson.sandbox-render-live-state",
+ "kind": "pitfall",
+ "claim": "Junk-filling a buffer before a re-render is a strong test only if the renderer rebuilds it fully; when it reads-modifies-writes, start from the buffer as the game left it.",
+ "evidence": [
+  {
+   "game": "games/castle_master.md",
+   "text": "Junk-filling a buffer is only a strong test if the renderer fully rebuilds it; with read-modify-write use the buffer as it was before the game's own render.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "when": [
+  "render.target.back_buffer",
+  "routine.display_only_effects"
+ ],
+ "words": [
+  "junk fill test",
+  "re-render",
+  "stale buffer",
+  "previous frame",
+  "read modify write",
+  "sandbox"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

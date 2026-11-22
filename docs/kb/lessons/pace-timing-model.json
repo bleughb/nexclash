@@ -1,0 +1,25 @@
+{
+ "id": "lesson.pace-timing-model",
+ "kind": "pitfall",
+ "claim": "RZX frames Fuse writes for an interrupt held off are near-empty (about 20 T), so weigh short frames by their T-states rather than counting whole frames.",
+ "evidence": [
+  {
+   "game": "games/castle_master.md",
+   "text": "Fuse writes a roughly 20 T frame when an interrupt delayed by DI lands, so a frame count runs ahead; weigh short frames by their T.",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "observed",
+ "area": "emulator",
+ "card": "patch.pace-limiter",
+ "words": [
+  "RZX",
+  "Fuse",
+  "short frame",
+  "interrupt",
+  "T-states",
+  "frame count"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

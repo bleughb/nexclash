@@ -1,0 +1,24 @@
+{
+ "id": "lesson.small-saving-hook-overhead",
+ "kind": "pitfall",
+ "claim": "A 28 MHz hook in front of a tight loop can be slower than the loop when the per-byte saving is smaller than the hook's fixed entry and exit cost; replace the whole loop instead.",
+ "evidence": [
+  {
+   "game": "games/gryzor.md",
+   "text": "NOPing a plotter's stores saves only 3 T a byte, less than a hook's fixed entry and exit at 3.5 MHz (about 250 T), so a 28 MHz hook in front of the loop made the game slower (pace model +3,800 T a tick).",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "hook cost",
+  "entry exit",
+  "28 MHz",
+  "plotter",
+  "fast path",
+  "overhead"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

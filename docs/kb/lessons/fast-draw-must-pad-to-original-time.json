@@ -1,0 +1,44 @@
+{
+ "id": "lesson.fast-draw-must-pad-to-original-time",
+ "kind": "pitfall",
+ "claim": "A routine made faster must be padded back to the original duration or the saving credited, or the game speeds up and pace moves with the work done.",
+ "evidence": [
+  {
+   "game": "games/cisco_heat.md",
+   "text": "The first sprite fast path made the game 14% fast in the simulator (7.41 frames an update against 8.59); the saving is added back to the wait (spr_credit).",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/everyones_a_wally_updated.md",
+   "text": "Hooks that replace a plot rather than add to it need the plot's original time back in the wait, or pace still moves with the plot count.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/booty.md",
+   "text": "A room at 28 MHz needs its original time back: a fit over all rooms, then a wait at the game's clock.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/winter_sports.md",
+   "text": "Pace wrapper: halt to the frame interrupt, then draw at 28 MHz inside the frame.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "when": [
+  "hook.faster_than_original"
+ ],
+ "words": [
+  "pad",
+  "original duration",
+  "pace",
+  "28 MHz",
+  "pace credit",
+  "faster than original",
+  "halt",
+  "timing"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,24 @@
+{
+ "id": "lesson.caller-return-address-identifies-figure",
+ "kind": "method",
+ "claim": "When one plotter draws several kinds of figure, identify the figure from the caller's return address on the stack or a register the caller set up, with no hook state.",
+ "evidence": [
+  {
+   "game": "games/chuckie_egg.md",
+   "text": "e_pl at 39500: caller return address at SP+8 picks the duck; e_hd at 37635: caller DE (hen table entry) at SP+16 gives the hen index.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "return address",
+  "caller",
+  "stack",
+  "shared plotter",
+  "figure identity",
+  "hook"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

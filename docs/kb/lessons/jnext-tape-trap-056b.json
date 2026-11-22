@@ -1,0 +1,23 @@
+{
+ "id": "lesson.jnext-tape-trap-056b",
+ "kind": "pitfall",
+ "claim": "New code placed in the old tape ROM must avoid PC 056B, because JNext rewrites A there while its tape trap is on.",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "JNext rewrites A at ROM PC 056B while its tape trap is on; hooks placed at 04C6/0574.",
+   "shown_on": "jnext"
+  }
+ ],
+ "level": "observed",
+ "area": "emulator",
+ "words": [
+  "JNext",
+  "tape trap",
+  "056B",
+  "tape ROM",
+  "hook placement"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

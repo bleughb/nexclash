@@ -1,0 +1,24 @@
+{
+ "id": "lesson.skoolkit-write-guards-below-4000",
+ "kind": "pitfall",
+ "claim": "SkoolKit's simulator drops writes below 0x4000, so a latch or hook state there looks fine in simulation but reads back 0; keep such latches in RAM above 0x4000.",
+ "evidence": [
+  {
+   "game": "games/treasure_island_dizzy.md",
+   "text": "A hook-speed latch in the slot-0 hook page read back 0 because the simulator drops writes below 0x4000; the clock matrix caught it.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "emulator",
+ "words": [
+  "skoolkit",
+  "0x3FFF",
+  "write guards",
+  "speed latch",
+  "slot 0",
+  "simulator"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

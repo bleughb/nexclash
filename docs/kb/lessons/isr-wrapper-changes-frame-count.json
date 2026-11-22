@@ -1,0 +1,28 @@
+{
+ "id": "lesson.isr-wrapper-changes-frame-count",
+ "kind": "pitfall",
+ "claim": "A handler a few T short of or past a whole number of frames decides whether the game gets a frame between notes, so a wrapper on the original handler can change game timing.",
+ "evidence": [
+  {
+   "game": "games/booty.md",
+   "text": "A 300 T wrapper on every interrupt took a death's room from 36 frames to 94.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "when": [
+  "exec.isr_must_run_on_time"
+ ],
+ "card": "patch.isr-deferral",
+ "words": [
+  "ISR wrapper",
+  "frame count",
+  "interrupt",
+  "handler length",
+  "notes",
+  "timing"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

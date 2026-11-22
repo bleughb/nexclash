@@ -1,0 +1,25 @@
+{
+ "id": "lesson.survey-misses-plotters",
+ "kind": "pitfall",
+ "claim": "The survey's routine table can miss plotters that comparing original pixels with sprites by frame finds.",
+ "limit": "One game; kept as a deferred open note there.",
+ "evidence": [
+  {
+   "game": "games/green_beret.md",
+   "text": "The survey's routine table missed the mine plotter and the small plotter's order; a pixel-versus-sprite comparison found both, by frame.",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "survey",
+  "plotter",
+  "missed",
+  "pixel comparison",
+  "sprites",
+  "routine table"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

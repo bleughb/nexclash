@@ -1,0 +1,24 @@
+{
+ "id": "lesson.frame-edge-snapshot-mid-upload",
+ "kind": "pitfall",
+ "claim": "A frame-edge snapshot can catch a correct hook halfway through an upload; check persistence and rendered frames before calling it corruption.",
+ "evidence": [
+  {
+   "game": "games/nodes_of_yesod.md",
+   "text": "1,898 native frame snapshots inspected; none showed persistent corruption after a hook finished, a few caught an upload or tile change in progress.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "snapshot",
+  "frame edge",
+  "upload in progress",
+  "corruption",
+  "hook",
+  "persistence"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

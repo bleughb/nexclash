@@ -1,0 +1,23 @@
+{
+ "id": "lesson.survey-needs-real-gameplay",
+ "kind": "pitfall",
+ "claim": "A survey of an idle menu or stopped game finds only the idle drawing; script the keys that really start play first.",
+ "evidence": [
+  {
+   "game": "games/winter_sports.md",
+   "text": "First survey (600 frames, no input) saw only the speed bars; a key script holding the first defined key started the descent.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "survey",
+  "key script",
+  "free run",
+  "idle",
+  "gameplay start"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

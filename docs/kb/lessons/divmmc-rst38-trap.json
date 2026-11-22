@@ -1,0 +1,31 @@
+{
+ "id": "lesson.divmmc-rst38-trap",
+ "kind": "pitfall",
+ "claim": "Once DivMMC no longer traps RST 38, a game running IM 1 reaches alt-ROM hook space at 0x0038 and 0x386E, so hook code can run or RST 38 can recurse; NextZXOS's trap masks this.",
+ "evidence": [
+  {
+   "game": "games/jetpac.md",
+   "text": "IM 1 in play reaches hook code at 0x386E once DivMMC no longer traps 0x0038 (found with JNext).",
+   "shown_on": "jnext"
+  },
+  {
+   "game": "games/match_day.md",
+   "text": "Menus run IM 1 into 0xFF bytes (RST 38 recursion) once DivMMC no longer traps 0x0038; only NextZXOS's trap hid it.",
+   "shown_on": "jnext"
+  }
+ ],
+ "level": "inferred",
+ "area": "platform",
+ "words": [
+  "DivMMC",
+  "IM 1",
+  "0x0038",
+  "0x386E",
+  "hook code",
+  "JNext",
+  "alt ROM",
+  "RST 38"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

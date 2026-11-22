@@ -1,0 +1,24 @@
+{
+ "id": "lesson.copied-engine-recolour",
+ "kind": "pitfall",
+ "claim": "A RECOLOUR registered with a map format the shared recolour tool cannot read should stay unregistered or be normalised.",
+ "evidence": [
+  {
+   "game": "games/starquake.md",
+   "text": "Not registered for recolour: the colour map is the engine's own format, not the coloursheet's, so the shared tool and its guard cannot read it.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "recolour",
+  "RECOLOUR",
+  "map format",
+  "registry",
+  "guard",
+  "engine"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

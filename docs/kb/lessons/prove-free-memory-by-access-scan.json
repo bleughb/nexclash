@@ -1,0 +1,50 @@
+{
+ "id": "lesson.prove-free-memory-by-access-scan",
+ "kind": "pitfall",
+ "claim": "Memory untouched in a recording is not proven free, so scan every wave, room and stage and prefer write-first bytes before choosing a tail site.",
+ "evidence": [
+  {
+   "game": "games/atic_atac.md",
+   "text": "The survey's free RAM (0xB536-, 0xD2EE-) holds graphics untouched by the recording, not free.",
+   "shown_on": "analysis"
+  },
+  {
+   "game": "games/silkworm.md",
+   "text": "0x9000-0x901F looked free in wave 1 and took writes in other waves.",
+   "shown_on": "analysis"
+  },
+  {
+   "game": "games/comando_quatro.md",
+   "text": "5B10 looked untouched over 2,500 frames and was first read later; write-first variables confirmed over longer recordings are the place.",
+   "shown_on": "analysis"
+  },
+  {
+   "game": "games/green_beret.md",
+   "text": "First choice 0x9400 was stage 4 graphics; the stage-4 recording's scan caught it.",
+   "shown_on": "analysis"
+  },
+  {
+   "game": "games/ruff_and_reddy.md",
+   "text": "Art mapped in slot 2 hid a room map below 0x6000; read the game's data before mapping over it.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/magicland_dizzy.md",
+   "text": "Printer buffer used: the game's bit-reverse table, read before written.",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "free memory",
+  "tail",
+  "access scan",
+  "write-first",
+  "printer buffer",
+  "untouched",
+  "stage"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

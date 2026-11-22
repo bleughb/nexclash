@@ -1,0 +1,24 @@
+{
+ "id": "lesson.rzx-short-frames",
+ "kind": "fact",
+ "claim": "Fuse writes a short frame of about 20 T when an interrupt delayed by DI lands, so a frame count runs ahead of real time; weigh short frames by their T.",
+ "evidence": [
+  {
+   "game": "games/castle_master.md",
+   "text": "RZX frames are not real time: a short frame of about 20 T appears when an interrupt delayed by DI lands.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "RZX",
+  "Fuse",
+  "short frame",
+  "DI",
+  "T state",
+  "frame count"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,35 @@
+{
+ "id": "lesson.reenable-layers-on-return-to-play",
+ "kind": "pitfall",
+ "claim": "Every path that returns from a non-play screen to a sprite-drawn screen must switch the layers back on, and menus and end screens may hold their own plots that need the overlay shown there too.",
+ "evidence": [
+  {
+   "game": "games/el_capitan_trueno.md",
+   "text": "Pause menu stub restores NEXTREG 0x69 and 0x15 on return; e_scr also turns Layer 2 on in case the menu is left without its RET.",
+   "shown_on": "mame"
+  },
+  {
+   "game": "games/rainbow_islands.md",
+   "text": "The stubs write NextReg $15 = 0 and the next commit sets $15 = 1.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/page_pharaoh.md",
+   "text": "Menu icons painted in the colour set were missing until the overlay was shown on the menu; sweep menus and end screens, not only play.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "sprites on",
+  "layer 2",
+  "return to play",
+  "menu",
+  "end screen",
+  "overlay",
+  "stale layers"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

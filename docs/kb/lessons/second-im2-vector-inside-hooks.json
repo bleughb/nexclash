@@ -1,0 +1,32 @@
+{
+ "id": "lesson.second-im2-vector-inside-hooks",
+ "kind": "method",
+ "claim": "Instead of hooking the original interrupt handler, select a second IM2 vector through I only while inside hooks, so the original handler runs during hook work without rewriting the original vector.",
+ "evidence": [
+  {
+   "game": "games/booty.md",
+   "text": "No hook on the handler: a second vector, selected by I inside hooks only.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/bruce_lee.md",
+   "text": "I=23 selects the private vector only while page 24 is mapped; the original handler runs on a reserved private stack, and the original I and clock return before unmapping.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "facts": {
+  "interrupts": "on"
+ },
+ "words": [
+  "IM2",
+  "second vector",
+  "I register",
+  "private stack",
+  "hook",
+  "interrupt handler"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

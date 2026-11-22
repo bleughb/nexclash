@@ -1,0 +1,49 @@
+{
+ "id": "lesson.negative-control-must-reach-path",
+ "kind": "pitfall",
+ "claim": "A negative control passes or reports n/a silently unless the data reaches the broken path; aim each at what the recording runs, run each new negative once, and count n/a explicitly.",
+ "evidence": [
+  {
+   "game": "games/page_pharaoh.md",
+   "text": "The 'XOR made plain' negative mutated the items' loop, which never undraws in the recording, and passed the replay.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/phantis.md",
+   "text": "A broken clipped-row path was never reached in 24,000 frames, so it stayed untested.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/rainbow_islands.md",
+   "text": "Two figure controls read live sprite attributes after the commit moved them and were n/a on every state.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/lunar_jetman.md",
+   "text": "The evict negative passed a 700-frame replay because the pool never filled.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/tranz_am.md",
+   "text": "A control changing the first LD A,n after the entry changed the mark's constant, not R's.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/robin_of_the_wood.md",
+   "text": "A leftover sys.argv MODE line made the art negatives run as normal.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "words": [
+  "negative control",
+  "n/a",
+  "mutation",
+  "recording",
+  "unreached path",
+  "verification"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

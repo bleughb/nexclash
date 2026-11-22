@@ -1,0 +1,24 @@
+{
+ "id": "lesson.shared-checkout-branch-switch",
+ "kind": "pitfall",
+ "claim": "Two sessions sharing one checkout can land a commit on the wrong branch; use a separate worktree per task and confirm the checked-out branch before committing.",
+ "evidence": [
+  {
+   "game": "sessions",
+   "text": "A commit landed on the other session's branch and a clone was switched to main under a running task; a worktree per task kept uncommitted edits untouched.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "words": [
+  "worktree",
+  "branch",
+  "shared checkout",
+  "git",
+  "wrong branch",
+  "parallel sessions"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

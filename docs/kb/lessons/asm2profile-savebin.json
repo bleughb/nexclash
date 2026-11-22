@@ -1,0 +1,24 @@
+{
+ "id": "lesson.asm2profile-savebin",
+ "kind": "pitfall",
+ "claim": "asm2profile reads SAVEBIN names only from the top-level source file, so a SAVEBIN in an included file is silently ignored.",
+ "evidence": [
+  {
+   "game": "games/chase_hq.md",
+   "text": "Two set sources carry their own SAVEBIN lines because asm2profile reads SAVEBIN names from the top-level file only; separate units match one source with a MODULE each, each SAVEBIN before the next reuses addresses.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "asm2profile",
+  "SAVEBIN",
+  "sjasmplus",
+  "MODULE",
+  "include",
+  "top-level"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

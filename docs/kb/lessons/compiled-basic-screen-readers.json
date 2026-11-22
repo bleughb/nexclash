@@ -1,0 +1,25 @@
+{
+ "id": "lesson.compiled-basic-screen-readers",
+ "kind": "fact",
+ "claim": "Compiled BASIC reads the screen through runtime PEEK, POINT and ATTR routines; find those routines and class reads by return address.",
+ "evidence": [
+  {
+   "game": "games/cauldron.md",
+   "text": "Main program is compiled BASIC (inferred from its runtime): 0x61D8 PEEK (LD L,(HL)), 0x61DB IN; figure plotter 0x6357 has 14 callers.",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "inferred",
+ "area": "method",
+ "card": "detect.gameplay-screen-readers",
+ "words": [
+  "compiled BASIC",
+  "PEEK",
+  "POINT",
+  "ATTR",
+  "screen readers",
+  "return address"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

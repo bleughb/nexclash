@@ -1,0 +1,27 @@
+{
+ "id": "lesson.xor-empty-screen-reference",
+ "kind": "pitfall",
+ "claim": "An empty screen is a wrong reference for an XOR plotter that draws the frame it erases; check draw-only entries against a model of the figure.",
+ "evidence": [
+  {
+   "game": "games/cookie.md",
+   "text": "The set-up cut compares signed, so a figure whose bottom line is above line 31 is not drawn at all.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "when": [
+  "render.composition.xor"
+ ],
+ "words": [
+  "XOR",
+  "plotter",
+  "verifier",
+  "empty screen",
+  "signed compare",
+  "model"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

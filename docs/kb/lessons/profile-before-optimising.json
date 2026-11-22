@@ -1,0 +1,49 @@
+{
+ "id": "lesson.profile-before-optimising",
+ "kind": "method",
+ "claim": "Profile before optimising: time hooks by the lines one call takes, count calls and cache misses per update, and require one timing row per hook; guessed costs are often wrong.",
+ "evidence": [
+  {
+   "game": "games/castle_master.md",
+   "text": "No hot spot existed (largest routine 13%); profile before tuning.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/atic_atac.md",
+   "text": "Profile a hook by lines one call takes; build at 257 to 297 lines a call was hidden by per-update hook times.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/ikari_warriors.md",
+   "text": "Image cache misses cost 38 ms against 0.1; count them per update.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/lunar_jetman.md",
+   "text": "A hook run for every object cost about 7% against 2-6% for hooks that switch speed; bookkeeping and attribute writes were the next costs.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/highway_encounter.md",
+   "text": "Profile complete hooks before assigning cost to large copies.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/inferno.md",
+   "text": "Require one timing row per completed hook so an empty list cannot look like success.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "profile",
+  "hook cost",
+  "per update",
+  "cache misses",
+  "timing row",
+  "hot spot"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}
