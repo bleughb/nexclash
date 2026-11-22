@@ -676,10 +676,8 @@ def _t_iff(code, syms):
 # Hook files whose NEXTREG 7 writes a fixed speed (the player's F8 choice lost on the way out), published before
 # the stack forms existed; the back-catalogue speed fix takes each off this list. A new engine is never added here.
 SPEED_LEGACY = {
-    'alien_8_hooks.asm', 'atic_atac_hooks.asm', 'atic_atac_v14_hooks.asm', 'cauldron_hooks.asm', 'chase_hq_hooks.asm',
-    'gauntlet_hooks.asm', 'ice_palace_hooks.asm', 'incredible_shrinking_fireman_hooks-add-GPT6_ASTRA.asm',
+    'atic_atac_hooks.asm', 'atic_atac_v14_hooks.asm', 'cauldron_hooks.asm', 'gauntlet_hooks.asm', 'incredible_shrinking_fireman_hooks-add-GPT6_ASTRA.asm',
     'inferno_hooks.asm', 'jetpac_hooks.asm', 'matchday_hooks.asm', 'matchday_v21_hooks.asm', 'new_zealand_story_hooks.asm',
-    'olli_and_lissa_2_hooks.asm', 'olli_and_lissa_3_hooks.asm', 'olli_and_lissa_hooks.asm', 'quazatron_hooks.asm',
     'rainbow_hooks.asm', 'rainbow_z80n_hooks.asm', 'robin_of_the_wood_hooks.asm', 'trueno_hooks.asm', 'wally_hooks.asm',
     'altered_beast_hooks.asm', 'jsw_hooks.asm'}       # the last two: published 2026-11-21, landed in main after the audit
 _SPEED_RE = re.compile(r'^\s*(?:[A-Za-z_.][\w.]*:?)?\s*nextreg\s+(?:0x0?7|\$0?7|7|07h)\s*,\s*([^\s;]+)', re.I)
@@ -693,6 +691,8 @@ def speed_audit(root=ROOT):
     for path in sorted(glob.glob(os.path.join(root, 'asm', '*.asm'))):
         for n, line in enumerate(open(path, encoding='utf-8', errors='replace'), 1):
             m = _SPEED_RE.match(line)
+            if m and '; speed: start-up' in line:   # runs once before the game (set-up, boot resume): no player choice yet
+                continue
             if m and m.group(1).lower() not in ('a', '3', '0x03', '$03', '03h'):
                 out.setdefault(os.path.basename(path), []).append((n, line.strip()[:60]))
     return out

@@ -735,7 +735,7 @@ setup:  ld hl,pbuf              ; the printer buffer as the snapshot has it (the
         nextreg 0x12,9          ; Layer 2 in bank 9
         nextreg 0x14,0xE3       ; the transparent colour
         nextreg 0x15,0x00       ; S L U: Layer 2 over the ULA and the tile layer (shown by the first tile pass)
-speed:  nextreg 0x07,0          ; (the steady-speed build: 3 = 28 MHz)
+speed:  nextreg 0x07,0        ; speed: start-up (once, before the game) - (the steady-speed build: 3 = 28 MHz)
         ret
 pal9:   DS 512
 pal2:   DS 512
