@@ -1,11 +1,11 @@
 # Elite (Braben / Bell, Firebird 1985; Russian 128K hack) - engine: elite (in progress, stage 2)
 
 ## Next session
-Stage: 2 (build)   State: M3 for ships (own roll / pitch every frame) runs in CSpect 2026-11-23 (## M2 progress, M3 note); stars and planet per frame (M3b) next
+Stage: 2 (build)   State: M3 + M3b (ships, planet, stars every frame) run in CSpect 2026-11-23 (## M2 progress); M4 next
 Inputs: specnext/reference/elite/ (tape, 5 RZX, 5 extracted .z80)    Branch: add-elite    Commit: see git log
 Checks: full surveys of all five RZX (7.5k-68.6k frames); tape not run in an emulator
 Pending user answers: none (design closed 2026-11-23: C coloured ships, details 1-5, pacing (i) interpolate)
-Start with: `python -m nexclash.elite C:\1NEXT\elite_work\Witch.z80 m2.nex` in CSpect, then M3b: stars / planet per frame
+Start with: `python -m nexclash.elite C:\1NEXT\elite_work\Witch.z80 m2.nex` in CSpect (m3b build), then M4: HUD clash cells, Layer 2 off on pages
 Read: PLAYBOOK stage 1, 3d (unknown engine: feasibility first); ## Findings below
 Open: see Findings
 
@@ -37,13 +37,7 @@ Which parts overlap each other is not compared.
   stretches (back-buffer copy ~125k T, up to 930k T per call).
 - Free memory is scarce: PoliceAnarchy leaves 5546 of 32768 bytes untouched in 0x4000-0xBFFF (largest span 456 bytes).
 
-## Findings (stage 0, DockingElite.rzx, `--stop 3000` first look; superseded by the full surveys above)
-128K snapshot, 7FFD = 0x30 (ROM 1, bank 0 at C000, paging locked), IM 2 I = 0xFD; WitchElite starts at 0xAB64, the
-others at 0xFEFE. Vector game with a back buffer copied by 0x7FBE every ~10 frames; 1726 interrupts in 3001 frames.
-Plain conversion needed `--tail` (solved: 0x4800).
-
 ## Open
-- Tail placement for a 128K snapshot with ROM 1 locked (see Lessons).
 - Which unreached call sites are figure plotters (cost --at / disassembly); whether another recording is needed.
 - Run Elite.tap in an emulator to confirm it matches the snapshots (loader is BASIC + `USR 28672`, packed 40801-byte block at 24648; the bytes differ from snapshot RAM, so it is packed).
 - Stage-1 design question and feasibility (3d).
@@ -199,8 +193,8 @@ Code: asm/elite_hooks.asm, nexclash/elite.py, docs/profiles/elite.json (not yet 
 Bugs found on the way (each a CSpect round): CSpect's IM 2 bus byte is not 0xFF (vector table moved to the alt ROM,
 I = 0x39); the ship wrapper's stack floor 0x400E (h_plot at most 10 bytes, no CALL); 0x8080 keeps A (h_clear
 pushes it); CSpect -mmc traps RST 08h as esxDOS and skips a byte (RST 18h used; found by hook-subset bisect).
-Not yet checked: stars drawn outside the viewport frame (white, from the ULA copy - compare with the original);
-the differential verify (step 6); hardware.
+Stars plot into columns 0 / 31 outside the frame (the game's copy leaves them out; h_plot skips them since M3b).
+Not yet checked: the differential verify (step 6); hardware.
 
 ## M2 progress (2026-11-23)
 M2 RUNS in CSpect (Docking and Witch, 700 frames each of rolling / pitching / speed-up; chart page entered and left).
@@ -235,7 +229,12 @@ draw_deps.py / draw_io.py in C:NEXT\elite_work\probe.
 Not yet checked / open: one render sample (Docking, after ~600 frames) showed a station z of 0xB2E1 negative (not
 reproduced in 8 later samples; to watch with a render assert); Havoc.z80 crashes ~150 frames in even in the
 --control build (no hooks; status page snapshot - the start-up tail at 0x4800 sits in its text rows); Layer 2 not yet
-hidden on pages (M4); planet and stars still move at the tick rate (M3b: they show own turning most); hardware.
+hidden on pages (M4); hardware.
+- M3b (planet, sun, stars): the pass draws them to the mono buffer only; render's scenery, after the ships, scales
+  the control bytes 0xFF09 / 0xFF0B (magnitude) and 0xFF0D ((speed + 1) * w - 1: 0xA173 moves z by (speed + 1) * 2)
+  by the weight, then the game's own 0x713C, 0x7853 (move), 0x7584 (draw, if 0x7103 = 0), 0x7898 (stars move + draw)
+  - their place now (cur + w of a pass). Outputs [observed: draw_deps.py on 0x7853 / 0x7584 / 0x7898, Docking]
+  added to outtab. Checked: Docking / Witch 600-1200 frames, count = time; renders land ~every 2nd frame (d 1, 3).
 
 ## Hardware checklist
 None yet (no build).

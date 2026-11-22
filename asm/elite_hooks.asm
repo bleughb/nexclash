@@ -135,6 +135,9 @@ h_plot: push af
         ld d,a                          ; D = y
         ld a,l
         and 31
+        jr z,.skip                      ; columns 0 and 31: outside the viewport frame (the copy leaves them out,
+        cp 31                           ; stars plot there)
+        jr z,.skip
         rlca
         rlca
         rlca
@@ -184,13 +187,13 @@ h_plot: push af
         ret
 
 ; ---- category hooks ----
-h_planet:
+h_planet:                               ; M3b: planet, sun and stars are drawn by the renderer (scenery)
         call poll
-        nextreg 0x7F,C_PLANET
+        nextreg 0x7F,C_NOMIRROR
         jp 0x7584
 h_stars:
         call poll
-        nextreg 0x7F,C_WHITE
+        nextreg 0x7F,C_NOMIRROR
         jp 0x7898
 h_msg:  call poll
         nextreg 0x7F,C_WHITE
@@ -360,7 +363,7 @@ intab:  dw 1, 0x6F42
         dw 12, 0xA8FA
         dw 1, 0xA9C8
         dw 1, 0xAA0F
-        dw 0xB4A4 - 0xB452, 0xB452
+        dw 0xB4A7 - 0xB452, 0xB452      ; (to 0xB4A6: 0x7898 via 0xF9A8)
         dw 2, 0xB7AA
         dw 0
         ASSERT 1 + 1 + 12 + 1 + 1 + (0xB4A4 - 0xB452) + 2 == NIN
@@ -373,7 +376,25 @@ intab:  dw 1, 0x6F42
 outtab: dw 0x6180 - 0x6048, 0x6048
         dw 1, 0x6F42
         dw 2, 0x6FEB
-        dw 3, 0x70E4                    ; ownrot: per-pass roll / pitch / speed
+        dw 0x7102 - 0x70E4, 0x70E4      ; ownrot, scenery (0x713C): per-pass roll / pitch / speed and derived
+        dw 0x7119 - 0x7107, 0x7107      ; scenery (0x7853): planet and sun positions
+        dw 1, 0x7120                    ; scenery (0x7584)
+        dw 1, 0x7128                    ; scenery (0x7898, rare)
+        dw 0x7583 - 0x757A, 0x757A      ; scenery (0x7584): planet work area
+        dw 1, 0x78B5                    ; scenery (0x7898)
+        dw 1, 0x7EDD                    ; scenery (0x7898 via 0xF9A8)
+        dw 0x7A59 - 0x7A39, 0x7A39      ; scenery (0x7898): star table
+        dw 0x8AA0 - 0x8A85, 0x8A85      ; scenery (0x7584, Havoc: planet markings)
+        dw 0x8ACC - 0x8ABA, 0x8ABA      ; scenery (0x9B68): planet axis vectors
+        dw 1, 0x8BD3                    ; scenery (0x7584)
+        dw 1, 0x8CD3                    ; scenery (0x7584, Havoc)
+        dw 1, 0x8DC9                    ; scenery (0x7584, Havoc)
+        dw 0x9527 - 0x9522, 0x9522      ; scenery (0x7898 / 0x7584, rare)
+        dw 1, 0x95AE
+        dw 1, 0x95BD
+        dw 2, 0x95F2                    ; scenery (0x7853, rare)
+        dw 1, 0x96BF
+        dw 1, 0xA1AD                    ; scenery (0x9B68 patches it)
         dw 0x862A - 0x861A, 0x861A
         dw 1, 0x9C97
         dw 2, 0x9F80                    ; ownrot: rotation bytes for 0xA0AB
@@ -387,9 +408,11 @@ outtab: dw 0x6180 - 0x6048, 0x6048
         dw 0xB213 - 0xB20D, 0xB20D
         dw 1, 0xB231
         dw 3, 0xB25D
-        dw 0xB4A4 - 0xB452, 0xB452
+        dw 0xB4A7 - 0xB452, 0xB452      ; (to 0xB4A6: 0x7898 via 0xF9A8)
         dw 2, 0xB7AA
         dw 0xBCD4 - 0xBCC8, 0xBCC8
+        dw 0x20, 0xCFE0                 ; scenery: line tables past the mono buffer
+        dw 6, 0xFF08                    ; scenery: controls, scaled in place
         dw 0
 
 ; tab_save: copy every (length, address) of the table at HL to DE onwards. tab_load: from DE back to them.

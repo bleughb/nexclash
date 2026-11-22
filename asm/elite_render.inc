@@ -196,7 +196,8 @@ render: cp TICK
         add hl,bc
         ld (S_RP),hl
         jp .rec
-.rdone: ld hl,outtab
+.rdone: call scenery
+        ld hl,outtab
         ld de,SAVE
         call tab_load
         nextreg 0x7F,C_WHITE
@@ -272,6 +273,60 @@ interp: ld hl,(S_RP)
         pop bc
         dec b
         jr .f
+
+; scenery (DI, state page at slot 0; M3b): planet, sun and stars, which the logic pass now draws to the buffer only,
+; drawn at their state after the pass (live) moved on by S_WGT / 256 of one pass of the player's own motion - the
+; controls' roll / pitch / speed bytes (0xFF09 / 0xFF0B / 0xFF0D) scaled, 0x713C turning them into the per-pass
+; values, then the game's own code: 0x7853 moves planet and sun (0xA173 on 0x7107 / 0x7110, 0x9B68 the planet's
+; axes), 0x7584 draws them (when 0x7103 = 0, as 0x74EA), 0x7898 moves and draws the stars. Planet, sun and stars
+; only move with the player, so this is their place now, as ownrot puts the ships. Everything written is in outtab.
+; A routine that ends EI would let h_isr in: DI again before the state page is mapped.
+scenery:
+        ld a,(S_WGT)
+        ld e,a
+        nextreg 0x50,0xFF
+        ld hl,0xFF09
+        call scale_sm
+        ld hl,0xFF0B
+        call scale_sm
+        ld a,(0xFF0D)                   ; 0xA173 moves z by (speed + 1) * 2 (0xFF: none): speed' = (speed + 1) * w / 256 - 1
+        inc a
+        ld d,a
+        mul d,e
+        ld a,d
+        dec a
+        ld (0xFF0D),a
+        call 0x713C
+        call 0x7853
+        di
+        ld a,(0x7103)
+        or a
+        jr nz,.nopl
+        nextreg 0x7F,C_PLANET
+        call 0x7584
+        di
+.nopl:  nextreg 0x7F,C_WHITE
+        call 0x7898
+        di
+        nextreg 0x50,STATE_PG
+        ret
+
+; scale_sm: (HL) = sign | magnitude byte, magnitude * E / 256. Keeps E, HL.
+scale_sm:
+        ld a,(hl)
+        ld b,a
+        and 0x7F
+        ld d,a
+        push de
+        mul d,e
+        ld a,d
+        pop de
+        ld c,a
+        ld a,b
+        and 0x80
+        or c
+        ld (hl),a
+        ret
 
 ; ownrot (IX = live slot, interpolated; state page at slot 0): M3, own turning without lag. The interpolated
 ; scene is one tick behind the logic; turn it by one pass of the player's roll / pitch as the controls stand now
