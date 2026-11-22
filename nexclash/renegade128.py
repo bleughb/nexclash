@@ -1410,12 +1410,12 @@ def enhanced_colours(z80):
     return p if os.path.isfile(p) else None
 
 
-def enhanced_nex(nex, cmap):
+def enhanced_nex(nex, cmap, outline=True):
     """The sprite build + the Enhanced map -> the Enhanced .nex (work/paint.py's last step): recolour(), then
     the sprite palette entries 4-15 in the setup stub's palette (bank 10) and the floors table (bank 12) from
     the profile's "enhanced" section. -> (bytes, info)."""
     from .recolour import banks, splice
-    out, info = recolour(nex, cmap)
+    out, info = recolour(nex, cmap, outline)
     prof = load_profile()
     enh = prof['enhanced']
     have = banks(out)
@@ -1434,6 +1434,23 @@ def enhanced_nex(nex, cmap):
     out2, ch = splice(out, {10: bytes(b10), 12: bytes(b12)})
     info['banks changed'] = sorted(set(info['banks changed']) | set(ch))
     return out2, info
+
+
+def black_outline_nex(nex):
+    """The sprite build -> the same build with the outline black: palette bytes only (entry 3 of the setup stub's palette in bank 10,
+    and the outline byte of each level's row of the floors table in bank 12), so no pattern changes. -> bytes."""
+    from .recolour import banks, splice
+    prof = load_profile()
+    have = banks(nex)
+    b10, b12 = bytearray(have[10]), bytearray(have[12])
+    o = 0x1000 + bytes.fromhex(prof['hooks']['setup']).index(bytes(PALETTE))
+    fl = int(prof['hooks']['syms']['floors'], 16) - 0x2000
+    if bytes(b10[o:o + 16]) != bytes(PALETTE) or any(b12[fl + 8 * i + 1] not in (0, 0xFF) for i in range(4)):
+        raise ValueError('palette or floors table not where the build puts them')
+    b10[o + OUTLINE] = 0
+    for i in range(4):
+        b12[fl + 8 * i + 1] = 0
+    return splice(nex, {10: bytes(b10), 12: bytes(b12)})[0]
 
 
 def auto(a, z80, name, out, say):
@@ -1459,15 +1476,27 @@ def auto(a, z80, name, out, say):
     say('Sprites   : %s  %s  boot %s' % (os.path.basename(spr), md5(spr),
                                           'OK' if not bad2 else 'MISMATCH %s' % str(bad2[:3])[:200]))
     ok = not bad and not bad2
+    # Outline toggles (issue jattree/nxc#8): the base build is unchanged. "Outline off" = the same build with no outline pixels in the
+    # patterns; "Black outline" = palette bytes only. The Enhanced set leaves the outline out, so the .nxc keeps it apart from both
+    # (nxc.py make --toggle "Outline off=NEX" --toggle "Black outline=NEX" --excludes "Enhanced colours=Outline off" --excludes "Enhanced colours=Black outline").
+    pn = RenegadePatch(z80, outline=False)
+    spn = os.path.join(out, name + '_sprites_nooutline.nex')
+    zt.convert(z80, spn, TAIL_ADDR, True, quiet=True, patch=pn)
+    bad3 = check(spn, z80, pn, (conv[1], conv[1] + len(conv[2])))
+    ok = ok and not bad3
+    say('No outline: %s  %s  boot %s' % (os.path.basename(spn), md5(spn), 'OK' if not bad3 else 'MISMATCH %s' % str(bad3[:3])[:200]))
+    sbo = os.path.join(out, name + '_sprites_blackoutline.nex')
+    open(sbo, 'wb').write(black_outline_nex(open(spr, 'rb').read()))
+    say('Black outl.: %s  %s  (palette bytes only)' % (os.path.basename(sbo), md5(sbo)))
     ec = enhanced_colours(z80)
     if ec is None:
         say('Enhanced  : no %s beside the snapshot: no Enhanced build' % ENH_COLOURS)
     else:
         from . import coloursheet as cs
         enh = os.path.join(out, name + '_enhanced.nex')
-        e, info = enhanced_nex(open(spr, 'rb').read(), cs.load(ec))
+        e, info = enhanced_nex(open(spr, 'rb').read(), cs.load(ec), outline=False)
         open(enh, 'wb').write(e)
-        say('Enhanced  : %s  %s  map %s, %d entries, banks changed %s' % (
+        say('Enhanced  : %s  %s  (no outline) map %s, %d entries, banks changed %s' % (
             os.path.basename(enh), md5(enh), hashlib.md5(open(ec, 'rb').read()).hexdigest()[:8], info['map entries'],
             info['banks changed']))
     states = []
