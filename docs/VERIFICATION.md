@@ -56,6 +56,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Jet Set Willy (jet_set_willy): `jet_set_willy.nex` e6da94d233366f87aec67f9da2358859, `jet_set_willy_sprites.nex` d148c9e8011b9e5f83944fb6b1cc9c07; verified 2026-11-22
 - Nemesis the Warlock (nemesis_the_warlock): `nemesis_the_warlock.nex` d1f685c80642ca96b8f454b7171f34b8, `nemesis_the_warlock_sprites.nex` 9e20d8e7cf40ae4d654bdc59ba7111dd; verified 2026-11-21
 - Inferno (inferno): `inferno.nex` 0a3bde4734c5b3f15ad0f2a55cc81e19; verified never
+- Altered Beast (128K) (altered_beast): `altered_beast.nex` 3a40cd83e14bad535b3f147708b2284e, `altered_beast_sprites.nex` 4d79dca84641647336e99baf858dc99a; verified 2026-11-22
 - Ghosts 'n Goblins (ghosts_n_goblins): `ghosts_n_goblins.nex` 61b31a77638e7c6393695f61473a518b, `ghosts_n_goblins_sprites.nex` 49b9383466196c36335b50943e6101b4, `ghosts_n_goblins_enhanced.nex` fff9a32e8e4ab38f395550639c8af3b7, `ghosts_n_goblins_sprites_loading.nex` 5f2bd47639ddecd8960998536be05f79, `ghosts_n_goblins_enhanced_loading.nex` d1627c16e3edf7f691f24d73614bf64f; verified 2026-11-20
 - Green Beret (green_beret): `green_beret.nex` c55d3d8303928a1dbddca65059674575, `green_beret_sprites.nex` 8e0d11e37eb93495a1b8d85a75292224; verified 2026-11-03
 - Nightshade (nightshade): `nightshade.nex` c2555ad8f43e1ebda5f07094a48bd041, `nightshade_sprites.nex` 37a5c792172120f2c5f5406e476e83bf, `nightshade_enhanced.nex` a09286f6c193f4f911a87a2a2317ebb8; verified 2026-11-21

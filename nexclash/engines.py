@@ -120,6 +120,7 @@ ENGINES = [
     ('jillys_farm', 'is_jillys', None),                                   # Jilly's Farm Volume 1 - SokoBAArn! (48K): default and Enhanced
     ('that_sinking_feeling', 'is_tsf', None),                             # That Sinking Feeling (128K tape form): default and Enhanced
     ('jsw', 'is_jsw', None),                                              # Jet Set Willy (48K)
+    ('altered_beast', 'is_altered_beast', None),                          # Altered Beast (128K)
 ]
 
 

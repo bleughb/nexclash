@@ -56,9 +56,11 @@ def held_at(schedule, frame):
     return ks
 
 
-def _watch(memory, hooks, regs_ref):
+def _watch(memory, hooks, regs_ref, ack=None):
     """Wrap memory so reads/writes call the hooks. 128K Memory: swap in a subclass (rzxplay
-    checks isinstance(memory, Memory)); 48K list: a list-like wrapper."""
+    checks isinstance(memory, Memory)); 48K list: a list-like wrapper. ack[0] = an address whose FIRST read is not the
+    game's (SkoolKit's accept_interrupt reads memory[prev_pc], and its callers pass prev_pc 0); later reads count."""
+    ack = ack if ack is not None else [None]
     rd = getattr(hooks, 'on_read', None)
     wr = getattr(hooks, 'on_write', None)
     if not rd and not wr:
@@ -74,7 +76,10 @@ def _watch(memory, hooks, regs_ref):
         class W(base):
             def __getitem__(s, a):
                 if rd and type(a) is int and (a < limit or a in wanted) and regs_ref:
-                    rd(a, regs_ref[0][24], s)
+                    if a == ack[0]:
+                        ack[0] = None           # SkoolKit's EI test, once; an IM 2 vector read there still counts
+                    else:
+                        rd(a, regs_ref[0][24], s)
                 return MG(s, a)
 
             def __setitem__(s, a, v):
@@ -93,7 +98,10 @@ def _watch(memory, hooks, regs_ref):
 
         def __getitem__(s, a):
             if rd and type(a) is int and (a < limit or a in wanted) and regs_ref:
-                rd(a, regs_ref[0][24], s)
+                if a == ack[0]:
+                    ack[0] = None               # SkoolKit's EI test, once; an IM 2 vector read there still counts
+                else:
+                    rd(a, regs_ref[0][24], s)
             return s.m[a]
 
         def __setitem__(s, a, v):
@@ -106,10 +114,11 @@ def _watch(memory, hooks, regs_ref):
 def _sim_class(hooks):
     from skoolkit.simulator import Simulator
     regs_ref = []
+    ack = [None]
 
     class S(Simulator):
         def __init__(self, memory, registers=None, state=None, config=None):
-            memory = _watch(memory, hooks, regs_ref)
+            memory = _watch(memory, hooks, regs_ref, ack)
             super().__init__(memory, registers, state, config)
             regs_ref[:] = [self.registers]          # a new simulator per RZX segment: hooks see its PC
             R, ops = self.registers, self.opcodes
@@ -132,7 +141,11 @@ def _sim_class(hooks):
         def accept_interrupt(self, registers, memory, prev_pc):
             if hasattr(hooks, 'on_interrupt'):
                 hooks.on_interrupt(self, prev_pc)
-            return super().accept_interrupt(registers, memory, prev_pc)
+            ack[0] = prev_pc                # its EI test reads memory[prev_pc]: not a read by the game (rzxplay passes 0)
+            try:
+                return super().accept_interrupt(registers, memory, prev_pc)
+            finally:
+                ack[0] = None
     return S
 
 
