@@ -18,7 +18,7 @@
   "order": {},
   "owns": {},
   "examples": ["r_type"],
-  "sources": ["specnext reference/r_type/intake/tools/sweep.py (owner's recipe, 2026-11-17); tools/smoke.py"]
+  "sources": ["specnext reference/r_type/intake/tools/sweep.py and smoke.py (owner's recipe, 2026-11-17)"]
 }
 ```
 
