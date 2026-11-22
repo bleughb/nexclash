@@ -19,6 +19,7 @@ h_flip: ld a,i                          ; P/V = IFF2
         or a
         jp z,.plain                     ; not after a flight pass (status, charts, equipment: the game draws the
                                         ; page into the buffer and this copy shows it): the original copy only
+        call rowfix                     ; ULA row 56 below the game's stack: see rowfix
         ld a,(S_W)
         ld (S_CUR),a
         xor 1
@@ -85,8 +86,28 @@ h_flip: ld a,i                          ; P/V = IFF2
 ; position and orientation interpolated from prev (same slot and blueprint) with weight A / TICK, drawn by the
 ; game's own ship draw 0xA6DF on the live slot through h_plot. All game RAM the draw writes (outtab, the slots
 ; included) is saved first and restored after, so the logic sees exactly what the original would (probe
-; draw_deps.py). Then show it. Clobbers everything; keeps the state page mapping.
-render: cp TICK
+; draw_deps.py). Then show it. Clobbers everything; keeps the state page mapping. Runs on its own stack RSTK (the
+; game's RAM there saved and restored): the game's stack has 32 bytes and the scenery calls go deeper than the
+; original's (2026-11-23: stack bytes in the screen row below it, white dashes at the right of the viewport).
+render: ld (S_RA),a
+        ld (S_RSP),sp
+        ld hl,RSTK - RSTKLEN
+        ld de,RSAVE
+        ld bc,RSTKLEN
+        ldir
+        ld sp,RSTK
+        ld a,(S_RA)
+        call render_b
+        ld sp,(S_RSP)
+        ld hl,RSAVE
+        ld de,RSTK - RSTKLEN
+        ld bc,RSTKLEN
+        ldir
+        ret
+        ASSERT RSAVE + RSTKLEN <= LIST0
+
+render_b:
+        cp TICK
         ld b,0
         jr c,.part
         inc b
@@ -122,6 +143,7 @@ render: cp TICK
         ld hl,outtab
         ld de,SAVE
         call tab_save
+        call scenery                    ; planet, sun, stars first: ships are drawn over them, as in the original
         nextreg 0x7F,0                  ; ship colours (IY)
         ld a,(S_CUR)                    ; cur list -> S_RP / S_RI, prev list -> S_PL / S_PN
         ld hl,S_N
@@ -196,8 +218,7 @@ render: cp TICK
         add hl,bc
         ld (S_RP),hl
         jp .rec
-.rdone: call scenery
-        ld hl,outtab
+.rdone: ld hl,outtab
         ld de,SAVE
         call tab_load
         nextreg 0x7F,C_WHITE
@@ -282,9 +303,15 @@ interp: ld hl,(S_RP)
 ; only move with the player, so this is their place now, as ownrot puts the ships. Everything written is in outtab.
 ; A routine that ends EI would let h_isr in: DI again before the state page is mapped.
 scenery:
+        ld hl,0xFF08                    ; controls kept for ownrot (it turns the ships by a whole pass)
+        ld de,S_CTL
+        ld bc,6
+        ldir
         ld a,(S_WGT)
         ld e,a
         nextreg 0x50,0xFF
+        ld a,0xC9                       ; 0x7584 / 0x7898 end EI: h_isr then returns at once with interrupts off
+        ld (0xFEFE),a                   ; (as during a ship draw; the frame is counted by the next poll)
         ld hl,0xFF09
         call scale_sm
         ld hl,0xFF0B
@@ -299,16 +326,28 @@ scenery:
         call 0x713C
         call 0x7853
         di
+        call .poll
         ld a,(0x7103)
         or a
         jr nz,.nopl
         nextreg 0x7F,C_PLANET
         call 0x7584
         di
+        call .poll
 .nopl:  nextreg 0x7F,C_WHITE
         call 0x7898
         di
+        ld a,0x18
+        ld (0xFEFE),a
         nextreg 0x50,STATE_PG
+        ld hl,S_CTL
+        ld de,0xFF08
+        ld bc,6
+        ldir
+        ret
+.poll:  nextreg 0x50,STATE_PG           ; a frame is lost if a whole one passes between polls (a big sun fill)
+        call fcount
+        nextreg 0x50,0xFF
         ret
 
 ; scale_sm: (HL) = sign | magnitude byte, magnitude * E / 256. Keeps E, HL.

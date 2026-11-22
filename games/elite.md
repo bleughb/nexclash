@@ -18,7 +18,6 @@ Order of play (cash): Docking ends docked at Lave (7186.3 Cr); Havoc, PoliceAnar
 page (Lave). Havoc ends docked at Tionisla (7252.3 Cr); PoliceAnarchy ends at Riedquat (7342.8 Cr, rating Competent);
 Reidquat ends at Riedquat (7483.2 Cr); Witch ends on the inventory screen ("Alien Items 6t", fuel 3.4 LY, 7215.4 Cr).
 So the names match SARD's notes. Frames: Docking 7501, Havoc 54517, PoliceAnarchy 68635, Witch 53371, Reidquat 41969.
-Which parts overlap each other is not compared.
 
 ## Findings (stage 0; Docking first look, then all five surveyed in full)
 - Colour (CORRECTED 2026-11-22: an earlier note called the viewport coloured; the orange / cyan / purple in the survey
@@ -163,14 +162,7 @@ one pass = 0x7505 0x84D9, 0x7509 0x7222, 0x750C 0x9A40, 0x750F 0x81A9, 0x7477 0x
   into the unused bank-0 buffer at 28 MHz - also the exact reference at alpha = 1); the renderer reruns only the
   per-object draw calls inside 0x9C80 / 0x7898 / 0x7584 on interpolated copies, with everything they write saved and
   restored (draw-time state such as an explosion cloud's counter must not advance per render).
-- Per-ship draw site [observed: disassembly, Docking.z80]: in 0x9C80's per-ship body (IX = slot) 0x9E29 CALL 0x9F82,
-  0x9E2C CALL 0xAE69, 3x CALL 0x9F41 on IX+9.., 0x9E41 CALL 0xB4D8, then 0x9E44 JP 0xF8B4 - the hack's draw wrapper: DI,
-  ISR entry 0xFEFE set to RET (0xC9), SP saved and set to 0x4020, CALL 0xA6DF (draw this ship), SP = 0x411A, 0xFEFE back
-  to JR (0x18), EI, JP 0x9E47. After the draw 0x9E47 RES 3,(IX+32) and tests bits 4 / 5 of (IX+32) (set by the draw?),
-  then 0x9E5D CALL 0xA8EC and 0x9E63 JP 0xF8E4 (next slot). So the renderer's ship call is 0xA6DF with IX = an
-  interpolated slot copy; slot byte 32 is draw-time state the logic reads (save / restore it around renders).
-First tasks: removal experiment for the buffer;
-find the planet / star / laser state the renderer needs; cost of one full draw at 28 MHz (drawcost / cost --at).
+- Per-ship draw site: 0x9E44 JP 0xF8B4, the hack's wrapper (DI, 0xFEFE = RET, SP 0x4020, CALL 0xA6DF) - ## M2 progress.
 
 ## M1 progress (2026-11-23)
 M1 part 1 (colour mirror) RUNS in CSpect from the Docking and Witch snapshots: planet blue, crosshair / lasers red,
@@ -194,6 +186,13 @@ Bugs found on the way (each a CSpect round): CSpect's IM 2 bus byte is not 0xFF 
 I = 0x39); the ship wrapper's stack floor 0x400E (h_plot at most 10 bytes, no CALL); 0x8080 keeps A (h_clear
 pushes it); CSpect -mmc traps RST 08h as esxDOS and skips a byte (RST 18h used; found by hook-subset bisect).
 Stars plot into columns 0 / 31 outside the frame (the game's copy leaves them out; h_plot skips them since M3b).
+Missed writers (found 2026-11-23 from the user's CSpect report: black bar through the sun, dashes at the right;
+probe buf_pcs.py, Witch / Havoc / PoliceAnarchy whole): planet / sun fills 0x8C19 0x8CBB 0x8D1B 0x8DB1 0x90D0 (A),
+0x8C22 0x8CC4 0x8D24 0x8DBA 0x8A78 (0xFF), LDDR 0x5E4B 0x8A81 (RST 28h, h_lddr), stack blits 0x8BCD 0x8CCD 0x8DC3
+(PUSH AF chains: JP pf_*). Left: 0xFB01 (inside another instruction's operand), 0x818C (page save). Logic-pass hooks
+exit early (nomirror) so the game's 32-byte stack 0x4100 goes little deeper; render runs on its own stack
+(0x7410-0x746F, saved); rowfix repaints ULA row 56 (0x40E0, below the stack, which the hack itself saves at 0xF8EC)
+after the planet and in h_flip. Sun (0x7107 via 0x86D0, h_sun) yellow; planet (0x7110) blue outline.
 Not yet checked: the differential verify (step 6); hardware.
 
 ## M2 progress (2026-11-23)
@@ -216,8 +215,7 @@ draw_deps.py / draw_io.py in C:NEXT\elite_work\probe.
   of the same slot and blueprint (weight frames-since-tick / 10; a jump of 0x8000+ keeps cur), 0xA6DF called as the
   wrapper does (0xFEFE = RET, SP 0x4020), outputs restored, flip. Only after a flight pass (h_combat sets
   S_FLIGHT): status / chart pages keep the original copy.
-- Interpolation checked in CSpect (station, Docking): z 0x4D1F -> 0x4D1D shows 0x4D1E; components move in steps
-  (0xE438, 0xE568, 0xE6A0 towards 0xE800 at weights 0.6-0.8).
+- Interpolation checked in CSpect (station, Docking): z 0x4D1F -> 0x4D1D shows 0x4D1E.
 - Frame counting (3 rounds; lesson in ## Lessons): h_isr counts each interrupt, raster polls in DI stretches add
   lost ones; 506 counted over ~505 frames. The game ISR body runs from an owed count (16 per 25 frames).
 - M3 (ships): ownrot, after interp, turns each ship by one pass of the current roll / pitch (0xFF09 / 0xFF0B) with
@@ -230,7 +228,7 @@ Not yet checked / open: one render sample (Docking, after ~600 frames) showed a 
 reproduced in 8 later samples; to watch with a render assert); Havoc.z80 crashes ~150 frames in even in the
 --control build (no hooks; status page snapshot - the start-up tail at 0x4800 sits in its text rows); Layer 2 not yet
 hidden on pages (M4); hardware.
-- M3b (planet, sun, stars): the pass draws them to the mono buffer only; render's scenery, after the ships, scales
+- M3b (planet, sun, stars): the pass draws them to the mono buffer only; render's scenery, before the ships (they are drawn over it), scales
   the control bytes 0xFF09 / 0xFF0B (magnitude) and 0xFF0D ((speed + 1) * w - 1: 0xA173 moves z by (speed + 1) * 2)
   by the weight, then the game's own 0x713C, 0x7853 (move), 0x7584 (draw, if 0x7103 = 0), 0x7898 (stars move + draw)
   - their place now (cur + w of a pass). Outputs [observed: draw_deps.py on 0x7853 / 0x7584 / 0x7898, Docking]

@@ -24,6 +24,7 @@ TRANS     EQU 0xE3          ; Layer 2 transparent colour (NR $14 default)
 C_WHITE   EQU 0xFF
 C_RED     EQU 0xE0
 C_PLANET  EQU 0x4B
+C_SUN     EQU 0xFC          ; yellow: the filled body (0x7107 via 0x86D0, h_sun)
 C_SHIPDEF EQU 0xFF
 P_L2      EQU 0x0B          ; port 0x123B: write-over on (bit 0), visible (bit 1), shadow bank NR $13 (bit 3)
 P_SHOW    EQU 0x02          ; visible only
@@ -48,6 +49,13 @@ S_INTL    EQU 0x0015        ; byte: raster line / 2 of the interrupt (0 in the z
 S_ISRF    EQU 0x0024        ; byte: an interrupt was counted since the last poll
 S_PC      EQU 0x0025        ; byte: the last poll counted a frame
 S_FLIGHT  EQU 0x0026        ; byte: the flight loop (0x9C80) ran since the last h_flip
+S_RSP    EQU 0x0028        ; word: SP at render entry (render runs on RSTK)
+S_RA     EQU 0x002A        ; byte: render's A argument across the stack switch
+S_CTL    EQU 0x002C        ; 6 bytes: the controls 0xFF08-0xFF0D across scenery (it scales them in place)
+RSAVE    EQU 0x0040        ; 0x60 bytes: game RAM under RSTK, saved around a render
+RSTK     EQU 0x7470        ; render stack top: 0x7410-0x746F, inside 0x7366-0x7470, untouched in all five
+RSTKLEN  EQU 0x60          ; recordings (scan_low / surveys); the game's own stack 0x4100-0x411F is 32
+                           ; bytes, the row below it on screen (a render there showed as dashes)
 S_PL      EQU 0x0012        ; word: prev list base
 S_PN      EQU 0x0014        ; byte: prev list count
 S_TP      EQU 0x0018        ; 3 bytes: lerp scratch (prev value, 24-bit two's complement)
@@ -87,6 +95,7 @@ rst20:  push af                         ; LD (HL),0xFF
         call h_plot
         pop af
         ret
+rst28:  jp h_lddr                       ; LDDR (the sun's fill, 0x5E4B)
 low_end:
         SAVEBIN "elite_low.bin", rst10, low_end - rst10
 
@@ -96,11 +105,130 @@ low_end:
         ORG 0x3000
 rom_start:
 
+; h_lddr: LDDR through h_plot, so every byte it copies is mirrored. The sun's fill (0x5E36) writes a row's right
+; byte with LD (HL),A (hooked) and copies it left with LDDR at 0x5E4B: unhooked, only the first byte of each row
+; reached Layer 2 (black bar through the sun, Witch, 2026-11-23); 0x8A81 (row fill after LD (HL),0xFF) the same.
+; Keeps A and F (both sites are followed by code that sets the flags again). NR $7F = C_NOMIRROR (logic pass): the
+; plain LDDR, so the game's tiny stack (0x4100-0x411F, the row below it is on screen) goes no deeper than 4 bytes.
+h_lddr: push af
+        call nomirror
+        jr nz,.loop
+        pop af
+        lddr
+        ret
+.loop:  ld a,(hl)
+        ex de,hl
+        call h_plot
+        ex de,hl
+        dec hl
+        dec de
+        dec bc
+        ld a,b
+        or c
+        jr nz,.loop
+        pop af
+        ret
+
+; nomirror: Z if NR $7F = C_NOMIRROR (the logic pass's planet, stars and ship draws). Clobbers A, F only.
+nomirror:
+        push bc
+        ld bc,0x243B
+        ld a,0x7F
+        out (c),a
+        inc b
+        in a,(c)
+        pop bc
+        cp C_NOMIRROR
+        ret
+
+; Planet / sun fills' stack blit (0x8BCD, 0x8CCD, 0x8DC3: LD SP,0x8FB6 / POP AF / LD SP,HL / JR into 16 x PUSH AF,
+; the JR offset patched to 16 - n): 2n bytes of 0xFF below HL. Each LD SP,0x8FB6 becomes JP to its stub. Not
+; mirroring (logic pass): the original blit. Mirroring: the bytes through h_plot (fill2n), then on at the end of the
+; push chain, which sets A / F again and reloads SP from 0x8623. Found 2026-11-23 (probe buf_pcs.py, Witch / Havoc /
+; PoliceAnarchy whole): M1's writer list came from Docking only.
+PFILL   MACRO site, off, cont
+        call nomirror
+        jr z,.orig
+        ld a,(off)
+        call fill2n
+        jp cont
+.orig:  ld sp,0x8FB6
+        jp site + 3
+        ENDM
+pf_8BCD: PFILL 0x8BCD, 0x8BD3, 0x8BE4
+pf_8CCD: PFILL 0x8CCD, 0x8CD3, 0x8CE4
+pf_8DC3: PFILL 0x8DC3, 0x8DC9, 0x8DDA
+
+; fill2n: A = the patched JR offset (16 - n): (HL - 1) .. (HL - 2n) = 0xFF through h_plot. Keeps HL, BC, DE.
+fill2n: push hl
+        push bc
+        ld b,a
+        ld a,16
+        sub b
+        add a,a
+        jr z,.done
+        ld b,a
+.byte:  dec hl
+        ld a,0xFF
+        call h_plot
+        djnz .byte
+.done:  pop bc
+        pop hl
+        ret
+
+; h_sun (0x759E, CALL 0x86D0 in 0x7584): the filled body (0x7107, the sun: yellow scanner icon) in C_SUN, then the
+; colour as it was (the outlined planet 0x7110 follows via 0x86DE). Logic pass: the original call (tail jump, same
+; stack). 0x86D0's inputs are memory only (0xFB31 loads A, EX AF,AF'); the caller reads A from 0x861D after.
+h_sun:  call nomirror
+        jp z,0x86D0
+        push af
+        nextreg 0x7F,C_SUN
+        call 0x86D0
+        pop af
+        nextreg 0x7F,a
+        ret
+
+; rowfix: repaint ULA row y = 56 (0x40E0-0x40FF), just below the game's 32-byte stack 0x4100-0x411F, as the blank
+; viewport row the copy shows (frame bits 0x80 at 0x40E1, 0x01 at 0x40FE), and the hack's save of it (0xFFD0-0xFFDF,
+; taken at 0xF8EC, put back at 0xF907). Deep calls (the planet circle most) leave stack bytes there; the original's
+; copy repaints the row soon after, here the copy waits for the tick - white dashes, at times the whole row
+; (2026-11-23, user report). Only when SP is above the row. Keeps all registers.
+rowfix: push af
+        push hl
+        push bc
+        ld hl,0x40E0
+        ld b,32
+        xor a
+.r1:    ld (hl),a
+        inc l
+        djnz .r1
+        ld hl,0xFFD0
+        ld b,16
+.r2:    ld (hl),a
+        inc l
+        djnz .r2
+        ld a,0x80
+        ld (0x40E1),a
+        ld a,0x01
+        ld (0x40FE),a
+        ld (0xFFDE),a
+        pop bc
+        pop hl
+        pop af
+        ret
+
 ; h_plot: (HL) = A, as the original LD (HL),A, and mirror the changed bits on the Layer 2 back buffer.
 ; Keeps every register and flag. Interrupts may be on. Stack: 10 bytes with the RST (4 pushes, no CALL) - the ship
 ; draw wrapper runs on a 32-byte stack at 0x4000-0x401F and reaches the writers with SP down to 0x400E (site_ctx probe):
 ; one byte more than 14 would push into the ROM and lose a return address (M1 first boot crashed that way).
 h_plot: push af
+        call nomirror
+        jr nz,.mir
+        pop af
+        ld (hl),a                       ; the logic pass's planet / stars / ships: the write only (stack: 4 bytes)
+        ret
+.mir:   pop af
+        push af
         push bc
         ld c,a                          ; C = new byte
         ld a,(hl)
@@ -193,6 +321,7 @@ h_planet:                               ; M3b: planet, sun and stars are drawn b
         jp 0x7584
 h_stars:
         call poll
+        call rowfix                     ; the planet draw just before goes deepest on the game's stack
         nextreg 0x7F,C_NOMIRROR
         jp 0x7898
 h_msg:  call poll

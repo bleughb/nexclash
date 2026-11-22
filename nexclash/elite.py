@@ -20,9 +20,11 @@ LOW_PAGE = 25               # 8K page: alt ROM image of 0x0000-0x1FFF (bank 12 u
 TAIL_ADDR = 0x4800
 
 WRITERS_A = (0x5E44, 0x8B15, 0x8B1A, 0x8BB6, 0x8BBB, 0x9083, 0x9119, 0x911E, 0x917D, 0x9182, 0x91BD, 0x91E2,
-             0x9215, 0x9261, 0xA84B, 0xB1B8, 0xB233, 0xB245, 0xB253, 0xD549)
+             0x9215, 0x9261, 0xA84B, 0xB1B8, 0xB233, 0xB245, 0xB253, 0xD549,
+             0x8C19, 0x8CBB, 0x8D1B, 0x8DB1, 0x90D0)        # planet / sun fills (buf_pcs.py, 2026-11-23)
 WRITERS_B = (0x91CD, 0x91F1)
-WRITERS_FF = (0x8B23, 0x8BC4)
+WRITERS_FF = (0x8B23, 0x8BC4, 0x8C22, 0x8CC4, 0x8D24, 0x8DBA, 0x8A78)
+WRITERS_LDDR = (0x5E4B, 0x8A81)    # row fills (sun; 0x8A78 + LDDR)
 
 # (site, original bytes, symbol, opcode of the new instruction)
 HOOK_SITES = (
@@ -34,6 +36,10 @@ HOOK_SITES = (
     (0xF8D4, 'c3479e', 'h_shipend', 0xC3),     # its exit, JP 0x9E47
     (0x8080, 'f3011e00', 'h_clear', 0xC3),     # DI / LD BC,30 (JP h_clear + one dead byte)
     (0x7FBE, '2100c0', 'h_flip', 0xC3),        # LD HL,0xC000
+    (0x759E, 'cdd086', 'h_sun', 0xCD),         # CALL 0x86D0: the filled body (sun) in its own colour
+    (0x8BCD, '31b68f', 'pf_8BCD', 0xC3),       # LD SP,0x8FB6: the fills' stack blit
+    (0x8CCD, '31b68f', 'pf_8CCD', 0xC3),
+    (0x8DC3, '31b68f', 'pf_8DC3', 0xC3),
 )
 IM2_I = 0x39                # alt ROM 0x3900-0x3A00 all 0x3A: vector 0x3A3A = h_isr for any bus byte (asm im2tab)
 DATA_SITES = ((0xFF4C, '3efd', '3e39'),)      # the game's "IM 2 on": LD A,0xFD / LD I,A -> I = IM2_I
@@ -70,6 +76,8 @@ def sites(syms):
         out.append((a, b'\x70', b'\xD7'))                       # RST 10h
     for a in WRITERS_FF:
         out.append((a, b'\x36\xFF', b'\xE7\x00'))               # RST 20h, NOP
+    for a in WRITERS_LDDR:
+        out.append((a, b'\xED\xB8', b'\xEF\x00'))               # RST 28h, NOP
     for a, old, sym, op in HOOK_SITES:
         old = bytes.fromhex(old)
         new = (bytes([op]) + syms[sym].to_bytes(2, 'little')).ljust(len(old), b'\x00')
@@ -117,9 +125,9 @@ class ElitePatch:
         if control:
             keep = {a for a, _, _ in DATA_SITES}
             if isinstance(control, str):        # diagnostic subsets: 'rst', 'cat', 'ship', 'clear', 'flip' (+-joined)
-                g = {'rst': set(WRITERS_A) | set(WRITERS_B) | set(WRITERS_FF),
+                g = {'rst': set(WRITERS_A) | set(WRITERS_B) | set(WRITERS_FF) | set(WRITERS_LDDR),
                      'cat': {0x74EE, 0x74F1, 0x74F4, 0x74F7}, 'ship': {0x9E44, 0xF8D4},
-                     'clear': {0x8080}, 'flip': {0x7FBE}}
+                     'clear': {0x8080}, 'flip': {0x7FBE}, 'fill': {0x8BCD, 0x8CCD, 0x8DC3}}
                 for k in control.split('+'):
                     if k.startswith('w'):       # w<hex>: one writer site
                         keep.add(int(k[1:], 16))
