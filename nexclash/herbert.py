@@ -51,7 +51,8 @@ class HerbertPatch:
   # Spectrum RGB333 converted to Next RGB332, palette zero is transparent.
   for c in range(16):
    v=7 if c&8 else 5;r=v if c&2 else 0;g=v if c&4 else 0;b=(3 if c&8 else 2) if c&1 else 0
-   h[0x1c00+c*16+1]=(r<<5)|(g<<2)|b
+   # 0xE3 is Layer 2's transparent colour and a real Next compares the RGB: bright magenta -> 0xE7 (nxc 1.5)
+   h[0x1c00+c*16+1]=0xE7 if (r<<5)|(g<<2)|b==0xE3 else (r<<5)|(g<<2)|b
   from .herbert_colours import PALETTE,tables
   for c in range(16):
    for index,(r,g,b) in PALETTE.items():h[0x1c00+c*16+index]=(r<<5)|(g<<2)|b
