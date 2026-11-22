@@ -76,22 +76,30 @@
  "outputs": {
   "plain": {
    "file": "renegade.nex",
-   "md5": "59c50d991f292728f95a59170196959c"
+   "md5": "62a06036dec229a7d19821df2cca6a04"
   },
   "sprites": {
    "file": "renegade_sprites.nex",
-   "md5": "10070d06abbc98f25160b119e2f9cc80"
+   "md5": "b4b452100f88d54415f3f5f11568c454"
+  },
+  "sprites_nooutline": {
+   "file": "renegade_sprites_nooutline.nex",
+   "md5": "c8baf422e7a76776f10a48ac270dd1ae"
+  },
+  "sprites_blackoutline": {
+   "file": "renegade_sprites_blackoutline.nex",
+   "md5": "28e56c4fc2789efeecf054f5cb49c80c"
   },
   "enhanced": {
    "file": "renegade_enhanced.nex",
-   "md5": "f3e21c37794b7774879ffa191b5f3cc7"
+   "md5": "f60ec79d6dd0a62d1b3d262ecf394203"
   }
  },
  "repro": [],
  "status": {
   "title": "Renegade (128K)",
   "engine_col": "renegade128 (renegade.md)",
-  "build": "sprites b4b45210, Enhanced 9ed0c98b (.nxc v1.2: pace windows, R kept; v1.1 was 510cdd29)",
+  "build": "sprites b4b45210, Enhanced f60ec79d (no outline; v1.2 Enhanced with outline was 9ed0c98b); toggles Outline off c8baf422, Black outline 28e56c4f (jattree/nxc#8; not published)",
   "software": "Verify on 4 bot recordings, whole game; unit PASS; negatives detected; reaches gameplay in JNext 1.1.104 (no human recording)",
   "hardware": "untested",
   "next": "hardware test"
@@ -126,15 +134,15 @@
   "deps": {
    "asm/renegade128_hooks.asm": "a2efae49a88d4de9",
    "docs/profiles/renegade128.json": "e8d0ef08baf6a9ff",
-   "nexclash.py": "04157df11540c17d",
+   "nexclash.py": "cc1297e9104ece5f",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "b22123bdf2572c9b",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
-   "nexclash/engines.py": "2abd23b537c0b5d4",
+   "nexclash/engines.py": "bf75ad27e5bfabce",
    "nexclash/machine.py": "659903f13de0fcee",
-   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
    "nexclash/rainbow.py": "e247f602b7cecb7b",
-   "nexclash/recolour.py": "6f27e87ef0c47a17",
+   "nexclash/recolour.py": "091578827a6f24a5",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/renegade.py": "6d256418fdf318d2",
    "nexclash/renegade128.py": "1c98ecfc94c7d36e",
@@ -143,27 +151,27 @@
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "50684436558662bd",
+   "nexclash/z80tonex.py": "9bd684151bdab4ea",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "fb16b7ef12d4d0c9",
+   "recipe": "33eecf7d7fcc2934",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-20"
+  "date": "2026-11-17"
  },
  "verified": {
   "deps": {
    "asm/renegade128_hooks.asm": "a2efae49a88d4de9",
    "docs/profiles/renegade128.json": "e8d0ef08baf6a9ff",
-   "nexclash.py": "04157df11540c17d",
+   "nexclash.py": "cc1297e9104ece5f",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "b22123bdf2572c9b",
+   "nexclash/coloursheet.py": "05b757b4b393c22b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
-   "nexclash/engines.py": "2abd23b537c0b5d4",
+   "nexclash/engines.py": "112c3b17a78ace9a",
    "nexclash/machine.py": "659903f13de0fcee",
-   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
    "nexclash/rainbow.py": "e247f602b7cecb7b",
-   "nexclash/recolour.py": "6f27e87ef0c47a17",
+   "nexclash/recolour.py": "091578827a6f24a5",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/renegade.py": "6d256418fdf318d2",
    "nexclash/renegade128.py": "1c98ecfc94c7d36e",
@@ -172,12 +180,12 @@
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "50684436558662bd",
+   "nexclash/z80tonex.py": "9bd684151bdab4ea",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "fb16b7ef12d4d0c9",
+   "recipe": "33eecf7d7fcc2934",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-20"
+  "date": "2026-11-12"
  }
 }
