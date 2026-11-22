@@ -4,8 +4,8 @@
 Stage: 0 done (all five recordings surveyed in full), 1 next (design)   State: stage 1 probe done 2026-11-22 (## Probe); design question open, user allowed a full rewrite
 Inputs: specnext/reference/elite/ (tape, 5 RZX, 5 extracted .z80)    Branch: add-elite    Commit: see git log
 Checks: full surveys of all five RZX (7.5k-68.6k frames); tape not run in an emulator
-Pending user answers: ## Design details 1-5 (option C chosen)
-Start with: the user's answers to ## Design details, then stage 2 (build)
+Pending user answers: smoothness method (## Pacing i / ii / iii)
+Start with: the user's choice in ## Pacing (i / ii / iii), then stage 2 (build)
 Read: PLAYBOOK stage 1, 3d (unknown engine: feasibility first); ## Findings below
 Open: see Findings
 
@@ -123,12 +123,29 @@ cells (HUD bars, condition light, planet / sun icon); (C) B + redraw the viewpor
 both unknowns for C are answered (## Probe): the buffer is cleared every frame (no owner model needed) and the ship
 model is in IY while its lines are drawn. Colouring per model / per draw category (planet, sun, stars, lasers, text) is cheap.
 
-## Design details (asked 2026-11-22, answers pending; defaults proposed)
+## Pacing (stage 2 gate, 2026-11-22)
+- ISR (0xFF25, own stack at 0x4020): keyboard scan 0xFD69, control integration 0xFE01 (pitch / roll from the keys,
+  every interrupt), then 0x7125 -> 0x9579. [observed: disassembly]
+- Movement is PER MAIN-LOOP PASS, not per time [observed: slot_motion.py, Havoc 9000-9600, slot 0x60E4]: its z (bytes 6-7)
+  drops ~0x52 per screen update whether 9, 13 or 16 frames passed (e.g. 18CA -> 1877 in 13 frames, 1824 -> 17D2 in 9).
+  So the original's game speed falls with load (~5.5 updates a second, slower with many ships), and running the
+  original loop faster makes the GAME faster - not allowed (equivalence rule).
+- Smoothness therefore means decoupling the picture from the logic. Options (asked 2026-11-22):
+  (i) logic untouched at a fixed tick (the original's typical ~9 frames per pass), the renderer interpolates ships between
+  the last two logic states at up to 50 fps, and applies the player's own roll / pitch every frame (no lag on your own
+  turning; other ships lag one tick, ~0.18 s); recommended: the original logic runs unchanged, so the RZX verification
+  still applies to it.
+  (ii) extrapolate instead of interpolate: no lag, small overshoots when a ship turns suddenly.
+  (iii) smaller logic steps (movement, rotation, timers, AI divided by k, k times as many passes): no lag, but every
+  constant in the game changes and the RZX can no longer verify the logic.
+
+## Design details (answered 2026-11-22: 1, 2, 3, 5 defaults; 4 changed)
 1. Ships: one colour per ship model (IY blueprint, 11 seen), chosen by us now, repaintable later (colour sheet + recolour).
 2. Planet / sun / stars / lasers / crosshair / messages: each its own colour (planet blue, sun yellow, stars white,
    lasers red, crosshair and messages white), same rule.
 3. Viewport on Layer 2 over a blank ULA viewport; HUD, scanner and text stay on the ULA, with the clash cells fixed (B).
-4. Pace: the original's (~5 updates a second, its slowdowns kept); a faster mode only if asked.
+4. Pace: CHANGED by the user: "4 speed - should be as smooth as possible". So: the highest frame rate the Next can give,
+   game speed (how fast ships move, timers) kept as the original's (equivalence rule). How depends on ## Pacing.
 5. Status / chart / equipment pages (full-screen ULA): Layer 2 off while they are up.
 
 ## Hardware checklist
