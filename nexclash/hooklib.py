@@ -753,6 +753,7 @@ SPEED_LEGACY = {             # file: its fixed writes now; a new one in a listed
     'incredible_shrinking_fireman_hooks-add-GPT6_ASTRA.asm': 1, 'inferno_hooks.asm': 13, 'matchday_hooks.asm': 2,
     'matchday_v21_hooks.asm': 1, 'new_zealand_story_hooks.asm': 2, 'rainbow_hooks.asm': 2, 'rainbow_z80n_hooks.asm': 2,
     'trueno_hooks.asm': 2, 'wally_hooks.asm': 2,
+    'arkanoid_hooks.asm': 1, 'bomb_jack_hooks.asm': 3, 'manic_miner_hooks.asm': 9,   # published 2026-11-21, landed 2026-11-22
     }
 # Shipped in jattree/nxc (fixed: gauntlet, altered_beast, jsw, robin_of_the_wood). Left, not the plain kind:
 # matchday_v21 and new_zealand_story run the game's own interrupt handler at 3.5 MHz on purpose (its sound) and give the

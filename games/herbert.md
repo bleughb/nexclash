@@ -12,7 +12,8 @@ Techniques: detect.gameplay-screen-readers
 - Built with tools/build_herbert.py (not yet an engine in engines.py: its verifier, negatives and clock matrix are
   the pilot's scripts, not ported; the engine contract's verify / unit_tests / CMP are the next step).
   `tools/build_herbert.py GAME.z80 -o OUT.nex --work DIR [--enhanced] [--screen PICTURE.scr]` gives, with the tape
-  picture, byte for byte the published .nxc 1.3 --bare default (537f88c7) and Enhanced (dbb38ec4).
+  picture, byte for byte the published .nxc 1.5 --bare default (7df91b7c) and Enhanced (f568c81d): 1.3 plus bright magenta
+  ink 0xE3 -> 0xE7 (Layer 2 transparency, a real Next compares the RGB) and the automap-off start (2026-11-22).
 - No game pixels are stored. The paint routines' bytes and every image are read from the player's snapshot; the
   owner's figure paintings (herbert_parts.json) and the scenery paint (herbert_scenery.json) hold one colour digit
   per ink pixel of the game's image, in pixel / bit order, and the build lays them over the image it reads.
