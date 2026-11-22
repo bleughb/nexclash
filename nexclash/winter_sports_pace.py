@@ -17,7 +17,7 @@ from . import winter_sports as W
 from . import winter_sports_common as C
 
 FRAME_T = 69888
-SPACING = 0x2C                                 # bytes reserved per wrapper (a wrapper is 41-43)
+SPACING = 0x30                                 # bytes reserved per wrapper (a wrapper is 35-46); the mode byte after them
 
 
 class Site:
@@ -205,7 +205,7 @@ class PaceEvent:
             sp = b_regs[12]                                      # the wrapper's pushes leave stale bytes below the stack pointer
             mem_ok = all(a_mem[i] == b_mem[i] for i in range(0x4000, 0x10000)
                          if not (self.wrap_at <= i < self.wrap_at + SPACING * len(self.sites) + 0x10) and not (sp - 48 <= i < sp)
-                         and i != C.SPD)
+                         and i not in (C.SPD, C.ACT, C.ACT + 1))
             if not (regs_ok and mem_ok and back == speed):
                 self.last_diff = (speed, back, [(i, a_regs[i], b_regs[i]) for i in keep if a_regs[i] != b_regs[i]][:6],
                                   [(hex(i), a_mem[i], b_mem[i]) for i in range(0x4000, 0x10000) if a_mem[i] != b_mem[i]][:6])

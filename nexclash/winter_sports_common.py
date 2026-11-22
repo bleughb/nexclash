@@ -25,10 +25,14 @@ TRANSPARENT = 0xE3
 # halt a wrapper runs exactly as before (NEXTREG 7,3 / CALL / NEXTREG 7,n): a latch on the timed path shifted Speed
 # Skating's frame-edge pacing by 3 %. SPD_OUT (the events' display-off code, at an event load) puts SPD back. Both live
 # in the loader hook's own block (winter_sports.HOOK .. 0x6EFF, untouched by the menu and every event), SPD among the
-# hook's 8 variable bytes at 0x6D00 (set to 0 when the hook goes in).
+# hook's 8 variable bytes at 0x6D00 (set to 0 when the hook goes in). ACT (2 bytes, after SPD) marks a drawing in
+# progress: SPD_IN zeroes its high byte, the wrapper's exit writes the stack pointer there (LD (nn),SP: no register or
+# flag touched; never below 0x4000, so never zero). SPD_OUT restores SPD only while a drawing was left unfinished, once,
+# so a speed the player chose in the menu (before the first event or between two) stands.
 SPD = 0x6D04
+ACT = SPD + 1
 SPD_IN = 0x6E80
-SPD_OUT = SPD_IN + 32
+SPD_OUT = SPD_IN + 40
 
 
 def speed_code():
@@ -37,8 +41,13 @@ def speed_code():
                   0x7E, 0xED, 0x31,                          # ld a,(hl) / add hl,a: HL -> the exit NEXTREG's operand
                   0x01, 0x3B, 0x24, 0x3E, 0x07, 0xED, 0x79, 0x04, 0xED, 0x78, 0xE6, 0x03,   # A = NR 7 & 3
                   0x77, 0x32, SPD & 255, SPD >> 8,           # ld (hl),a / ld (SPD),a
+                  0xAF, 0x32, (ACT + 1) & 255, (ACT + 1) >> 8,   # xor a / ld (ACT+1),a: a drawing in progress
                   0xE1, 0x23, 0xC1, 0xF1, 0xE3, 0xC9])       # pop hl / inc hl (past the byte) / pop bc / af / ex / ret
-    out = bytes([0xF5, 0x3A, SPD & 255, SPD >> 8, 0xED, 0x92, 0x07, 0xF1, 0xC9])     # push af; NR 7 = SPD; pop af
+    out = bytes([0xF5, 0x3A, (ACT + 1) & 255, (ACT + 1) >> 8, 0xB7,  # push af / ld a,(ACT+1) / or a
+                 0x20, 0x0B,                                 # jr nz,done: the last drawing finished, the speed stands
+                 0x3A, SPD & 255, SPD >> 8, 0xED, 0x92, 0x07,    # ld a,(SPD) / NR 7 = A
+                 0x3E, 0xFF, 0x32, (ACT + 1) & 255, (ACT + 1) >> 8,  # ld a,0xFF / ld (ACT+1),a: restored once
+                 0xF1, 0xC9])                                # done: pop af / ret
     assert len(code) <= SPD_OUT - SPD_IN
     return code.ljust(SPD_OUT - SPD_IN, b'\0') + out
 
@@ -50,9 +59,11 @@ def _speed_latch(a):
 
 
 def _speed_exit(a, at):
-    """NEXTREG 7,n whose n SPD_IN sets to the player's speed; points the offset byte at `at` to it."""
+    """NEXTREG 7,n whose n SPD_IN sets to the player's speed (the offset byte at `at` points to it), then the
+    drawing-finished mark (ACT)."""
     a.code[at] = len(a.code) + 3 - at
     a.nr(0x07, 0x00)
+    a.e(0xED, 0x73, a.w(ACT))                     # ld (ACT),sp: the drawing finished (SPD_OUT leaves the speed alone)
 
 
 class Asm:

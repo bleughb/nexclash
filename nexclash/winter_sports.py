@@ -178,7 +178,7 @@ def memory_patches(hybrid=False):
         assert DISABLE + len(code) <= common.SPD_IN, len(code)
         out.append((DISABLE, code))
         out.append((common.SPD_IN, common.speed_code()))   # the wrappers' speed latch routines (winter_sports_common)
-        out.append((common.SPD, b'\0'))                   # the latch starts at 3.5 MHz, the stub's speed
+        out.append((common.SPD, b'\0\0\xff'))           # the latch at 3.5 MHz (the stub's speed); ACT: no drawing in progress
     return out
 
 
@@ -376,7 +376,7 @@ def verify(patch, z80, tape_files=None, frames=900, progress=None, collect=0, **
     C, ex = Counter(), []
     pages = _pages(patch.events)
     own = set(range(HOOK, HOOK + len(patch.hook))) | set(range(PG, EVT + 1)) | set(range(SITE, SITE + 3))
-    own |= {common.SPD} | set(range(common.SPD_IN, common.SPD_IN + len(common.speed_code())))   # the speed latch
+    own |= {common.SPD, common.ACT, common.ACT + 1} | set(range(common.SPD_IN, common.SPD_IN + len(common.speed_code())))   # the speed latch
     timing = set(range(0x5C00, 0x5C80)) | set(range(0x5F80, 0x6000))   # FRAMES etc. and the stack: the hook's copy takes ~12
     #                                                         frames the tape trap does not, so the two runs stop at different instants
     for k, key in enumerate(MENU_KEYS):
