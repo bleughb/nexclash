@@ -1453,14 +1453,14 @@ def verify(patch, rzx_path, progress=None, stop=None):
 
     def ev_piece(real, R):
         o, p = OMem(real), PMem(real)
-        so = _machine(Sim, o, list(R), NextState(patch))
+        so = _machine(Sim, o, list(R), NextState(patch), slot='rz_piece_o')    # pooled: two live per event (Codex P1)
         ok1 = _run(so, (59513, 59547))
         n_before = ns.scratch[V_S]
         ns.events = []
         h0 = ns.scratch[V_HITS] | ns.scratch[V_HITS + 1] << 8
         sp0 = ns.nr.get(0x07)                       # the piece hook must not change the CPU speed
         ov0 = ns.scratch[0x36]
-        sp_ = _machine(Sim, p, list(R), ns)
+        sp_ = _machine(Sim, p, list(R), ns, slot='rz_piece_p')
         ok2 = _run(sp_, (59513, 59547))
         if not (ok1 and ok2):
             fail('piece: did not return', (ok1, ok2))
@@ -1555,8 +1555,8 @@ def verify(patch, rzx_path, progress=None, stop=None):
 
     def ev_simple(real, R, stop_at, what, dead=()):
         o, p = OMem(real), PMem(real)
-        so = _machine(Sim, o, list(R), NextState(patch))
-        sp_ = _machine(Sim, p, list(R), ns)
+        so = _machine(Sim, o, list(R), NextState(patch), slot='rz_ev_simple_o')
+        sp_ = _machine(Sim, p, list(R), ns, slot='rz_ev_simple_p')
         ns.events = []
         if not (_run(so, (stop_at,)) and _run(sp_, (stop_at,))):
             fail(what + ': did not return', ())
@@ -1578,8 +1578,8 @@ def verify(patch, rzx_path, progress=None, stop=None):
         ret = MG(real, R[12]) | MG(real, R[12] + 1) << 8
         o, p = OMem(real), PMem(real)
         nso = NextState(patch)
-        so = _machine(Sim, o, list(R), nso)
-        sp_ = _machine(Sim, p, list(R), ns)
+        so = _machine(Sim, o, list(R), nso, slot='rz_ev_ay_o')
+        sp_ = _machine(Sim, p, list(R), ns, slot='rz_ev_ay_p')
         ns.events = []
         if not (_run(so, (ret,)) and _run(sp_, (ret,))):
             fail('AY write: did not return', ())
@@ -1697,8 +1697,8 @@ def verify(patch, rzx_path, progress=None, stop=None):
         row = (ba >> 8 & 0x18) | (ba & 0xE0) >> 5
         exp = {a: v for a, v in obj_fix(peek, st['shadow'], ns.pages[PAGE_T], row).items() if v != peek(a)}
         o, p = OMem(real), PMem(real)
-        so = _machine(Sim, o, list(R), NextState(patch))
-        sp_ = _machine(Sim, p, list(R), ns)
+        so = _machine(Sim, o, list(R), NextState(patch), slot='rz_ev_band_o')
+        sp_ = _machine(Sim, p, list(R), ns, slot='rz_ev_band_p')
         beam(R)
         ok_run = _run(so, (59550,)) and _run(sp_, (59550,))
         ns.line_x = None
@@ -1779,8 +1779,8 @@ def verify(patch, rzx_path, progress=None, stop=None):
             st['tre_at'] = st['facc'] + R[25] - st['f0'] + st['fx']
         tok = ns.scratch[V_TOK]
         o, p = OMem(real), PMem(real)
-        so = _machine(Sim, o, list(R), NextState(patch))
-        sp_ = _machine(Sim, p, list(R), ns)
+        so = _machine(Sim, o, list(R), NextState(patch), slot='rz_ev_render_end_o')
+        sp_ = _machine(Sim, p, list(R), ns, slot='rz_ev_render_end_p')
         ns.events = []
         beam(R)                             # the beam: the frame starts at the interrupt (line INT_LINE)
         t0 = sp_.registers[25]
@@ -1862,9 +1862,9 @@ def verify(patch, rzx_path, progress=None, stop=None):
         if st['afp']:                               # AF' holds a canvas-derived byte: prove it dies
             ro_af, rp_af = st['afp']
             a, b = OMem(real), OMem(real)
-            ma = _machine(Sim, a, list(R), NextState(patch))
+            ma = _machine(Sim, a, list(R), NextState(patch), slot='rz_ev_end_a')
             rb = list(R); rb[16:18] = rp_af
-            mb = _machine(Sim, b, rb, NextState(patch))
+            mb = _machine(Sim, b, rb, NextState(patch), slot='rz_ev_end_b')
             for step in range(100000):
                 if all(ma.registers[i] == mb.registers[i] for i in CMP + [16, 17]):
                     if a.ov == b.ov:
