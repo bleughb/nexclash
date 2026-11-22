@@ -5,8 +5,9 @@
  "evidence": [
   {
    "game": "games/spellbound_dizzy.md",
-   "text": "PC in ROM (PAUSE 0 before USR); the engine is found only as an inert copy; pre-run finishes any LDIR and stops before the Kempston detect.",
-   "shown_on": "unknown"
+   "text": "PC in ROM (BASIC PAUSE 0 before RANDOMIZE USR), the engine found only as an inert copy; fix: pre-run the recording to the first frame boundary where the engine is identified and live, finish any LDIR, and take that state before hardware detection (Kempston).",
+   "shown_on": "unknown",
+   "quote": "Symptoms: PC in ROM (BASIC `PAUSE 0` before `RANDOMIZE USR`), engine found only as an inert"
   }
  ],
  "level": "observed",
@@ -20,6 +21,6 @@
   "Kempston",
   "engine live"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

@@ -97,12 +97,12 @@ v1.0: two Failure lookup rows for card patch.pace-limiter (K-window overhead as 
 
 
 ## Lessons
-- [deferred Open: reconsider when card patch.pace-limiter has room under its 600-word budget (Failure lookup row)] The plain .nex is not always the pace control: its ROM is NextZXOS's ROM3, whose BEEP ran 12%
+- [deferred Open: reconsider when card patch.pace-limiter has room under its 600-word budget (Failure lookup row)] [kb lesson.pace-control-rom-beep] The plain .nex is not always the pace control: its ROM is NextZXOS's ROM3, whose BEEP ran 12%
   faster than Sinclair's in JNext; a game that beeps through the ROM needs the original .z80 (48K machine) as control.
-- [local: redirecting a routine's screen by MMU] Reads in the remapped slot can still decide the path (BIT 6 on attributes):
+- [kb lesson.read-game-bytes-before-remap: redirecting a routine's screen by MMU] Reads in the remapped slot can still decide the path (BIT 6 on attributes):
   R and time differed until the box's attributes were copied into the scratch page.
-- [deferred Open: reconsider when card patch.pace-limiter has room under its 600-word budget (Failure lookup row)] Window overhead at 28 MHz is multiplied by K: account it as debt, or the target grows.
-- [local: a game that compares whole port values] `record` returns 0xFF on port FE and the game ignores every key, with no warning: an Issue 3 recorder (work/lib.py) fixed it. The recorder could offer this.
+- [deferred Open: reconsider when card patch.pace-limiter has room under its 600-word budget (Failure lookup row)] [kb lesson.pace-window-overhead] Window overhead at 28 MHz is multiplied by K: account it as debt, or the target grows.
+- [kb lesson.recorder-port-fe-issue3: a game that compares whole port values] `record` returns 0xFF on port FE and the game ignores every key, with no warning: an Issue 3 recorder (work/lib.py) fixed it. The recorder could offer this.
 - [local: the picture check found the depth rule] Verify passed with figures showing over water and ice, because its model was mine; only frames beside the original showed the balls should sink. The rule then went into the model and the negatives.
 - [local: dead registers pass a compare at the return] A stand-in that left C wrong passed at the plot's return, as the next row reloads it; compare at the stand-in.
 - [local: a negative control is only as good as its recording] The depth controls were missed on room 1 and detected on attract, which reaches solid cells.

@@ -5,12 +5,14 @@
  "evidence": [
   {
    "game": "games/inferno.md",
-   "text": "Skipping the copier kept game RAM equal on levels 1-4 and 6 once the recorded LD A,R values were fed; disassembly then found gameplay logic (9804) inside the copier.",
+   "text": "Skipping the copier kept game RAM equal (L1-4, L6) once LD A,R values were fed: exact R/IRQ/copier-RAM preservation was unneeded; disassembly found gameplay logic (9804) inside the copier.",
+   "quote": "LD A,R values were fed: exact R/IRQ/copier-RAM preservation was unneeded; disassembly found 9804 logic.",
    "shown_on": "simulator"
   },
   {
    "game": "games/castle_master.md",
-   "text": "Raster stage skipped over all frames (5,281 calls): the only raster-written areas were display-only, marked observed.",
+   "text": "Raster stage alone, all frames, 5,281 calls: the only raster-written bytes read outside it are the view buffer, by display code, and the filler itself: display-only (observed).",
+   "quote": "Raster stage alone (skip_*.log, taint_8599_full.json; all frames, 5,281 calls)",
    "shown_on": "simulator"
   }
  ],
@@ -25,6 +27,6 @@
   "replay coverage",
   "game logic"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

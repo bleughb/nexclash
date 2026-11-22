@@ -5,8 +5,9 @@
  "evidence": [
   {
    "game": "games/arc_of_yesod.md",
-   "text": "The room number is at 23479; the descent into the caverns was found later (2026-11-17) after the owner showed it could be done.",
-   "shown_on": "unknown"
+   "text": "The descent into the caverns (up row Q from a hatch gap, room 74 -> 90) was found 2026-11-17 after an earlier search missed it by watching the height and new code, not the room; the room number is at 23479.",
+   "shown_on": "unknown",
+   "quote": "An earlier search missed it by watching the height and new code, not the room."
   }
  ],
  "level": "observed",
@@ -18,6 +19,6 @@
   "room number",
   "reused routines"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

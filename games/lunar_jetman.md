@@ -119,15 +119,15 @@ Plays in JNext 1.3.0; the edge needs hardware.
 - [local: a missing reference input] Three refactor sessions skipped this game because "Jetpac.256 is not in the
   references", but the file was on the machine (a Spec256 download, the record's md5). Search by the record's md5
   before skipping a verify.
-- [local: message screens wipe figures] A message screen printed over the play area wipes figures without the clear routine: find every
+- [kb lesson.other-screen-writers-hide-figures: message screens wipe figures] A message screen printed over the play area wipes figures without the clear routine: find every
   routine that overwrites the play area (who.py: screen writers per frame) and hide sprites there.
 - [card patch.restore-speed §Failure lookup] A hook with no speed switch at all, run for every object every update
   (h_clr), cost about 7% where the hooks that switch cost 2-6%: count calls per update before trusting "small" hooks;
   skip the call when the game's own state says there is nothing to do (IX+10 = 0).
-- [local: pace not in lockstep] The game takes LD A,R (0x9466) for its randomness and runs its frame tasks on interrupts,
+- [kb lesson.pace-lockstep-fixture: pace not in lockstep] The game takes LD A,R (0x9466) for its randomness and runs its frame tasks on interrupts,
   so JNext runs of two builds play different games (port 0xFE writes 106 against 179): pace by seed varies -25% to +18%.
   The replay pace (the recording on both sides) is the like-for-like figure; JNext over 8 seeds is the cross-check.
-- [local: verify from the title] A recording that starts mid-game leaves the sprite model and the figure model empty
+- [kb lesson.recording-coverage-and-start: verify from the title] A recording that starts mid-game leaves the sprite model and the figure model empty
   while the screen has figures; start every recording at the title, cheats poked into the start state.
 - [card optimise.pattern-cache §Probe and stop] Simulate the cache on the hook call log before building it: a per-slot
   tile cache (each object its own patterns) saved 60% of figure tile uploads, a pool shared by content 97% (p1: 7,055
@@ -136,10 +136,10 @@ Plays in JNext 1.3.0; the edge needs hardware.
 - [local: profile the hook by routine] After the uploads, the T per routine (assembler symbol file, simulator) showed
   the pool's own bookkeeping (acq) and the attribute writes as the next costs, not what was guessed; the profile picked
   each next step (register acq, port 0x57, the truck memo: 66% of h_tnew calls repeat the last placement).
-- [local: a negative the recordings cannot reach] The `evict` negative passed the 700-frame replay (the pool never fills
+- [kb lesson.negative-control-must-reach-path: a negative the recordings cannot reach] The `evict` negative passed the 700-frame replay (the pool never fills
   that early): a table-full case needs its own driven check (the pool check), as the rules say; run every new negative
   once before trusting the list.
-- [local: ROM-resident hooks] The alt ROM leaves 1,150 bytes for hooks (to 0x3D00 less the register block): code that
+- [kb lesson.alt-rom-space-finite: ROM-resident hooks] The alt ROM leaves 1,150 bytes for hooks (to 0x3D00 less the register block): code that
   runs only with the state page mapped (the pool, placement, objn, list search: 326 bytes) moved there (asm ORG 0x8900,
   profile block stcode, put in by the build); the ROM keeps 914 bytes. Check the size after every assemble.
 - [card patch.preserve-r §Use / do not use] An existing engine whose game takes R for randomness (LD A,R 0x9466) gets

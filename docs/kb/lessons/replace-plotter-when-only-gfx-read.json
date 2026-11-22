@@ -5,13 +5,15 @@
  "evidence": [
   {
    "game": "games/everyones_a_wally.md",
-   "text": "Plotters A and B are converted to sprites; the plotters use self-modified operands and a PUSH AF on the game stack with no DI (4,299 A and 1,058 B plots converted in the RZX).",
-   "shown_on": "unknown"
+   "text": "Plotters A and B are converted to sprites; they self-modify 43232/43260 and 61359 and PUSH AF on the game stack with no DI (4,299 A and 1,058 B plots converted in the RZX).",
+   "shown_on": "unknown",
+   "quote": "self-mods 43232/43260, 61359 (x/8). PUSH AF on the game stack; no DI."
   },
   {
    "game": "games/rainbow_islands.md",
-   "text": "The original plotter is run once over canvas RAM page 29 for the exact register state, then sprite attributes are staged; AF' may hold a canvas byte, which verify proves dies.",
-   "shown_on": "unknown"
+   "text": "The original plotter is run once over canvas RAM page 29 for the exact register state, then the sprite attributes are staged; AF' may hold a canvas byte, which verify proves dies.",
+   "shown_on": "simulator",
+   "quote": "plotter once over canvas 29 for the exact register state, then stage the sprite attributes:"
   }
  ],
  "level": "observed",
@@ -25,6 +27,6 @@
   "patterns",
   "register state"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

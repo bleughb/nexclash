@@ -6,6 +6,7 @@
   {
    "game": "games/r_type.md",
    "text": "Hooking the owner-map test (8ED6) in an RZX replay listed 71 families hidden behind scenery; kept as an editable flag table behind a build switch. Partly drawn figures are published behind whole ones.",
+   "quote": "listed 71 families hidden behind scenery; kept as an editable flag table behind a build switch.",
    "shown_on": "simulator"
   }
  ],
@@ -24,6 +25,6 @@
   "figure families",
   "sprite order"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

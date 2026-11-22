@@ -6,7 +6,8 @@
   {
    "game": "games/r_type.md",
    "text": "Owner 2026-11-16: two sheets per level, IDENTIFY (2x, IDs) and PAINTING (1:1, same arrangement, every figure); related figures grouped; stable figure IDs L<n>-<nnn> with families.",
-   "shown_on": "unknown"
+   "shown_on": "unknown",
+   "quote": "IDENTIFY (2x, IDs) and PAINTING (1:1, same arrangement, every figure; a graphic is bright and"
   }
  ],
  "level": "observed",
@@ -19,6 +20,6 @@
   "related figures",
   "design preference"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

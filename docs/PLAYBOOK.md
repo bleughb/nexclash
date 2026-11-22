@@ -60,7 +60,7 @@ preserve the handoff either way. Stages do not force new chats.
 `python -m nexclash.survey GAME.z80 --rzx R [--rzx R2]` (~1 min per 3,000 frames, silent; long
 recording: `--stop 15000` first; same inputs: reused) runs
 the snapshot check (0b), the plain conversion with its boot check (1; 48K only), engine identification (2) and one analysis pass (3: screen writers by routine, callers, T per call,
-ISR, free memory), then a preview pass, and writes `<game>_survey/`: survey.md (one page, ~2K
+ISR, free memory), a preview pass; writes `<game>_survey/`: survey.md (one page + shared lessons that fit, ~3K
 tokens), survey.json, preview.png (what each top plot routine draws, per caller), the plain .nex.
 A KNOWN engine returns a recognition-only report before replay/conversion; use `auto`, no stage 1-2.
 `survey --full` explicitly analyses a known game; recognition is not verification. Read survey.md first; run the single commands below

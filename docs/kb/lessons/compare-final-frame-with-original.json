@@ -6,27 +6,32 @@
   {
    "game": "games/altered_beast.md",
    "text": "Level-end curtain found by the attribute model at frame 16,420, not by looking.",
+   "quote": "Curtain: found by the attribute model at frame 16,420, not by looking.",
    "shown_on": "unknown"
   },
   {
    "game": "games/page_pharaoh.md",
-   "text": "Whole-picture replay model caught the Layer 2 LDI carry at column 31; hook registers and RAM alone did not.",
+   "text": "LDI's DE carries out of column 255 into the next row; the whole-picture replay model caught it, hook registers and RAM alone did not.",
+   "quote": "The whole-picture replay model caught it; hook registers and RAM alone did not.",
    "shown_on": "simulator"
   },
   {
    "game": "games/solomons_key.md",
-   "text": "Composite check against the original's screen found the game's one-pass glitches.",
+   "text": "Both one-pass effects came from the composite check, not from reading the code.",
+   "quote": "Both one-pass effects above came from the check, not from reading the code.",
    "shown_on": "unknown"
   },
   {
    "game": "games/mad_mix_2.md",
-   "text": "Model caught a lost MMU line in a refactor at once.",
+   "text": "An MMU line lost in a refactor showed at once as a picture against the model, where the eye would have taken a while.",
+   "quote": "An MMU line lost in a refactor showed at once as a picture against the model, where the eye would have taken a while.",
    "shown_on": "unknown"
   },
   {
    "game": "games/herbert.md",
-   "text": "Native pictures caught a selector-model mistake.",
-   "shown_on": "jnext"
+   "text": "Native pictures caught the selector-model mistake; the all-room pace survey caught sparse-room speedup and crowded-room slowdown.",
+   "quote": "Native pictures caught the selector-model mistake;",
+   "shown_on": "unknown"
   }
  ],
  "level": "observed",
@@ -40,6 +45,6 @@
   "composite",
   "screen compare"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

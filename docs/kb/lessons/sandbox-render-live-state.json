@@ -5,8 +5,9 @@
  "evidence": [
   {
    "game": "games/castle_master.md",
-   "text": "Junk-filling a buffer is only a strong test if the renderer fully rebuilds it; with read-modify-write use the buffer as it was before the game's own render.",
-   "shown_on": "simulator"
+   "text": "Junk-filling a buffer before a re-render is a strong test only if the renderer fully rebuilds it; when it reads-modify-writes, use the buffer as it was before the game's own render.",
+   "quote": "before a re-render is a strong test only if the renderer fully rebuilds it; when it reads-modify-writes, use",
+   "shown_on": "unknown"
   }
  ],
  "level": "observed",
@@ -23,6 +24,6 @@
   "read modify write",
   "sandbox"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

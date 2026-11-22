@@ -5,7 +5,8 @@
  "evidence": [
   {
    "game": "games/altered_beast.md",
-   "text": "At 0xAE40 pointers := clean copies, blit, then pointers restored, with one small hook.",
+   "text": "Redirecting only the blit's source to a clean copy gave identical game memory with one small hook (at 0xAE40: pointers := clean copies, blit, pointers put back); needs a clean copy in memory at blit time and a game that reads neither buffer nor screen.",
+   "quote": "Keeping the back buffer intact and redirecting only the blit's source gave identical game memory with one small hook",
    "shown_on": "unknown"
   }
  ],
@@ -25,6 +26,6 @@
   "redirect source",
   "title"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

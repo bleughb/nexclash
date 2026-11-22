@@ -5,13 +5,15 @@
  "evidence": [
   {
    "game": "games/rainbow_z80n.md",
-   "text": "sjasmplus warns on backslashes in the source path; sjasm.py cannot find or build the pinned assembler on Windows.",
-   "shown_on": "unknown"
+   "text": "sjasmplus warns on backslashes in the source path (Windows; forward slashes passed); sjasm.py cannot find or build the pinned assembler on Windows.",
+   "shown_on": "unknown",
+   "quote": "sjasm.py cannot find or build the pinned assembler on Windows; a local 1.24.0"
   },
   {
    "game": "games/trap_door.md",
    "text": "An autocrlf checkout on Windows failed 18 size budgets and listed docs twice.",
-   "shown_on": "unknown"
+   "shown_on": "unknown",
+   "quote": "an autocrlf checkout on Windows failed 18 size budgets and listed docs twice."
   }
  ],
  "level": "observed",
@@ -24,6 +26,6 @@
   "assembler",
   "size budget"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

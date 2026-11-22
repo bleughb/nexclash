@@ -5,17 +5,20 @@
  "evidence": [
   {
    "game": "games/olli_and_lissa_3.md",
-   "text": "Run-time building cost 113 T a byte at 28 MHz; made once and kept in spare pages then OTIR, pace came out within 0.07%.",
+   "text": "Run-time building cost 113 T a byte at 28 MHz; made once and kept in spare pages, then OTIR, the pace came out within 0.07%.",
+   "quote": "Made once and kept in spare pages, then OTIR: the hooks fit and the pace came out within 0.07%.",
    "shown_on": "unknown"
   },
   {
    "game": "games/quazatron.md",
-   "text": "Per-update pattern uploads of about 20k T overran the 33-66k T delay; an image-keyed cache came before limiter tuning.",
+   "text": "With 4-5 blocks the delay is only 33-66k T and with 6 or more there is none; per-update pattern uploads of about 20k T alone overran it, so an image-keyed pattern cache came before limiter tuning.",
+   "quote": "per-update sprite pattern uploads (about 20k T) alone overran it, so an image-keyed pattern cache came before any limiter tuning.",
    "shown_on": "unknown"
   },
   {
    "game": "games/spellbound_magic_knight.md",
-   "text": "Knight conversion cache misses were the cost (+2.67% from image conversions).",
+   "text": "Knight conversion cache misses were the cost: the +2.67 % was the image conversions.",
+   "quote": "The +2.67 % was the image conversions (cache misses: updates 2-33,",
    "shown_on": "unknown"
   }
  ],
@@ -30,6 +33,6 @@
   "pace",
   "spare pages"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

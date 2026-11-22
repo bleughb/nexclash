@@ -5,17 +5,20 @@
  "evidence": [
   {
    "game": "games/el_capitan_trueno.md",
-   "text": "Pause menu stub restores NEXTREG 0x69 and 0x15 on return; e_scr also turns Layer 2 on in case the menu is left without its RET.",
+   "text": "The pause menu stub restores NEXTREG 0x15 and 0x69 on return; e_scr also turns Layer 2 on in case the menu is left without its RET. Checked in MAME.",
+   "quote": "on too, in case the menu is left without its RET. Checked in MAME by the contributor (2026-10-13).",
    "shown_on": "mame"
   },
   {
    "game": "games/rainbow_islands.md",
-   "text": "The stubs write NextReg $15 = 0 and the next commit sets $15 = 1.",
+   "text": "On non-play screens the alt-ROM stubs write NextReg $15 = 0 (sprites off) and the next commit sets $15 = 1.",
+   "quote": "off), then the original call. The next commit sets $15 = 1.",
    "shown_on": "unknown"
   },
   {
    "game": "games/page_pharaoh.md",
-   "text": "Menu icons painted in the colour set were missing until the overlay was shown on the menu; sweep menus and end screens, not only play.",
+   "text": "Menu icons painted in the colour set were missing until the overlay was shown on the menu; sweep menus and end screens too, not only play.",
+   "quote": "its painted icons were missing until the overlay was shown there. Sweep menus and end screens too, not only play.",
    "shown_on": "unknown"
   }
  ],
@@ -30,6 +33,6 @@
   "overlay",
   "stale layers"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

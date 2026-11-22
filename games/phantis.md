@@ -37,14 +37,14 @@ The owner's rule (2026-11-08): no mock-up or approval to convert a Spec256 set. 
 - verify.update-locked-pace: used: lockstep pace runs on the test fixture.
 
 ## Lessons
-- [local: copy column] Part 1's copy pops a table of screen addresses and adds 1 before use, so work column 0 is screen column 3. The first overlay sat one column left of the ULA, which read at first like a pass of lag. The verifier checked its own idea of the column; only the JNext screen showed it. Read the copy's destination, do not assume.
-- [local: beam race] Part 1's copy is slower than a frame and stays behind the beam, so what it writes shows from the next frame's top; a flip at its end falls mid screen. Split the row count and flip in the middle.
+- [kb lesson.jnext-screen-shows-what-verifier-misses: copy column] Part 1's copy pops a table of screen addresses and adds 1 before use, so work column 0 is screen column 3. The first overlay sat one column left of the ULA, which read at first like a pass of lag. The verifier checked its own idea of the column; only the JNext screen showed it. Read the copy's destination, do not assume.
+- [kb lesson.copy-destination-and-beam: beam race] Part 1's copy is slower than a frame and stays behind the beam, so what it writes shows from the next frame's top; a flip at its end falls mid screen. Split the row count and flip in the middle.
 - [local: read after the body] Reading the clipped result from the plot's own variables after the body keeps the overlay short and cannot disagree with the original's clipping.
-- [local: selection keys] The menu polls, and a script's short press of J can be missed. Check an input script really changed the game: two pace seeds with identical numbers meant input was not reaching it.
+- [kb lesson.menu-key-pulses-missed: selection keys] [kb lesson.pace-fixture-and-control] The menu polls, and a script's short press of J can be missed. Check an input script really changed the game: two pace seeds with identical numbers meant input was not reaching it.
 - [local: fixture] Pace fixture: the handler does not step the RND seed (BA4B NOP), lives do not fall, part 2 skips the code screen.
 
-- [local: find by pointers] A graphic search over the whole snapshot finds 1,028 matches; only those the code points at, or that a replay really plots, are graphics: 166.
-- [local: a negative that passes] A broken build that changes only the clipped-row path of a painted figure was not caught over 24,000 frames: the path is never reached in the recordings, so it stays untested and the notes say so. A pattern that finds the first of two copies of the code changes the rarer one: check what a negative really changed.
+- [kb lesson.graphics-search-by-pointers: find by pointers] A graphic search over the whole snapshot finds 1,028 matches; only those the code points at, or that a replay really plots, are graphics: 166.
+- [kb lesson.negative-control-must-reach-path: a negative that passes] A broken build that changes only the clipped-row path of a painted figure was not caught over 24,000 frames: the path is never reached in the recordings, so it stays untested and the notes say so. A pattern that finds the first of two copies of the code changes the rarer one: check what a negative really changed.
 - [local: which way to miss] With K 89 the whole was on the original's pace and the worst stretch +6.7%; Enhanced takes K 84, a little faster all round, because the rule allows faster where the original lags and never slower. The default's bytes keep K 89.
 
 ## Evidence

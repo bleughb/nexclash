@@ -26,6 +26,9 @@
  ],
  "level": "observed",
  "area": "platform",
+ "enforced_by": [
+  "nexclash.nextboot.rom_paths"
+ ],
  "words": [
   "alt ROM",
   "ROM reads",

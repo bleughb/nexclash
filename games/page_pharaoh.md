@@ -44,18 +44,18 @@ Nothing has run on a Next. To check: ULA+ on the core (the palette above), start
 ## Lessons
 - [local: XOR overlay] A game that XORs figures needs no place list: toggling on the overlay keeps it exact through every erase, draw and redraw.
 - [local: input phases] Two reads in an update at different phases of the frame cannot both be raced: a read near the frame boundary falls either side of it. A test-only copy that reads once an update gave lockstep at every update; applying input just after that read is then safe.
-- [local: frame-locked game] A game that waits for FRAMES needs no limiter round its plots: the wait takes up the time.
+- [kb lesson.pace-repay-places: frame-locked game] A game that waits for FRAMES needs no limiter round its plots: the wait takes up the time.
 
-- [local: unmasked XOR on values] XOR needs no masks on Layer 2 when the buffer holds the set's own 8-bit values: XOR on eight planes and XOR on the value are the same operation. Test a named risk before designing round it: the composed overlay this page's mock-up note asked for was not needed.
+- [kb lesson.xor-overlay-needs-no-state: unmasked XOR on values] XOR needs no masks on Layer 2 when the buffer holds the set's own 8-bit values: XOR on eight planes and XOR on the value are the same operation. Test a named risk before designing round it: the composed overlay this page's mock-up note asked for was not needed.
 - [local: K multiply saturates] hlib_mul8 saturates at 0xFFFF, so a K that looks too big has no effect at all: a long window showed no response to K until it came down below saturation.
-- [local: Layer 2 LDI at column 31] LDI's DE carries out of column 255 into the next row: a tile at the right edge needs its last byte by hand. The whole-picture replay model caught it; hook registers and RAM alone did not.
-- [local: negative aimed at a path the recording never takes] "XOR made plain" mutated the items' loop, which never undraws in the recording, and passed the replay. Aim each negative at the path the recording runs, and a MISSED one is a finding about the negative or the recording.
+- [kb lesson.compare-final-frame-with-original: Layer 2 LDI at column 31] [kb lesson.layer2-ldi-column-wrap] LDI's DE carries out of column 255 into the next row: a tile at the right edge needs its last byte by hand. The whole-picture replay model caught it; hook registers and RAM alone did not.
+- [kb lesson.negative-control-must-reach-path: negative aimed at a path the recording never takes] "XOR made plain" mutated the items' loop, which never undraws in the recording, and passed the replay. Aim each negative at the path the recording runs, and a MISSED one is a finding about the negative or the recording.
 
-- [local: compare every screen with the set] Level frames against the set's emulator matched, so the menu wasn't looked at, and its painted icons were missing until the overlay was shown there. Sweep menus and end screens too, not only play. Before showing an overlay on a screen, check the screen holds no ULA bit the overlay lacks.
+- [kb lesson.reenable-layers-on-return-to-play: compare every screen with the set] Level frames against the set's emulator matched, so the menu wasn't looked at, and its painted icons were missing until the overlay was shown there. Sweep menus and end screens too, not only play. Before showing an overlay on a screen, check the screen holds no ULA bit the overlay lacks.
 
 ## Friction
 - reuse: [none: the shared libraries and Game Over's hook structure were enough]
-- retries: [local: pace start keys] A start key still held when play begins reads as input. Keep it short.
+- retries: [kb lesson.menu-key-pulses-missed: pace start keys] A start key still held when play begins reads as input. Keep it short.
 - environment: [local: palette] The simulator and emuspec256 show the plain palette; only JNext shows what a Next shows.
 - hand-rolled: [local: review scripts] Fixture, cheats and package scripts stay in the review run.
 - scratch: [local: review run] Its work folder stays in private evidence.

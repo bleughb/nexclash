@@ -5,8 +5,9 @@
  "evidence": [
   {
    "game": "games/winter_sports.md",
-   "text": "Menu code reads each event with its own loader, using a 22-byte pseudo-header unlike the standard 19-byte header; the plain NEX holds events in banks 12-26 with a 127-byte hook; played on hardware.",
-   "shown_on": "hardware"
+   "text": "Menu code reads each event with its own loader (0x627E -> ROM 0x0562) using a 22-byte flag-FF pseudo-header; the plain NEX holds events in banks 12-26 (5 pages each) with a 127-byte hook at 0x6C00; played on hardware (Downhill ran).",
+   "shown_on": "hardware",
+   "quote": "The menu code (0x6000, `wispc0`) reads each event with its OWN loader (0x627E -> ROM 0x0562): a 22-byte flag-FF pseudo-header"
   }
  ],
  "level": "demonstrated",
@@ -19,6 +20,6 @@
   "pseudo-header",
   "menu"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

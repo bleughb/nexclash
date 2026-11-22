@@ -155,10 +155,10 @@ it waits on the real beam (0x98ED, floating bus), with the game's tone in the lo
 - [local: the same .256 serves another release by matching graphics by bytes, then position]
 - [local: the approved Enhanced came from a run-folder script] observed (import, 2026-11-04): the clone's record held
   only the default; work/paint.py's last step (recolour, palette, floors) moved into auto, the map kept private.
-- [local: K window readings] A K window's reading holds the hook's own time, which K would scale: on a short window that is most of the error (0.5 ms for each). Put it in
+- [kb lesson.pace-window-overhead: K window readings] A K window's reading holds the hook's own time, which K would scale: on a short window that is most of the error (0.5 ms for each). Put it in
   the debt as hook time x K, and keep one window going across hook sites rather than opening one per site.
 - [local: Renegade's time-slicer: an overrun here plays differently, not just slower] Count the game's own skips against the original's as well as the percentage; they are what parted lockstep.
-- [local: interrupts on through an upload] A pattern page at the slot of the state page, which the handler never reads, needs no DI; at slot 0 an interrupt went astray in JNext (cause not established).
+- [kb lesson.mmu-slot-by-what-isr-touches: interrupts on through an upload] A pattern page at the slot of the state page, which the handler never reads, needs no DI; at slot 0 an interrupt went astray in JNext (cause not established).
 - [local: a third-party colour map marked local only] observed (import, 2026-11-04): the Enhanced map stays out of
   the public repo as a staged record input; the profile holds only the 44 palette and floors bytes.
 

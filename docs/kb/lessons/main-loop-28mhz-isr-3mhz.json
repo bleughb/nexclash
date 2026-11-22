@@ -5,7 +5,8 @@
  "evidence": [
   {
    "game": "games/r_type.md",
-   "text": "Speed: 28 MHz from the level draw to the next Layer 2 off; title, scores and name entry run at 3.5 MHz for busy-loop timing; the native ISR (all beeper sound) always runs at 3.5 MHz.",
+   "text": "28 MHz from the level draw to the next Layer 2 off; title, scores, name entry and continue run at 3.5 MHz (busy-loop timing); the native ISR (all beeper sound) always runs at 3.5 MHz.",
+   "quote": "continue run at 3.5MHz: busy-loop timing); the native ISR (all beeper sound) always 3.5MHz.",
    "shown_on": "unknown"
   }
  ],
@@ -19,6 +20,6 @@
   "speed switch",
   "pitch"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

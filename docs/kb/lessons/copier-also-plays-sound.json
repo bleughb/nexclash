@@ -5,8 +5,9 @@
  "evidence": [
   {
    "game": "games/inferno.md",
-   "text": "Copier head 9790..97FB (416 cells, 25.2-30.8 ms) OUTs the beeper buffer per cell and calls limiter 9907 after row 6; OUTs replayed at original T via polled CTC ch 3, model OUT -24..+56 T.",
-   "shown_on": "simulator"
+   "text": "Copier head 9790..97FB (416 cells, 25.2-30.8 ms) OUTs the A700 beeper buffer per cell and calls limiter 9907 after row 6; OUTs replayed at the original T (CTC ch 3 polled), model OUT -24..+56 T.",
+   "quote": "The copier head 9790..97FB (416 cells, 25.2-30.8 ms) OUTs the A700 beeper buffer per cell.",
+   "shown_on": "unknown"
   }
  ],
  "level": "observed",
@@ -20,6 +21,6 @@
   "CTC",
   "timed output"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

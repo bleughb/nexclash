@@ -42,7 +42,7 @@ tiles (run-time tile cache needed); any added time changes game speed (unpaced g
   entries with routine fingerprints, matched by every later survey.
 - [doc docs/PLAYBOOK.md §2. Identify the engine] The cell map + diff copier model was missing from the
   rendering-model list.
-- [deferred Open: reconsider when a second game without pixel-level clash reaches stage 1] No tool says
+- [deferred Open: reconsider when a second game without pixel-level clash reaches stage 1] [kb lesson.clash-by-layer-and-no-clash] No tool says
   "there is no colour clash to remove"; an attribute-change count cannot tell a cell copier from clash.
 - [local: inferred from the author's other games, not checked] Same engine family: Popeye, Flunky,
   Through the Trap Door.

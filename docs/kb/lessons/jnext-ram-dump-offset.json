@@ -6,17 +6,20 @@
  "evidence": [
   {
    "game": "games/exolon.md",
-   "text": "ram.bin includes a 0x40000 offset before ordinary Next RAM; asserting the hook-code signature first showed an all-zero free-pool count was the wrong offset.",
+   "text": "JNext mem/ram.bin includes a 0x40000 physical offset before ordinary Next RAM; asserting the hook-code signature first showed an all-zero free-pool count was the wrong offset.",
+   "quote": "JNext mem/ram.bin includes a 0x40000 physical offset before",
    "shown_on": "jnext"
   },
   {
    "game": "games/bruce_lee.md",
-   "text": "Ordinary RAM pages have a physical SRAM offset; reconstruct CPU RAM through the MMU and dedicated bank 5 VRAM, not raw offsets.",
+   "text": "JNext ordinary RAM pages have a physical SRAM offset; reconstruct CPU RAM through the MMU and dedicated bank 5 VRAM, not raw ram.bin offsets.",
+   "quote": "reconstruct CPU RAM through the MMU and dedicated bank 5 VRAM, not raw ram.bin offsets.",
    "shown_on": "jnext"
   },
   {
    "game": "games/inferno.md",
    "text": "Physical SRAM includes a 040000 aperture offset.",
+   "quote": "Physical SRAM includes 040000 aperture offset; high staging is 216–223.",
    "shown_on": "jnext"
   }
  ],
@@ -32,6 +35,6 @@
   "native snapshot",
   "bank 5"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

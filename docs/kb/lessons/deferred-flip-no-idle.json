@@ -1,11 +1,12 @@
 {
  "id": "lesson.deferred-flip-no-idle",
  "kind": "method",
- "claim": "Do not idle for the raster before every buffer flip; defer in-between flips into the next view's geometry loop and flip from a check inside it once the raster has left the view.",
+ "claim": "Do not idle for the raster before each in-between flip: defer it into the next view's object loop and flip from a check inside it.",
  "evidence": [
   {
    "game": "games/castle_master.md",
-   "text": "Speed pass: in-between flips deferred into the next view's object loop (flipchk); views per redraw rose 6.67 to 7.46 (+11.8%), pace median +0.69; the flip's line and raster are checked in the simulator.",
+   "text": "Speed pass: in-between flips deferred into the next view's object loop (flipchk), not idling before them; views a redraw 6.67 -> 7.46, pace median +0.69; m3_sim also checks the flip's line.",
+   "quote": "in-between flips deferred into the next view's object loop (flipchk).",
    "shown_on": "simulator"
   }
  ],
@@ -21,6 +22,6 @@
   "Layer 2",
   "flipchk"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

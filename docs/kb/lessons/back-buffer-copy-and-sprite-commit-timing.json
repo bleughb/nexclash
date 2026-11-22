@@ -5,7 +5,8 @@
  "evidence": [
   {
    "game": "games/everyones_a_wally.md",
-   "text": "Back buffer copied by unrolled LDI (47653) then attributes at 47637; sprite commit goes at 47637, after the pixel copy.",
+   "text": "Render 47611 copies pixels via row table 33400 (unrolled LDI 47653), 47637 copies attributes; the sprite commit goes at 47637, after the pixel copy.",
+   "quote": "0x6B00. Commit at 47637 (after the pixel copy).",
    "shown_on": "unknown"
   }
  ],
@@ -26,6 +27,6 @@
   "screen copy",
   "timing"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

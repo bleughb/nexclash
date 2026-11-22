@@ -6,7 +6,8 @@
   {
    "game": "games/inferno.md",
    "text": "Workflow: failed states, 1/10 sample, ONE gate (--jobs 6); JNext headless before hardware rounds.",
-   "shown_on": "simulator"
+   "shown_on": "unknown",
+   "quote": "Workflow: failed states, 1/10 sample, ONE gate (--jobs 6); JNext headless before hardware rounds."
   }
  ],
  "level": "observed",
@@ -19,6 +20,6 @@
   "failing states",
   "gate"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

@@ -41,12 +41,12 @@ build only (`auto` writes no plain .nex).
 ## Lessons
 - [local: the walks reach hide hooks rarely] the window control was caught on one walk of four; hide hooks need
   unit cases from captured states, not luck in the recording (queued as a shared helper for all engines).
-- [local: a sum is not a signature] an additive pattern signature matched rows in another order; signatures mix
+- [kb lesson.graphic-keys-collide-or-move: a sum is not a signature] an additive pattern signature matched rows in another order; signatures mix
   the position (rotate before add / xor).
 
 ## Friction
 - reuse: [local: Finders Keepers' hide-hook unit case shape reused]
-- retries: [local: the first four-walk rerun passed several RZX files to one --rzx; auto takes one --rzx per recording]
+- retries: [kb lesson.auto-takes-one-rzx-per-recording: the first four-walk rerun passed several RZX files to one --rzx; auto takes one --rzx per recording] 
 - environment: [local: the walks live in the scratchpad; reference folder staged by MD5 for the record]
 - hand-rolled: [none: the record was upgraded with the records module's own checks and selftest]
 - scratch: [none: the staging stays in the session's scratchpad]

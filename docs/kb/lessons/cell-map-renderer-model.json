@@ -5,7 +5,8 @@
  "evidence": [
   {
    "game": "games/trap_door.md",
-   "text": "Two cell maps (tile set, tile, attribute) diffed and changed cells copied; findings from survey counts and disassembly, not a probe; logged analysed and skipped (no colour clash to remove).",
+   "text": "Two cell maps (tile set, tile index, attribute) diffed and changed cells copied; figures move in whole cells, so no pixel-level attribute clash, and the visible fault is square cut-outs where a figure's cell hides the background cell. From survey counts and disassembly, not a probe.",
+   "quote": "Figures move in whole cells: no pixel-level attribute clash.",
    "shown_on": "analysis"
   }
  ],
@@ -24,6 +25,6 @@
   "cut-outs",
   "Trap Door"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

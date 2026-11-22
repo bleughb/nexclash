@@ -43,11 +43,11 @@ Built 2026-11-08: a menu option, off by default, in the first version, 1.0 (publ
 Boot and loading screen; music; figures white on red, cyan, yellow and blue rock; no tear at the top of the play area; room change with no stale figures; pause; giving up; game over; each cheat.
 
 ## Lessons
-- [local: bank at C000] The snapshot pages bank 3, so a dump of C000 up reads the player's bank, not the game's; a first look at the POKE sites and the room table read the wrong bytes.
+- [kb lesson.snapshot-128k-bank-at-c000: bank at C000] The snapshot pages bank 3, so a dump of C000 up reads the player's bank, not the game's; a first look at the POKE sites and the room table read the wrong bytes.
 - [local: wrong poke] A start-room poke one byte off (812E, not 812C) corrupted the room table and showed scrambled rooms; a sheet of every room showed it.
-- [local: stale overlay] Giving up in the pause leaves through FD75 and a bank 3 screen before the title's hide: the overlay stayed over the title until the key test was looked at. The hide now covers FD75, and a recording goes through it.
-- [local: window noise] A nested debt reading at each of up to six plots adds about a line of error each, scaled by K: 37 lines of target, enough to miss a frame at a room change. One reading at the end of the pass fixed it.
-- [local: map below 0x6000] Art mapped in slot 2 hid a room map that lies below 0x6000: read the game's data before mapping over it. Only the level-complete test copy's room showed it.
+- [kb lesson.disable-layers-on-nonplay-screens: stale overlay] Giving up in the pause leaves through FD75 and a bank 3 screen before the title's hide: the overlay stayed over the title until the key test was looked at. The hide now covers FD75, and a recording goes through it.
+- [kb lesson.pace-window-overhead: window noise] A nested debt reading at each of up to six plots adds about a line of error each, scaled by K: 37 lines of target, enough to miss a frame at a room change. One reading at the end of the pass fixed it.
+- [kb lesson.prove-free-memory-by-access-scan: map below 0x6000] Art mapped in slot 2 hid a room map that lies below 0x6000: read the game's data before mapping over it. Only the level-complete test copy's room showed it.
 - [local: message hide] An earlier default had no hide at D42B, so figures stayed over LEVEL COMPLETE; only a test that reached the screen showed it.
 - [local: start-up flag] The stamp's ROM path check warns that the game reads 5B5C (the 128K paging flag) before writing it, a printer buffer byte the .nex leaves as NEXLOAD wrote it; the review run's soak counted the same AY writes as the original (648/s) and the real loader reached play in every mode, so no keep_printer_buffer. As Atom Ant.
 - [local: list on a page] The box list's empty test is a zero low byte, so each list must start on a page; a list at 0x3B40 ran a 64K LDIR over the hook code.
@@ -63,7 +63,7 @@ Boot and loading screen; music; figures white on red, cyan, yellow and blue rock
 ## Friction
 - reuse: [none: Game Over's overlay route and the shared pace library were enough]
 - retries: [local: window design] The first split into per-plot windows lost a frame at room changes; see Lessons.
-- environment: [local: a heavily loaded machine this run] A long shell command sat unstarted once and was replaced by separate short ones.
+- environment: [kb lesson.long-job-background-no-limit: a heavily loaded machine this run] A long shell command sat unstarted once and was replaced by separate short ones.
 - hand-rolled: [local: review scripts] Pace, soak and loader runs were driven by scripts in the review run, not the toolkit.
 - scratch: [local: review run] Its work folder stays in private evidence.
 

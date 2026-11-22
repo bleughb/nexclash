@@ -5,7 +5,8 @@
  "evidence": [
   {
    "game": "games/spellbound_dizzy.md",
-   "text": "The first hardware build used a ROM-copy page made from the zeros: the font was blank and dialogue text was empty.",
+   "text": "The first hardware build had blank dialogue text: the slot-1 page was built from Snapshot.memory[0:0x4000], which is zeros for .z80 files; ROM bytes come from skoolkit.ROM48.",
+   "quote": "Snapshot.memory[0:0x4000], which is ZEROS for .z80 files - always take ROM bytes from skoolkit.ROM48.",
    "shown_on": "hardware"
   }
  ],
@@ -19,6 +20,6 @@
   "z80 snapshot",
   "ROM copy"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

@@ -169,10 +169,10 @@ checks belong to the eventual sprite build; no hardware result is claimed.
 - [local: packed source lifetime] Uniqueness is not immutability. Validate packed bytes/attributes/skip markers per invocation; unknown art/generation needs native fallback. Dispatch/invalidation remain open.
 - [local: book comparison]96-byte SCROLL6 matches8914. Binary follow-up identifies owner/dirty maps with IRQ readers and independent BG stream;24 native initializations pass. Ingest labels alone were insufficient.
 - [local: review of encoded pause sites] A test must inspect converter output: separately emitting the right CALL masked the builder's wrong JP. Actual-key testing also found repeated pause calls; save/fold once per pause.
-- [local: timing credit includes its cost] Broad timer windows counted wrapper work as original producer time and regressed pace. Cell credit is checked against complete original/hook CPU costs; retain fractional units and remeasure natural play.
+- [kb lesson.pace-window-overhead: timing credit includes its cost] Broad timer windows counted wrapper work as original producer time and regressed pace. Cell credit is checked against complete original/hook CPU costs; retain fractional units and remeasure natural play.
 - [local: hardware text tile route] Native1bpp tiles remove ZX-to4bpp expansion while preserving exact visible colours; per-pixel painting still needs a separately measured override path.
 - [local: clone entry phase] Fixed170 waiting added9.80%; guard below210/from249. Current peak pace is recorded above.
-- [local: empty pattern quadrants] Demonstrated: ordinary-DMA zero fill avoids per-cell blank writes; live23-sprite preparation47.687ms including native IRQs, down from66.915ms.105-sprite component also passes.
+- [kb lesson.dma-zero-fill-empty-quadrants: empty pattern quadrants] Demonstrated: ordinary-DMA zero fill avoids per-cell blank writes; live23-sprite preparation47.687ms including native IRQs, down from66.915ms.105-sprite component also passes.
 - [local: source-hole oracle] Demonstrated: post-IRQ sentinel expectations must count IRQs through the wait to the tail transition; broad restoration loses the sentinel and the negative fails.
 - [doc docs/CHECKS.md §Setup] Observed in JNext1.2.0: execute-triggered JNS requests save at a frame boundary. Exact hook ABI/RAM tests use execute-time logs/dump_mem instead.
 - [tool nexclash.isrinfo] Expose data-read/write address sets in the API, retaining text output;
@@ -197,7 +197,7 @@ checks belong to the eventual sprite build; no hardware result is claimed.
 
 ## Friction
 - reuse: [none: existing survey, scan, preview and census tools provided the investigation paths]
-- retries: [local: measurement boundaries] JNext can report an execute address again after IRQ; one-shot phase flags and nested-ledger negatives prevent double accounting. All101 clocks/380 bytes agree with uninstrumented controls. Earlier guard/stack and source-hole fixes retained in reference.
+- retries: [kb lesson.jnext-execute-probe-fires-twice: measurement boundaries] JNext can report an execute address again after IRQ; one-shot phase flags and nested-ledger negatives prevent double accounting. All101 clocks/380 bytes agree with uninstrumented controls. Earlier guard/stack and source-hole fixes retained in reference.
 - environment: [local: remote continuation] SkoolKit10.1/Pillow13.0.0, official JNext1.2.0 and new owner SD restored read-only outside Git. Old peak/profile absent; new9cfed755 recipe is explicit, not an old-result reproduction. Main f92662e.
 - hand-rolled: [none: disassembly used sna2skool; screen images used the existing preview renderer]
 - scratch: [local: per-game feasibility evidence] Game-specific experiments kept beside the inputs

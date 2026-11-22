@@ -1,12 +1,13 @@
 {
  "id": "lesson.loading-screen-hold-owner-rule",
  "kind": "owner-rule",
- "claim": "The owner wants the loading screen shown for at least 4 seconds on launching a standalone NEX; inside an NXC patch it shows the moment ENTER is pressed, with no fixed hold.",
+ "claim": "A standalone NEX build can hold the loading screen on top of the load time (Winter Sports: 5.2 s).",
  "evidence": [
   {
    "game": "games/winter_sports.md",
-   "text": "Standalone NEX builds hold the screen 5.2 s (F=761) on top of the load time.",
-   "shown_on": "unknown"
+   "text": "Standalone NEX: the stub's setup waits 260 frames, then copies the menu screen back; game start at F=761 = 5.2 s on top of the load time (JNext log).",
+   "quote": "F=761 = 5.2 s on top of the load time.",
+   "shown_on": "jnext"
   }
  ],
  "level": "observed",
@@ -19,6 +20,6 @@
   "ENTER",
   "owner rule"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

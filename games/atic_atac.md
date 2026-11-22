@@ -246,18 +246,18 @@ v1.3, v1.4 and v1.6: games/atic_atac_v14.md.
 - [card detect.tracked-unit §Recognise] Per-key XOR parity breaks when parts XOR-cancel an image (death: 18 one-row
   slices; 19 sprites over a blank screen). Group by graphic + base line with a row mask and check the group.
 - [local: a hook remapping slot 6 / 7 before reading the IX object] read game bytes first, then remap.
-- [local: an sjasmplus syntax trap met once] `ld a,(EXPR)` is a memory read even for a constant EXPR: use an EQU.
+- [kb lesson.hand-assembled-hooks-and-sjasmplus: an sjasmplus syntax trap met once] `ld a,(EXPR)` is a memory read even for a constant EXPR: use an EQU.
 - [local: this verifier's fork] map pages before overlaying the run's game writes.
-- [local: the published patch carried build steps outside the engine] (rework import, 2026-11-04) the v1.3 .nxc =
+- [kb lesson.published-build-steps-in-engine: the published patch carried build steps outside the engine] (rework import, 2026-11-04) the v1.3 .nxc =
   engine output + the v1.0 package's Enhanced store and screen bank, carried by delta scripts; moved into
   atic_atac_v13.auto (colour map read back and checked byte for byte, stub as asm).
 - [tool selftest.py] (rework import) Dean's AticAtac.rzx is in no reference folder, so the whole record was skipped:
   a record input may now say "missing": that verify is skipped (reported, nothing stamped), its reworks still run.
 
 - [deferred Open: reconsider when card patch.pace-limiter has room under its 600-word budget] (v1.6, 2026-11-08) A pace table with a slow stretch: read the debt's clamp first. v1.4's -192 lines threw away most of what room changes and the appear effect cost, and the audit's "the limiter cannot repay" was that clamp.
-- [local: Atic Atac's room change] Running game code at 28 MHz needs a sound check first: A403 only queues the room's sound (0 frames), so the window can end there; the first pass may beep, so it uses catch-up at 7 MHz with the sound routines' first bytes swapped while it is on.
-- [deferred Open: reconsider when card patch.pace-limiter has room under its 600-word budget] A catch-up clock: the lower the better. At 28 MHz a gap's real gain runs from 3 to 8 times its lines (hooks in it against contended writes); at 7 MHz it is near 2 whatever the gap holds, so a fixed credit stays honest.
-- [local: hook cost] Profile a hook by the lines one call takes (a JDS rule at its entry and return) before optimising around it: `build` at 257 to 297 lines a call was hidden by the audit's per-update hook times.
+- [kb lesson.sound-in-fast-window: Atic Atac's room change] Running game code at 28 MHz needs a sound check first: A403 only queues the room's sound (0 frames), so the window can end there; the first pass may beep, so it uses catch-up at 7 MHz with the sound routines' first bytes swapped while it is on.
+- [deferred Open: reconsider when card patch.pace-limiter has room under its 600-word budget] [kb lesson.pace-catch-up-credit] A catch-up clock: the lower the better. At 28 MHz a gap's real gain runs from 3 to 8 times its lines (hooks in it against contended writes); at 7 MHz it is near 2 whatever the gap holds, so a fixed credit stays honest.
+- [kb lesson.profile-before-optimising: hook cost] Profile a hook by the lines one call takes (a JDS rule at its entry and return) before optimising around it: `build` at 257 to 297 lines a call was hidden by the audit's per-update hook times.
 
 ## Friction
 - reuse: [local: add_screen.py's stub now in three engines' asm] Jet Pac (bank 13), Rambo (older), this (bank 23).

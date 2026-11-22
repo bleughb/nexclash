@@ -11,6 +11,9 @@
  ],
  "level": "observed",
  "area": "platform",
+ "facts": {
+  "interrupts": "on"
+ },
  "words": [
   "port 0x303B",
   "sprite index",

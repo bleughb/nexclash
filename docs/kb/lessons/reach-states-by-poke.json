@@ -5,12 +5,14 @@
  "evidence": [
   {
    "game": "games/dynamite_dan.md",
-   "text": "Dan spawned by poke gives a room census for coverage (169 of 736,272 cells over scenery in the census); recordings give the clash numbers.",
+   "text": "Dan spawned by poke gives a room census for coverage (169 of 736,272 cells over scenery attributes in the census, against 0 of 187,938 and 229,596 in play); recordings give the clash numbers.",
+   "quote": "the room census counts Dan spawned inside scenery: use play recordings for the clash numbers, census for coverage.",
    "shown_on": "unknown"
   },
   {
    "game": "games/green_beret.md",
-   "text": "Poking 0xFFDF just after the start reaches a later stage.",
+   "text": "Poking 0xFFDF just after the start reaches a later stage; the display's STAGE shows 01.",
+   "quote": "0xFFDF poked just after the start reaches a later stage; the display's STAGE shows 01.",
    "shown_on": "unknown"
   }
  ],
@@ -24,6 +26,6 @@
   "room",
   "cheat"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

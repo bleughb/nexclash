@@ -7,7 +7,8 @@
   {
    "game": "games/rainbow_islands.md",
    "text": "Tilemap palette bank 0: 0 transparent, 1 black, 2-8 inks 1-7, 9-15 bright inks; bank n is bank 0 with pixel 2 as ink n, so a one-ink tile's palette offset is the ink.",
-   "shown_on": "analysis"
+   "quote": "bank 0: 0 transparent, 1 black, 2-8 inks 1-7, 9-15 bright inks 1-7 (Next default ULA levels); bank n (1-15) = bank 0 with pixel 2 = ink index n",
+   "shown_on": "unknown"
   }
  ],
  "level": "observed",
@@ -19,6 +20,6 @@
   "bright ink",
   "pattern palette"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

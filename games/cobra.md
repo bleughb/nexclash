@@ -141,17 +141,17 @@ Hardware risk review: DivMMC: hooks 0x386E-0x3CD2, not in 0x3D00-0x3DFF. IM 2 ve
   (original 437); interrupts 33.53 a second all three.
 
 ## Lessons
-- [local: hlib_pace.asm's header already says only hlib_line keeps DE] The current library's hlib_pace_open / hlib_debt_open lose DE (V1's kept it): an
+- [kb lesson.hlib-pace-library-changes: hlib_pace.asm's header already says only hlib_line keeps DE] The current library's hlib_pace_open / hlib_debt_open lose DE (V1's kept it): an
   engine moving off HLIB_PACE_V1 saves DE around them.
-- [local: this game's start] observed: the whole alt ROM image made the key-wait stub unnecessary: Sinclair's ROM runs the snapshot's own BASIC return, and the ROM path check proves it on the recordings.
-- [local: this game's RNG] observed: the RNG runs in the wait-for-interrupt sound loop, so any timing change gives other enemies; pace trials ran on a fixture (that call and the lives decrement removed, in the original and the build alike), in lockstep for every update.
-- [local: this game's sound] demonstrated: frame-locked pace hid a slower figure phase: game updates equal, but the beeper plays only while waiting for the interrupt, so port FE writes fell 8 % in busy scenes. The limiter and the prepared patterns brought them back (510.4 / 509.6 a second).
-- [deferred Open: reconsider when the flicker check's .z80 reader is fixed upstream] observed: with a .z80 control the original's attribute transients read 0 (its screen is not in that run's bank 5 VRAM file); the original flashes the same cells (JNext mem[] log, work2/attrwatch.py). The plain .nex is the control.
-- [local: the archive's trainer] observed: the TOSEC .pok's Infinite Lives also pokes 34925, which is not lives but a graphics pointer (read by the plotter's frame lookup at 39837); the single-poke trainer is used.
+- [kb lesson.whole-alt-rom-image: this game's start] observed: the whole alt ROM image made the key-wait stub unnecessary: Sinclair's ROM runs the snapshot's own BASIC return, and the ROM path check proves it on the recordings.
+- [kb lesson.pace-lockstep-fixture: this game's RNG] observed: the RNG runs in the wait-for-interrupt sound loop, so any timing change gives other enemies; pace trials ran on a fixture (that call and the lives decrement removed, in the original and the build alike), in lockstep for every update.
+- [kb lesson.frame-locked-pace-hides-cost: this game's sound] [kb lesson.sound-comparison] demonstrated: frame-locked pace hid a slower figure phase: game updates equal, but the beeper plays only while waiting for the interrupt, so port FE writes fell 8 % in busy scenes. The limiter and the prepared patterns brought them back (510.4 / 509.6 a second).
+- [deferred Open: reconsider when the flicker check's .z80 reader is fixed upstream] [kb lesson.flicker-check-z80-control] observed: with a .z80 control the original's attribute transients read 0 (its screen is not in that run's bank 5 VRAM file); the original flashes the same cells (JNext mem[] log, work2/attrwatch.py). The plain .nex is the control.
+- [kb lesson.archive-poke-translation: the archive's trainer] observed: the TOSEC .pok's Infinite Lives also pokes 34925, which is not lives but a graphics pointer (read by the plotter's frame lookup at 39837); the single-poke trainer is used.
 
 ## Friction
 - reuse: [local: the floating-bus Machine of the pilot's recorder is repeated in work2/cheats.py, outside the repo]
-- retries: [local: the first pace runs left the RNG in, and diverged at update 3; the fixture fixed it]
+- retries: [kb lesson.pace-lockstep-fixture: the first pace runs left the RNG in, and diverged at update 3; the fixture fixed it] 
 - environment: [local: NEXCLASH_NEXT_ROM (enNextZX.rom) and NEXCLASH_JNEXT_CARD point into other pilot runs, read only]
 - hand-rolled: [local: the time model in NextState repeats hooklib.NextModel's clock arithmetic for this verifier's events]
 - scratch: [none: scratch scripts stay in the pilot run folder, none added to the repo]

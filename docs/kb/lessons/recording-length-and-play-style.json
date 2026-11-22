@@ -5,22 +5,26 @@
  "evidence": [
   {
    "game": "games/heartland.md",
-   "text": "Four minutes of owner play gave 2,485 game steps and the bolt; six scripted recordings gave about 550 steps each and no bolt.",
+   "text": "The owner's four minutes of play gave 2,485 game steps and the bolt; six scripted recordings gave about 550 steps each and no bolt.",
+   "quote": "The owner's four minutes of play gave 2,485 game steps and the bolt; six scripted",
    "shown_on": "unknown"
   },
   {
    "game": "games/movie.md",
    "text": "A recording ending at 16% is not a completion even when every drawing entry type is reached.",
+   "quote": "A recording ending at 16% is not a completion even when every drawing entry type is reached.",
    "shown_on": "unknown"
   },
   {
    "game": "games/lode_runner.md",
-   "text": "The original verify replayed an RZX only to 6,000 frames; the rework replays each recording whole.",
+   "text": "The rework replays every recording whole; the earlier build's verify stopped at 6,000 frames.",
+   "quote": "a 128K boot check (bank 4 at 0xC000, paging unlocked); every recording replayed",
    "shown_on": "unknown"
   },
   {
    "game": "games/gunrunner.md",
-   "text": "Per-level replays found the canvas clear covering the wrong span (stale pixels after a restart); the shorter recording had passed.",
+   "text": "The per-level replays found the canvas clear covering the wrong span, leaving stale pixels after a restart; the shorter recording had passed.",
+   "quote": "The per-level replays found the canvas clear covering the wrong span, leaving stale pixels after a restart; the shorter recording had passed.",
    "shown_on": "simulator"
   }
  ],
@@ -35,6 +39,6 @@
   "per-level",
   "frame cap"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

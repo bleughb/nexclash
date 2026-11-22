@@ -6,6 +6,7 @@
   {
    "game": "games/castle_master.md",
    "text": "Fuse writes a roughly 20 T frame when an interrupt delayed by DI lands, so a frame count runs ahead; weigh short frames by their T.",
+   "quote": "frame when an interrupt delayed by DI lands, so a frame count runs ahead; weigh short frames by their T.",
    "shown_on": "analysis"
   }
  ],
@@ -20,6 +21,6 @@
   "T-states",
   "frame count"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

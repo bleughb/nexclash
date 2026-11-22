@@ -5,7 +5,8 @@
  "evidence": [
   {
    "game": "games/bubbler.md",
-   "text": "Import reads the full declared palette rather than silently restricting to its first 15 colours.",
+   "text": "The moving sheet has 34 RGB entries; the sheet importer truncated palettes at 15 entries and now reads the full declared palette.",
+   "quote": "reads the full declared palette rather than silently restricting import to its first 15 colours.",
    "shown_on": "unknown"
   }
  ],
@@ -20,6 +21,6 @@
   "sheet",
   "15 entries"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

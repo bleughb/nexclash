@@ -88,7 +88,7 @@ this rework = recorded.
   is mapped at slot 1 only around the call, with interrupts already off; identical bytes in both views make the switch
   safe]
 - [local: the TOSEC main 128K dump carries the Infinite Lives POKE (0x78AB = 0xB6): diff dumps before choosing]
-- [local: a game's developer room skip (0x77C2 = 0, C + direction) reaches a far room for a recording honestly]
+- [kb lesson.recording-room-skip: a game's developer room skip (0x77C2 = 0, C + direction) reaches a far room for a recording honestly] 
 
 ## Technique use
 - patch.restore-speed: used (the plot hook's head / tail, Magicland's: the incoming speed latched on the stack)
@@ -96,7 +96,7 @@ this rework = recorded.
 
 ## Friction
 - reuse: [tool nextboot.rom_paths] the ROM path and tail checks; the boot check, pace, flicker and soak ran on the 128K build unchanged
-- retries: [local: the room skip needs C held until the room changes and a SPACE tap to leave it]
+- retries: [kb lesson.recording-room-skip: the room skip needs C held until the room changes and a SPACE tap to leave it] 
 - environment: [none: headless JNext with HOME in the run folder, the read-only card]
 - hand-rolled: [local: bot recorder on SkoolKit's C simulator; pace trials from Fantasy World's script]
 - scratch: [none: scripts stay in the pilot run folder runs/dean_prince_of_the_yolkfolk/work]

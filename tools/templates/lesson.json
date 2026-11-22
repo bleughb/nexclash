@@ -7,12 +7,14 @@
   {
    "game": "games/REPLACE_WITH_GAME.md",
    "text": "REPLACE: what this game saw, with its numbers as its notes give them (at most 300 characters)",
+   "quote": "OPTIONAL but needed for review source-checked: 20+ characters copied exactly from that file",
    "shown_on": "REPLACE: simulator | jnext | cspect | mame | hardware | analysis | unknown"
   }
  ],
  "level": "REPLACE: observed | inferred | demonstrated",
  "area": "REPLACE: platform | emulator | toolkit | method | design | process",
  "facts": {"OPTIONAL, only what the lesson needs": "machine 48K | 128K; interrupts on | off; draw back-buffer | cell-copier | one-routine | direct"},
+ "enforced_by": ["OPTIONAL: nexclash.<module>.<function> or a file that now checks this, once one does"],
  "words": ["REPLACE", "four to nine search words"],
  "review": "extracted",
  "as_of": "REPLACE: the VERSION file"

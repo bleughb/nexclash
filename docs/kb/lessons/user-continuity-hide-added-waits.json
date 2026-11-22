@@ -5,13 +5,15 @@
  "evidence": [
   {
    "game": "games/inferno.md",
-   "text": "Driver install shown with loading bars and skipped on a same-level restart.",
-   "shown_on": "unknown"
+   "text": "The driver install is shown with loading bars and skipped on a same-level restart.",
+   "shown_on": "unknown",
+   "quote": "Installed, with loading bars; skipped on a same-level restart."
   },
   {
    "game": "games/cisco_heat.md",
-   "text": "Loading screen shown at once, held 200 frames (about 4 s) or until a key; 0 frames in the NXC build.",
-   "shown_on": "unknown"
+   "text": "The tape's own loading screen is shown by NEXLOAD at once and kept while the banks load, then held boot_frames (200; 0 in the NXC build) frames or until a key.",
+   "shown_on": "unknown",
+   "quote": "so NEXLOAD shows it at once and keeps it while the banks load; boot_resume then holds it boot_frames (200; 0 in the NXC build)"
   }
  ],
  "level": "observed",
@@ -24,6 +26,6 @@
   "original behaviour",
   "loading screen"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

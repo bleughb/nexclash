@@ -5,7 +5,14 @@
  "evidence": [
   {
    "game": "games/new_zealand_story.md",
-   "text": "Start state is the record's snapshot (128K game loaded from Side A); built from its tape sets; Side B .tzx supplies world block 37; the published .nxc accepts the same releases.",
+   "text": "Start state is the record's snapshot (128K game loaded from Side A in an emulator, world 1 in memory); Side B .tzx supplies world block 37, which Side A lacks.",
+   "quote": "Start state = the record's snapshot: the 128K game loaded from Side A in an emulator",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/new_zealand_story.md",
+   "text": "Tapes are inputs.tapes alternative sets in order; every set must rebuild the same outputs (the .tap and the .tzx give the same bytes).",
+   "quote": "every set must rebuild the same outputs",
    "shown_on": "unknown"
   }
  ],
@@ -23,6 +30,6 @@
   "nxc",
   "loading screen"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

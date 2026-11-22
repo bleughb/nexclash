@@ -5,8 +5,9 @@
  "evidence": [
   {
    "game": "games/gunfright.md",
-   "text": "The Enhanced setup substitution missed on leading whitespace, leaving black transparent; compositing real palette, attributes and patterns exposed 122 lost ink pixels that pattern-index checks did not.",
-   "shown_on": "simulator"
+   "text": "The Enhanced setup substitution silently missed because its leading whitespace differed, leaving NR4B0 and making intended black0 transparent; compositing the actual native palette, attributes and patterns exposed the lost ink pixels; keep the old build as the negative.",
+   "quote": "The Enhanced setup substitution silently missed because its leading whitespace differed, leaving NR4B0",
+   "shown_on": "unknown"
   }
  ],
  "level": "demonstrated",
@@ -19,6 +20,6 @@
   "opacity",
   "native layer"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

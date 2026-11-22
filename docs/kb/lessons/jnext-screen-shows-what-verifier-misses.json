@@ -5,12 +5,14 @@
  "evidence": [
   {
    "game": "games/page_pharaoh.md",
-   "text": "The game writes the ULA+ palette; on a Next and in JNext the walls are pink, the jungle lime; SkoolKit's simulator shows the plain palette.",
+   "text": "The game writes the ULA+ palette; on a Next and in JNext the walls are pink, the jungle lime, the fire orange; SkoolKit's simulator shows the plain palette.",
+   "quote": "on a Next and in JNext the walls are pink, the jungle lime, the fire orange.",
    "shown_on": "jnext"
   },
   {
    "game": "games/phantis.md",
-   "text": "The copy adds 1 to a screen address table, so work column 0 is screen column 3; the verifier checked its own idea of the column and only the JNext screen showed the overlay one column left.",
+   "text": "The copy pops a table of screen addresses and adds 1 before use, so work column 0 is screen column 3; the verifier checked its own idea of the column and only the JNext screen showed the overlay one column left.",
+   "quote": "Part 1's copy pops a table of screen addresses and adds 1 before use, so work column 0 is screen column 3.",
    "shown_on": "jnext"
   }
  ],
@@ -24,6 +26,6 @@
   "overlay column",
   "ULA+"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

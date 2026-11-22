@@ -65,7 +65,7 @@ byte); No crushers 47715 -> RET; Harmless water 37002 LD A,7 -> LD A,0; Tickets 
   from that state's code (here: composite cells not yet rebuilt) and prove them by RAM equality after the routine.
 - [local: tail placement] converter's free-space guess put the 128K tail in the composite cells; the ROM path check
   (reads before writes) caught it: name the tail from `scan` write-first ranges for any game with cell buffers.
-- [local: 128K printer buffer] keep_printer_buffer is 48K only; a 128K game that reads 0x5B00 gets it back in its
+- [kb lesson.nexload-printer-buffer: 128K printer buffer] keep_printer_buffer is 48K only; a 128K game that reads 0x5B00 gets it back in its
   set-up (Silkworm / Eagle's Nest pattern).
 
 ## Friction

@@ -5,12 +5,16 @@
  "evidence": [
   {
    "game": "games/cookie.md",
-   "text": "The set-up cut compares signed, so a figure whose bottom line is above line 31 is not drawn at all.",
-   "shown_on": "unknown"
+   "text": "An XOR plotter on an empty screen draws the frame it means to erase; the model of the figure is the reference and the draw-only entries check the model; that check found the game draws nothing for a figure whose bottom line is above line 31 (signed compare).",
+   "shown_on": "unknown",
+   "quote": "An XOR plotter on an empty screen draws the frame it means to erase: the empty"
   }
  ],
  "level": "observed",
  "area": "method",
+ "facts": {
+  "draw": "direct"
+ },
  "when": [
   "render.composition.xor"
  ],
@@ -22,6 +26,6 @@
   "signed compare",
   "model"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

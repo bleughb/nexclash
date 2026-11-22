@@ -5,7 +5,8 @@
  "evidence": [
   {
    "game": "games/r_type.md",
-   "text": "Recording averages 4.35 frames per update (28% 3, 34% 4, 22% 5); title alternates 2 and 3; at 28 MHz every update took 3 (45% fast), so PACE 4 and the owner dropped slowdown.",
+   "text": "Recording averages 4.35 frames per update (28% 3, 34% 4, 22% 5); the title alternates 2 and 3; at 28MHz every update took 3 (45% fast): PACE 4, title 4; the owner dropped slowdown.",
+   "quote": "The recording averages 4.35 frames per update (28% 3, 34% 4, 22% 5);",
    "shown_on": "unknown"
   }
  ],
@@ -19,6 +20,6 @@
   "original speed",
   "distribution"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

@@ -1,11 +1,12 @@
 {
  "id": "lesson.native-capture-frame-completion",
  "kind": "pitfall",
- "claim": "A screenshot requested at an instruction-boundary freeze may show a partial video frame, and exiting right after requesting one can error; let the final frame complete and compare only completed intervals.",
+ "claim": "Exiting right after requesting a native screenshot can return an error despite valid timing data: let the final frame complete and compare only completed update intervals.",
  "evidence": [
   {
    "game": "games/martianoids.md",
    "text": "Immediate exit after requesting a screenshot returned an error despite valid timing data; allow frame completion and compare only completed update intervals.",
+   "quote": "Immediate exit after requesting a screenshot returned an error despite valid timing data; allow frame completion and compare only completed update intervals.",
    "shown_on": "jnext"
   }
  ],
@@ -18,6 +19,6 @@
   "native capture",
   "update interval"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

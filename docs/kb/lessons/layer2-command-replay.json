@@ -5,7 +5,8 @@
  "evidence": [
   {
    "game": "games/gunfright.md",
-   "text": "Five producer hooks record one command each after the original computes buffer address, data pointer, rows, shift and mirror; the replay builds an ordered Layer 2 picture.",
+   "text": "Five producer hooks record one command each after the original computes its buffer address, data pointer, rows, shift and mirror; the original mono drawing still runs, so game RAM, registers and R stay the original's, and h_out replays the queue.",
+   "quote": "record one command each after the original has computed its buffer address, data pointer, rows, shift and mirror;",
    "shown_on": "unknown"
   }
  ],
@@ -20,6 +21,6 @@
   "R parity",
   "ordered replay"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

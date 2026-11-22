@@ -16,6 +16,9 @@
  ],
  "level": "observed",
  "area": "platform",
+ "facts": {
+  "interrupts": "on"
+ },
  "words": [
   "line clock",
   "311 lines",

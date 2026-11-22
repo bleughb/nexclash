@@ -38,7 +38,7 @@ Lightning: 0x7240 draws a line from the sky to the Knight with ROM DRAW (0x24BA)
 3. Characters and objects keep their colours; a window hides the figures under it.
 
 ## Lessons
-- [local: an address map matches code that follows, not code that was inserted] A return address taken from a window
+- [kb lesson.address-map-matches-following-code: an address map matches code that follows, not code that was inserted] A return address taken from a window
   match landed 7 bytes late; check every "after the call" address is the call site + 3 in the new game.
 
 ## Friction

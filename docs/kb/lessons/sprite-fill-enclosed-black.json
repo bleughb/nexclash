@@ -5,12 +5,14 @@
  "evidence": [
   {
    "game": "games/inferno.md",
-   "text": "Mask rule G3 (owner chose, replacing B): black is see-through only via gaps of at least 3x3 from outside; explosions keep the older enclosed-only rule.",
+   "text": "Mask G3 (user chose, replacing B): black is see-through only via gaps of at least 3x3 from outside; explosions B2-B8 keep B (enclosed black only).",
+   "quote": "through only via gaps >= 3x3 from outside; explosions B2-B8 keep B (enclosed black only).",
    "shown_on": "unknown"
   },
   {
    "game": "games/r_type.md",
-   "text": "Scenery masks come from a whole-level sky flood keyed by cell content, with 1-2 px gaps as walls; per-cell runtime floods were too slow.",
+   "text": "Scenery masks come from a whole-level sky flood, keyed by cell content, with 1-2 px gaps as walls; per-cell runtime floods were too slow.",
+   "quote": "sky flood, keyed by cell content, with 1-2 px gaps as walls, cost one lookup per staged cell.",
    "shown_on": "unknown"
   }
  ],
@@ -24,6 +26,6 @@
   "see-through",
   "gaps"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

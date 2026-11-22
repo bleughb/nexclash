@@ -1,36 +1,24 @@
 {
  "id": "lesson.long-job-background-no-limit",
  "kind": "pitfall",
- "claim": "Run long checks in the harness's own background mode with no time limit: setsid nohup jobs die with the tool call, and a background command given a limit is stopped at it.",
+ "claim": "Run long checks in the background with no time limit: a background command given a time limit is stopped at it, and a long test can pass the shell's time limit under load.",
  "evidence": [
   {
-   "game": "games/lode_runner.md",
-   "text": "setsid nohup jobs died with the tool call; the harness's own background mode worked.",
-   "shown_on": "unknown"
-  },
-  {
    "game": "games/olli_and_lissa_2.md",
-   "text": "A background command given a time limit is stopped at the limit.",
+   "text": "A background command given a time limit is stopped at the limit: the long check runs with none.",
+   "quote": "a background command given a time limit is stopped at the limit: the long",
    "shown_on": "unknown"
   },
   {
    "game": "games/into_the_eagles_nest.md",
    "text": "A cheat test passed the shell's time limit at load 60; run long tests in the background.",
-   "shown_on": "unknown"
-  },
-  {
-   "game": "games/simpsons.md",
-   "text": "Five full runs in parallel take about 25 minutes; auto prints nothing until it ends.",
+   "quote": "A cheat test passed the shell's time limit at load 60; run long tests in the background.",
    "shown_on": "unknown"
   },
   {
    "game": "games/lunar_jetman.md",
    "text": "Full verify takes about 80 minutes detached.",
-   "shown_on": "unknown"
-  },
-  {
-   "game": "games/ruff_and_reddy.md",
-   "text": "On a heavily loaded machine a long shell command sat unstarted; replaced by separate short ones.",
+   "quote": "needs NEXCLASH_NEXT_ROM=enNextZX.rom; full verify ~80 min detached",
    "shown_on": "unknown"
   }
  ],
@@ -44,6 +32,6 @@
   "detached",
   "load"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

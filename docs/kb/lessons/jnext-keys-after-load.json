@@ -5,8 +5,9 @@
  "evidence": [
   {
    "game": "games/gunfright.md",
-   "text": "JNext clears keys held before NEX load, so keys start at frame 501 after load at 500; otherwise moving/fire runs describe neutral-input play.",
-   "shown_on": "jnext"
+   "text": "JNext clears keys held before NEX load, so keys start at frame 501 after load 500; otherwise moving/fire runs can describe neutral-input play.",
+   "shown_on": "jnext",
+   "quote": "JNext clears keys held before NEX load, so keys start at frame 501 after load 500;"
   }
  ],
  "level": "observed",
@@ -20,6 +21,6 @@
   "native",
   "fixture"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

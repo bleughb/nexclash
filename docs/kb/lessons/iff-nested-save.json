@@ -6,21 +6,27 @@
   {
    "game": "games/treasure_island_dizzy.md",
    "text": "Preserve its incoming IFF and protect shared hook state before the first write; compare both IFF states.",
+   "quote": "its incoming IFF and protect shared hook state before the first write; compare both IFF states.",
    "shown_on": "unknown"
   },
   {
    "game": "games/movie.md",
    "text": "Nested full plots have separate outer IFF and speed latches; tests cover both IFF states.",
+   "quote": "Nested full plots have separate outer IFF/speed latches. The game is DI; tests cover both IFF",
    "shown_on": "unknown"
   },
   {
    "game": "games/incredible_shrinking_fireman-add-GPT6_ASTRA.md",
    "text": "Sprite update saves entry IFF, restores it after; the recording exercises 19 entries with interrupts enabled.",
+   "quote": "then restores entry IFF. The recording exercises19 entries with interrupts enabled.",
    "shown_on": "simulator"
   }
  ],
  "level": "observed",
  "area": "toolkit",
+ "facts": {
+  "interrupts": "on"
+ },
  "words": [
   "IFF",
   "ISR",
@@ -29,6 +35,6 @@
   "save restore",
   "hlib_iff"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

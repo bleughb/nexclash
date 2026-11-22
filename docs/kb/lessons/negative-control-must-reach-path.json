@@ -6,31 +6,31 @@
   {
    "game": "games/page_pharaoh.md",
    "text": "The 'XOR made plain' negative mutated the items' loop, which never undraws in the recording, and passed the replay.",
+   "quote": "\"XOR made plain\" mutated the items' loop, which never undraws in the recording, and passed the replay.",
    "shown_on": "simulator"
   },
   {
    "game": "games/phantis.md",
-   "text": "A broken clipped-row path was never reached in 24,000 frames, so it stayed untested.",
+   "text": "A broken build changing only the clipped-row path of a painted figure was not caught over 24,000 frames: the path is never reached in the recordings, so it stays untested.",
+   "quote": "the path is never reached in the recordings, so it stays untested and the notes say so.",
    "shown_on": "simulator"
   },
   {
    "game": "games/rainbow_islands.md",
-   "text": "Two figure controls read live sprite attributes after the commit moved them and were n/a on every state.",
+   "text": "Two figure controls (negative control, store stale-pattern control) were n/a on every state: they read the committed attributes, which are only staged at piece time.",
+   "quote": "\"store stale-pattern control\" were n/a on every state - they read the",
    "shown_on": "simulator"
   },
   {
    "game": "games/lunar_jetman.md",
-   "text": "The evict negative passed a 700-frame replay because the pool never filled.",
+   "text": "The `evict` negative passed the 700-frame replay because the pool never fills that early; a table-full case needs its own driven check.",
+   "quote": "The `evict` negative passed the 700-frame replay (the pool never fills",
    "shown_on": "simulator"
   },
   {
    "game": "games/tranz_am.md",
-   "text": "A control changing the first LD A,n after the entry changed the mark's constant, not R's.",
-   "shown_on": "simulator"
-  },
-  {
-   "game": "games/robin_of_the_wood.md",
-   "text": "A leftover sys.argv MODE line made the art negatives run as normal.",
+   "text": "A negative control that changes \"the first LD A,n after the entry\" changed the mark's constant, not R's; the hook's lines were reordered so the control changes what it names.",
+   "quote": "A negative control that changes \"the first LD A,n after the entry\" changed the mark's",
    "shown_on": "simulator"
   }
  ],
@@ -44,6 +44,6 @@
   "unreached path",
   "verification"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

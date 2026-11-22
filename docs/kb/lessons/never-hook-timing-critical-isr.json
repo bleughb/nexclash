@@ -16,6 +16,9 @@
  ],
  "level": "observed",
  "area": "method",
+ "facts": {
+  "interrupts": "on"
+ },
  "when": [
   "exec.isr_must_run_on_time"
  ],

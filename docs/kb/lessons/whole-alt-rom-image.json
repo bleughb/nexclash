@@ -5,23 +5,27 @@
  "evidence": [
   {
    "game": "games/cobra.md",
-   "text": "Whole alt ROM image in both builds; start is the snapshot's own BASIC, no stub.",
+   "text": "Whole alt ROM image in both builds, the plain build included; the start is the snapshot's own BASIC, no stub.",
+   "quote": "Whole alt ROM image (patch.whole-altrom-image) in both builds; the plain build carries Sinclair's ROM too.",
    "shown_on": "unknown"
   },
   {
    "game": "games/dynamite_dan.md",
-   "text": "Whole alt ROM image: build starts from the TOSEC snapshot's own BASIC (PAUSE 0, RANDOMIZE USR 51200).",
+   "text": "Whole alt ROM image in both builds: the build starts from the TOSEC snapshot's own BASIC (PAUSE 0, RANDOMIZE USR 51200).",
+   "quote": "Whole alt ROM image (patch.whole-altrom-image) in both builds: the build now starts from the TOSEC snapshot's own BASIC",
    "shown_on": "unknown"
   },
   {
    "game": "games/chuckie_egg.md",
-   "text": "Pinned build over ROM3 reads 89 ROM data bytes that differ; demonstrated in simulation, not hardware.",
+   "text": "Pinned build over ROM3 reads 89 ROM data bytes that differ; demonstrated in simulation, not on hardware.",
+   "quote": "reads 89 ROM data bytes that differ (ROM paths, 2026-11-04; demonstrated in simulation, not on hardware)",
    "shown_on": "simulator"
   },
   {
    "game": "games/atom_ant.md",
-   "text": "Default runs the Next's own ROM3 (no alt ROM); 5 to 10 ROM bytes it uses differ.",
-   "shown_on": "unknown"
+   "text": "Default runs the Next's own ROM3 (no alt ROM): 5 to 10 ROM bytes it uses differ from the recording's 128K ROM; lockstep in JNext showed no game difference.",
+   "quote": "The default runs the Next's own ROM3 (no alt ROM): 5 to 10 ROM bytes it uses differ from the recording's 128K ROM",
+   "shown_on": "jnext"
   }
  ],
  "level": "observed",
@@ -35,6 +39,6 @@
   "ROM path check",
   "BASIC"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

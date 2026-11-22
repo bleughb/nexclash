@@ -35,7 +35,7 @@ until the next room set-up.
 ## Lessons
 - [local: negative controls] the room set-up and erase-all controls were caught only when a recording reached them
   after a sprite was shown; unit cases from captured states (every sprite shown, the hook run) now catch them always.
-- [local: the card already covers it] every hook left NR 7 at 3.5 MHz; HK_IN keeps the caller's speed on the stack (card patch.restore-speed).
+- [kb lesson.speed-latch-restore-caller-speed: the card already covers it] every hook left NR 7 at 3.5 MHz; HK_IN keeps the caller's speed on the stack (card patch.restore-speed).
 
 ## Friction
 - reuse: [local: Magic Knight's verifier shape (events, truth layers, units) followed; patch.restore-speed card as written]

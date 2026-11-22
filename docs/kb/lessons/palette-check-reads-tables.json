@@ -5,13 +5,15 @@
  "evidence": [
   {
    "game": "games/alien_8.md",
-   "text": "The never-drawn default entries were flagged: default figures take entries 64 + ink, so check drawn indices before claiming a shade is seen.",
-   "shown_on": "unknown"
+   "text": "palette_check flagged 4 off-standard default entries (205/255 shades); the native snapshot showed the build never draws them (figures use entries 64 + ink); check the indices drawn before saying a shade is seen.",
+   "shown_on": "unknown",
+   "quote": "native snapshot showed the build never draws them (figures use entries 64 + ink). Check the indices drawn before"
   },
   {
    "game": "games/cookie.md",
-   "text": "palette_wrong replays the boot's NEXTREG writes against the painted map, since fixed colours compared only as symbols missed the real RGB.",
-   "shown_on": "unknown"
+   "text": "An Enhanced build's fixed colours were compared as symbols only, never with the RGB the set-up uploads; palette_wrong replays the boot's NEXTREG writes against the painted map, the default build as its negative.",
+   "shown_on": "unknown",
+   "quote": "palette_wrong replays the boot's NEXTREG writes against the"
   }
  ],
  "level": "observed",
@@ -24,6 +26,6 @@
   "RGB",
   "palette"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }
