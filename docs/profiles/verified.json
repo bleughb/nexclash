@@ -20,6 +20,14 @@
     "english_enhanced": "1661e9c766c7284b6961623caf145ec5"
    }
   },
+  "9df49e056fdf38a2f6da21fc4dfbf34f": {
+   "game": "Altered Beast (128K)",
+   "doc": "altered_beast.md",
+   "nex": {
+    "plain": "3a40cd83e14bad535b3f147708b2284e",
+    "sprites": "4d79dca84641647336e99baf858dc99a"
+   }
+  },
   "f58236395e737aaa0fac1f8476711ad8": {
    "game": "The Arc of Yesod",
    "doc": "arc_of_yesod.md",
