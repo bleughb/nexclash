@@ -223,10 +223,12 @@ def changed_games(base=None):
     base = base or merge_base()
     if not base:
         return None
-    try:
-        out = subprocess.run(['git', 'diff', '--name-only', base], cwd=ROOT, capture_output=True,
-                             text=True, check=True).stdout.split()
-    except (OSError, subprocess.CalledProcessError):
+    try:                                # NUL-delimited (a path with a space is one path), and untracked new notes too:
+        out = subprocess.run(['git', 'diff', '--name-only', '-z', base], cwd=ROOT, capture_output=True,     # a new
+                             text=True, check=True).stdout.split('\0')                                     # game's
+        out += subprocess.run(['git', 'ls-files', '-z', '--others', '--exclude-standard', '--', 'games/'],  # note
+                              cwd=ROOT, capture_output=True, text=True, check=True).stdout.split('\0')     # escaped
+    except (OSError, subprocess.CalledProcessError):                                                       # (Codex T6)
         return None
     return {f for f in out if f.startswith('games/') and f.endswith('.md')}
 

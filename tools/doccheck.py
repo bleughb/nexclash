@@ -194,7 +194,9 @@ def lf_size(f):
 
 def main():
     os.chdir(ROOT)
-    files = subprocess.run(['git', 'ls-files'], capture_output=True, text=True).stdout.split()
+    files = subprocess.run(['git', 'ls-files', '-z', '--cached', '--others', '--exclude-standard'], capture_output=True,
+                           text=True).stdout.split('\0')                # untracked new notes too, NUL-delimited (Codex T6)
+    files = [f for f in files if f]
     files = sorted(set(files) | {f.replace(os.sep, '/') for f in glob.glob('docs/*.md')} | {'CLAUDE.md'})   # glob: '\' on Windows listed every doc twice
     docs = [f for f in files if f.endswith('.md') and os.path.exists(f)]
     fl, st, mods = cli_flags(), selftest_flags(), module_names()
