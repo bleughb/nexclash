@@ -1,0 +1,169 @@
+{
+ "name": "stormbringer",
+ "order": 260,
+ "game": "Stormbringer (128K)",
+ "doc": "stormbringer.md",
+ "engine": "stormbringer",
+ "representative": false,
+ "reference": "stormbringer",
+ "inputs": {
+  "snapshot": {
+   "name": "stormbringer.z80",
+   "md5": "d462589b7b7e63cb7e958323d00d165a",
+   "path": "stormbringer/stormbringer.z80",
+   "note": "Stormbringer (1987)(Mastertronic Added Dimension)[128K][Magic Knight 4].z80 from the archive: title menu, 7FFD 0x10."
+  },
+  "recordings": [
+   {
+    "name": "sb_walk.rzx",
+    "md5": "7e44da58174ed219553e701ffe78d4c1",
+    "path": "stormbringer/sb_walk.rzx",
+    "role": "machine-played: menu, walking right and left through the first rooms, command windows"
+   },
+   {
+    "name": "sb_rooms.rzx",
+    "md5": "d310eab6833d29d1fe365b375e6c759c",
+    "path": "stormbringer/sb_rooms.rzx",
+    "role": "machine-played: 63 rooms, one segment each (exit table poked), the room build and its figures"
+   },
+   {
+    "name": "sb_cmds.rzx",
+    "md5": "525096004f25556e2f49893121c432b2",
+    "path": "stormbringer/sb_cmds.rzx",
+    "role": "machine-played: random commands and windows, the lightning that ends the game, back at the title"
+   },
+   {
+    "name": "sb_cmds2.rzx",
+    "md5": "48e3a7b130bab341524a0497f3d0a508",
+    "path": "stormbringer/sb_cmds2.rzx",
+    "role": "machine-played: as sb_cmds with another seed, longer walks, key definition at the title"
+   }
+  ]
+ },
+ "modules": [
+  "stormbringer"
+ ],
+ "own_modules": [
+  "stormbringer"
+ ],
+ "data": [
+  "docs/profiles/stormbringer.json",
+  "asm/stormbringer_hooks.asm"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": []
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "sb_walk.rzx",
+   "sb_rooms.rzx",
+   "sb_cmds.rzx",
+   "sb_cmds2.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 12,
+  "note": "needs NEXCLASH_NEXT_ROM (NextZXOS's enNextZX.rom): the lockstep reads ROM 1 from alt image 1 as the Next fills it (NextZXOS's ROM3, then the build), and the previous-build negative needs it. auto: plain + sprite build, boot check, the loading stub run on a model; lockstep of the whole 128K machine per frame against the original on all four recordings (hook instructions counted as nothing; sprite layer and ULA against the model at stable frames, registers at every hook exit, crew layer on the Bridge), unit tests (figure cases, pool full, window pictures), 19 negatives (kt_cmds 1500 frames; the crew ones on kt_t1 1500 frames)"
+ },
+ "outputs": {
+  "plain": {
+   "file": "stormbringer.nex",
+   "md5": "74f64c674eda981e940da907018aa9b2"
+  },
+  "sprites": {
+   "file": "stormbringer_sprites.nex",
+   "md5": "218f92e530c6c658f37e51d6c24ce641"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Stormbringer (128K)",
+  "engine_col": "stormbringer (stormbringer.md)",
+  "build": "stormbringer_sprites.nex: Knight Tyme engine relocated by address map; no loading screen yet",
+  "software": "IDENTICAL on 4 recordings, unit PASS, 16/16 negatives",
+  "hardware": "Tang board smoke before release"
+ },
+ "checks": [
+  "asm2profile:stormbringer"
+ ],
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/stormbringer.md#port-how-the-engine-was-made",
+    "games/stormbringer.md#results"
+   ],
+   "coverage": "Four machine-played recordings (62,450 frames): menu, 63 rooms, command windows, the lightning and the title; hook T on the simulator. No hardware timing yet.",
+   "result": "Knight Tyme's hooks and timing carried over unchanged; the same 28 MHz hook bodies, speed restored on exit (negative 'speed not restored' detected)."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/stormbringer.md#stormbringer-s-own",
+    "games/stormbringer.md#port-how-the-engine-was-made"
+   ],
+   "coverage": "Every game address the engine names, mapped and checked; the flying things (0x8EC7 / 0xAE0A) and the lightning (ROM DRAW) traced; ROM paths on all four recordings.",
+   "result": "Game code changed only at the hook sites and two data sites, as in Knight Tyme; the flying things stay on the ULA (counted exceptions); no game routine reads a figure's pixels except their XOR (A' only)."
+  },
+  "decision": "Knight Tyme's engine relocated; the clash fix + checked cheats as 1.0; colours and a loading screen later.",
+  "next_experiment": "Tang board: menu, play, rooms 21-26 with the flying things, no crash or leftovers."
+ },
+ "checked": {
+  "deps": {
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "asm/stormbringer_hooks.asm": "3fe8428331b52efa",
+   "docs/profiles/stormbringer.json": "ce8f74ad82ba7f65",
+   "nexclash.py": "04157df11540c17d",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/engines.py": "1da8aa07fe7b212c",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/recolour.py": "6f27e87ef0c47a17",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/stormbringer.py": "f6c0fb2a553d4c2c",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "50684436558662bd",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "daa6a2914fbb0841",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-21"
+ },
+ "verified": {
+  "deps": {
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "asm/stormbringer_hooks.asm": "3fe8428331b52efa",
+   "docs/profiles/stormbringer.json": "ce8f74ad82ba7f65",
+   "nexclash.py": "04157df11540c17d",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/engines.py": "1da8aa07fe7b212c",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/recolour.py": "6f27e87ef0c47a17",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/stormbringer.py": "f6c0fb2a553d4c2c",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "50684436558662bd",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "daa6a2914fbb0841",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-21"
+ }
+}

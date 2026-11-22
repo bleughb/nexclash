@@ -14,6 +14,23 @@
 | renegade.py | alt ROM images 0 + 1, loading-screen front end |
 | rainbow.py | full redraw / tile composer, 128K (excluded from automatic checks) |
 
+| finders_keepers.py | stateless alt-ROM hooks over an XOR plotter, the 2026-11-22 checklist below applied (speed kept on the stack, auto runs units + negatives + desync, hide-hook unit cases) |
+
+## New engine checklist (2026-11-22: the six faults one review round found in six engines)
+1. Speed: hooks keep the caller's NR 7. Alt-ROM hooks (no RAM) use `HLIB_SPEED_IN_SP` / `HLIB_SPEED_OUT_SP`
+   (asm/lib/hlib_speed.asm); never write a constant to NR 7 on the way out. `hooklib.speed_audit` (selftest
+   --tools) refuses one; the verifier enters unit cases at all four speeds, a negative control leaves 28 MHz.
+2. auto(): runs `unit_tests` and the negative controls itself, fails a run with no coverage, and a replay that loses
+   sync fails (`on_desync`). doccheck checks the calls (AUTO_LEGACY lists the older engines).
+3. Hide-type hooks (room set-up, clear screen, window): unit cases from captured states with every sprite shown,
+   `hooklib.hide_cases`, so their negative controls never depend on a recording reaching them.
+4. A port re-derives every pin: MD5s of screens, snapshots and tables, addresses, sizes. doccheck refuses one MD5 in
+   two engines (SHARED_MD5 for real sharing, with why).
+5. NEXLOAD: a snapshot with its stack, code or live data in 0x5B00-0x5BFF needs `keep_printer_buffer` (48K and 128K)
+   or the game's own set-up putting it back; boot with `nextboot.boot(..., nexload=True)` to see it.
+6. Review (Codex or a person) the first engine commit, before the record and the patch exist: fixes are cheaper then.
+Record: `python tools/mkrecord.py SPEC.json REFERENCE_DIR --stamp` writes it whole (its docstring has the spec).
+
 ## Colour map
 (Moved from PLAYBOOK 5-6, 2026-11-08.)
 Colour map (every game, docs/COLOURS.md): the sprite builder applies `<record>_colours.json` per pixel -

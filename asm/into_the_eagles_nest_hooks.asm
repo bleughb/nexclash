@@ -811,6 +811,16 @@ setup:
         otir
         dec d
         jr nz,.spr
+        ld bc,0x303B            ; sprites 60-127 hidden: another program may have left any of them visible
+        ld a,60
+        out (c),a
+        xor a
+        ld b,128-60
+.hid:   out (0x57),a
+        out (0x57),a
+        out (0x57),a
+        out (0x57),a
+        djnz .hid
         nextreg 0x54,4
         nextreg 0x55,5
         nextreg 0x15,0x01

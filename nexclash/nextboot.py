@@ -434,12 +434,14 @@ def raster(st, reg):
     return max(st.get('line', 0), 0) >> 8
 
 
-def boot(nex, pc_stop, limit=5_000_000, nexload=False, sysrom=None):
+def boot(nex, pc_stop, limit=5_000_000, nexload=False, sysrom=None, nr=None, min_steps=0):
     """Run the NEX from its entry point until PC == pc_stop. Returns the machine state dict.
     nexload: start with the printer buffer overwritten as NEXLOAD leaves it (NEXLOAD_PRINTER).
     sysrom: the system ROM3 (default Sinclair's: a check of the stub alone, as the engines' own boot
     checks expect; check() and rom_paths() pass system_rom3(), NextZXOS's when given; pass a different
-    ROM to prove an image does not depend on it, BRIEFING C2 #5)."""
+    ROM to prove an image does not depend on it, BRIEFING C2 #5). nr: NextRegs as the loader leaves them
+    (default {}: what each build sets is what the checks see). min_steps: pc_stop counts only after that
+    many instructions (a game resuming inside the automap code's own addresses)."""
     banks, sp, pc = load_nex(nex)
     with open(nex, 'rb') as f:
         entry_bank = f.read(512)[139]  # NEX entry bank; loading wrappers may use bank 32
@@ -453,7 +455,7 @@ def boot(nex, pc_stop, limit=5_000_000, nexload=False, sysrom=None):
         pages[10][0x1B00:0x1C00] = NEXLOAD_PRINTER
     rom = sysrom if sysrom is not None else rom48()
     others = system_roms()                     # NextZXOS's ROMs 0-2 when the 64K file is given
-    st = {'mmu': [0xFF, 0xFF, 10, 11, 4, 5, 2 * entry_bank, 2 * entry_bank + 1], 'nr': {0x8C: 0, 0x08: 0}, 'p7ffd': 0x00, 'p1ffd': 0,
+    st = {'mmu': [0xFF, 0xFF, 10, 11, 4, 5, 2 * entry_bank, 2 * entry_bank + 1], 'nr': {0x8C: 0, 0x08: 0, **(nr or {})}, 'p7ffd': 0x00, 'p1ffd': 0,
           'alt': [bytearray(16384), bytearray(16384)], 'bad': [], 'sel': 0, 'ports': {}, 'nrlog': []}
 
     def page(n):
@@ -524,7 +526,7 @@ def boot(nex, pc_stop, limit=5_000_000, nexload=False, sysrom=None):
                 st['mmu'][6:8] = [2 * b, 2 * b + 1]
     sim.set_tracer(Tr())
     ops, mem, n = sim.opcodes, sim.memory, 0
-    while R[24] != pc_stop:
+    while R[24] != pc_stop or n < min_steps:
         ops[mem[R[24]]]()
         n += 1
         if n > limit:
@@ -544,6 +546,51 @@ def regblock_overlap(patch, regs):
     rom = rom48()
     return [slot1[1] + i for i, v in enumerate(regs) if 0x2000 <= slot1[1] + i < 0x4000 and
             page[slot1[1] + i - 0x2000] not in (rom[slot1[1] + i], 0, 0xFF, v)]
+
+
+NEXTZXOS_NR0A = 0x11        # NextReg $0A as NextZXOS v2.10 leaves it for a .nex: DivMMC automap on (Tang board, 2026-11-20)
+
+
+def nexload_check(nex, z80):
+    """The build booted to the snapshot's PC twice, with the printer buffer as NEXLOAD leaves it and without:
+    -> (failures, warnings). A failure: the snapshot's stack is in 0x5B00-0x5BFF and its top 16 bytes (or up to
+    0x5C00) do not survive NEXLOAD (Jet Set Willy, Robin of the Wood: the first RET leaves the game). A warning:
+    other snapshot bytes there lost to NEXLOAD (harmless only if the game writes them before reading them), or a
+    stack there with a start the boot model does not follow. keep_printer_buffer (z80tonex) puts them back."""
+    s = zt.Z80Snapshot(z80)
+    want = bytes(s.read(a) for a in range(0x5B00, 0x5C00))
+    stack = 0x5B00 <= s.sp < 0x5C00
+    try:
+        m0, m1 = boot(nex, s.pc)['mem'], boot(nex, s.pc, nexload=True)['mem']
+        plain, nl = bytes(m0[a] for a in range(0x5B00, 0x5C00)), bytes(m1[a] for a in range(0x5B00, 0x5C00))
+    except (ValueError, RuntimeError, KeyError) as e:
+        return [], (['stack at 0x%04X in the printer buffer and the start not followed (%s): prove NEXLOAD keeps it'
+                     % (s.sp, str(e)[:60])] if stack else [])
+    lost = [i for i in range(256) if nl[i] != want[i] and plain[i] == want[i]]
+    top = range(s.sp - 0x5B00, min(256, s.sp - 0x5B00 + 16)) if stack else range(0)
+    hit = [i for i in lost if i in top]
+    fails = ['the stack at 0x%04X is in the printer buffer and NEXLOAD overwrites %d of its top bytes: '
+             'keep_printer_buffer' % (s.sp, len(hit))] if hit else []
+    warns = ['%d snapshot bytes in 0x5B00-0x5BFF lost to NEXLOAD (fine only if the game writes them first)'
+             % len(lost)] if lost and not hit else []
+    return fails, warns
+
+
+def automap_check(nex):
+    """A finished .nex booted to its game with NextReg $0A as NextZXOS leaves it: automap must be off by then, and
+    the automap code's page (the entry bank's lower half) must not be where the game sees it. -> problems."""
+    with open(nex, 'rb') as f:
+        h = f.read(512)
+    entry, pc = h[139], h[14] | h[15] << 8
+    if pc != 0xC000 + zt.AUTOMAP_OFF_AT:
+        return ['PC 0x%04X: no automap code (z80tonex.automap_off)' % pc]
+    st = boot(nex, start_pc(nex), nr={0x0A: NEXTZXOS_NR0A}, min_steps=9)    # past the automap code's 9 instructions
+    bad = []
+    if st['nr'][0x0A] & 0x10:
+        bad.append('DivMMC automap still on at the game ($0A = 0x%02X)' % st['nr'][0x0A])
+    if 2 * entry in st['mmu']:
+        bad.append('the automap code\'s page %d is mapped at the game (MMU %s)' % (2 * entry, st['mmu']))
+    return bad
 
 
 def check(nex, z80, patch=None, tail=None, nexload=False, sysrom=None):

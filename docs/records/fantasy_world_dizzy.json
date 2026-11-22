@@ -63,18 +63,18 @@
  "outputs": {
   "plain": {
    "file": "fantasy_world_dizzy.nex",
-   "md5": "cd620010e2f61af0002e76718945716f"
+   "md5": "1f0c272a669c8d557f8ee21d8d7a93b9"
   },
   "sprites": {
    "file": "fantasy_world_dizzy_sprites.nex",
-   "md5": "fb77af62c5ce975802c354dd8b1943ee"
+   "md5": "7e972f511ceb19c707b1e0358b7d4231"
   }
  },
  "repro": [
   {
    "strategy": "printer",
    "file": "fantasy_world_dizzy_sprites.nex",
-   "md5": "c09213beaec1572c0228985dae89bd77"
+   "md5": "51129bd72539e57939d4d4fa00584cd4"
   }
  ],
  "pin": {
@@ -91,15 +91,15 @@
  },
  "checked": {
   "deps": {
-   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash.py": "04157df11540c17d",
    "nexclash/analyse.py": "4c7e2c2391fb64a1",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
    "nexclash/dizzy5.py": "1123c301b84e7cbc",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "bf75ad27e5bfabce",
+   "nexclash/engines.py": "2abd23b537c0b5d4",
    "nexclash/evidence.json": "a6c823114223e2c3",
    "nexclash/fwd128.py": "ea8ebafbd02f35be",
    "nexclash/hooklib.py": "24241497925658d6",
@@ -107,35 +107,35 @@
    "nexclash/identify.py": "578e73ef2ca90c6a",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
    "nexclash/machine.py": "659903f13de0fcee",
-   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
-   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/recolour.py": "6f27e87ef0c47a17",
    "nexclash/recorder.py": "8b959db3b8dc838b",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/rzx.py": "e018e000440e0274",
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/templates.json": "e93f585833e72628",
+   "nexclash/templates.json": "f7fbc6a2fc623f9e",
    "nexclash/verify.py": "2d4c0e3b68e6354a",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "e003b72b5ff75d07",
+   "recipe": "0ddf10d36561a922",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-17"
+  "date": "2026-11-21"
  },
  "verified": {
   "deps": {
-   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash.py": "04157df11540c17d",
    "nexclash/analyse.py": "4c7e2c2391fb64a1",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
    "nexclash/dizzy5.py": "1123c301b84e7cbc",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "112c3b17a78ace9a",
+   "nexclash/engines.py": "2abd23b537c0b5d4",
    "nexclash/evidence.json": "a6c823114223e2c3",
    "nexclash/fwd128.py": "ea8ebafbd02f35be",
    "nexclash/hooklib.py": "24241497925658d6",
@@ -143,23 +143,23 @@
    "nexclash/identify.py": "578e73ef2ca90c6a",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
    "nexclash/machine.py": "659903f13de0fcee",
-   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
-   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/recolour.py": "6f27e87ef0c47a17",
    "nexclash/recorder.py": "8b959db3b8dc838b",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/rzx.py": "e018e000440e0274",
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/templates.json": "e93f585833e72628",
+   "nexclash/templates.json": "f7fbc6a2fc623f9e",
    "nexclash/verify.py": "2d4c0e3b68e6354a",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "e003b72b5ff75d07",
+   "recipe": "0ddf10d36561a922",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-12"
+  "date": "2026-11-21"
  },
  "rework": [
   {
@@ -213,11 +213,11 @@
    "outputs": {
     "plain": {
      "file": "Dizzy 3 - Fantasy World Dizzy (1989)(Code Masters)(128K)[a2][a2].nex",
-     "md5": "9efc6a2062c141acda244b44909137b7"
+     "md5": "5c664b76785e20e2d52851aa17da064e"
     },
     "sprites": {
      "file": "Dizzy 3 - Fantasy World Dizzy (1989)(Code Masters)(128K)[a2][a2]_sprites.nex",
-     "md5": "4dc1f8c667e5a0baaae63ed24c2b175a"
+     "md5": "d16b16a0a0eab1a648971be836810257"
     }
    },
    "proof": "3 recordings of the 128K release IDENTICAL on rework v128 (bot walks of 12,010 / 12,007 / 12,004 frames: the dungeon, the troll's dialogue, deaths in the fire, a game over and restart, the inventory, the Smuggler's Hideout): 5,983 plots pixel-perfect, 5,935 erases, 12,122 ISR hide checks (104 on the hide path), 100 room wipes and 96 boxes hiding Dizzy, equal to the original's; the game never touches the tail and latch in the printer buffer nor the alt ROM hook bytes; 4 negative controls detected; clock matrix 5 hook sites x 4 incoming clocks = 20 cases PASS, a forced 3.5 MHz exit detected; ROM paths: every ROM byte as recorded; start-up tail never read before written",

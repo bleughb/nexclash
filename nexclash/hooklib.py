@@ -13,6 +13,9 @@ engine's own verifier calls - verifiers stay per engine (CLAUDE.md), these are p
   lines16, pace_check     the pace limiter's target and its check (card patch.pace-limiter)
   pcache_key              a content-cache key (card optimise.pattern-cache)
   iff_audit()             every LD A,I / LD A,R in asm/ that decides on P/V: read twice (card patch.iff-safe-read)
+  speed_audit()           every NEXTREG 7 in asm/: only 28 MHz in or the caller's speed back (card patch.restore-speed)
+  hide_cases(...)         unit cases for hide-type hooks (room set-up, clear screen, window): all sprites shown
+                          first, from captured states, at each CPU speed - not left to a recording reaching them
   call(sim, addr, regs)   run one hook / original to its RET
 
 Existing engines keep their own copies (frozen games: their outputs never change); a rework that opts in
@@ -239,6 +242,28 @@ def call(sim, addr, regs=None, limit=5000000):
         if n > limit:
             raise RuntimeError('call %04X: no RET after %d instructions (PC %04X)' % (addr, limit, Rg[PC]))
     return n
+
+
+def hide_cases(states, sites, run, speeds=4, per_site=4):
+    """Unit cases for every hook whose job is to hide sprites (a room drawn, a screen cleared, a window opened):
+    a recording reaches these rarely with a sprite on show, so their negative controls pass or fail by luck.
+    sites: {pc: name}; run(pc, state, speed) -> (failures, still_shown) runs the engine's own event at pc from the
+    captured state with every sprite made visible first, entered at that CPU speed (NextReg 7 = speed), and
+    returns the event's failures and the sprites left visible. -> Counter: '<name> hook ok' / '<name> hook FAIL!'
+    per case, and up to 3 '  example' lines."""
+    import collections
+    c = collections.Counter()
+    for pc, name in sorted(sites.items()):
+        for n, st in enumerate(list(states)[:per_site]):
+            for speed in range(speeds):
+                fl, shown = run(pc, st, speed)
+                bad = list(fl) + ['sprite %d left shown' % s for s in sorted(shown)]
+                k = '%s hook' % name
+                c[k + (' FAIL!' if bad else ' ok')] += 1
+                if bad and c['  example'] < 3:
+                    c['  example'] += 1
+                    c['  %s, state %d, speed %d: %s' % (k, n, speed, bad[:2])] += 1
+    return c
 
 
 def every_site(sites, run, clocks=CLOCKS):
@@ -570,7 +595,7 @@ def _t_matrix(code, syms):
     """every_site over the harness hooks: the same results at every incoming clock, its clock back at exit."""
     data = {0x9000: bytes(range(256)) * 2, 0xA000: bytes((i * 7) & 255 for i in range(0x800)),
             0xB000: bytes([2, 0x21, 0x43, 0x00, 0x90, 32, 40, 0, 0, 0x00, 0x91, 48, 44])}
-    regs = {'t_speed': {B: 3, C: 4}, 't_speed2': {D: 0x5A, E: 0x0F}, 'h_r': {B: 9, H: 0xA0, L: 0x10, R: 0x91},
+    regs = {'t_speed': {B: 3, C: 4}, 't_speed2': {D: 0x5A, E: 0x0F}, 't_speed3': {B: 3, C: 4, D: 0x21, E: 0x13}, 'h_r': {B: 9, H: 0xA0, L: 0x10, R: 0x91},
             'h_blit': {}, 'h_plot': {H: 0xA0, L: 1, D: 0xA1, E: 0}, 't_up': {A: 5, D: 0x12, E: 0x34, H: 0x90, L: 0},
             't_frame': {}}
     no_r = {'h_r'}                              # the hooks that keep R; elsewhere R counts the waits' polls
@@ -646,6 +671,31 @@ def _t_iff(code, syms):
         if win >= 256:
             c['DI window over 256 T at 28 MHz!'] += 1
     return c
+
+
+# Hook files whose NEXTREG 7 writes a fixed speed (the player's F8 choice lost on the way out), published before
+# the stack forms existed; the back-catalogue speed fix takes each off this list. A new engine is never added here.
+SPEED_LEGACY = {
+    'alien_8_hooks.asm', 'atic_atac_hooks.asm', 'atic_atac_v14_hooks.asm', 'cauldron_hooks.asm', 'chase_hq_hooks.asm',
+    'gauntlet_hooks.asm', 'ice_palace_hooks.asm', 'incredible_shrinking_fireman_hooks-add-GPT6_ASTRA.asm',
+    'inferno_hooks.asm', 'jetpac_hooks.asm', 'matchday_hooks.asm', 'matchday_v21_hooks.asm', 'new_zealand_story_hooks.asm',
+    'olli_and_lissa_2_hooks.asm', 'olli_and_lissa_3_hooks.asm', 'olli_and_lissa_hooks.asm', 'quazatron_hooks.asm',
+    'rainbow_hooks.asm', 'rainbow_z80n_hooks.asm', 'robin_of_the_wood_hooks.asm', 'trueno_hooks.asm', 'wally_hooks.asm',
+    'altered_beast_hooks.asm', 'jsw_hooks.asm'}       # the last two: published 2026-11-21, landed in main after the audit
+_SPEED_RE = re.compile(r'^\s*(?:[A-Za-z_.][\w.]*:?)?\s*nextreg\s+(?:0x0?7|\$0?7|7|07h)\s*,\s*([^\s;]+)', re.I)
+
+
+def speed_audit(root=ROOT):
+    """Every NEXTREG 7 in asm/*.asm (not the library or its harness): a hook may write 3 (28 MHz on the way in) or A
+    (the caller's speed, read through 0x243B / 0x253B, on the way out); any other value is a fixed speed that loses
+    the one the player chose. -> {file: [(line, text)]} for each file with a fixed-speed write."""
+    out = {}
+    for path in sorted(glob.glob(os.path.join(root, 'asm', '*.asm'))):
+        for n, line in enumerate(open(path, encoding='utf-8', errors='replace'), 1):
+            m = _SPEED_RE.match(line)
+            if m and m.group(1).lower() not in ('a', '3', '0x03', '$03', '03h'):
+                out.setdefault(os.path.basename(path), []).append((n, line.strip()[:60]))
+    return out
 
 
 def iff_audit(root=ROOT):
@@ -949,6 +999,19 @@ def selfcheck():
     out.append(('hooklib IFF audit: %d LD A,I / LD A,R in asm/ (%d read twice, %d values), none trusted after one read'
                 % (len(au), sum(v == 'twice' for *_, v in au), sum(v == 'value' for *_, v in au)),
                 ['IFF read once: %s!' % x for x in once]))
+    sa = speed_audit()
+    new = sorted(f for f in sa if f not in SPEED_LEGACY)
+    fixed = sorted(f for f in SPEED_LEGACY if f not in sa)
+    out.append(('hooklib speed audit: NEXTREG 7 only 28 MHz in or the caller\'s speed back; %d legacy files still to fix'
+                % len(SPEED_LEGACY & set(sa)),
+                ['fixed speed written in a hook: %s line %d!' % (f, sa[f][0][0]) for f in new] +
+                ['%s no longer writes a fixed speed: take it off SPEED_LEGACY!' % f for f in fixed]))
+    good = hide_cases([0, 1], {0x100: 'room'}, lambda pc, st, sp: ([], set()))
+    broken = hide_cases([0, 1], {0x100: 'room'}, lambda pc, st, sp: ([], {5}))
+    out.append(('hooklib hide_cases: %d cases (2 states x 4 speeds), a hook leaving sprite 5 shown caught (%d)'
+                % (good['room hook ok'], broken['room hook FAIL!']),
+                [] if good['room hook ok'] == 8 and not good['room hook FAIL!'] and broken['room hook FAIL!'] == 8
+                else ['hide_cases does not tell a hiding hook from a leaking one!']))
     tc = _t_commit(code, syms)
     out.append(('hooklib atomic commit: %d frames, back half only, one burst, the right images shown' % tc['frames'],
                 [k for k in tc if k.endswith('!')]))

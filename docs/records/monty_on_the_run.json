@@ -1,0 +1,184 @@
+{
+ "name": "monty_on_the_run",
+ "order": 274,
+ "game": "Monty on the Run",
+ "doc": "monty_on_the_run.md",
+ "engine": "monty_on_the_run",
+ "representative": true,
+ "reference": "monty_on_the_run",
+ "inputs": {
+  "snapshot": {
+   "name": "monty_on_the_run.z80",
+   "md5": "0acdc707ef4cf3b4aaf94316bd0f285c",
+   "path": "monty_on_the_run/monty_on_the_run.z80",
+   "note": "TOSEC Monty on the Run (1985)(Gremlin Graphics Software).z80, the 48K game, as the published patch targets"
+  },
+  "recordings": [
+   {
+    "name": "montyontherun.rzx",
+    "md5": "0e5f4e0a37671702741dce80edac3dd5",
+    "path": "monty_on_the_run/montyontherun.rzx",
+    "role": "rzxarchive recording, 61,198 frames (20 minutes), 157 rooms"
+   },
+   {
+    "name": "monty_on_the_run.pok",
+    "md5": "a27db54a2224cf75a8e39405120799f1",
+    "path": "monty_on_the_run/monty_on_the_run.pok",
+    "note": "not a recording: the archive's cheats; four in the .nxc, each checked against this release's code"
+   }
+  ]
+ },
+ "modules": [
+  "monty_on_the_run"
+ ],
+ "own_modules": [
+  "monty_on_the_run"
+ ],
+ "data": [
+  "docs/profiles/monty_on_the_run.json",
+  "asm/monty_on_the_run_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "montyontherun.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 20,
+  "note": "rzxarchive recording; auto also runs the unit cases (enemy, Monty, room, new game, menu, four CPU speeds) and the negative controls"
+ },
+ "outputs": {
+  "plain": {
+   "file": "monty_on_the_run.nex",
+   "md5": "86c30493dbd683b5076dfa43098180bb"
+  },
+  "sprites": {
+   "file": "monty_on_the_run_sprites.nex",
+   "md5": "7fdb25d99b58c4413042f4b7a7f919c8"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Monty on the Run",
+  "engine_col": "monty_on_the_run (monty_on_the_run.md)",
+  "build": "monty_on_the_run_sprites.nex (as published in nxc 1.0: enemies in their own ink and Monty in white as sprites over the two XOR plotters, the attribute painter off; four cheats)",
+  "software": "replay IDENTICAL on 61,198 frames (57,105 figure checks, 13.7M pixels); unit cases incl. four CPU speeds; 10 negatives detected",
+  "hardware": "Tang board: loads with automap on, reaches the menu (play through the Sinclair keys 6-0)",
+  "next": "owner play"
+ },
+ "checks": [
+  "asm2profile:monty_on_the_run"
+ ],
+ "techniques": [
+  {
+   "application": "monty_on_the_run.screen-readers",
+   "id": "detect.gameplay-screen-readers",
+   "revision": 2,
+   "target": "survey readers: only the plotters' own read-modify-write; no collision reads of screen pixels",
+   "phases": []
+  },
+  {
+   "application": "monty_on_the_run.xor-overlay",
+   "id": "patch.xor-overlay-keep-ula",
+   "revision": 2,
+   "target": "the enemy (0xB4F5) and Monty (0xEFE4) XOR plotters kept; two sprites per figure over the drawn image, the painter's attribute writes NOPed",
+   "phases": []
+  },
+  {
+   "application": "monty_on_the_run.alt-rom",
+   "id": "patch.whole-altrom-image",
+   "revision": 2,
+   "target": "Sinclair 48K ROM as alt ROM image 1, hooks at 0x386E",
+   "phases": []
+  },
+  {
+   "application": "monty_on_the_run.restore-speed",
+   "id": "patch.restore-speed",
+   "revision": 1,
+   "target": "28 MHz inside each hook, the caller's NR 7 kept on the stack and put back",
+   "phases": []
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/monty_on_the_run_hooks.asm": "577d70d9bbff1d2d",
+   "docs/profiles/monty_on_the_run.json": "86133d2d514e238d",
+   "nexclash.py": "04157df11540c17d",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/engines.py": "a10e858bbd72c2dd",
+   "nexclash/monty_on_the_run.py": "70602a910ef3a120",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "50684436558662bd",
+   "skoolkit": "10.1",
+   "recipe": "149d57642e689810",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-22"
+ },
+ "verified": {
+  "deps": {
+   "asm/monty_on_the_run_hooks.asm": "577d70d9bbff1d2d",
+   "docs/profiles/monty_on_the_run.json": "86133d2d514e238d",
+   "nexclash.py": "04157df11540c17d",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/engines.py": "a10e858bbd72c2dd",
+   "nexclash/monty_on_the_run.py": "70602a910ef3a120",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "50684436558662bd",
+   "skoolkit": "10.1",
+   "recipe": "149d57642e689810",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-22"
+ },
+ "results": [
+  {
+   "application": "monty_on_the_run.xor-overlay",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "7fdb25d9",
+   "scope": "1 rzxarchive recording (61,198 frames, 157 rooms); unit cases for the enemy, Monty, room, new game and menu hooks at four CPU speeds; 10 negatives; no hardware timing",
+   "evidence": "games/monty_on_the_run.md \"Results\""
+  }
+ ],
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/monty_on_the_run.md#design-built-2026-11-21-standing-default-figures-as-sprites-in-the-games-own-colours-colour-paint-off"
+   ],
+   "coverage": "Hook T over the first 3,000 frames of the recording in the simulator; no JNext or hardware timing.",
+   "result": "About 1.9% of the frame budget: enemy hook ~37.8k T, Monty ~12.6k T at 28 MHz, run about one frame in 4.75."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/monty_on_the_run.md#observed-engine-static-reading-motr_startz80"
+   ],
+   "coverage": "Every screen reader in the first 15,000 frames (survey) and the whole recording's plotter, painter, room and lift-block writes.",
+   "result": "No routine reads screen pixels for collisions: the XORs stay on the ULA; the attribute painter's writes are the clash and are removed."
+  },
+  "decision": "Enemies in their own ink and Monty in white as sprites over the kept XOR plotters, the attribute painter off (the standing default).",
+  "next_experiment": "A human recording reaching the later caverns and the escape: replay IDENTICAL with every negative control caught."
+ }
+}
