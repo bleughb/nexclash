@@ -1,19 +1,37 @@
 # Elite (Braben / Bell, Firebird 1985; Russian 128K hack) - engine: none yet
 
 ## Next session
-Stage: 0 done (Docking only), 1 next (design)   State: intake 2026-11-22, no design asked yet
+Stage: 0 done (all five recordings surveyed in full), 1 next (design)   State: intake 2026-11-22, no design asked yet
 Inputs: specnext/reference/elite/ (tape, 5 RZX, 5 extracted .z80)    Branch: add-elite    Commit: see git log
-Checks: survey of DockingElite (3000 frames); other four recordings not surveyed
+Checks: full surveys of all five RZX (7.5k-68.6k frames); tape not run in an emulator
 Pending user answers: stage-1 design question (nothing asked yet)
-Start with: `python -m nexclash.survey ../specnext/reference/elite/PoliceAnarchyElite.z80 --rzx ../specnext/reference/elite/PoliceAnarchyElite.rzx --stop 15000`
-Read: PLAYBOOK stage 1, 3d (unknown engine: feasibility first)
+Start with: feasibility (PLAYBOOK 3d): cost of 32702/32717 (back-buffer copy) and 32739 (line plot), tail place, then the design question
+Read: PLAYBOOK stage 1, 3d (unknown engine: feasibility first); ## Findings below
 Open: see Findings
 
 Inputs from SARD (eliteRZX.txt): Elite.tap + 5 Fuse RZX (Docking, PoliceAnarchy, Havoc, Witch, Reidquat),
 "Russian 128k Hack" with a "Mamba MkII" and a new "PuffAdder" ship. No .z80 was sent; each RZX's first
 snapshot is the start state (`rzx extract`). Files live in specnext/reference/elite/ only.
 
-## Findings (stage 0, DockingElite.rzx, `--stop 3000`)
+## Recordings (checked 2026-11-22 against the full-length survey previews)
+Order of play (cash): Docking ends docked at Lave (7186.3 Cr); Havoc, PoliceAnarchy and Reidquat start from that status
+page (Lave). Havoc ends docked at Tionisla (7252.3 Cr); PoliceAnarchy ends at Riedquat (7342.8 Cr, rating Competent);
+Reidquat ends at Riedquat (7483.2 Cr); Witch ends on the inventory screen ("Alien Items 6t", fuel 3.4 LY, 7215.4 Cr).
+So the names match SARD's notes. Frames: Docking 7501, Havoc 54517, PoliceAnarchy 68635, Witch 53371, Reidquat 41969.
+Which parts overlap each other is not compared.
+
+## Findings (stage 0; Docking first look, then all five surveyed in full)
+- The game is COLOURED, not mono: the viewport attributes are one colour per system (orange at Lave-area/Tionisla/Riedquat,
+  cyan in witchspace), the scanner is purple / green, the status pages are cyan text. Whole-viewport fills, so wireframe
+  lines do not clash inside it; the multi-colour scanner / HUD bars are where clash can show.
+- Gate over all five recordings: 29993 (0x7529) -> 39117 never reached; 32702 callers 37720, 38122 (and one more of 11) never
+  reached; 38113 -> 30872 never reached in Docking (other four 3/4 reached). Mostly code that ran nearby; which are FIGURE
+  paths is not checked.
+- Pacing: interrupts accepted in about 2/3 of the frames in every recording (e.g. 46005 of 68636): the game runs with DI for
+  stretches (back-buffer copy ~125k T, up to 930k T per call).
+- Free memory is scarce: PoliceAnarchy leaves 5546 of 32768 bytes untouched in 0x4000-0xBFFF (largest span 456 bytes).
+
+## Findings (stage 0, DockingElite.rzx, `--stop 3000` first look)
 - Snapshot: 128K machine, 7FFD = 0x30 (ROM 1 = 48K BASIC, bank 0 at C000, paging LOCKED): runs like a
   48K game. IM 2, I = 0xFD, vector 0xFDFF -> 0xFEFE, DI at the snapshot. Border 0. WitchElite starts at
   PC 0xAB64, the other four at 0xFEFE (ISR). All five snapshots show the same IM 2 setup.
@@ -32,14 +50,15 @@ snapshot is the start state (`rzx extract`). Files live in specnext/reference/el
 
 ## Open
 - Tail placement for a 128K snapshot with ROM 1 locked (see Lessons).
-- Longer survey of the other four recordings (coverage GATE: 29993, 39074 never reached).
+- Which unreached call sites are figure plotters (cost --at / disassembly); whether another recording is needed.
+- Run Elite.tap in an emulator to confirm it matches the snapshots (loader is BASIC + `USR 28672`, packed 40801-byte block at 24648; the bytes differ from snapshot RAM, so it is packed).
 - Stage-1 design question and feasibility (3d).
 
 ## Hardware checklist
 None yet (no build).
 
 ## Stage log
-2026-11-22  stage 0 (intake, Docking only)  ~30 min  ~25 calls  0 user rounds
+2026-11-22  stage 0 (intake, all five recordings)  ~2 h  ~60 calls  0 user rounds
 
 ## Lessons
 - [deferred Open: reconsider when stage 1 feasibility shows whether a tail can be placed (--tail + scan --range)] A 128K snapshot with the 48K ROM locked in: `convert` found no place for the start-up tail and nextboot.check models 48K start-up only.
