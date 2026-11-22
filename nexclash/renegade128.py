@@ -1436,10 +1436,12 @@ def enhanced_nex(nex, cmap, outline=True):
     return out2, info
 
 
-def black_outline_nex(nex):
-    """The sprite build -> the same build with the outline black: palette bytes only (entry 3 of the setup stub's palette in bank 10,
-    and the outline byte of each level's row of the floors table in bank 12), so no pattern changes. -> bytes."""
+def outline_colour_nex(nex, rgb332):
+    """The sprite build -> the same build with the outline in one RGB332 colour (0-255): palette bytes only (entry 3 of the setup stub's
+    palette in bank 10, and the outline byte of each level's row of the floors table in bank 12), so no pattern changes. -> bytes."""
     from .recolour import banks, splice
+    if not 0 <= rgb332 <= 255:
+        raise ValueError('RGB332 colour is 0-255')
     prof = load_profile()
     have = banks(nex)
     b10, b12 = bytearray(have[10]), bytearray(have[12])
@@ -1447,10 +1449,14 @@ def black_outline_nex(nex):
     fl = int(prof['hooks']['syms']['floors'], 16) - 0x2000
     if bytes(b10[o:o + 16]) != bytes(PALETTE) or any(b12[fl + 8 * i + 1] not in (0, 0xFF) for i in range(4)):
         raise ValueError('palette or floors table not where the build puts them')
-    b10[o + OUTLINE] = 0
+    b10[o + OUTLINE] = rgb332
     for i in range(4):
-        b12[fl + 8 * i + 1] = 0
+        b12[fl + 8 * i + 1] = rgb332
     return splice(nex, {10: bytes(b10), 12: bytes(b12)})[0]
+
+
+def black_outline_nex(nex):
+    return outline_colour_nex(nex, 0)
 
 
 def auto(a, z80, name, out, say):
