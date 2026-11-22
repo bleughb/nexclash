@@ -72,6 +72,7 @@ ENGINES = [
     ('starquake', 'is_starquake', None),                                  # Starquake (48K)
     ('lunar_jetman', 'is_lunar_jetman', None),                            # Lunar Jetman (48K)
     ('dynamite_dan', 'is_dynamite_dan', None),                            # Dynamite Dan (48K)
+    ('monty_on_the_run', 'is_monty_on_the_run', None),                    # Monty on the Run (48K)
     ('sabre_wulf', 'is_sabre_wulf', None),                                # Sabre Wulf (48K)
     ('solomons_key', 'is_solomons_key', None),                            # Solomon's Key (48K)
     ('robin_of_the_wood', 'is_robin_of_the_wood', None),                  # Robin of the Wood (128K)
