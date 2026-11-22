@@ -1,0 +1,45 @@
+{
+ "id": "lesson.menu-key-pulses-missed",
+ "kind": "pitfall",
+ "claim": "Menus poll the keyboard every few frames or run long routines, so short key pulses are missed; hold the key, but held keys can overrun a letter wheel or leak into play.",
+ "evidence": [
+  {
+   "game": "games/phantis.md",
+   "text": "The menu polls and a short press of J can be missed; two pace seeds with identical numbers meant input was not reaching the game.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/gryzor.md",
+   "text": "The menu checks the keyboard from its interrupt every few frames: a 1-frame press is often missed, in the original too; hold the key.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/gunfright.md",
+   "text": "A sustained press is needed during the long menu beeper routine.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/father_christmas.md",
+   "text": "The name screen's wheel of letters: a held key stepped past the end; use short presses with a wait.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/page_pharaoh.md",
+   "text": "A start key still held when play begins reads as input; keep it short.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "key press",
+  "hold key",
+  "menu poll",
+  "short pulse",
+  "letter wheel",
+  "start key",
+  "interrupt"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

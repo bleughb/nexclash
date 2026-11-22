@@ -1,0 +1,23 @@
+{
+ "id": "lesson.snapshot-odd-moment",
+ "kind": "pitfall",
+ "claim": "A snapshot taken at an odd moment (interrupts off at an ISR entry) can crash a plain build; take one from the recording instead.",
+ "evidence": [
+  {
+   "game": "games/el_capitan_trueno.md",
+   "text": "The first snapshot had PC at 0xEEEE, the ISR entry at the title menu, with DI and IM 2.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "snapshot",
+  "ISR entry",
+  "interrupts off",
+  "title menu",
+  "rzxplay --stop"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

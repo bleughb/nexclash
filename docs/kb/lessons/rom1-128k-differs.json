@@ -1,0 +1,34 @@
+{
+ "id": "lesson.rom1-128k-differs",
+ "kind": "fact",
+ "claim": "The 128K ROM 1 differs from Sinclair's 48K ROM in keypad code, so ROM-path checks need the right ROM 1 (tried as the 48K ROM and per segment) and recordings made on the other ROM can desync.",
+ "evidence": [
+  {
+   "game": "games/lode_runner.md",
+   "text": "Observed 29 MISMATCH reads when the 48K ROM was used for a 128K ROM 1 image; the fade reads every ROM byte.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/knight_tyme.md",
+   "text": "128-1.rom has keypad code at 0x386E on the ISR path and a stub there broke replay; recordings on the 48K ROM desynced the 128K run at frame 2; the Bridge star map reads ROM 0 at 0x0D00-0x0D20 (33 bytes seen).",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "platform",
+ "facts": {
+  "machine": "128K"
+ },
+ "card": "patch.whole-altrom-image",
+ "words": [
+  "128K ROM",
+  "ROM 1",
+  "keypad",
+  "rom_paths",
+  "desync",
+  "48K ROM",
+  "alt ROM"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

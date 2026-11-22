@@ -1,0 +1,23 @@
+{
+ "id": "lesson.rom-paths-test-pokes",
+ "kind": "fact",
+ "claim": "A recording with test pokes stays in sync when each poke starts a new segment from its own snapshot; rom_paths reports this in its lines.",
+ "evidence": [
+  {
+   "game": "games/gunrunner.md",
+   "text": "A recording with test pokes keeps sync when each poke starts a new segment from its own snapshot; rom_paths says so in its lines.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "rom_paths",
+  "pokes",
+  "segment",
+  "snapshot",
+  "recording"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

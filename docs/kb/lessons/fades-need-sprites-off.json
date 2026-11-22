@@ -1,0 +1,25 @@
+{
+ "id": "lesson.fades-need-sprites-off",
+ "kind": "pitfall",
+ "claim": "A fade to black and a scene on a black screen need the sprites off for their length, since figures the game drew fade with the attributes but sprites do not.",
+ "evidence": [
+  {
+   "game": "games/olli_and_lissa_2.md",
+   "text": "New room, title and end of game start with an attribute fade to black, and a lost life plays a scene on a black screen; the figures on the screen fade or go black with it.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "card": "patch.display-atomic-switch",
+ "words": [
+  "fade",
+  "black screen",
+  "sprites off",
+  "room change",
+  "attribute fade",
+  "scene"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

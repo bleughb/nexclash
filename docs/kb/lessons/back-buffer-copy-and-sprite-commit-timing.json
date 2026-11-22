@@ -1,0 +1,31 @@
+{
+ "id": "lesson.back-buffer-copy-and-sprite-commit-timing",
+ "kind": "pitfall",
+ "claim": "In back-buffer games commit sprites after the pixel copy, not at the start of the blit, or they show before the pixels arrive.",
+ "evidence": [
+  {
+   "game": "games/everyones_a_wally.md",
+   "text": "Back buffer copied by unrolled LDI (47653) then attributes at 47637; sprite commit goes at 47637, after the pixel copy.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "facts": {
+  "draw": "back-buffer"
+ },
+ "when": [
+  "render.target.back_buffer"
+ ],
+ "card": "patch.display-atomic-switch",
+ "words": [
+  "back buffer",
+  "LDI copy",
+  "commit",
+  "sprites",
+  "screen copy",
+  "timing"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

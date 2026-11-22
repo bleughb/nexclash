@@ -1,0 +1,24 @@
+{
+ "id": "lesson.sprite-from-committed-state",
+ "kind": "pitfall",
+ "claim": "Set a sprite from the state the game committed (what it drew from), not from a routine's proposed fields, which are wrong after a refused move.",
+ "evidence": [
+  {
+   "game": "games/3d_stock_car_championship.md",
+   "text": "Proposed fields (+0x46, +0x43, +0x5F) are wrong after a refused move (about one draw in nine); set the sprite after the commit loop.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "sprite",
+  "commit",
+  "refused move",
+  "proposed fields",
+  "position",
+  "hook"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

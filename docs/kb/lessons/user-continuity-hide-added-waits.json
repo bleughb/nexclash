@@ -1,0 +1,29 @@
+{
+ "id": "lesson.user-continuity-hide-added-waits",
+ "kind": "owner-rule",
+ "claim": "Hide or remove waits the conversion adds and keep the original game's flow and speed.",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "Driver install shown with loading bars and skipped on a same-level restart.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/cisco_heat.md",
+   "text": "Loading screen shown at once, held 200 frames (about 4 s) or until a key; 0 frames in the NXC build.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "loading wait",
+  "continuity",
+  "retry",
+  "border bars",
+  "original behaviour",
+  "loading screen"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

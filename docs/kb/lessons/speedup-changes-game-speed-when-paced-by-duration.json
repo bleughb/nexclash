@@ -1,0 +1,30 @@
+{
+ "id": "lesson.speedup-changes-game-speed-when-paced-by-duration",
+ "kind": "pitfall",
+ "claim": "If game speed follows update duration or CPU time, any speed-up (or added hook time) changes the game's pace, so hold each update to its original length by crediting saved time back.",
+ "evidence": [
+  {
+   "game": "games/cisco_heat.md",
+   "text": "Sprite fast path without its saving added back to the pace ran 14% fast in the simulator (7.41 frames an update against 8.59); with the credit 8.47 against 8.59 plain.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/trap_door.md",
+   "text": "48K, IM 1, interrupts off through the whole recording (0 accepted): no frame sync, pace = CPU time; any added time changes game speed (unpaced game).",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "speed-up",
+  "game too fast",
+  "update duration",
+  "pace credit",
+  "game speed",
+  "per update",
+  "28 MHz"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

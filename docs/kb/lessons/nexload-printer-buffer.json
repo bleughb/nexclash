@@ -1,0 +1,52 @@
+{
+ "id": "lesson.nexload-printer-buffer",
+ "kind": "pitfall",
+ "claim": "NEXLOAD overwrites 0x5B00-0x5BFF before the game starts, so a snapshot that keeps code, stack or data there starts wrong unless the build restores the whole 256 bytes.",
+ "limit": "A read of 5B5C alone did not matter in Atom Ant or Ruff and Reddy (real loader showed 0x10 there in every mode); check what the game does with the byte.",
+ "evidence": [
+  {
+   "game": "games/head_over_heels.md",
+   "text": "Restore the entire 256-byte NEXLOAD printer buffer, not only the start-up tail; 5B00-5BFF workspace restored completely.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/silkworm.md",
+   "text": "Code lives at 5B00-5BEE (entry 5B00); NEXLOAD writes that buffer, so a set-up call in the stub bank copies 5B00-5BFF back.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/robin_of_the_wood.md",
+   "text": "Stack at 0x5B76, inside the buffer NEXLOAD overwrites, returning into ROM paging code at 0x5BB0; found by scanning builds with nexload=True.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/highway_encounter.md",
+   "text": "NEXLOAD overwrites the printer buffer before entry; 5B00..5CFF restored.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/that_sinking_feeling.md",
+   "text": "Game reads 5B5C (its 7FFD copy); setup restores the buffer because keep_printer_buffer was 48K only.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/auf_wiedersehen_monty.md",
+   "text": "Game reads 0x5B00 before writing it; NEXLOAD overwrote it, so the snapshot's buffer is put back.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "NEXLOAD",
+  "printer buffer",
+  "5B00",
+  "5B5C",
+  "BANKM",
+  "keep_printer_buffer",
+  "128K",
+  "stack"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

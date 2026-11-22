@@ -1,0 +1,29 @@
+{
+ "id": "lesson.cell-map-renderer-model",
+ "kind": "fact",
+ "claim": "A cell-map renderer that diffs two maps and copies changed cells has no pixel-level attribute clash; its visible fault is a figure's cell hiding what is behind it.",
+ "evidence": [
+  {
+   "game": "games/trap_door.md",
+   "text": "Two cell maps (tile set, tile, attribute) diffed and changed cells copied; findings from survey counts and disassembly, not a probe; logged analysed and skipped (no colour clash to remove).",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "inferred",
+ "area": "design",
+ "facts": {
+  "draw": "cell-copier"
+ },
+ "words": [
+  "cell map",
+  "tile",
+  "attribute",
+  "diff",
+  "copier",
+  "clash",
+  "cut-outs",
+  "Trap Door"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

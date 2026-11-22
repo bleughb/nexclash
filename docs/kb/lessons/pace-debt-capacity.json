@@ -1,0 +1,28 @@
+{
+ "id": "lesson.pace-debt-capacity",
+ "kind": "pitfall",
+ "claim": "A limiter that only waits cannot repay a debt larger than its window; check its capacity against the worst update.",
+ "evidence": [
+  {
+   "game": "games/nightshade.md",
+   "text": "Limiter that only waits cannot repay a debt larger than its window: 240 lines a blit against 560 of hooks.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "when": [
+  "hook.faster_than_original"
+ ],
+ "card": "patch.pace-limiter",
+ "words": [
+  "pace",
+  "debt",
+  "capacity",
+  "window",
+  "limiter",
+  "worst update"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

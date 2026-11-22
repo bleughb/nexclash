@@ -1,0 +1,29 @@
+{
+ "id": "lesson.sprite-outline-is-pattern-index-0",
+ "kind": "fact",
+ "claim": "Next sprite transparency is pattern index 0, so an outline 'off' option must leave outline pixels out of the images; only an outline colour change is a palette-only change.",
+ "evidence": [
+  {
+   "game": "games/renegade.md",
+   "text": "Outline off writes no outline pixels (--toggle 'Outline off'); a black outline variant is palette bytes only (outline_colour_nex).",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/lunar_jetman.md",
+   "text": "Black outline on standard colours; toggle 'Outline off'; another outline colour is a palette-only change (outline_colour=).",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "outline",
+  "sprite",
+  "index 0",
+  "palette",
+  "black outline",
+  "nxc toggle"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

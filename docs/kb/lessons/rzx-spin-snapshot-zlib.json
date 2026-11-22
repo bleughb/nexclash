@@ -1,0 +1,23 @@
+{
+ "id": "lesson.rzx-spin-snapshot-zlib",
+ "kind": "fact",
+ "claim": "SPIN RZX snapshot blocks are zlib-compressed (flag 2); nexclash.py rzx extract reads them.",
+ "evidence": [
+  {
+   "game": "games/nemesis_the_warlock.md",
+   "text": "SPIN RZX snapshot blocks are zlib-compressed (flag 2); parsed by hand, now nexclash.py rzx extract does it.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "rzx",
+  "zlib",
+  "snapshot block",
+  "SPIN",
+  "extract"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,35 @@
+{
+ "id": "lesson.native-not-simulator-timing",
+ "kind": "method",
+ "claim": "Take timing constants and benefits from native measurements, not simulator T counts, and label estimates separately; raster samples omit wrapper entry/exit, so profile those offsets before fixing a debt.",
+ "evidence": [
+  {
+   "game": "games/gunfright.md",
+   "text": "Producer hooks inside a measured render window lengthen it and are scaled by the limiter's slope; refit the constants from native measurements, not simulator counts.",
+   "shown_on": "jnext"
+  },
+  {
+   "game": "games/highway_encounter.md",
+   "text": "Raster samples omit wrapper entry/exit and the gaps between window samples.",
+   "shown_on": "jnext"
+  },
+  {
+   "game": "games/head_over_heels.md",
+   "text": "Label estimates separately from native pace.",
+   "shown_on": "jnext"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "card": "patch.pace-limiter",
+ "words": [
+  "native measurement",
+  "simulator T count",
+  "limiter slope",
+  "raster sample",
+  "estimate",
+  "pace"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

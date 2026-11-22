@@ -1,0 +1,24 @@
+{
+ "id": "lesson.painted-pixel-hides-runtime-colour",
+ "kind": "pitfall",
+ "claim": "A fixed painted palette entry on a pixel the game colours at run time hides the game's colour cue; give such pixels the run-time colour.",
+ "evidence": [
+  {
+   "game": "games/sabre_wulf.md",
+   "text": "The orchid's colour tells the player its effect, and painted pixels are fixed so a painted set loses the cue; the colour map gives the plant frames' upper cell row the run-time colour, except the black outline.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "fixed palette",
+  "run-time colour",
+  "orchid",
+  "painted set",
+  "colour cue",
+  "recolour"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

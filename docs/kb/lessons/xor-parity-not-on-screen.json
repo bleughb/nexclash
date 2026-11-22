@@ -1,0 +1,24 @@
+{
+ "id": "lesson.xor-parity-not-on-screen",
+ "kind": "pitfall",
+ "claim": "Draw parity does not mean 'is on screen' for XOR figures: clears, scrolls and text wipe or move them without an erase, so visibility needs more than a parity count.",
+ "evidence": [
+  {
+   "game": "games/cauldron.md",
+   "text": "Other writers on figure bits: ROM PO-CHAR 15,777, tile writer 0xB378, CLS and clears 0xB2A6, bottom-third scroll 0xDED2/0xDEEA; XOR overlay with figures in front chosen.",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "XOR",
+  "parity",
+  "visibility",
+  "clear",
+  "scroll",
+  "overlay"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,27 @@
+{
+ "id": "lesson.snapshot-128k-bank-at-c000",
+ "kind": "pitfall",
+ "claim": "A 128K snapshot may have a non-game bank paged at 0xC000, so a dump from C000 up shows that bank, not the game's.",
+ "evidence": [
+  {
+   "game": "games/ruff_and_reddy.md",
+   "text": "The .z80 was saved with bank 3 (the player's bank) paged; game addresses from C000 up are in bank 0, so the first look at POKE sites and the room table read the wrong bytes.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "facts": {
+  "machine": "128K"
+ },
+ "words": [
+  "bank",
+  "C000",
+  "128K",
+  "snapshot",
+  "paging",
+  "7FFD"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

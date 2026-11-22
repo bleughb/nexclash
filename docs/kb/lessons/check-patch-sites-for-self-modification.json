@@ -1,0 +1,30 @@
+{
+ "id": "lesson.check-patch-sites-for-self-modification",
+ "kind": "pitfall",
+ "claim": "Games self-modify; check patch sites for writes during play and model the operation byte currently in force.",
+ "evidence": [
+  {
+   "game": "games/treasure_island_dizzy.md",
+   "text": "Title-screen ISR 63328 writes 63340.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/magicland_dizzy.md",
+   "text": "Object plotter self-modifies 36775 (NOP / XOR (HL)) and 36772 (JP 36795 mirrored path); model the op in force.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "self-modifying",
+  "patch site",
+  "operand",
+  "NOP",
+  "XOR (HL)",
+  "signature",
+  "analysis"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

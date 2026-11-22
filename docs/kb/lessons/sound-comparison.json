@@ -1,0 +1,32 @@
+{
+ "id": "lesson.sound-comparison",
+ "kind": "method",
+ "claim": "Compare ordered port FE values at matched updates and periods at the same OUT; port counts per wall second mix pace with pitch.",
+ "evidence": [
+  {
+   "game": "games/dizzy_ultimate_cartoon_adventure.md",
+   "text": "Compare ordered FE values at matched updates and periods at the same OUT instruction; port counts per wall second alone mix game pace with pitch.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/cobra.md",
+   "text": "The main loop waits for the interrupt and the beeper plays there.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "when": [
+  "routine.emits_timed_output"
+ ],
+ "words": [
+  "sound",
+  "beeper",
+  "port FE",
+  "pitch",
+  "OUT",
+  "pace"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

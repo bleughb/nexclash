@@ -1,0 +1,30 @@
+{
+ "id": "lesson.display-only-scope",
+ "kind": "pitfall",
+ "claim": "A test that skips a routine proves it display-only only on the paths the recording takes; branches never taken and code the stage patches elsewhere stay unchecked, so read the disassembly too.",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "Skipping the copier kept game RAM equal on levels 1-4 and 6 once the recorded LD A,R values were fed; disassembly then found gameplay logic (9804) inside the copier.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/castle_master.md",
+   "text": "Raster stage skipped over all frames (5,281 calls): the only raster-written areas were display-only, marked observed.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "display only",
+  "skip routine",
+  "recording coverage",
+  "unchecked branches",
+  "disassembly",
+  "replay coverage",
+  "game logic"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

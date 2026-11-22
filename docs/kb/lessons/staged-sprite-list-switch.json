@@ -1,0 +1,24 @@
+{
+ "id": "lesson.staged-sprite-list-switch",
+ "kind": "method",
+ "claim": "When the game fills a figure list then plays it, stage sprites at the add and switch them on at the play; a pass that adds nothing switches every sprite off, so room changes need no hook.",
+ "evidence": [
+  {
+   "game": "games/olli_and_lissa_3.md",
+   "text": "Play hook switches on the staged figures' sprites in the order added and every other sprite off; a pass that adds nothing switches every sprite off, so a room change needs no hook of its own.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "display list",
+  "staged sprites",
+  "room change",
+  "stale sprite",
+  "switch on",
+  "play hook"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

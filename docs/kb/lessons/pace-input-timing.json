@@ -1,0 +1,50 @@
+{
+ "id": "lesson.pace-input-timing",
+ "kind": "fact",
+ "claim": "JNext queues input to the next frame boundary, so inject keys after the game's own read, just before the render, or at the game's reads, and give both arms the same input.",
+ "evidence": [
+  {
+   "game": "games/ikari_warriors.md",
+   "text": "Input arrives at the next frame boundary; applied after the game's read (0xEB5F) the runs stay in lockstep.",
+   "shown_on": "jnext"
+  },
+  {
+   "game": "games/comando_quatro.md",
+   "text": "The game reads keys at a dozen places; applying input just before the render gives every arm the same input.",
+   "shown_on": "jnext"
+  },
+  {
+   "game": "games/everyones_a_wally_updated.md",
+   "text": "Three reads of one row came within 2 ms of the probe; keys given at the game's reads (profile inject) held lockstep.",
+   "shown_on": "jnext"
+  },
+  {
+   "game": "games/jillys_farm.md",
+   "text": "Updates shorter than a frame: a small generator in place of the control read gives both arms the same input.",
+   "shown_on": "jnext"
+  },
+  {
+   "game": "games/herbert.md",
+   "text": "Queue replay keys before the long copy window, not at the reader, to avoid an extra jump update.",
+   "shown_on": "jnext"
+  },
+  {
+   "game": "games/mad_mix_2.md",
+   "text": "Fixture needs R removed and no key waits: input changes only at updates.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "emulator",
+ "words": [
+  "JNext",
+  "input",
+  "frame boundary",
+  "key reads",
+  "inject",
+  "lockstep",
+  "pace"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

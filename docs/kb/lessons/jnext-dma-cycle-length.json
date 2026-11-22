@@ -1,0 +1,24 @@
+{
+ "id": "lesson.jnext-dma-cycle-length",
+ "kind": "fact",
+ "claim": "In JNext 1.1.104, DMA with both ports left at the reset timing is much slower than with cycle length 2 programmed (12.5 T against 3.6 T a byte), so program the timing.",
+ "evidence": [
+  {
+   "game": "games/scooby_doo.md",
+   "text": "JNext 1.1.104: both ports at cycle length 2 took 3.6 T a byte against 12.5 with the reset timing.",
+   "shown_on": "jnext"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "emulator",
+ "words": [
+  "DMA",
+  "cycle length",
+  "JNext",
+  "timing",
+  "T per byte",
+  "port"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

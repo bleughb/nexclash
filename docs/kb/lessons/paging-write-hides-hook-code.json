@@ -1,0 +1,48 @@
+{
+ "id": "lesson.paging-write-hides-hook-code",
+ "kind": "pitfall",
+ "claim": "On the Next a game or ISR write to port 7FFD can remap the MMU slots holding hook code or a hook stack, so use a slot the write does not reset and check ROM and paging state at hook entry and exit.",
+ "evidence": [
+  {
+   "game": "games/r_type.md",
+   "text": "Return (8F4E) maps the hook page back because a 7FFD write maps ROM over slot 1.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/lode_runner.md",
+   "text": "An IM 2 handler that writes 7FFD resets MMU 0, 1, 6 and 7; a hook window into another bank must use another slot (slot 2 used).",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/head_over_heels.md",
+   "text": "7FFD writes replace MMU1 so a private stack there is lost; a stack in a spare page in MMU2 survived.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/into_the_eagles_nest.md",
+   "text": "A wrapper mapping slot 1 to ROM crashed when the hook stack was in slot 1; restore what was found.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/cisco_heat.md",
+   "text": "A 7FFD write inside w_go put ROM back into MMU slot 0: 51 characters printed for 18 and updates ran 3 frames long; the verifier now models the reset.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "platform",
+ "facts": {
+  "machine": "128K"
+ },
+ "words": [
+  "7FFD",
+  "MMU",
+  "slot",
+  "hook stack",
+  "ROM",
+  "paging",
+  "reset"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

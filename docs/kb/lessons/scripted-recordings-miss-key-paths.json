@@ -1,0 +1,23 @@
+{
+ "id": "lesson.scripted-recordings-miss-key-paths",
+ "kind": "pitfall",
+ "claim": "Scripted recordings reward reaching rooms and code, not keys beyond movement, so they can miss a path (such as a wrong colour) that a human recording finds quickly.",
+ "evidence": [
+  {
+   "game": "games/arc_of_yesod.md",
+   "text": "Ten scripted recordings missed a second colour path beside the paint that a human recording released within minutes.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "scripted recording",
+  "human recording",
+  "coverage",
+  "key input",
+  "colour path"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

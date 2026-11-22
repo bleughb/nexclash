@@ -1,0 +1,46 @@
+{
+ "id": "lesson.title-key-sequences",
+ "kind": "pitfall",
+ "claim": "Titles may need a timed key sequence: a key only after the tune starts, all keys up before the next wait, startup keys anchored to the entry PC; pokes applied after the start key miss the test level.",
+ "evidence": [
+  {
+   "game": "games/comando_quatro.md",
+   "text": "The title takes its key only once its tune has started; a key too early never reaches the menu.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/gunrunner.md",
+   "text": "Pokes on the game's menu were applied after the key that started the game, so the test level did not take.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/mad_mix_2.md",
+   "text": "The READY wait needs all keys up and then one down; a script must leave gaps between keys.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/head_over_heels.md",
+   "text": "A loading screen changes input timing; anchor startup keys to the entry PC and assert real player updates before a long soak.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/solomons_key.md",
+   "text": "Key 1 starts the game and is held about 2 s until the tune reaches its key test.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "title",
+  "key sequence",
+  "start keys",
+  "tune",
+  "startup",
+  "timing",
+  "pokes",
+  "READY"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

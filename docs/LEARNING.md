@@ -40,7 +40,7 @@ A `[local]` lesson naming shared code (simpool, rzx, z80tonex, ...) fails: it is
 | `[doc BRIEFING A1]` / `[doc docs/<X>.md §Heading]` / `[doc CLAUDE.md §Heading]` | a platform / toolkit fact in a shared doc | section resolves |
 | `[tool <ref>]` | implemented in shared code now | `nexclash.py <cmd>`, `nexclash.<module>`, `<module>.<function>` or a path resolves |
 | `[backlog C2 #N]` | a shared capability requested, not built | BRIEFING C2 item exists |
-| `[kb lesson.<id>]` | cross-game, no card / doc has room: a docs/kb/lessons.json entry (no budget) | id exists |
+| `[kb lesson.<id>]` | cross-game, no card / doc has room: a docs/kb/lessons/ file (tools/templates/lesson.json) | id exists |
 | `[probe tools/probes/<x>.py]` | kept as a reproducible probe | file, README row, docstring fields |
 | `[local: <reason>]` | true for this game only | a reason |
 | `[deferred C2 #N\|Open: reconsider when <condition>]` | unresolved; evidence kept there | target exists, a condition |

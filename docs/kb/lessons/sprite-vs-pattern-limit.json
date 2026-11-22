@@ -1,0 +1,27 @@
+{
+ "id": "lesson.sprite-vs-pattern-limit",
+ "kind": "fact",
+ "claim": "The 128-pattern limit is on patterns on screen at once, so faster uploads or caches cannot fix a scene needing more; count patterns per update before choosing a fix.",
+ "evidence": [
+  {
+   "game": "games/r_type.md",
+   "text": "Pattern-cache attempt: no help, protected union exceeds 128.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "inferred",
+ "area": "platform",
+ "when": [
+  "sprite.working_set_fits"
+ ],
+ "card": "optimise.pattern-cache",
+ "words": [
+  "128 patterns",
+  "pattern limit",
+  "DMA upload",
+  "pattern cache",
+  "churn"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

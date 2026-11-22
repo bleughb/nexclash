@@ -1,0 +1,23 @@
+{
+ "id": "lesson.ldi-flag-bits",
+ "kind": "pitfall",
+ "claim": "A blit whose source changes can differ in F bits 3 and 5 after LDI; check that those bits are dead rather than masking all of F.",
+ "evidence": [
+  {
+   "game": "games/ikari_warriors.md",
+   "text": "One allowance: F bits 3 and 5 after the blit (its last LDI copied clean scenery, not a figure), counted, overwritten by the next flag-setting instruction, later memory equal.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "LDI",
+  "F register",
+  "flag bits 3 5",
+  "blit",
+  "verification"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

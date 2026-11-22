@@ -1,0 +1,28 @@
+{
+ "id": "lesson.r-address-random-reads-all-memory",
+ "kind": "pitfall",
+ "claim": "A game that draws random numbers from a byte at an address made of R can read any byte of memory, so a hook must hand it the original's R and no patched byte may sit at such an address.",
+ "evidence": [
+  {
+   "game": "games/heartland.md",
+   "text": "Random routine 0xBBF3 reads address A*257 (A = R XOR last byte); the first design passed every picture check and failed only the whole-state comparison, 906 steps in.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "when": [
+  "exec.game_reads_r"
+ ],
+ "card": "patch.preserve-r",
+ "words": [
+  "R register",
+  "random",
+  "A*257",
+  "whole-state",
+  "hook",
+  "patched byte"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

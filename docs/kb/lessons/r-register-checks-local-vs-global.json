@@ -1,0 +1,53 @@
+{
+ "id": "lesson.r-register-checks-local-vs-global",
+ "kind": "pitfall",
+ "claim": "Per-hook R checks can pass while global R differs, so separate hook R correctness from the original's own R differences and include R in the comparison.",
+ "evidence": [
+  {
+   "game": "games/bubbler.md",
+   "text": "A death HALT's fetch-count difference (6,459 mod 128) explains the full R offset 59, separate from hook R correctness.",
+   "shown_on": "analysis"
+  },
+  {
+   "game": "games/bruce_lee.md",
+   "text": "Native global R sequences can still differ through idle-loop and IRQ phase while per-hook boundary R is clean.",
+   "shown_on": "analysis"
+  },
+  {
+   "game": "games/exolon.md",
+   "text": "Moving the speed latch before IFF/R capture needs R corrected for the fetches moved.",
+   "shown_on": "analysis"
+  },
+  {
+   "game": "games/dizzy_ultimate_cartoon_adventure.md",
+   "text": "Including R in the comparison exposed differences at seven hook sites in the first 400 frames.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/beyond_the_ice_palace.md",
+   "text": "Particle and damage routines read R and need it preserved even inside rendering.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/gryzor.md",
+   "text": "A star hook that works out the original's bytes from the plot list keeps R exact with no fixture.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "when": [
+  "exec.game_reads_r"
+ ],
+ "card": "patch.preserve-r",
+ "words": [
+  "R register",
+  "per-hook",
+  "global R",
+  "fetch count",
+  "IFF",
+  "comparison"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

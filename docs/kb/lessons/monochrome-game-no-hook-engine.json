@@ -1,0 +1,34 @@
+{
+ "id": "lesson.monochrome-game-no-hook-engine",
+ "kind": "method",
+ "claim": "A monochrome game with no figures to hook needs no hook site; the checks that still mean something are the boot compare, rom_paths over the system ROM, the tail reads and lockstep runs against the original.",
+ "evidence": [
+  {
+   "game": "games/atom_ant.md",
+   "text": "A monochrome play area needs no hooks; proof is the boot check plus lockstep runs; R has no hook to be compared at.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/gunrunner.md",
+   "text": "A monochrome game needs no site; the checks left are the boot compare with R, rom_paths over the system ROM and the tail reads.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/jillys_farm.md",
+   "text": "As Gunrunner: no site; boot compare with R, rom_paths and the tail.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "monochrome",
+  "no hook",
+  "boot compare",
+  "rom_paths",
+  "tail reads",
+  "lockstep"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

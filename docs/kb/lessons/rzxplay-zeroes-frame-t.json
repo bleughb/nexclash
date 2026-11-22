@@ -1,0 +1,24 @@
+{
+ "id": "lesson.rzxplay-zeroes-frame-t",
+ "kind": "pitfall",
+ "claim": "rzxplay zeroes T before next_frame, so a verifier's frame T loses every RZX frame a game frame spans and frames over 20 ms read too low; the beam must be one monotonic formula.",
+ "evidence": [
+  {
+   "game": "games/rainbow_z80n.md",
+   "text": "Frames over 20 ms read 13 against 2 in the first 2000 frames of one recording until fixed.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "toolkit",
+ "words": [
+  "rzxplay",
+  "T state",
+  "next_frame",
+  "frames over 20 ms",
+  "beam",
+  "monotonic"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

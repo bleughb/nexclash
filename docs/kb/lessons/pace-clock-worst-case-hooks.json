@@ -1,0 +1,24 @@
+{
+ "id": "lesson.pace-clock-worst-case-hooks",
+ "kind": "pitfall",
+ "claim": "A pace clock read once a frame or less often loses frames silently; count the worst case of every long hook.",
+ "evidence": [
+  {
+   "game": "games/nightshade.md",
+   "text": "Clock read once a frame or less loses frames silently; Enhanced's figures took 582 lines before the first tick.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "pace",
+  "clock",
+  "tick",
+  "long hook",
+  "worst case",
+  "frames lost"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

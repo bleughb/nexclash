@@ -1,0 +1,29 @@
+{
+ "id": "lesson.nxc-harness-needs-z80-package",
+ "kind": "fact",
+ "claim": "The NXC menu-test harness needs the z80 Python package, which a shared virtual environment may lack, so run the tests from an environment that has it.",
+ "evidence": [
+  {
+   "game": "games/abu_simbel.md",
+   "text": "The shared venv has no z80 package, so the nxc repo's menu tests ran from a private venv.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/cisco_heat.md",
+   "text": "The nxc harness needs the z80 package; on the owner's PC only one Python version (3.13) has it.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "nxc",
+  "z80 package",
+  "venv",
+  "menu tests",
+  "harness",
+  "python"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

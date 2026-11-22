@@ -1,0 +1,24 @@
+{
+ "id": "lesson.palette-origin-and-check",
+ "kind": "pitfall",
+ "claim": "Keep a set's palette out of the repository when its licence is not established, as a local checksum-pinned input.",
+ "evidence": [
+  {
+   "game": "games/army_moves.md",
+   "text": "The Spec256-Games palette committed as a profile was byte for byte the one Booty and Lunar Jetman keep out of the repo (licence not established); moved to a local input.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "words": [
+  "palette",
+  "licence",
+  "local input",
+  "MD5",
+  "Spec256",
+  "repository"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

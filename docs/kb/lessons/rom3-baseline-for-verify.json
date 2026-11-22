@@ -1,0 +1,30 @@
+{
+ "id": "lesson.rom3-baseline-for-verify",
+ "kind": "fact",
+ "claim": "A verification baseline must name which ROM it models: archive bootstrap and ROM baseline can differ in R, and import verify can need NextZXOS ROM3 supplied rather than Sinclair's.",
+ "evidence": [
+  {
+   "game": "games/knight_lore.md",
+   "text": "R must match at player updates, including the bootstrap and ROM baseline (archive bootstrap and ROM baseline differ).",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/lunar_jetman.md",
+   "text": "System ROM3 comes from nextboot.system_rom3(); import verify ran with ROM model NextZXOS ROM3.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "ROM3",
+  "baseline",
+  "verify",
+  "NextZXOS",
+  "R register",
+  "bootstrap",
+  "system ROM"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

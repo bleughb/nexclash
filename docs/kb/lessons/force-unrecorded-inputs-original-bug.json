@@ -1,0 +1,25 @@
+{
+ "id": "lesson.force-unrecorded-inputs-original-bug",
+ "kind": "method",
+ "claim": "Force inputs the recording never has: the original may overflow, and a replacement drawing into its own pages must not copy the bug; make it a recorded model option.",
+ "evidence": [
+  {
+   "game": "games/castle_master.md",
+   "text": "Forcing (27391) = 0 (lightning) found an original bug: at pitch 4 a 255-row bolt overwrites RAM including the face list; the model option 'bolt clipped' was recorded.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "card": "patch.native-renderer-own-pages",
+ "words": [
+  "original bug",
+  "overflow",
+  "unrecorded input",
+  "model option",
+  "clip",
+  "native renderer"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

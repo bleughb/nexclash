@@ -1,0 +1,30 @@
+{
+ "id": "lesson.hook-register-state-at-resume",
+ "kind": "pitfall",
+ "claim": "A hook must leave every register as the original would at the resume address; a register that looks dead can be live, and loop control can sit in AF'.",
+ "evidence": [
+  {
+   "game": "games/rambo.md",
+   "text": "The blit's BC is B from its own LD and C = 0 left by the wait; the first commit lost C and the blit ran off its table; lockstep found it at once.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/rainbow_islands.md",
+   "text": "Plotter row control lives in AF'.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "registers",
+  "resume address",
+  "AF'",
+  "lockstep",
+  "liveness",
+  "hook",
+  "dead register"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

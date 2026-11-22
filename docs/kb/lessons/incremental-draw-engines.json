@@ -1,0 +1,28 @@
+{
+ "id": "lesson.incremental-draw-engines",
+ "kind": "method",
+ "claim": "A game that redraws incrementally (erase by tile redraw, draw by OR or overwrite) needs no staging or commit: set one sprite per object at its plot and hide it at its erase and at every screen clear.",
+ "limit": "Shown for one game only.",
+ "evidence": [
+  {
+   "game": "games/chuckie_egg.md",
+   "text": "Sprites 0-4 hens, 5 duck, 6 player; five hook sites at the screen clears hide sprites 0-6 and replay the displaced instruction.",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "facts": {
+  "draw": "direct"
+ },
+ "words": [
+  "incremental draw",
+  "erase",
+  "tile redraw",
+  "one sprite per object",
+  "screen clear",
+  "hide sprite"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

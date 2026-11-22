@@ -1,0 +1,25 @@
+{
+ "id": "lesson.cpu-speed-state-in-setup-phases",
+ "kind": "pitfall",
+ "claim": "Check what sets the CPU speed on every path through screen transitions, including title and setup phases, not only inside the play loop.",
+ "evidence": [
+  {
+   "game": "games/r_type.md",
+   "text": "28 MHz only from the level draw to the next Layer 2 off; title, scores, name entry and continue run at 3.5 MHz; native ISR always 3.5 MHz.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "28 MHz",
+  "speed",
+  "title",
+  "level start",
+  "3.5 MHz",
+  "setup",
+  "transition"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

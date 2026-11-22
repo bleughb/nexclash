@@ -1,0 +1,23 @@
+{
+ "id": "lesson.loader-clears-turbosound-bit",
+ "kind": "pitfall",
+ "claim": "The loader clears NextReg 0x08 bit 1 (second sound chip, turbosound) after the setup stub, so a hook that needs the second chip must set it itself.",
+ "evidence": [
+  {
+   "game": "games/3d_stock_car_championship.md",
+   "text": "The loader clears NR 0x08 bit 1 after the setup stub; a hook that needs it must set it.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "platform",
+ "words": [
+  "NextReg 0x08",
+  "turbosound",
+  "second sound chip",
+  "loader",
+  "setup stub"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

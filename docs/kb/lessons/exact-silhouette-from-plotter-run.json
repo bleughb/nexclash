@@ -1,0 +1,42 @@
+{
+ "id": "lesson.exact-silhouette-from-plotter-run",
+ "kind": "method",
+ "claim": "Learn a plotter's layout, mask and exact figure pixels by running the original plotter on an empty (0x00) and a full (0xFF) canvas instead of decoding graphics or guessing the body.",
+ "evidence": [
+  {
+   "game": "games/olli_and_lissa.md",
+   "text": "First layout model was wrong (mask a row and a byte larger, a pixel left); the game's own routine run on an empty and a full background showed the layout.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/olli_and_lissa_3.md",
+   "text": "Running the game's routines on an empty and a full screen gave byte order, empty rows and the mask's corner; the model matched at every shift.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/el_capitan_trueno.md",
+   "text": "Blank buffers 0x00 / 0xFF at frame 5000 showed the mask is a one-pixel outline; a morphological body left 49 mask pixels uncovered, so masks come from the game.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/olli_and_lissa_2.md",
+   "text": "A masked graphic sits a row below and a pixel right of its mask's corner.",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "words": [
+  "canvas",
+  "silhouette",
+  "mask",
+  "plotter run",
+  "empty screen",
+  "full screen",
+  "layout",
+  "00 buffer",
+  "FF buffer"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

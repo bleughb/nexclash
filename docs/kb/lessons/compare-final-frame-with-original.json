@@ -1,0 +1,45 @@
+{
+ "id": "lesson.compare-final-frame-with-original",
+ "kind": "method",
+ "claim": "Verify against the game's own screen or buffer as well as your own model: a second independent comparison catches faults that hooks and the first model share.",
+ "evidence": [
+  {
+   "game": "games/altered_beast.md",
+   "text": "Level-end curtain found by the attribute model at frame 16,420, not by looking.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/page_pharaoh.md",
+   "text": "Whole-picture replay model caught the Layer 2 LDI carry at column 31; hook registers and RAM alone did not.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/solomons_key.md",
+   "text": "Composite check against the original's screen found the game's one-pass glitches.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/mad_mix_2.md",
+   "text": "Model caught a lost MMU line in a refactor at once.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/herbert.md",
+   "text": "Native pictures caught a selector-model mistake.",
+   "shown_on": "jnext"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "verify",
+  "model",
+  "original frame",
+  "buffer",
+  "compare",
+  "composite",
+  "screen compare"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

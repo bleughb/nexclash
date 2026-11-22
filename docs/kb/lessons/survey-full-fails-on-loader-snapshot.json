@@ -1,0 +1,23 @@
+{
+ "id": "lesson.survey-full-fails-on-loader-snapshot",
+ "kind": "fact",
+ "claim": "survey --full cannot replay a loader snapshot, while auto handles the loader itself, so such a game gets no research-database entry that way.",
+ "evidence": [
+  {
+   "game": "games/spellbound_dizzy.md",
+   "text": "BASIC loader-stage snapshot; auto builds it using loader.prerun, which replays the RZX through the loader.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "loader snapshot",
+  "survey --full",
+  "auto",
+  "loader.prerun",
+  "Dizzy 5"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

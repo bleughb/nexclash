@@ -1,0 +1,23 @@
+{
+ "id": "lesson.machine-run-at-stop",
+ "kind": "pitfall",
+ "claim": "A run-to-address call returns at once if the machine is already at that address, so step one instruction between updates.",
+ "evidence": [
+  {
+   "game": "games/cisco_heat.md",
+   "text": "Machine.run(0x8BE1) returns at once when already at the stop: step one instruction between updates.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "run to address",
+  "stop address",
+  "step one instruction",
+  "update loop",
+  "simulator"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

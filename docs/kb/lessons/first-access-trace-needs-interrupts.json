@@ -1,0 +1,24 @@
+{
+ "id": "lesson.first-access-trace-needs-interrupts",
+ "kind": "method",
+ "claim": "When proving dead stack bytes safe, trace first accesses with the game's periodic interrupts delivered, not a no-interrupt lookahead.",
+ "evidence": [
+  {
+   "game": "games/bruce_lee.md",
+   "text": "Eight dead-stack differences were individually proven overwritten before their next read, with interrupts included; no blanket stack exemption.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "first access",
+  "trace",
+  "interrupts",
+  "dead stack",
+  "ISR",
+  "overwritten"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

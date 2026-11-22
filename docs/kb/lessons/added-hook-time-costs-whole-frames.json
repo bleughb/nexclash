@@ -1,0 +1,26 @@
+{
+ "id": "lesson.added-hook-time-costs-whole-frames",
+ "kind": "pitfall",
+ "claim": "Time a hook adds to a frame-locked update can cost a whole frame on many updates; measure the slack before the next interrupt, then keep added time near zero or pad back.",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "Copier calls limiter 9907 after row 6; slack after it (p10) 2.9-13.2k T, so +10 ms of hook work slips 56-81% of updates a frame; a '10 ms total' budget is no gate.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "pacing",
+  "frame interrupt",
+  "hook time",
+  "extra frame",
+  "limiter",
+  "slack",
+  "budget",
+  "copier"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

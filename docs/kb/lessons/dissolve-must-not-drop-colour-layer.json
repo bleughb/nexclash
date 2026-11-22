@@ -1,0 +1,27 @@
+{
+ "id": "lesson.dissolve-must-not-drop-colour-layer",
+ "kind": "pitfall",
+ "claim": "A transition drawn through a separate effect (a dissolve) can drop the colour layer if the build switches layers off for it; repeat the effect's passes on the colour layer instead.",
+ "limit": "The simulator proves the end result, not how the passes look.",
+ "evidence": [
+  {
+   "game": "games/castle_master.md",
+   "text": "Views shown by the dissolve (drawbridge) stayed in the original look because the dissolve 0xB66E turned Layer 2 and sprites off; now drawn hidden, the passes repeated on Layer 2 (h_dpass), then flipped; 18 of 18 such views checked in m3_sim.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "design",
+ "card": "patch.mosaic-transition",
+ "words": [
+  "dissolve",
+  "transition",
+  "Layer 2 off",
+  "colour layer",
+  "fade",
+  "non-view screen",
+  "passes"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

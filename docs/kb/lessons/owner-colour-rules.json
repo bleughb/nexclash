@@ -1,0 +1,24 @@
+{
+ "id": "lesson.owner-colour-rules",
+ "kind": "owner-rule",
+ "claim": "Keep the original's dither shading with colour on top and make colour switchable off for the original look.",
+ "evidence": [
+  {
+   "game": "games/castle_master.md",
+   "text": "Decision: dither kept with colour on top, cursor a sprite, colour switchable off by the player (original look).",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "card": "patch.mosaic-transition",
+ "words": [
+  "colour",
+  "dither",
+  "switchable",
+  "original look",
+  "owner rule"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,40 @@
+{
+ "id": "lesson.recording-length-and-play-style",
+ "kind": "pitfall",
+ "claim": "Short, capped or scripted recordings can pass what longer or human play breaks: replay whole recordings, replay every level, and do not treat a recording that ends early as completion.",
+ "evidence": [
+  {
+   "game": "games/heartland.md",
+   "text": "Four minutes of owner play gave 2,485 game steps and the bolt; six scripted recordings gave about 550 steps each and no bolt.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/movie.md",
+   "text": "A recording ending at 16% is not a completion even when every drawing entry type is reached.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/lode_runner.md",
+   "text": "The original verify replayed an RZX only to 6,000 frames; the rework replays each recording whole.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/gunrunner.md",
+   "text": "Per-level replays found the canvas clear covering the wrong span (stale pixels after a restart); the shorter recording had passed.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "recording",
+  "replay",
+  "whole replay",
+  "owner play",
+  "coverage",
+  "per-level",
+  "frame cap"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

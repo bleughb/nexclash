@@ -1,0 +1,25 @@
+{
+ "id": "lesson.drop-unfinished-window-work",
+ "kind": "method",
+ "claim": "For work run in timed gaps, drop what is not finished at the deadline instead of finishing it late.",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "Unfinished coroutine work was dropped (12% of updates, runs to 6, later 14.9% with runs to 14); a 128-slot protected store kept as a recency list.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "coroutine",
+  "wait gaps",
+  "deadline",
+  "dropped work",
+  "timed gap",
+  "recency list",
+  "deferred work"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

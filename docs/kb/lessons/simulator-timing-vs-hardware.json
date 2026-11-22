@@ -1,0 +1,31 @@
+{
+ "id": "lesson.simulator-timing-vs-hardware",
+ "kind": "pitfall",
+ "claim": "The simulator's T is not JNext's or the hardware's: budget from T x 1.4, report simulator timings as such, and re-measure in JNext or on hardware before claiming a frame rate.",
+ "evidence": [
+  {
+   "game": "games/castle_master.md",
+   "text": "JNext ran the renderer at 1.34-1.42x the simulator's T (wait states), moving the worst outdoor view from in budget to about 10 fps.",
+   "shown_on": "jnext"
+  },
+  {
+   "game": "games/flying_shark.md",
+   "text": "A handler measured 140,000 T in the simulator against 131,000 in JNext; the toolkit frame length needed 72,000 T to give the 2-frame beat.",
+   "shown_on": "jnext"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "emulator",
+ "words": [
+  "simulator",
+  "JNext",
+  "T-states",
+  "wait states",
+  "budget",
+  "calibrate",
+  "frame rate",
+  "timing"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

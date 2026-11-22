@@ -1,0 +1,24 @@
+{
+ "id": "lesson.sprite-store-reuse-on-retry",
+ "kind": "method",
+ "claim": "Skip rebuilding the sprite store when the same level restarts, so retries do not add a wait.",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "Stage-2 driver installed with loading bars; sprite build skipped on a same-level restart.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "card": "optimise.pattern-cache",
+ "words": [
+  "sprite store",
+  "retry",
+  "rebuild skip",
+  "level restart",
+  "cache"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,25 @@
+{
+ "id": "lesson.probes-routine-skip-and-pacing",
+ "kind": "method",
+ "claim": "The routine_skip probe replays each update with one CALL skipped (recorded inputs, R values and interrupts) and compares RAM, and pacing_census reports time, frames and slack per update.",
+ "evidence": [
+  {
+   "game": "sessions",
+   "text": "On Chuckie Egg skipping the attribute refresh left 133 of 133 updates identical and skipping the hens differed every update (negative control). Without recorded R values Inferno level 6 diverges.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "card": "detect.routine-removal",
+ "words": [
+  "routine_skip",
+  "pacing_census",
+  "probe",
+  "CALL skipped",
+  "negative control",
+  "R values"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

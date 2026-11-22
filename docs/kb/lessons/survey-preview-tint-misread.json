@@ -1,0 +1,23 @@
+{
+ "id": "lesson.survey-preview-tint-misread",
+ "kind": "pitfall",
+ "claim": "Survey preview sheets are tinted per routine; do not read the tint as the game's colour, check a plain screenshot first.",
+ "evidence": [
+  {
+   "game": "sessions",
+   "text": "An Elite preview looked coloured (orange or cyan viewports, purple scanner) but the viewport is white on black; the survey writer now says the sheet is tinted.",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "survey",
+  "preview sheet",
+  "tint",
+  "colour misread",
+  "screenshot"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

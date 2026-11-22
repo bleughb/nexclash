@@ -1,0 +1,25 @@
+{
+ "id": "lesson.jnext-keys-after-load",
+ "kind": "pitfall",
+ "claim": "JNext clears key presses made before a .nex finishes loading; schedule keys after the load and confirm from the game's own state that they arrived.",
+ "evidence": [
+  {
+   "game": "games/gunfright.md",
+   "text": "JNext clears keys held before NEX load, so keys start at frame 501 after load at 500; otherwise moving/fire runs describe neutral-input play.",
+   "shown_on": "jnext"
+  }
+ ],
+ "level": "observed",
+ "area": "emulator",
+ "words": [
+  "JNext",
+  "keys",
+  "input",
+  "load",
+  "scripted keys",
+  "native",
+  "fixture"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

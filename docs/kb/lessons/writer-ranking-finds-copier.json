@@ -1,0 +1,33 @@
+{
+ "id": "lesson.writer-ranking-finds-copier",
+ "kind": "pitfall",
+ "claim": "Ranking screen writers or using a rounded buffer range can point at the copier or renderer variables; find the copier's own pointer for the exact buffer.",
+ "evidence": [
+  {
+   "game": "games/bubbler.md",
+   "text": "Masked actors and scenery compose into a 24-byte stride buffer, published by a stack copier; screen-writer ranking alone first emphasised the copier and menus.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/castle_master.md",
+   "text": "The survey's rounded buffer range (0x5C80-0x673F) mixed the view buffer with renderer variables; the copier's pointer (LD HL,23740 at 0xA39A) gave the exact buffer.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "when": [
+  "render.target.back_buffer"
+ ],
+ "card": "detect.buffer-layout-producer",
+ "words": [
+  "scan --writers",
+  "survey",
+  "buffer",
+  "copier",
+  "composer",
+  "buffer range"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

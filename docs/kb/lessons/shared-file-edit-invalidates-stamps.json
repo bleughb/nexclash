@@ -1,0 +1,24 @@
+{
+ "id": "lesson.shared-file-edit-invalidates-stamps",
+ "kind": "pitfall",
+ "claim": "A shared file that every verification stamp depends on invalidates all stamps when edited, and a full selftest takes hours, so prefer additive modules and targeted checks.",
+ "evidence": [
+  {
+   "game": "sessions",
+   "text": "Editing nexclash.py would mark all 80 games for re-verification; selftest over all games re-verifies about 60 in an emulator and takes hours.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "words": [
+  "stamp",
+  "selftest",
+  "re-verify",
+  "dependency hash",
+  "shared code",
+  "verification cost"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,25 @@
+{
+ "id": "lesson.bisect-with-stripped-builds",
+ "kind": "method",
+ "claim": "When a build misbehaves, drive JNext headless with scripts, screenshots and PC reads instead of reading static listings.",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "JNext headless before hardware rounds; it found that hooks overwrote the IM 2 vector bytes at ROM 3BFF-3C00 (I = 3B).",
+   "shown_on": "jnext"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "JNext headless",
+  "bisect",
+  "stall",
+  "script",
+  "screenshot",
+  "PC read",
+  "debugger"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

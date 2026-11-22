@@ -1,0 +1,24 @@
+{
+ "id": "lesson.setup-substitution-silent-miss",
+ "kind": "pitfall",
+ "claim": "A scripted edit can silently miss (different leading whitespace); check the full-layer result by compositing the real palette, attributes and patterns, and keep the old build as the negative.",
+ "evidence": [
+  {
+   "game": "games/gunfright.md",
+   "text": "The Enhanced setup substitution missed on leading whitespace, leaving black transparent; compositing real palette, attributes and patterns exposed 122 lost ink pixels that pattern-index checks did not.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "words": [
+  "transparent",
+  "black",
+  "palette",
+  "substitution",
+  "opacity",
+  "native layer"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

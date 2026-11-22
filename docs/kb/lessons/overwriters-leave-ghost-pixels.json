@@ -1,0 +1,31 @@
+{
+ "id": "lesson.overwriters-leave-ghost-pixels",
+ "kind": "fact",
+ "claim": "When something overwrites a figure while it is drawn, the original's later XOR erase leaves ghost pixels that the converted game does not; differences confined to the undo buffer are fine if nothing reads it.",
+ "evidence": [
+  {
+   "game": "games/magicland_dizzy.md",
+   "text": "4 undo-buffer-only differences in 33,294 pixel tests (the original's ghost pixels; nothing else reads that buffer); a later run lists 5 of 101,594 differing.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/prince_of_the_yolkfolk.md",
+   "text": "5 of 171,382 pixel tests failed: an object drawn over Dizzy then his eraser's XOR leaves a hole or ghost the build does not have.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "when": [
+  "screen.other_writers_change_figure_bits"
+ ],
+ "words": [
+  "ghost pixels",
+  "undo buffer",
+  "XOR erase",
+  "pixel test",
+  "overwrite"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

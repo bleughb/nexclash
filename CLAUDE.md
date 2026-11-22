@@ -28,7 +28,7 @@ version; tools/sjasmplus/README.md). Maintainers: repos and reference files in d
 
 ## Tokens: read, write and print as little as the task needs
 - Read: this file, PLAYBOOK intro + your stage, games/<game>.md, survey.md. Look things up in
-  BRIEFING (platform + toolkit facts, C2 = backlog), LEARNINGS (lessons; every game's: `python tools/knowledge.py lessons WORD`), TECHNIQUES (Next techniques):
+  BRIEFING (platform + toolkit facts, C2 = backlog), LEARNINGS (lessons; all: `python tools/knowledge.py lessons WORD` | `--facts GAME`), TECHNIQUES (Next techniques):
   `grep -n '^#' FILE` is the map, then grep the subject and Read +-30 lines - never end to end.
   MAME: `grep -n '\[MAME\]' docs/*.md`.
 - Patch plan first (PLAYBOOK 2): docs/techniques/index.json, then at most 3

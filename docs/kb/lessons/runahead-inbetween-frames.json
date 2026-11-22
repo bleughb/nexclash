@@ -1,0 +1,26 @@
+{
+ "id": "lesson.runahead-inbetween-frames",
+ "kind": "method",
+ "claim": "In-between frames can be made by running the next update ahead with part of its movement, showing it, then putting back every byte the update changed so game state is untouched.",
+ "limit": "One game only, not confirmed by a second game.",
+ "evidence": [
+  {
+   "game": "games/cisco_heat.md",
+   "text": "Exact in 159 of 159 recording cases (511 in-between frames, none late) in v1.0 and 754 frames in the final build; about 25 pictures a second was the practical rate because each in-between frame's work and copy took more than a frame.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "design",
+ "words": [
+  "in-between frames",
+  "run-ahead",
+  "write set",
+  "restore bytes",
+  "28 MHz",
+  "25 fps",
+  "interpolation"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

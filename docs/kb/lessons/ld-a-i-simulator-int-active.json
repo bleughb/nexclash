@@ -1,0 +1,25 @@
+{
+ "id": "lesson.ld-a-i-simulator-int-active",
+ "kind": "pitfall",
+ "claim": "Simulators that model interrupts per call can clear the LD A,I parity flag without an accepted interrupt; test real injected interrupts separately and keep both IFF read paths at equal fetch counts.",
+ "evidence": [
+  {
+   "game": "games/underwurlde.md",
+   "text": "2,114 injected IRQs, 27 of them NMOS LD A,I/R PV-clearing cases; hlib_iff's HLIB_IFF_FIXED_R makes both IFF read paths six M1s.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "LD A,I",
+  "IFF",
+  "simulator",
+  "injected IRQ",
+  "M1",
+  "int_active",
+  "parity"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

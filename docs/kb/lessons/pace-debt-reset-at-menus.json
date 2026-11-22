@@ -1,0 +1,26 @@
+{
+ "id": "lesson.pace-debt-reset-at-menus",
+ "kind": "pitfall",
+ "claim": "A pace debt kept through a menu with nothing to repay it makes the first updates of play run fast; cap the debt at one frame, clear it at the screen clear, and count at every nested hook's close.",
+ "evidence": [
+  {
+   "game": "games/quazatron.md",
+   "text": "The ISR hook's cost every frame with no delay to repay it made the first 25 updates run 15% fast. A window counted only from the ISR hook loses a frame when an interrupt lands in a ROM trampoline.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "card": "patch.pace-limiter",
+ "words": [
+  "pace debt",
+  "menu",
+  "cap",
+  "frame",
+  "ISR hook",
+  "trampoline",
+  "nested hook"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

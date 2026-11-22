@@ -1,0 +1,29 @@
+{
+ "id": "lesson.jnext-isolate-config",
+ "kind": "method",
+ "claim": "Isolate parallel JNext runs with a private config directory (JNEXT_CONFIG_DIR) and temp folders, keep master SD cards read-only, and run loader tests on disposable copies.",
+ "evidence": [
+  {
+   "game": "games/dizzy_ultimate_cartoon_adventure.md",
+   "text": "JNEXT_CONFIG_DIR isolates JNext without changing HOME; master cards are read-only, actual-loader tests use disposable copies.",
+   "shown_on": "jnext"
+  },
+  {
+   "game": "games/bruce_lee.md",
+   "text": "Private JNext config/temp folders; shared card read-only.",
+   "shown_on": "jnext"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "words": [
+  "JNext",
+  "JNEXT_CONFIG_DIR",
+  "isolation",
+  "disposable card",
+  "read-only",
+  "parallel runs"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

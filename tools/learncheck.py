@@ -36,7 +36,7 @@ FRICTION_KEYS = ('reuse', 'retries', 'environment', 'hand-rolled', 'scratch')   
 SHARED = re.compile(r'\b(simpool|z80tonex|nextboot|rzx|records|selftest|learncheck|doccheck|survey|memscan|'
                     r'snapinfo|isrinfo|drawcost|simrun|preview|userflow|build\.py|sprites\.py|engines\.py)\b')
 TAG = re.compile(r'\[(card|doc|tool|backlog|probe|kb|local|deferred|none)\b([^\]]*)\]')
-KB = os.path.join(ROOT, 'docs', 'kb', 'lessons.json')
+KB = os.path.join(ROOT, 'docs', 'kb', 'lessons')       # one file per shared lesson
 
 
 def cards():
@@ -152,10 +152,9 @@ def _check_tag(kind, arg, game_text, cs, ps, ctx):
             return 'probe %s: %s' % (n, ', '.join(missing + ([] if listed else ['not in tools/probes/README.md'])))
     elif kind == 'kb':
         ids = ctx.get('kb')
-        if ids is None:
-            ids = {x.get('id') for x in json.load(open(KB, encoding='utf-8'))['lessons']} if os.path.exists(KB) else set()
-        if arg not in ids:
-            return 'no shared lesson "%s" in docs/kb/lessons.json (add the entry in the same change)' % arg
+        if not (arg in ids if ids is not None else re.fullmatch(r'lesson\.[a-z0-9-]+', arg)
+                and os.path.exists(os.path.join(KB, arg[7:] + '.json'))):
+            return 'no shared lesson "%s" in docs/kb/lessons/ (add the file in the same change)' % arg
     elif kind == 'none':
         if not re.match(r':\s*\S.{6,}', arg):
             return 'none tag needs a reason "[none: <why there is no new finding>]"'

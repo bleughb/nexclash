@@ -1,0 +1,34 @@
+{
+ "id": "lesson.mask-ink-composition",
+ "kind": "pitfall",
+ "claim": "Original ink and mask do not reduce to simple transparency: some ink bits lie outside the mask, and colour masks are not binary, so keep the original mask-OR-ink support and the AND/OR per plane.",
+ "evidence": [
+  {
+   "game": "games/gunfright.md",
+   "text": "Opacity is mask OR ink, because original ink is not always a subset of mask.",
+   "shown_on": "analysis"
+  },
+  {
+   "game": "games/head_over_heels.md",
+   "text": "Colour masks are not binary transparency; ignoring their painted bits made a hollow image.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/knight_lore.md",
+   "text": "Keeps the original complete clear/plot order; a colour canvas holds the exact final pixels and opaque black stays opaque.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "mask",
+  "ink",
+  "opacity",
+  "AND OR",
+  "transparency",
+  "plot order"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

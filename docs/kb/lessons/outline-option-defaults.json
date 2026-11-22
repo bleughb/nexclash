@@ -1,0 +1,29 @@
+{
+ "id": "lesson.outline-option-defaults",
+ "kind": "owner-rule",
+ "claim": "With standard colours the build's outline stays on and an 'Outline off' toggle removes it; with the painted (Enhanced) sprite set the outline is off, and that set excludes the toggle.",
+ "evidence": [
+  {
+   "game": "games/lunar_jetman.md",
+   "text": "Standard colours: black outline on, toggle 'Outline off'. Painted (Enhanced): none, and it excludes that toggle.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/renegade.md",
+   "text": "Owner: outline off with painted sprites; on with the standard ones, with a way to turn it off or black; outline on per the owner's standing preference.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "outline",
+  "Outline off",
+  "toggle",
+  "Enhanced",
+  "painted sprites",
+  "default"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

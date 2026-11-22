@@ -1,0 +1,44 @@
+{
+ "id": "lesson.pace-need-by-game-structure",
+ "kind": "fact",
+ "claim": "The pace limiter a game needs follows its structure: none where it waits on its own interrupts or HALTs, a fixed-stretch credit with no frame sync, a K window for a flat-out game.",
+ "evidence": [
+  {
+   "game": "games/into_the_eagles_nest.md",
+   "text": "A game waiting on its own interrupts needs no K window: 28 MHz to the wait is enough, fine windows only add cost.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/father_christmas.md",
+   "text": "Updates held by HALTs only need their time right at the frame edge; plots at 28 MHz need no window.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/jetpac.md",
+   "text": "No frame sync and a hook cost per draw needs no limiter: run a fixed stretch of the same draw's set-up at 28 MHz.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/jillys_farm.md",
+   "text": "A game with no frame wait needs a K window round all it can, or every hook entry at 3.5 MHz is its own cost.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/cyclone.md",
+   "text": "A CPU-bound game can be paced by running one of its own long routines at 28 MHz; the build was +15% before.",
+   "shown_on": "jnext"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "pace limiter",
+  "K window",
+  "HALT",
+  "frame sync",
+  "28 MHz",
+  "hook cost"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

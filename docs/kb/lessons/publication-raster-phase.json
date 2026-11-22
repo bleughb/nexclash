@@ -1,0 +1,30 @@
+{
+ "id": "lesson.publication-raster-phase",
+ "kind": "method",
+ "claim": "Time a screen flip so the copy starts with the beam below the window, and sweep raster phases: a good build must pass every phase and a broken one fail where publication reaches display.",
+ "evidence": [
+  {
+   "game": "games/mad_mix_2.md",
+   "text": "The copy ends with the beam in the window's upper rows so a flip there tears; flip at the copy's start with the beam below the window.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/herbert.md",
+   "text": "Raster phase sweep: 39 valid phases pass and 18 forced unsafe phases are caught; a faster renderer can make a caught negative pass at one phase.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "card": "patch.display-atomic-switch",
+ "words": [
+  "raster phase",
+  "flip",
+  "tearing",
+  "publication",
+  "sweep",
+  "beam"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

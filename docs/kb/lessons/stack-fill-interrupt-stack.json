@@ -1,0 +1,28 @@
+{
+ "id": "lesson.stack-fill-interrupt-stack",
+ "kind": "pitfall",
+ "claim": "A PUSH fill into Layer 2 with the stack pointing at the screen bank runs with interrupts on, so the interrupt entry must switch to its own stack.",
+ "evidence": [
+  {
+   "game": "games/castle_master.md",
+   "text": "PUSH fill used for spans of 16 pixels or more and clear rows, with SP in Layer 2; interrupt in the renderer handled by isr_e.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "when": [
+  "exec.interrupts_on_at_sites"
+ ],
+ "card": "optimise.layer2-renderer-speed",
+ "words": [
+  "PUSH fill",
+  "stack",
+  "Layer 2",
+  "interrupt",
+  "ISR stack",
+  "span fill"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

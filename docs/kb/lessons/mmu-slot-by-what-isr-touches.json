@@ -1,0 +1,39 @@
+{
+ "id": "lesson.mmu-slot-by-what-isr-touches",
+ "kind": "method",
+ "claim": "Choose the MMU slot for a hook page by what the game and its ISR touch: avoid the slot the ISR runs through and the slot holding the stack, and avoid slot 6 at NEX start-up.",
+ "evidence": [
+  {
+   "game": "games/silkworm.md",
+   "text": "The ISR runs through slot 7; read the isr Slots line; slot 5 was free.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/solomons_key.md",
+   "text": "The stack is at the top of memory, so the state page maps at slot 6, not 7.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/r_type.md",
+   "text": "At the NEX setup call SP is near DFEE: mapping a page into slot 6 crashed; use slots 3/7.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/renegade.md",
+   "text": "State page at slot 2, which the handler never touches, keeps interrupts on; slot 0 hangs JNext (an interrupt goes astray, cause not established).",
+   "shown_on": "jnext"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "MMU slot",
+  "hook page",
+  "ISR",
+  "stack",
+  "NEX start-up",
+  "slot choice"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

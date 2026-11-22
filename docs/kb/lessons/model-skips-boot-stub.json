@@ -1,0 +1,24 @@
+{
+ "id": "lesson.model-skips-boot-stub",
+ "kind": "pitfall",
+ "claim": "A model that starts from game state and never runs the NEX loader or startup stub can pass every check while the build crashes on hardware; boot each actual .nex in the simulator and require every hook byte intact.",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "Hook code under the stub's register block is lost; a register-block crash was fixed.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "NEX startup stub",
+  "boot check",
+  "register block",
+  "hook bytes",
+  "model",
+  "crash"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

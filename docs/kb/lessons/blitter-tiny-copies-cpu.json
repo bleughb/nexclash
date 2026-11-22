@@ -1,0 +1,24 @@
+{
+ "id": "lesson.blitter-tiny-copies-cpu",
+ "kind": "fact",
+ "claim": "Tiny copies are cheaper on the CPU than through the blitter or DMA; charge DMA stalls separately.",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "Tiny copies prefer CPU. Charge stalls separately; protect current and pending pairs and allocations.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "platform",
+ "words": [
+  "blitter",
+  "tiny copies",
+  "CPU",
+  "stalls",
+  "DMA",
+  "copy cost"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

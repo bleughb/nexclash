@@ -1,0 +1,25 @@
+{
+ "id": "lesson.cover-check-every-copy",
+ "kind": "method",
+ "claim": "Replay the whole recording and check at every copy that each figure pixel the game changes lies under an opaque sprite pixel; this finds sprite masks that leave ULA pixels showing.",
+ "evidence": [
+  {
+   "game": "games/el_capitan_trueno.md",
+   "text": "Cover check over the whole recording: 10,508 renders, 17 flushes, 0 uncovered after the consistent-state shapes fix; before it 5,769 renders had uncovered pixels (the white flashes). Mask outlines had to come from the game.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "cover check",
+  "sprite mask",
+  "uncovered pixels",
+  "replay",
+  "opaque sprite",
+  "Layer 2",
+  "figure pixels"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}
