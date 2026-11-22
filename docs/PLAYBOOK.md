@@ -307,8 +307,8 @@ engine) to docs/profiles/, games/<game>.md, and the evidence record docs/records
 the STATUS row, `techniques` + `results` = the recipe and checks, docs/techniques/STANDARD.md 3), then
 `python -m nexclash.records views` (regenerates STATUS / VERIFICATION
 checksums / verified.json). Check it: `python -m nexclash.records deps <game>` lists what your
-game's evidence depends on; the one full verification (6a) stamps it. Canary scope follows CLAUDE.md: shared build/runtime/verifier changes; documentation and
-registry-only additions do not trigger it.
+game's evidence depends on; the one full verification (6a) stamps it. Canary: CLAUDE.md (docs do not trigger it).
+No .nxc from `auto`, or options on the loader's menu: docs/NXC_PATCHES.md.
 Send with the sprite build: the colour sheets (docs/COLOURS.md "What to send") and the hardware
 checklist, so the user tests and paints in the same pass.
 

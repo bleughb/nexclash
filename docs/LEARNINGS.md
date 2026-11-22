@@ -88,11 +88,11 @@ BRIEFING - with its reason.
   ROM3 has $8C trampolines (ED 91 8C), inert in a copy (Cyclone hung at BEEP): the 'rom3' stub
   restores v2.09 (z80tonex.ROM3_V210_FIXUPS).
 - A legacy 1FFD/7FFD write from the stub remaps slots 6/7, where the stub runs: page the stub into
-  slot 4 as an alias and run the paging + copy there (no stack), restore 6/7, jump back.
-- UNLOCKED legacy paging writes (7FFD/1FFD) remap MMU slots (most recent change wins); map
-  slot-1 RAM AFTER the tail's own paging writes. LOCKED (7FFD bit 5 = 1) writes to 7FFD/1FFD/DFFD
-  are ignored with no MMU remap (VHDL 3.01.09), so a RAM slot-1 page survives them; NextReg $08
-  bit 7 can only UNLOCK (write 1), never lock. Hardware confirmation pending (Dizzy 6 build).
+  slot 4 as an alias and run the paging + copy there (no stack), restore 6/7, jump back. The NEX
+  start-up stack is in slot 6 too (R-Type DFEE): use slots 3 / 7.
+- UNLOCKED 7FFD/1FFD writes remap MMU slots 0/1 and 6/7 (latest wins; locked ones do not,
+  BRIEFING A1): map slot-1 RAM AFTER the tail's paging writes and any hooked routine that pages
+  (R-Type 8F40 hid the hook page, next IRQ reset: remap before EI; trace PC + MMU).
 - Pages mapped into slot 0 while interrupts are on = crash risk (IM1 vector at 0x38). DI around
   hook paging; hook pages must be read-only (TID bug: hook wrote into its own paged-in page).
 - Code running in slot 0 cannot unmap slot 0: map/unmap from alt ROM stubs.
@@ -953,8 +953,9 @@ Grouped by question; add a new lesson to its group.
   LOG` with the call's timeout raised to 10 minutes (default 2 kills it mid-sleep; lower caps: sleep just
   under). Every call resends the whole conversation: ten 1-minute polls cost ten times one 9-minute
   poll and tell nothing more (Chuckie Egg release run ~15 min). Never `cat` a log; `tail -3` or `grep -c '!'`.
-- Run a stamping selftest in a separate git worktree (`git worktree add ../nexclash-verify BRANCH`)
-  so its record stamps do not collide with edits in the main checkout; commit them from there.
+- Run a stamping selftest, or any long run rebuilding from files, in a separate git worktree
+  (`git worktree add ../nexclash-verify BRANCH`), apart from edits (R-Type: half-edited input read as
+  a slowdown); commit from there.
 - `cd X; cmd` runs cmd in the OLD directory when X does not exist - use `cd X && cmd` (a selftest
   with --stamp started in the wrong checkout).
 - GitHub from a cloud session: the git proxy pushes only to repositories attached to the session

@@ -148,15 +148,21 @@ checks belong to the eventual sprite build; no hardware result is claimed.
   restarts drew figures natively in 8x8. One conversion + palette offset per graphic fixed it.
 - [card patch.copper-palette-bands §Failure lookup] CSpect: WAIT line n shows from row n + 32 of 320x256 Layer 2;
   the restart comes after the top border; 9-bit NR 0x44 pairs from the Copper failed.
-- [local: start-up stack in slot 6] At the NEX setup call SP is near DFEE: mapping a page into
+- [card detect.behind-scenery §Probe and stop] Hooking the owner-map test (8ED6) in an RZX replay
+  listed 71 families hidden behind scenery; kept as an editable flag table behind a build switch.
+- [card patch.mosaic-transition §Failure lookup] Original to upscaled picture: one shared palette
+  keeps the mosaic in colour at the swap; drawing into the shown screen tears slightly.
+- [card verify.scripted-event-reach §Use / do not use] The owner's recipe (POKE 37362,201, sweep the
+  lower two-thirds firing) reached the power-up bug in CSpect when blind keys had not.
+- [doc docs/LEARNINGS.md §1.3 Spectrum Next: MMU, legacy paging, alt ROM, NextRegs] At the NEX setup call SP is near DFEE: mapping a page into
   slot 6 there (to copy data) crashed; keep data in an already mapped page or use slots 3/7.
 - [tool tools/asm2profile.py] A SAVEBIN in an INCLUDEd file is not collected (names come from the
   top file): the build used an empty page. asm2profile now warns about uncollected .bin outputs.
-- [local: tests break at 0000] The R-Type tests set a breakpoint at 0000 to catch a reset; a glide
+- [card verify.scripted-event-reach §Failure lookup] The R-Type tests set a breakpoint at 0000 to catch a reset; a glide
   page entry at 0000 looked like a reset. Entry points start at 0100.
-- [local: never edit build inputs mid-test] compare rebuilds each level from the current files; a
+- [doc docs/LEARNINGS.md §2.6 Process / tokens (this sandbox)] compare rebuilds each level from the current files; a
   half-edited layout gave a false slowdown on levels 2-8, cleared by a worktree bisect.
-- [local: the original's pace] The recording averages 4.35 frames per update (28% 3, 34% 4, 22% 5);
+- [card patch.hybrid-display-replacement §Use / do not use] The recording averages 4.35 frames per update (28% 3, 34% 4, 22% 5);
   the title alternates 2 and 3. At 28MHz every update took 3 (45% fast): PACE 4, title 4.
 - [local: total budget first] Live costs14.176ms legacy display and9.961ms identity/bridge. Consumer/native-credit budget precedes replacement; gross CPU/waits are not free. See live-budget-review.md.
 - [local: native code modes] Initial BG changes plot destination8EBF, RET condition8F10 and four clip operands; native flip table01->00 exposes compiler mismatch. Preserve live modes/table and original-time/R credit; see background-consumer-review.md.
@@ -178,15 +184,15 @@ checks belong to the eventual sprite build; no hardware result is claimed.
   plotters; scanning its source buffer locates the four tile drawers. No removal-safety claim yet.
 - [local: credits share an enemy slot] Independent review: peak owner-grid scene includes THANK-YOU
   text. Graphic identity, not global owner exclusion, gives105 sprites in the full corrected census.
-- [local: wrong root cause recorded] A reset after patching C027 was first put down to a "game load
+- [doc docs/LEARNINGS.md §1.3 Spectrum Next: MMU, legacy paging, alt ROM, NextRegs] A reset after patching C027 was first put down to a "game load
   check" and noted as "never patch bank 0"; the real cause was the 7FFD remap below. Confirm a cause
   with a trace (PC and MMU at the reset) before writing it down.
-- [local: 7FFD remaps slots 0-1] On the Next a 7FFD write maps ROM over slots 0-1, hiding a hook page
+- [doc docs/LEARNINGS.md §1.3 Spectrum Next: MMU, legacy paging, alt ROM, NextRegs] On the Next a 7FFD write maps ROM over slots 0-1, hiding a hook page
   in slot 1; the level unpack (8F40) did it and the next interrupt reset the machine. Return through
   game RAM that maps the hook page back before EI.
-- [local: busy-loop screens need original speed] Title, attract and name entry time themselves with
+- [card patch.hybrid-display-replacement §Use / do not use] Title, attract and name entry time themselves with
   CPU loops; run 28MHz only during play.
-- [local: draw order beats identity] Replacing the picture (scroll on Layer 2, sprites keyed by the
+- [card patch.hybrid-display-replacement §Use / do not use] Replacing the picture (scroll on Layer 2, sprites keyed by the
   plotter call) cost less than recognising the original's cells every update, and gave hardware scroll.
 
 ## Friction
@@ -198,6 +204,8 @@ checks belong to the eventual sprite build; no hardware result is claimed.
   in specnext/reference/r_type/intake; none added as an untested shared toolkit probe.
 
 ## Stage log
+- 2026-11-22 Lessons pass: local lessons promoted to cards (detect.behind-scenery,
+  patch.mosaic-transition, verify.scripted-event-reach, hybrid r2) and LEARNINGS 1.3 / 2.6.
 - 2026-11-17 Own the display (specnext PRs #97-#99): half-pixel scroll, scenery masks in front,
   filled figures, glide, pace 4, title fixes, power-up fixes, start-up showpiece. CSpect only.
 - 2026-11-16 Prototype: colour sheets + recolour, figure IDs, outlines, partly hidden figures,
