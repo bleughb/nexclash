@@ -30,7 +30,10 @@
   "docs/profiles/everyones_a_wally_updated.json",
   "asm/wally2_hooks.asm"
  ],
- "shared_data": [],
+ "shared_data": [
+  "asm/lib/hlib_pace.asm",
+  "asm/lib/hlib_speed.asm"
+ ],
  "rebuild": {
   "args": [
    "--no-record"

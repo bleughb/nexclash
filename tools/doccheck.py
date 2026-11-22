@@ -245,6 +245,11 @@ def main():
         fail[k].extend(v)
     for k, v in copied_pins().items():
         fail[k].extend(v)
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from nexclash import records as _records   # assembly a record's sources INCLUDE must be in its data / shared_data
+    inc = [b for r in _records.all_records() for b in _records.include_problems(r)]
+    if inc:
+        fail['record dependencies: assembly INCLUDEs not listed (records.include_problems)'].extend(inc)
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     import techindex                      # technique cards, predicates, recipes (docs/techniques/STANDARD.md)
     fail['technique cards / recipes (python tools/techindex.py)'].extend(techindex.check())

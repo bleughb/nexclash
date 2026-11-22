@@ -59,6 +59,7 @@ import glob
 import hashlib
 import json
 import os
+import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -292,6 +293,43 @@ def evidence(rec):
     it (every legacy record) reads 'not assessed', never a failure."""
     given = rec.get('status', {}).get('evidence', {})
     return {c: dict(given.get(c) or {'level': 'not assessed', 'scope': ''}) for c in EVIDENCE}
+
+
+_INCLUDE_RE = re.compile(r'^[ \t]*INCLUDE[ \t]+"?([^"\s;]+)"?', re.I | re.M)
+
+
+def asm_includes(path, seen=None):
+    """Repository-relative paths an assembly source INCLUDEs, recursively, resolved from its folder as sjasmplus
+    does (asm/x.asm: INCLUDE "lib/hlib_speed.asm" -> asm/lib/hlib_speed.asm). Generated files that do not exist
+    in the tree are left out."""
+    seen = set() if seen is None else seen
+    try:
+        text = open(os.path.join(ROOT, path), errors='replace').read()
+    except OSError:
+        return seen
+    for m in _INCLUDE_RE.finditer(text):
+        inc = os.path.normpath(os.path.join(os.path.dirname(path), m.group(1)))
+        if inc not in seen and os.path.exists(os.path.join(ROOT, inc)):
+            seen.add(inc)
+            asm_includes(inc, seen)
+    return seen
+
+
+def include_problems(rec):
+    """Assembly the record's declared sources INCLUDE but the record does not list: deps() follows Python imports,
+    not INCLUDEs, so a library edit would not plan this game. Libraries (asm/lib/) belong in shared_data, the
+    game's own includes in data. -> list"""
+    data, shared = set(rec.get('data', [])), set(rec.get('shared_data', []))
+    bad = []
+    for src in sorted(p for p in data if p.endswith(('.asm', '.inc'))):
+        for inc in sorted(asm_includes(src)):
+            lib = inc.startswith('asm/lib/')
+            if lib and inc not in shared:
+                bad.append('%s: %s (INCLUDEd by %s) %s' % (rec['name'], inc, src,
+                           'is in data: a library belongs in shared_data' if inc in data else 'not in shared_data'))
+            elif not lib and inc not in data | shared:
+                bad.append('%s: %s (INCLUDEd by %s) not in data' % (rec['name'], inc, src))
+    return bad
 
 
 def evidence_problems(rec):

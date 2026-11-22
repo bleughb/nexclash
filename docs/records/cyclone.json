@@ -51,7 +51,8 @@
   "asm/cyclone_hooks.asm"
  ],
  "shared_data": [
-  "asm/lib/hlib_speed.asm"
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_pace.asm"
  ],
  "rebuild": {
   "args": [

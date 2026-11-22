@@ -34,7 +34,9 @@
   "docs/profiles/cauldron_v11.json",
   "asm/cauldron_v11_hooks.asm"
  ],
- "shared_data": [],
+ "shared_data": [
+  "asm/lib/hlib_pace.asm"
+ ],
  "rebuild": {
   "args": [
    "--no-record"

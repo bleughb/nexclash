@@ -43,16 +43,16 @@
   "docs/profiles/dizzy1_colours.json",
   "asm/dizzy1_enhanced_hooks.asm",
   "docs/profiles/dizzy1_enhanced.json",
-  "asm/lib/hlib_r.asm",
-  "asm/lib/hlib_speed.asm",
-  "asm/lib/hlib_iff.asm",
-  "asm/lib/hlib_pace.asm",
   "asm/dizzy1_loading.asm",
   "docs/profiles/dizzy1_loading.json"
  ],
  "shared_data": [
   "nexclash/templates.json",
-  "nexclash/evidence.json"
+  "nexclash/evidence.json",
+  "asm/lib/hlib_iff.asm",
+  "asm/lib/hlib_pace.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_speed.asm"
  ],
  "rebuild": {
   "args": [

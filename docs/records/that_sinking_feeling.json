@@ -261,7 +261,12 @@
   "docs/profiles/that_sinking_feeling.json",
   "docs/profiles/that_sinking_feeling_palette.json"
  ],
- "shared_data": [],
+ "shared_data": [
+  "asm/lib/hlib_iff.asm",
+  "asm/lib/hlib_pace.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_speed.asm"
+ ],
  "rebuild": {
   "args": [
    "--no-record"

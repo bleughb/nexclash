@@ -45,7 +45,9 @@
   "docs/profiles/rainbow_z80n_sky.json",
   "asm/rainbow_z80n_sky_ldscr.asm"
  ],
- "shared_data": [],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm"
+ ],
  "rebuild": {
   "args": [
    "--no-record"

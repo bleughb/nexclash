@@ -36,7 +36,10 @@
   "asm/midres_hooks.asm",
   "docs/profiles/midnight_resistance_colours.json"
  ],
- "shared_data": [],
+ "shared_data": [
+  "asm/lib/hlib_pace.asm",
+  "asm/lib/hlib_speed.asm"
+ ],
  "rebuild": {
   "args": [
    "--no-record"
