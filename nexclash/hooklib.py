@@ -713,10 +713,11 @@ def drift_selfcheck():
 
 # Hook files whose NEXTREG 7 writes a fixed speed (the player's F8 choice lost on the way out), published before
 # the stack forms existed; the back-catalogue speed fix takes each off this list. A new engine is never added here.
-SPEED_LEGACY = {
-    'atic_atac_hooks.asm', 'atic_atac_v14_hooks.asm', 'cauldron_hooks.asm', 'incredible_shrinking_fireman_hooks-add-GPT6_ASTRA.asm',
-    'inferno_hooks.asm', 'matchday_hooks.asm', 'matchday_v21_hooks.asm', 'new_zealand_story_hooks.asm',
-    'rainbow_hooks.asm', 'rainbow_z80n_hooks.asm', 'trueno_hooks.asm', 'wally_hooks.asm',
+SPEED_LEGACY = {             # file: its fixed writes now; a new one in a listed file fails too (Codex review C6)
+    'atic_atac_hooks.asm': 8, 'atic_atac_v14_hooks.asm': 2, 'cauldron_hooks.asm': 11,
+    'incredible_shrinking_fireman_hooks-add-GPT6_ASTRA.asm': 1, 'inferno_hooks.asm': 13, 'matchday_hooks.asm': 2,
+    'matchday_v21_hooks.asm': 1, 'new_zealand_story_hooks.asm': 2, 'rainbow_hooks.asm': 2, 'rainbow_z80n_hooks.asm': 2,
+    'trueno_hooks.asm': 2, 'wally_hooks.asm': 2,
     }
 # Shipped in jattree/nxc (fixed: gauntlet, altered_beast, jsw, robin_of_the_wood). Left, not the plain kind:
 # matchday_v21 and new_zealand_story run the game's own interrupt handler at 3.5 MHz on purpose (its sound) and give the
@@ -727,6 +728,21 @@ SPEED_LEGACY = {
 # cauldron (v1.1 ships, own hooks), incredible_shrinking_fireman GPT6 (OPUS ships), inferno, matchday (v21 ships),
 # rainbow (z80n ships), trueno, wally (wally2 ships, keeps the speed).
 _SPEED_RE = re.compile(r'^\s*(?:[A-Za-z_.][\w.]*:?)?\s*nextreg\s+(?:0x0?7|\$0?7|7|07h)\s*,\s*([^\s;]+)', re.I)
+
+
+def speed_audit_check(sa=None, legacy=None):
+    """-> (title, failures): a fixed NEXTREG 7 write in a file not on SPEED_LEGACY, or more than its pinned count in a
+    listed one (the exemption was by file name: another fixed write in a listed file passed); a listed file with
+    fewer than its count asks for the pin to come down."""
+    sa = speed_audit() if sa is None else sa
+    legacy = SPEED_LEGACY if legacy is None else legacy
+    bad = ['fixed speed written in a hook: %s line %d!' % (f, sa[f][0][0]) for f in sorted(sa) if f not in legacy]
+    bad += ['%s writes a fixed speed %d times, %d pinned: line %d is new!' % (f, len(sa[f]), legacy[f], sa[f][-1][0])
+            for f in sorted(sa) if f in legacy and len(sa[f]) > legacy[f]]
+    bad += ['%s writes a fixed speed %d times, %d pinned: lower its SPEED_LEGACY count (or take it off)!'
+            % (f, len(sa.get(f, ())), n) for f, n in sorted(legacy.items()) if len(sa.get(f, ())) < n]
+    return ('hooklib speed audit: NEXTREG 7 only 28 MHz in or the caller\'s speed back; %d legacy files still to fix'
+            % len(set(legacy) & set(sa)), bad)
 
 
 def speed_audit(root=ROOT):
@@ -1045,13 +1061,7 @@ def selfcheck():
     out.append(('hooklib IFF audit: %d LD A,I / LD A,R in asm/ (%d read twice, %d values), none trusted after one read'
                 % (len(au), sum(v == 'twice' for *_, v in au), sum(v == 'value' for *_, v in au)),
                 ['IFF read once: %s!' % x for x in once]))
-    sa = speed_audit()
-    new = sorted(f for f in sa if f not in SPEED_LEGACY)
-    fixed = sorted(f for f in SPEED_LEGACY if f not in sa)
-    out.append(('hooklib speed audit: NEXTREG 7 only 28 MHz in or the caller\'s speed back; %d legacy files still to fix'
-                % len(SPEED_LEGACY & set(sa)),
-                ['fixed speed written in a hook: %s line %d!' % (f, sa[f][0][0]) for f in new] +
-                ['%s no longer writes a fixed speed: take it off SPEED_LEGACY!' % f for f in fixed]))
+    out.append(speed_audit_check())
     good = hide_cases([0, 1], {0x100: 'room'}, lambda pc, st, sp: ([], set()))
     broken = hide_cases([0, 1], {0x100: 'room'}, lambda pc, st, sp: ([], {5}))
     out.append(('hooklib hide_cases: %d cases (2 states x 4 speeds), a hook leaving sprite 5 shown caught (%d)'
