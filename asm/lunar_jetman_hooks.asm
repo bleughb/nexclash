@@ -881,6 +881,11 @@ setup:  nextreg 0x43,0x20
         inc hl
         djnz .p
         nextreg 0x4B,0
+        nextreg 0x1C,2          ; sprite clip window = the 256 x 192 display, set explicitly (jattree/nxc#7: objects spilled
+        nextreg 0x19,0          ; into the left / right border): index reset, then X1, X2, Y1, Y2
+        nextreg 0x19,255
+        nextreg 0x19,0
+        nextreg 0x19,191
         xor a
 .h:     nextreg 0x34,a
         nextreg 0x38,0

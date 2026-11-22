@@ -62,7 +62,7 @@ the text printer 35311: none branches on a pixel, so no figure collision reads t
   which prints over the play area) hide every sprite.
 - Images precomputed at build time for every graphic in both tables (222 figure graphics, 22 truck graphics): 4-bit,
   ink, enclosed paper filled (a darker shade of the figure's own colour; trucks black), a one-pixel outline outside
-  the silhouette (white; black for a white figure; none under 12 ink pixels). Figures 2 x 2 tiles at (x - 1, top - 1);
+  the silhouette (black, standard colours only; none under 12 ink pixels). Figures 2 x 2 tiles at (x - 1, top - 1);
   trucks 5 x 2. Pages: 26 state (caches, graphic lists, the pattern pool, tile ids, the objn table), 27 index (graphic
   & 0x1FFF -> id + 1), 28-31 trucks, 36-49 figures; the state page at slot 4 and an image page at slot 5 only inside a
   hook (the ROM IM 1 handler uses slots 0 and 2, the game's stack is at 0x5Exx; both back on pages 4 / 5 before any
@@ -90,10 +90,14 @@ Negatives 11 of 11 detected. Hook time 3.6-7.6 % of a frame at 28 MHz (sim T / 6
 The shipped build starts at the file's decrypter; the simulator shows it reaches the verified s0 + sites at 0x8000
 apart from 16 bytes (KSTATE, FRAMES, dead stack). Cheats: the .pok's proven entries, written for the rotated code.
 
+## Border overflow (jattree/nxc#7, 2026-11-22)
+Objects showed in the border on hardware. Setup now sets the sprite clip window to the display (0x1C bit 1, 0x19: 0, 255, 0, 191).
+Plays in JNext 1.3.0; the edge needs hardware.
+
 ## Defaults taken (a human would have decided)
 1. Every object the two plotters draw is a sprite; lasers, ground, craters, HUD and text stay on the ULA.
 2. Depth: figures over the rover, by object number among figures (the original XORs, no depth).
-3. Outline on by default (owner's rule), white; black for white figures; none under 12 ink pixels.
+3. Standard colours: black outline on (jattree/nxc#7: white rims); toggle "Outline off" (`_nooutline.nex`). Painted (Enhanced): none, excludes that toggle. Another outline colour is a palette-only change: `outline_colour=` (RGB332).
 4. Enclosed paper filled with a darker shade of the figure's own colour (items solid in their own colours).
 5. The rover's outline and fill black (it is half white); its colours by cell rows, as the game paints it.
 6. Enhanced painted by rule, not by hand, except Jetman's colours, which come from the Spec256 Jetpac.

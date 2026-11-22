@@ -62,7 +62,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Spellbound (128K, Magic Knight 2) (spellbound_magic_knight): `spellbound_magic_knight.nex` 656c71c4b2ebb8318f3ad442d70b0ab9, `spellbound_magic_knight_sprites.nex` b679ae970a270e89c80979b2eb618026, `spellbound_magic_knight_enhanced.nex` 33f251edab40d1ce2f223981409f2bbe; verified 2026-11-12
 - Rambo (rambo): `rambo.nex` 434a84778881e230d0c930677abad0b4, `rambo_sprites.nex` 1c5c71b7252ef354527acde6d8e93a10, `rambo_enhanced.nex` c40a49aee47327d2789238e740af0f13; verified 2026-11-12
 - Ikari Warriors (48K form) (ikari_warriors): `ikari_warriors.nex` 2d56c304bcb21619d8402d64804fef75, `ikari_warriors_sprites.nex` 8777f2c4c54afb99640dfe638d735ec2, `ikari_warriors_enhanced.nex` 82ada11a56d58fadb18be5fc23c0c0eb; verified 2026-11-12
-- Renegade (128K) (renegade): `renegade.nex` 62a06036dec229a7d19821df2cca6a04, `renegade_sprites.nex` b4b452100f88d54415f3f5f11568c454, `renegade_enhanced.nex` 9ed0c98b03279f04ca18d6cae8fd8387; verified 2026-11-12
+- Renegade (128K) (renegade): `renegade.nex` 62a06036dec229a7d19821df2cca6a04, `renegade_sprites.nex` b4b452100f88d54415f3f5f11568c454, `renegade_sprites_nooutline.nex` c8baf422e7a76776f10a48ac270dd1ae, `renegade_sprites_blackoutline.nex` 28e56c4fc2789efeecf054f5cb49c80c, `renegade_enhanced.nex` f60ec79d6dd0a62d1b3d262ecf394203; verified 2026-11-12
 - Three Weeks in Paradise (128K) (three_weeks): `three_weeks_128.nex` 1a6f1bbe0abfbcfbb5712ad4f4700e95, `three_weeks_128_sprites.nex` 468b17528c4c1659a2087bbe2d8cc8d1, `three_weeks_128_enhanced.nex` b38d048f254302fe942eb2ac58bbf463; verified 2026-11-12
 - Starquake (starquake): `starquake.nex` f447d9b3d937837d2427e021002a9648, `starquake_sprites.nex` 64b15a7b8477ae97c5807a660e00b1a6, `starquake_sprites_loading.nex` 4c5ce962f813849d9ff360077266367f; verified 2026-11-12
 - Lunar Jetman (lunar_jetman): `lunar_jetman.nex` 3e5ca3908616f76a33f864be57baef95, `lunar_jetman_sprites.nex` e5876b5442b0c50fb2b95bbf60a02229, `lunar_jetman_sprites_loading.nex` 2fdd4986d2aaf0675f3c0eb36fd0fa87, `lunar_jetman_enhanced.nex` 999da186beccfa0179c602a179730ec9, `lunar_jetman_enhanced_loading.nex` b8062918bb7d3fd88a04cd280a07ef1f; verified 2026-11-12
@@ -125,6 +125,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Cookie (cookie): `cookie.nex` df40629882f8b5be3619e90f87690c91, `cookie_sprites.nex` faaacc0beb0c6bc6d5742b0f40ec9cd2, `cookie_enhanced.nex` 7df95fe3204d63471c342b8cd6fd9d59; verified 2026-11-20
 - Tranz Am (tranz_am): `tranz_am.nex` 8308134dff22d877c6f70ba236e2e012, `tranz_am_sprites.nex` 637c510df69e95cb621db6f63d02a5fd, `tranz_am_enhanced.nex` c89e6c5a4707b97a92922cd352b555ef; verified 2026-11-20
 - R-Type (r_type): `r_type_sprites.nex` 1fdf9b83ea553038bc0d3cbf1194175b, `r_type_sprites_loading.nex` 727b938f71f74602579cc923b00c94f4; verified never
+- Winter Sports (winter_sports): `winter_sports.nex` 8dc688fa980454c63f98bc0e802d5f88, `winter_sports_sprites.nex` e26abf0ba45ba34013608063cd8d6823; verified 2026-11-22
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13
