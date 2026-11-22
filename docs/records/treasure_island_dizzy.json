@@ -44,12 +44,13 @@
   "docs/profiles/tid128_loading.json"
  ],
  "shared_data": [
-  "nexclash/templates.json",
-  "nexclash/evidence.json",
+  "asm/lib/hlib_iff.asm",
+  "asm/lib/hlib_pace.asm",
   "asm/lib/hlib_r.asm",
   "asm/lib/hlib_speed.asm",
-  "asm/lib/hlib_iff.asm",
-  "asm/lib/hlib_pace.asm"
+  "asm/lib/loading_stub.inc",
+  "nexclash/evidence.json",
+  "nexclash/templates.json"
  ],
  "rebuild": {
   "args": [],
