@@ -20,6 +20,9 @@ h_flip: ld a,i                          ; P/V = IFF2
         jp z,.plain                     ; not after a flight pass (status, charts, equipment: the game draws the
                                         ; page into the buffer and this copy shows it): the original copy only
         call rowfix                     ; ULA row 56 below the game's stack: see rowfix
+        ld a,(S_ULAC)
+        or a
+        call z,ulaclr
         ld a,(S_W)
         ld (S_CUR),a
         xor 1
@@ -228,7 +231,7 @@ render_b:
         call tab_load
         nextreg 0x7F,C_WHITE
         ld a,(S_BACK)
-        nextreg 0x12,a                  ; show the render
+rflip:  nextreg 0x12,a                  ; show the render
         xor L2_A ^ L2_B                 ; the other one next (not NR $12 read back: it may be BLANK_BK, M4)
         ld (S_BACK),a
         nextreg 0x13,BASE_BK            ; the logic pass draws into base

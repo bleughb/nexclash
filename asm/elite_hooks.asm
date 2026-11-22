@@ -54,6 +54,7 @@ S_RSP    EQU 0x0028        ; word: SP at render entry (render runs on RSTK)
 S_RA     EQU 0x002A        ; byte: render's A argument across the stack switch
 S_ISP    EQU 0x0032        ; word: SP at h_isr (it runs on HSTK)
 S_HSP    EQU 0x0034        ; word: SP at h_ship / poll (they run on HSTK)
+S_ULAC   EQU 0x0036        ; byte: the ULA viewport was cleared once (ulaclr)
 ISTK     EQU 0x00C0        ; h_isr's stack top (0x00A0-0x00BF), apart from HSTK: an interrupt can come inside one
 HSTK     EQU 0x0100        ; hooks' stack top in the state page (0x00A0-0x00FF): the game's own stack 0x4100
                            ; has 32 bytes with a screen row below it (M4: dashes on the pages)
@@ -766,6 +767,34 @@ addframe:
 ; at 0xFDFF / 0xFE00 and game code elsewhere: CSpect's IM 2 bus byte is not 0xFF, and the first interrupt jumped
 ; through 0xFD00 = 0xC903 into the buffer (plain conversion crashed in pass 2, 2026-11-23).
 im2tab: ds 257, high h_isr             ; vector 0x3A3A = h_isr for any bus byte
+; (the gap up to h_isr)
+; ulaclr (first flight h_flip): the ULA viewport inside its frame (rows 9-126, x 9-246) cleared once; the frame
+; (rows 8/127, x 8/247) kept. The snapshot's own screen is there (lines mid-draw) and the copy that clears it comes
+; only after this pass's renders (the original's within ~3 frames, ours ~10). Not at setup: the start-up tail runs
+; at 0x4800. Clobbers AF, BC, DE, HL.
+ulaclr: ld a,1
+        ld (S_ULAC),a
+        ld d,9
+.r:     ld e,8
+        pixelad                         ; HL = screen address of (E, D)
+        ld a,(hl)
+        and 0x80                        ; keep x 8 (left frame line)
+        ld (hl),a
+        inc l
+        ld b,28
+        xor a
+.c:     ld (hl),a
+        inc l
+        djnz .c
+        ld a,(hl)
+        and 0x01                        ; keep x 247 (right frame line)
+        ld (hl),a
+        inc d
+        ld a,d
+        cp 127
+        jr nz,.r
+        ret
+
         ds 0x3A3A - $, 0xFF
 
 ; h_isr (IM 2): count frames (fcount), then run the game's ISR body (0xFF25: keyboard, controls, sound) if one
