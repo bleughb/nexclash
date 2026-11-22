@@ -201,7 +201,7 @@ class Model(hooklib.NextModel):
         self.ins = []
 
     def read_port(self, regs, port):
-        if port == 0x253B:
+        if port in (0x243B, 0x253B):            # 0x243B reads the selection back (the handler keeps it: Codex C7)
             return super().read_port(regs, port)
         self.ins.append(port)
         return 0xFF
@@ -239,7 +239,7 @@ class State:
         self.speed = 0
 
 
-def run_hook(patch, st, mem, regs, stop, limit=8000000, speed=None):
+def run_hook(patch, st, mem, regs, stop, limit=8000000, speed=None, sel=None):
     """stop(R, view) -> True at the hook's return."""
     Sim = _rw()
     v = View(mem, patch, st)
@@ -247,6 +247,8 @@ def run_hook(patch, st, mem, regs, stop, limit=8000000, speed=None):
     m = Model(s, st.speed if speed is None else speed, st.line)
     m.nr.update(st.nr)
     m.attrs = st.attrs
+    if sel is not None:
+        m.sel = sel                             # the NextReg selection the interrupted code had
     v.model = m
     n = 0
     R = s.registers
@@ -371,7 +373,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, full_every=1):
             stopf = lambda r, v: r[24] == tgt
         before = (st.page[S['V_OX'] - 0x2000], st.page[S['V_OY'] - 0x2000])
         speed0 = st.speed
-        got, v, model = run_hook(patch, st, patched, regs, stopf)
+        sel_in = (0x1F, 0x07, 0x1E, 0x08, 0x53)[c['hooks h_isr'] % 5] if sym == 'h_isr' else None   # mid line / clock read
+        got, v, model = run_hook(patch, st, patched, regs, stopf, sel=sel_in)
         for i in CMP:
             if (bool(R[i]) != bool(got[i])) if i == 26 else R[i] != got[i]:
                 fail('registers differ', {'pc': hex(pc), 'reg': i, 'orig': R[i], 'got': got[i], 'sym': sym})
@@ -400,8 +403,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, full_every=1):
             fail('game reads differ', {'pc': hex(pc), 'sym': sym})
         if sym == 'h_isr' and speed0 == 3 and ('s', st.page[0x3E30 - 0x2000]) not in model.events:
             fail('interrupt not at the game clock', {'pc': hex(pc)})
-        if sym == 'h_isr' and model.sel != 7:
-            fail('interrupt leaves another register selected', {'pc': hex(pc), 'sel': model.sel})
+        if sym == 'h_isr' and model.sel != sel_in:
+            fail('interrupt leaves another register selected', {'pc': hex(pc), 'sel': model.sel, 'found': sel_in})
         c['hooks'] += 1
         c['hooks ' + sym] += 1
         c['48K bytes compared'] += 49152
@@ -560,7 +563,7 @@ def negative_patches(patch):
         b.ram[0x800 + i:0x800 + i + len(new) // 2] = bytes.fromhex(new)
         b._banks()
         out[name] = b
-    mutate('interrupt leaves another register selected', '013B243E07ED79', '00000000000000', patch.syms['h_isr'] + 30)
+    mutate('interrupt leaves another register selected', '013B24F1ED79', '013B24F10000', patch.syms['h_isr'] + 30)
     mutate('R off by one', '3EE9CD', '3EEACD')
     mutate('clock left at 28 MHz', 'F53A423EED9207F1', 'F53E0300ED9207F1')
     mutate('interrupt runs at 28 MHz', '3A303EED9207', '000000000000')
