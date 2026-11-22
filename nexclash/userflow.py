@@ -61,6 +61,17 @@ def artifact_state(path):
         return None
 
 
+def output_paths(out, name):
+    """(plain, sprite build) of a build in `out`: NAME.nex and NAME_sprites.nex, or the names its engine declared in
+    NAME_outputs.json (docs/ENGINE_CONTRACT.md "Outputs"; Fireman ASTRA)."""
+    plain, spr = name + '.nex', name + '_sprites.nex'
+    decl = os.path.join(out, name + '_outputs.json')
+    if os.path.exists(decl):
+        d = json.load(open(decl))
+        plain, spr = d.get('plain') or plain, d.get('default') or spr
+    return os.path.join(out, plain), os.path.join(out, spr)
+
+
 def match_release(known, got):
     """The release of this snapshot whose outputs `got` ({kind: md5}) reproduces, or None. Every release counts: a
     frozen or alternate release shares the snapshot (Everyone's a Wally, Fireman OPUS / ASTRA, Rainbow)."""
@@ -75,8 +86,7 @@ def cmd_patch(a, cmd_auto):
     out = a.out or os.path.join(os.path.dirname(os.path.abspath(z80)), name + '_nexclash')
     h = md5(z80)
     known = verified().get('snapshots', {}).get(h)
-    plain, spr = os.path.join(out, name + '.nex'), os.path.join(out, name + '_sprites.nex')
-    previous = artifact_state(spr)
+    previous = artifact_state(output_paths(out, name)[1])
     try:
         if cmd_auto(a) is False:
             print('Sprite build FAILED its checks; previous output files are not a new build.')
@@ -90,6 +100,7 @@ def cmd_patch(a, cmd_auto):
     rep = open(os.path.join(out, name + '_report.txt')).read() if os.path.exists(
         os.path.join(out, name + '_report.txt')) else ''
     print()
+    plain, spr = output_paths(out, name)        # after the build: an engine declares its own names (NAME_outputs.json)
     current = artifact_state(spr)
     if current is not None and current == previous:
         print('No sprite build from this run: %s is an earlier output, kept unchanged. Do not use it as this run\'s result.' % spr)
@@ -112,7 +123,8 @@ def cmd_patch(a, cmd_auto):
             known = hit
         print('Recognised snapshot: %s (games/%s). Output %s the reference build%s.' % (
             known['game'], known.get('doc', '?'), 'is identical to' if same else 'DIFFERS from',
-            (' (%s)' % ' '.join(hit['args']) if hit.get('args') else '') if same else ' (report this: %s)' % got))
+            (' (%s)' % ' '.join(hit['args'] + ['%s=%s' % kv for kv in sorted(hit.get('env', {}).items())])
+             if hit.get('args') or hit.get('env') else '') if same else ' (report this: %s)' % got))
     else:
         print('PATCHED: your snapshot is not byte-identical to the one we verified, but every patch site')
         print('held the original bytes, so the same patch applied. To prove it for YOUR snapshot, record')

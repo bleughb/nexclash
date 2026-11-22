@@ -1617,6 +1617,8 @@ def auto(a, z80, name, out, say):
     say('Sprites   : %s  %s  boot %s' % (os.path.basename(spr), md5(spr),
                                           'OK' if not bad2 else 'MISMATCH %s' % str(bad2[:3])[:200]))
     ok = not bad and not bad2
+    with open(os.path.join(out, name + '_outputs.json'), 'w') as f:   # its own names (nxcout.manifest, userflow.cmd_patch)
+        json.dump({'plain': os.path.basename(plain), 'default': os.path.basename(spr)}, f, indent=1)
     states = []
     for r in list(a.rzx or []):
         c, ex, st = verify(patch, r, stop=getattr(a, 'quick', None), collect=3, progress=lambda n,c: say('Progress  : frame %d' % n))
