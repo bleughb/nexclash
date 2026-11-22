@@ -567,7 +567,7 @@ pix_b:  out (0x5B),a
 
 ; Enhanced only: the colour routine in RAM page CPAGE at 0x0000, interrupts off around it (the game runs with
 ; them off; the front end event, the only one with them on, sends no pattern). Keeps all but A, F, E.
-pix4c:  ld a,i
+pix4c:  ld a,i                  ; IFF known off: the game runs with DI and the front end sends no pattern
         push af
         di
         nextreg 0x50,CPAGE

@@ -617,6 +617,7 @@ _IFF_RE = re.compile(r'^\s*(?:[A-Za-z_.][\w.]*:?)?\s*ld\s+a\s*,\s*([ir])\s*(?:;.
 _PV_RE = re.compile(r'\b(?:jp|ret|call)\s+p[oe]\b', re.I)
 _I_VALUE_RE = re.compile(r';.*\bI as a value\b')                 # the source's own mark on a LD A,I that saves I
 _STORE_A_RE = re.compile(r'ld\s+\([^)]+\)\s*,\s*a$', re.I)        # ... and the store that must follow it at once
+_IFF_OFF_RE = re.compile(r';.*\bIFF known off\b.{12,}')       # a single LD A,I where interrupts are always off, with why
 _CODE_RE = re.compile(r'^(?:[A-Za-z_.][\w.]*:?)?\s+([a-z].*?)\s*(?:;.*)?$', re.I)   # a label only in column 0
 
 
@@ -802,8 +803,10 @@ def iff_audit(root=ROOT):
     still reads as off),
     'value' (LD A,R with no P/V condition before the next flag-setting code: R as a value; or a LD A,I marked
     "; I as a value" and stored to memory by the next instruction: I saved, not IFF), 'once' (a single
-    LD A,I - hooks read I for IFF - or LD A,R tested on P/V: an interrupt during the read leaves interrupts off).
-    The harness's NEG_IFF1 control is the one expected 'once'. -> [(file, line, register, verdict)]."""
+    LD A,I - hooks read I for IFF - or LD A,R tested on P/V: an interrupt during the read leaves interrupts off),
+    'off' (a single LD A,I marked "; IFF known off: <why>": it only runs with interrupts off, so no interrupt can meet
+    the read; the reason is the source's claim, reviewed with it). The harness's NEG_IFF1 control is the one
+    expected 'once'. -> [(file, line, register, verdict)]."""
     out = []
     files = sorted(glob.glob(os.path.join(root, 'asm', '*.asm')) + glob.glob(os.path.join(root, 'asm', 'lib', '*.asm')))
     for path in files:
@@ -828,6 +831,8 @@ def iff_audit(root=ROOT):
                 verdict = 'twice' if any(_PV_RE.search(x[1]) for x in code[lo + 1:hi]) else 'pair'
             elif reg == 'I' and _I_VALUE_RE.search(ln) and k + 1 < len(code) and _STORE_A_RE.match(code[k + 1][1]):
                 verdict = 'value'           # I itself, saved to memory at once and marked so in the source (Bruce Lee)
+            elif reg == 'I' and _IFF_OFF_RE.search(ln):
+                verdict = 'off'             # interrupts are off wherever this runs (the source says why: Arkanoid)
             elif reg == 'I':
                 verdict = 'once'            # LD A,I is read for IFF (pushed, tested later): one read is the fault
             else:
@@ -1094,6 +1099,12 @@ def selfcheck():
                 [] if unpadded['IFF capture M1 count differs!'] else ['unpadded IFF read not caught!']))
     au = iff_audit()
     once = ['%s:%d' % (f, n) for f, n, _, v in au if v in ('once', 'pair') and not f.endswith('hlib_selftest.asm')]
+    with tempfile.TemporaryDirectory() as d:          # the "IFF known off" mark needs its reason; unmarked stays 'once'
+        os.makedirs(os.path.join(d, 'asm'))
+        open(os.path.join(d, 'asm', 'm1.asm'), 'w').write('a:      ld a,i      ; IFF known off: runs with DI only\n')
+        open(os.path.join(d, 'asm', 'm2.asm'), 'w').write('b:      ld a,i      ; IFF known off\n')
+        if [v for *_, v in iff_audit(d)] != ['off', 'once']:
+            once.append('the IFF known off mark (with a reason; without one it stays once)')
     out.append(('hooklib IFF audit: %d LD A,I / LD A,R in asm/ (%d read twice, %d values), none trusted after one read'
                 % (len(au), sum(v == 'twice' for *_, v in au), sum(v == 'value' for *_, v in au)),
                 ['IFF read once: %s!' % x for x in once]))
