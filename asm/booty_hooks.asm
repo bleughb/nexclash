@@ -22,7 +22,7 @@ V_SP EQU 0x3E32
 V_IN EQU 0x3BF0                 ; 1 in this page while a hook runs; always 0 in the hidden ROM's copy (below the font)
 V_ILEAVE EQU 0x3E3D             ; I when a hook leaves: 3B in a room
 I_GAME EQU 0xF4
-V_ROOMSP EQU 0x3E35             ; the game's clock while a room is drawn at 28 MHz
+V_ROOMSP EQU 0x3E35             ; the game's clock while a room is drawn at 28 MHz; 3 outside a room
 ROOM_CLK EQU 0x6000             ; its copy in game RAM, where isr_w finds it from either page copy (untouched by the game
                                 ; in every recording: scan of a1, rooms, die, hid, over)
 V_R0 EQU 0x3E36
@@ -241,6 +241,8 @@ h_re:
         ld a,(V_ROOMSP)
         ld (V_SPEED),a
         nextreg 0x07,a
+        ld a,3                  ; out of a room V_ROOMSP is 3, so a hook latched at 28 MHz is the caller's own clock
+        ld (V_ROOMSP),a         ; (isr_w reads V_ROOMSP when V_SPEED says 28 MHz; the page starts with 3 too)
         ld hl,(V_WAIT)          ; what the room took the original, less what it took here: at the game's clock, so the ISR
 .s:     dec hl                  ; takes its share of it as it did of the original's
         ld a,h
