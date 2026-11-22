@@ -35,7 +35,8 @@ PROBE_FIELDS = ('Invocation:', 'Limits:', 'Origin:', 'Smoke test:')
 FRICTION_KEYS = ('reuse', 'retries', 'environment', 'hand-rolled', 'scratch')     # docs/LEARNING.md 2b
 SHARED = re.compile(r'\b(simpool|z80tonex|nextboot|rzx|records|selftest|learncheck|doccheck|survey|memscan|'
                     r'snapinfo|isrinfo|drawcost|simrun|preview|userflow|build\.py|sprites\.py|engines\.py)\b')
-TAG = re.compile(r'\[(card|doc|tool|backlog|probe|local|deferred|none)\b([^\]]*)\]')
+TAG = re.compile(r'\[(card|doc|tool|backlog|probe|kb|local|deferred|none)\b([^\]]*)\]')
+KB = os.path.join(ROOT, 'docs', 'kb', 'lessons.json')
 
 
 def cards():
@@ -149,6 +150,12 @@ def _check_tag(kind, arg, game_text, cs, ps, ctx):
         missing, listed = ps[n]
         if missing or not listed:
             return 'probe %s: %s' % (n, ', '.join(missing + ([] if listed else ['not in tools/probes/README.md'])))
+    elif kind == 'kb':
+        ids = ctx.get('kb')
+        if ids is None:
+            ids = {x.get('id') for x in json.load(open(KB, encoding='utf-8'))['lessons']} if os.path.exists(KB) else set()
+        if arg not in ids:
+            return 'no shared lesson "%s" in docs/kb/lessons.json (add the entry in the same change)' % arg
     elif kind == 'none':
         if not re.match(r':\s*\S.{6,}', arg):
             return 'none tag needs a reason "[none: <why there is no new finding>]"'
@@ -198,7 +205,7 @@ def check_friction(rel, t, cs, ps, ctx, required):
     if required:
         for i, item in enumerate(_section(t, 'Lessons') or [], 1):
             if item.startswith('[local') and SHARED.search(item):
-                bad.append('%s: lesson %d is [local] but names shared code (%s): tag it tool / doc / backlog '
+                bad.append('%s: lesson %d is [local] but names shared code (%s): tag it tool / doc / backlog / kb '
                            '(docs/LEARNING.md 2b)' % (rel, i, SHARED.search(item).group(1)))
     return bad
 
@@ -391,6 +398,9 @@ def selfcheck():
     for arg, ok in ((': hardware report only, nothing new', True), ('', False), (':  ', False)):
         if (_check_tag('none', arg, '', {}, {}, {}) is None) != ok:
             bad.append('none tag %r' % arg)
+    for arg, ok in (('lesson.a', True), ('lesson.b', False), ('', False)):
+        if (_check_tag('kb', arg, '', {}, {}, {'kb': {'lesson.a'}}) is None) != ok:
+            bad.append('kb tag %r' % arg)
     use = '## Technique use\n- patch.a: helped\n- patch.a: helped (again)\n- patch.b: used\n'
     cnt, games = usage_counts({'g1.md': use, 'g2.md': '## Technique use\n- patch.b: no help: why\n'})
     if (len(games['patch.a']), cnt['patch.a']['uses'], len(games['patch.b']), cnt['patch.b']['uses']) != (1, 2, 2, 2):

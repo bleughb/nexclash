@@ -28,18 +28,18 @@ version; tools/sjasmplus/README.md). Maintainers: repos and reference files in d
 
 ## Tokens: read, write and print as little as the task needs
 - Read: this file, PLAYBOOK intro + your stage, games/<game>.md, survey.md. Look things up in
-  BRIEFING (platform + toolkit facts, C2 = backlog), LEARNINGS (lessons), TECHNIQUES (Next techniques):
+  BRIEFING (platform + toolkit facts, C2 = backlog), LEARNINGS (lessons; every game's: `python tools/knowledge.py lessons WORD`), TECHNIQUES (Next techniques):
   `grep -n '^#' FILE` is the map, then grep the subject and Read +-30 lines - never end to end.
   MAME: `grep -n '\[MAME\]' docs/*.md`.
 - Patch plan first (PLAYBOOK 2): docs/techniques/index.json, then at most 3
-  cards initially; add cards required by the design, then targeted functions (`grep -n '^def \|^class ' FILE`); explain whole-module reads in the Stage log. Engine files: docs/ENGINE_CONTRACT.md. Read code
+  cards; add cards required by the design, then targeted functions (`grep -n '^def \|^class ' FILE`); explain whole-module reads in the Stage log. Engine files: docs/ENGINE_CONTRACT.md. Read code
   in changed modules and relevant callers/dependencies; avoid rereading unchanged material.
 - Write: change existing files with Edit, never rewrite a large file whole; write a new engine in
   stages (sites, hooks, verify, unit tests), each checked before the next.
 - Print: `python tools/run_logged.py --log run.log -- CMD ARG...` retains the full log and exit
   status, prints bounded warnings and a tail, and returns the command status. Disassemble only flagged routines.
 - Replies: never re-summarize earlier turns or paste results already in files; say what changed.
-- Long runs: use the environment's supported background execution; retain logs and exit status.
+- Long runs: background execution; keep logs and exit status.
 - No subagents unless the user asks: each starts cold and re-reads the docs.
 
 ## Rules (contributions are checked against them)
@@ -84,13 +84,13 @@ version; tools/sjasmplus/README.md). Maintainers: repos and reference files in d
 ## End of every stage
 - games/<game>.md: facts, decisions, status, results (counters, MD5s), hardware checklist, Stage
   log line, Next session block. `python -m nexclash.kb add <survey dir> --game <game>` (docs/kb;
-  skipped games too). docs/VERIFICATION.md is no longer appended to (2026-10-26): the
+  skipped games too). docs/VERIFICATION.md is not appended to: the
   results live in games/<game>.md and the record.
 - At stage 2-3: the evidence record docs/records/<game>.json (PLAYBOOK 7), then `python -m
   nexclash.records views` (writes STATUS.md's table, VERIFICATION.md's checksum list, verified.json;
   never edit those by hand - selftest fails when they are stale).
 - Learning loop (docs/LEARNING.md; a stage is not complete without it): every finding a line in
-  games/<game>.md "## Lessons" with its disposition tag (card / doc / tool / backlog / probe / local
+  games/<game>.md "## Lessons" with its disposition tag (card / doc / tool / backlog / probe / kb / local
   / deferred), each acted on now: card or doc amended, wrong or reasonless rules fixed in place,
   recurring mistakes' warnings sharpened, hardware-only failures in BRIEFING A1. "## Friction"
   sweep (docs/LEARNING.md 2b): toolkit + environment lessons, scratch scripts to tools/probes/
