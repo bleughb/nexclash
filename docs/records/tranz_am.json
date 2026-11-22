@@ -1,0 +1,241 @@
+{
+ "name": "tranz_am",
+ "order": 270,
+ "game": "Tranz Am",
+ "doc": "tranz_am.md",
+ "engine": "tranz_am",
+ "representative": true,
+ "reference": "tranz_am",
+ "inputs": {
+  "snapshot": {
+   "name": "tranz_am.z80",
+   "md5": "8dc717670aa7fc8817e83e8f63a22f72",
+   "path": "tranz_am/tranz_am.z80",
+   "note": "TOSEC \"Tranz Am (1983)(Ultimate Play The Game)[a2][16K].z80\": the 16K game at its menu. The tape: \"Tranz Am (1983)(Ultimate Play The Game)[16K].tzx\"."
+  },
+  "recordings": [
+   {
+    "name": "tranz_am_colours.json",
+    "md5": "196aa7851e2ad83911e79dd02f83e41c",
+    "path": "tranz_am/tranz_am_colours.json",
+    "role": "The painted map (28 pictures, 13 fixed colours), staged beside the snapshot; not a recording. It holds the figures, so it is not in the repository."
+   },
+   {
+    "name": "tranz_am_loading.scr",
+    "md5": "dc7bc0fdb5722ba7e2015cf65d08bcf7",
+    "path": "tranz_am/tranz_am_loading.scr",
+    "role": "The tape's loading screen (6,912 bytes), staged beside the snapshot; not a recording."
+   },
+   {
+    "name": "enNextZX.rom",
+    "md5": "8c34d957fb2cbbd0be423cea3b370fd5",
+    "path": "tranz_am/enNextZX.rom",
+    "role": "The Next's ROM file, for the verifier's ROM model; not a recording."
+   },
+   {
+    "name": "tranz_am_m2.rzx",
+    "md5": "d67376ef04f97ec5a92513f94fd322c1",
+    "path": "tranz_am/tranz_am_m2.rzx",
+    "role": "Machine-played from the snapshot (Kempston), one unbroken recording of 20,132 frames, 7 games: the rzxarchive has no downloadable recording."
+   },
+   {
+    "name": "tranz_am_m3.rzx",
+    "md5": "888777678088e221c3082ea1b7d1f8bb",
+    "path": "tranz_am/tranz_am_m3.rzx",
+    "role": "The same from another seed: 20,030 frames, 7 games."
+   }
+  ]
+ },
+ "modules": [
+  "tranz_am"
+ ],
+ "own_modules": [
+  "tranz_am"
+ ],
+ "data": [
+  "asm/tranz_am_hooks.asm",
+  "asm/tranz_am_tables.asm",
+  "docs/profiles/tranz_am.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm"
+ ],
+ "rebuild": {
+  "args": [],
+  "rzx": []
+ },
+ "verify": {
+  "args": [],
+  "rzx": [
+   "tranz_am_m2.rzx",
+   "tranz_am_m3.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 60,
+  "note": "Each hook against the original from one state: every register with R and all memory (the bitmap too) at the draw hook, the erase-only entry, the clear, the pace window's entries and ends and every draw from its entry; the object's sprites against a model of the figure, and the model against the original's own plot wherever the entry draws without erasing; the colour paint's copies store nothing and leave everything else the game's; the IM 1 handler of the alt ROM image against Sinclair's at every interrupt; unit cases over every type."
+ },
+ "outputs": {
+  "plain": {
+   "file": "tranz_am.nex",
+   "md5": "5b7ed517c752b2899bddd6539aaedfc9"
+  },
+  "sprites": {
+   "file": "tranz_am_sprites.nex",
+   "md5": "62b76f0325fec6055b068f57434bf602"
+  },
+  "enhanced": {
+   "file": "tranz_am_enhanced.nex",
+   "md5": "2d9e69880cf7a8c9a8a8fc27303bc0b3"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Tranz Am",
+  "engine_col": "tranz_am (tranz_am.md)",
+  "build": "tranz_am_sprites.nex 637c510d (the game draws as it does; the cars and the roadside items as sprites on the same pixels in their own colours; their colour paint stores nothing; loading screen) + enhanced c89e6c5a (28 pictures painted with 13 fixed colours, a first pass; a pixel left unpainted keeps the game's colour)",
+  "software": "Verify IDENTICAL on two whole machine-played recordings (40,164 frames, 14 games), both builds: 26,818 figures as sprites, 2,796,472 sprite pixels against the figure's model (itself checked against the original's plot at every draw-only entry) and, on Enhanced, every pixel's colour against the painted map; every register with R and all memory (the bitmap too) at every hook; the IM 1 handler compared at 39,986 interrupts; unit PASS on both builds (3,264 graphic cases over all 34 types, negative control 40 of 40); 6 of 6 broken builds detected; ROM path check pass",
+  "hardware": "untested (the patch runs from its menu in OverSpec, a trainer and Enhanced on)",
+  "next": "a recording played by hand; hardware test"
+ },
+ "checks": [
+  "asm2profile:tranz_am"
+ ],
+ "techniques": [
+  {
+   "application": "tranz_am.keep-ula",
+   "id": "patch.xor-overlay-keep-ula",
+   "revision": 2,
+   "target": "the game's plotter and bitmap unchanged; each object's sprites lie on the pixels it plots, in the object's colour; the colour paint's two CALLs for objects go to a copy that stores nothing",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "tranz_am.preserve-r",
+   "id": "patch.preserve-r",
+   "revision": 2,
+   "target": "HLIB_R_IN / hlib_r_set / HLIB_R_OUT in every hook (the game reads R)",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "tranz_am.restore-speed",
+   "id": "patch.restore-speed",
+   "revision": 1,
+   "target": "HLIB_SPEED_IN at the plot's entries, HLIB_SPEED_OUT at their ends: the set-up runs at 28 MHz and pays for the draw hook",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "tranz_am.whole-altrom",
+   "id": "patch.whole-altrom-image",
+   "revision": 2,
+   "target": "Sinclair's ROM as the alt image with the hooks at 0x386E (0xFF there); the game runs the ROM's IM 1 handler, compared at every interrupt",
+   "phases": [
+    "setup"
+   ]
+  },
+  {
+   "application": "tranz.colour-map",
+   "id": "patch.runtime-colour-map",
+   "revision": 1,
+   "target": "a painted set changes only the patterns' nibbles and 13 fixed palette colours (nibbles 2-14 of every offset): nibble 1 stays the object's ink at run time; the hooks are the same",
+   "phases": [
+    "setup"
+   ]
+  }
+ ],
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/tranz_am.md#build-stage-2-2026-11-20-asmtranz_am_hooksasm-nexclashtranz_ampy-after-jetpac_v11"
+   ],
+   "coverage": "Two machine-played recordings (40,162 frames); every pace site compared in the replay. No JNext or hardware timing.",
+   "result": "The main loop is not frame-synced. The plot's set-up, a fixed stretch a draw, runs at 28 MHz and pays for the draw hook (as Jetpac 1.3); the colour paint's copy takes the original's time to the T state. Not measured as a whole."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/tranz_am.md#feasibility-playbook-3d-2026-11-20",
+    "games/tranz_am.md#build-stage-2-2026-11-20-asmtranz_am_hooksasm-nexclashtranz_ampy-after-jetpac_v11"
+   ],
+   "coverage": "Every screen writer of the first recording (survey); every CALL and JP from the handlers into the plot code listed; the colour paint's three callers checked by the build; all 34 types through the plotter in the unit cases.",
+   "result": "The bitmap and all game memory but the colour cells of the objects with sprites stay the original's. The game runs the ROM's IM 1 handler: the alt ROM image is Sinclair's. It reads R: every hook leaves R as the original. Two routines CALL the plot's set-up past its start with a place and a graphic of their own: those draws change no sprite (an entry marks an object's draw). A 16K game: nothing reads or writes above 0x7FFF, where the hook RAM is."
+  },
+  "decision": "As Jetpac's published patch (owner 2026-11-20: 'Let's finish off the ultimate games'): the game's own colours, moving figures as sprites.",
+  "next_experiment": "A recording played by hand into later levels; hardware: the checklist in games/tranz_am.md; the game's speed against the original over a minute of play: within 2%."
+ },
+ "checked": {
+  "deps": {
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "asm/tranz_am_hooks.asm": "71545143ad79421a",
+   "asm/tranz_am_tables.asm": "45b8a87163e37735",
+   "docs/profiles/tranz_am.json": "23ff037730984367",
+   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "fcff3674de0daae4",
+   "nexclash/hooklib.py": "24241497925658d6",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
+   "nexclash/recolour.py": "e0c2de6bfad5c6fb",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/tranz_am.py": "654f6ffb14a7dd99",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "fb9c1c6d197fc57a",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-20"
+ },
+ "verified": {
+  "deps": {
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
+   "asm/tranz_am_hooks.asm": "71545143ad79421a",
+   "asm/tranz_am_tables.asm": "45b8a87163e37735",
+   "docs/profiles/tranz_am.json": "23ff037730984367",
+   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "fcff3674de0daae4",
+   "nexclash/hooklib.py": "24241497925658d6",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
+   "nexclash/recolour.py": "e0c2de6bfad5c6fb",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/tranz_am.py": "654f6ffb14a7dd99",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "fb9c1c6d197fc57a",
+   "rom": "8c34d957fb2cbbd0"
+  },
+  "date": "2026-11-20"
+ }
+}
