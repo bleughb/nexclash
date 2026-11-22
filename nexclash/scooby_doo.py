@@ -318,7 +318,7 @@ class View:
             return self.mem[a]
         if m == 24:
             return self.st.page[a & 8191]
-        return self.st.pages.setdefault(m, bytearray(8192))[a & 8191]
+        return (self.st.pages.get(m) or self.st.pages.setdefault(m, bytearray(8192)))[a & 8191]
 
     def __setitem__(self, a, v):
         s = a >> 13
@@ -330,7 +330,7 @@ class View:
         if m == 24:
             self.st.page[a & 8191] = v
         else:
-            self.st.pages.setdefault(m, bytearray(8192))[a & 8191] = v
+            (self.st.pages.get(m) or self.st.pages.setdefault(m, bytearray(8192)))[a & 8191] = v
 
 
 class Model(hooklib.NextModel):

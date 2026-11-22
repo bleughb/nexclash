@@ -1037,7 +1037,7 @@ def _boot(nex, pc_stop, limit=5_000_000, nexload=False, sysrom=None):
           'alt': [bytearray(16384), bytearray(16384)], 'bad': [], 'sel': 0, 'ports': {}, 'nrlog': []}
 
     def page(n):
-        return pages.setdefault(n, bytearray(8192))
+        return (pages.get(n) or pages.setdefault(n, bytearray(8192)))
 
     def romn():
         return ((st['p1ffd'] >> 2) & 1) << 1 | ((st['p7ffd'] >> 4) & 1)
