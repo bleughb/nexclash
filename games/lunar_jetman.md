@@ -62,7 +62,7 @@ the text printer 35311: none branches on a pixel, so no figure collision reads t
   which prints over the play area) hide every sprite.
 - Images precomputed at build time for every graphic in both tables (222 figure graphics, 22 truck graphics): 4-bit,
   ink, enclosed paper filled (a darker shade of the figure's own colour; trucks black), a one-pixel outline outside
-  the silhouette (white; black for a white figure; none under 12 ink pixels). Figures 2 x 2 tiles at (x - 1, top - 1);
+  the silhouette (black since 2026-11-22, jattree/nxc#7; none under 12 ink pixels). Figures 2 x 2 tiles at (x - 1, top - 1);
   trucks 5 x 2. Pages: 26 state (caches, graphic lists, the pattern pool, tile ids, the objn table), 27 index (graphic
   & 0x1FFF -> id + 1), 28-31 trucks, 36-49 figures; the state page at slot 4 and an image page at slot 5 only inside a
   hook (the ROM IM 1 handler uses slots 0 and 2, the game's stack is at 0x5Exx; both back on pages 4 / 5 before any
@@ -93,7 +93,7 @@ apart from 16 bytes (KSTATE, FRAMES, dead stack). Cheats: the .pok's proven entr
 ## Defaults taken (a human would have decided)
 1. Every object the two plotters draw is a sprite; lasers, ground, craters, HUD and text stay on the ULA.
 2. Depth: figures over the rover, by object number among figures (the original XORs, no depth).
-3. Outline on by default (owner's rule), white; black for white figures; none under 12 ink pixels.
+3. Outline on by default (owner's rule), black like the play area (white until 2026-11-22: rims, jattree/nxc#7); none under 12 ink pixels.
 4. Enclosed paper filled with a darker shade of the figure's own colour (items solid in their own colours).
 5. The rover's outline and fill black (it is half white); its colours by cell rows, as the game paints it.
 6. Enhanced painted by rule, not by hand, except Jetman's colours, which come from the Spec256 Jetpac.
