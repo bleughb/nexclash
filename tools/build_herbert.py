@@ -24,6 +24,9 @@ def main():
   if len(screen)!=6912:p.error('--screen must be 6912 bytes')
   d=bytearray(out.read_bytes());d[10]=2;out.write_bytes(d[:512]+screen+d[512:])
  assert nex_banks(out.read_bytes())==before
+ # every build starts with DivMMC automap off (NextZXOS leaves it on), as nexclash.py's finish step does
+ from nexclash.z80tonex import automap_off
+ out.write_bytes(automap_off(out.read_bytes()))
  print('Boot and NEXLOAD printer-buffer check: PASS; screen-aware bank comparison: IDENTICAL')
  print('SHA256',hashlib.sha256(out.read_bytes()).hexdigest(),out)
 if __name__=='__main__':main()

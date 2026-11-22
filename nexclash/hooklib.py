@@ -679,6 +679,7 @@ SPEED_LEGACY = {
     'atic_atac_hooks.asm', 'atic_atac_v14_hooks.asm', 'cauldron_hooks.asm', 'incredible_shrinking_fireman_hooks-add-GPT6_ASTRA.asm',
     'inferno_hooks.asm', 'matchday_hooks.asm', 'matchday_v21_hooks.asm', 'new_zealand_story_hooks.asm',
     'rainbow_hooks.asm', 'rainbow_z80n_hooks.asm', 'trueno_hooks.asm', 'wally_hooks.asm',
+    'arkanoid_hooks.asm', 'bomb_jack_hooks.asm', 'manic_miner_hooks.asm',   # published 2026-11-21, landed 2026-11-22
     }
 # Shipped in jattree/nxc (fixed: gauntlet, altered_beast, jsw, robin_of_the_wood). Left, not the plain kind:
 # matchday_v21 and new_zealand_story run the game's own interrupt handler at 3.5 MHz on purpose (its sound) and give the

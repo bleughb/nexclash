@@ -39,6 +39,14 @@
     "enhanced_loading": "62b922d83ab47c6abf8f895c7a7af110"
    }
   },
+  "1f0faef52a701cfc9434e2745ccb7fc2": {
+   "game": "Arkanoid",
+   "doc": "arkanoid.md",
+   "nex": {
+    "plain": "636dcef8d4e456e35bfc1b63f46c8298",
+    "sprites": "cf5589795b281d555be085094bd10f41"
+   }
+  },
   "9c14e2564e3f9956ff6ff973dac77537": {
    "game": "Army Moves",
    "doc": "army_moves.md",
@@ -79,6 +87,14 @@
    "nex": {
     "sprites": "54f755bd59ee680e5ed4c7f6060ba177",
     "sprites_loading": "5b05d5236cac7e451d9a6f59bbc2f609"
+   }
+  },
+  "08e760e82721540898b57b8a1f277659": {
+   "game": "Bomb Jack",
+   "doc": "bomb_jack.md",
+   "nex": {
+    "plain": "55a84a1452b6624d726f682917027d34",
+    "sprites": "3494df60c092860d2c9ad18987d92920"
    }
   },
   "0b2cb0c5a033e853d62c3a5e492f8bc0": {
@@ -175,6 +191,14 @@
     "plain": "f79626650e54545a5818fd0067e33ee5",
     "sprites": "350767afe81d88de4126c88db1e5d7df",
     "enhanced": "cd1ec11109c2fd8833178d33527310a7"
+   }
+  },
+  "92ad5a23acfe06f0756ae2d503ab31cc": {
+   "game": "Cybernoid - The Fighting Machine",
+   "doc": "cybernoid.md",
+   "nex": {
+    "plain": "7c7bd61154709c7c0ac37ef63e59e165",
+    "sprites": "c08867f3174b9b8c73cbad5af84d25c7"
    }
   },
   "745cb8f59f865db5118e6dc98d09e385": {
@@ -455,6 +479,14 @@
     "sprites": "f0e32785990472fb01a8370e3a187e78"
    }
   },
+  "d8face31a18a9543b093443b6f115f84": {
+   "game": "Manic Miner",
+   "doc": "manic_miner.md",
+   "nex": {
+    "plain": "6b205fc37cc5791dc07d5caa4df5b139",
+    "sprites": "57e9b6df0fc78205566d09648a9553a5"
+   }
+  },
   "5df07fbd5dabdcb9a909b86cf690a4e8": {
    "game": "Martianoids",
    "doc": "martianoids.md",
@@ -582,6 +614,18 @@
     "loading": "75b7ae1bdb9038f610c39765283399d0",
     "enhanced": "f9f705e610465dcc2f42c99f4de73763",
     "enhanced_loading": "fb742cd5b18e72c6dda1a5a46e870642"
+   }
+  },
+  "75b969b9da612b72c7780e11a862dbdd": {
+   "game": "Pentagram",
+   "doc": "pentagram.md",
+   "nex": {
+    "plain": "718d6a4fd3ece6df3db60c53434b3415",
+    "sprites": "8fa89e9acb35245bd0695ab067a059b7",
+    "enhanced": "e2b342b349b1cdbfc3bcc28a75683ea5",
+    "plain_loading": "eccd4ef26576435ed8a29c7da29e86cb",
+    "sprites_loading": "795ff97eba947bd9ad3e2a9c976f03cb",
+    "enhanced_loading": "c69d345bc266693dd0d83eb0fcd9c061"
    }
   },
   "c39caed696ba547f693546b707c9cee8": {
