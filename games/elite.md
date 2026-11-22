@@ -1,11 +1,11 @@
 # Elite (Braben / Bell, Firebird 1985; Russian 128K hack) - engine: elite (in progress, stage 2)
 
 ## Next session
-Stage: 2 (build)   State: M3 + M3b (ships, planet, stars every frame) run in CSpect 2026-11-23 (## M2 progress); M4 next
+Stage: 2 (build)   State: M3b done; M4 part 1 (pages, stacks) run in CSpect 2026-11-23 (## M2 progress); M4 HUD / colour next
 Inputs: specnext/reference/elite/ (tape, 5 RZX, 5 extracted .z80)    Branch: add-elite    Commit: see git log
 Checks: full surveys of all five RZX (7.5k-68.6k frames); tape not run in an emulator
 Pending user answers: none (design closed 2026-11-23: C coloured ships, details 1-5, pacing (i) interpolate)
-Start with: `python -m nexclash.elite C:\1NEXT\elite_work\Witch.z80 m2.nex` in CSpect (m3b build), then M4: HUD clash cells, Layer 2 off on pages
+Start with: `python -m nexclash.elite C:\1NEXT\elite_work\Witch.z80 m2.nex` in CSpect (m4 build), then M4: HUD clash cells, colour sheet
 Read: PLAYBOOK stage 1, 3d (unknown engine: feasibility first); ## Findings below
 Open: see Findings
 
@@ -39,7 +39,6 @@ So the names match SARD's notes. Frames: Docking 7501, Havoc 54517, PoliceAnarch
 ## Open
 - Which unreached call sites are figure plotters (cost --at / disassembly); whether another recording is needed.
 - Run Elite.tap in an emulator to confirm it matches the snapshots (loader is BASIC + `USR 28672`, packed 40801-byte block at 24648; the bytes differ from snapshot RAM, so it is packed).
-- Stage-1 design question and feasibility (3d).
 
 ## Feasibility (stage 1, 2026-11-22; measured from the five surveys, basis in brackets)
 - Pacing [observed]: one screen update (buffer copy 32702) per ~10 frames, so ~5 fps, set by the game's own CPU work
@@ -75,10 +74,7 @@ PoliceAnarchy 42000-47000.
 - 2026-11-22 (user): "for elite, you can totally re-write the engine to utilise all the memory of the spectrum next, free
   RAM should not be scarce". So: a full engine rewrite is allowed (not only hooks on the original), and memory is not a
   design constraint. The equivalence rule still holds (gameplay extremely close, docs: owner 2026-11-10).
-
-## Design question (stage 1)
-ANSWERED 2026-11-22: "C: coloured ships" (of A plain + 28 MHz, B A + HUD clash cells, C B + viewport on Layer 2 in
-colour). Details: ## Design details.
+- 2026-11-22 (user): design "C: coloured ships" (B HUD clash cells + viewport on Layer 2 in colour); ## Design details.
 
 ## Pacing (stage 2 gate, 2026-11-22)
 - ISR (0xFF25, own stack at 0x4020): keyboard scan 0xFD69, control integration 0xFE01 (pitch / roll from the keys,
@@ -215,7 +211,6 @@ draw_deps.py / draw_io.py in C:NEXT\elite_work\probe.
   of the same slot and blueprint (weight frames-since-tick / 10; a jump of 0x8000+ keeps cur), 0xA6DF called as the
   wrapper does (0xFEFE = RET, SP 0x4020), outputs restored, flip. Only after a flight pass (h_combat sets
   S_FLIGHT): status / chart pages keep the original copy.
-- Interpolation checked in CSpect (station, Docking): z 0x4D1F -> 0x4D1D shows 0x4D1E.
 - Frame counting (3 rounds; lesson in ## Lessons): h_isr counts each interrupt, raster polls in DI stretches add
   lost ones; 506 counted over ~505 frames. The game ISR body runs from an owed count (16 per 25 frames).
 - M3 (ships): ownrot, after interp, turns each ship by one pass of the current roll / pitch (0xFF09 / 0xFF0B) with
@@ -226,13 +221,15 @@ draw_deps.py / draw_io.py in C:NEXT\elite_work\probe.
   max 0x0FFF), 0xFF0C speed; 0x713C copies the high bytes to 0x70E4-0x70E6 once per pass.
 Not yet checked / open: one render sample (Docking, after ~600 frames) showed a station z of 0xB2E1 negative (not
 reproduced in 8 later samples; to watch with a render assert); Havoc.z80 crashes ~150 frames in even in the
---control build (no hooks; status page snapshot - the start-up tail at 0x4800 sits in its text rows); Layer 2 not yet
-hidden on pages (M4); hardware.
+--control build (no hooks; status page snapshot - the start-up tail at 0x4800 sits in its text rows); hardware.
 - M3b (planet, sun, stars): the pass draws them to the mono buffer only; render's scenery, before the ships (they are drawn over it), scales
   the control bytes 0xFF09 / 0xFF0B (magnitude) and 0xFF0D ((speed + 1) * w - 1: 0xA173 moves z by (speed + 1) * 2)
   by the weight, then the game's own 0x713C, 0x7853 (move), 0x7584 (draw, if 0x7103 = 0), 0x7898 (stars move + draw)
   - their place now (cur + w of a pass). Outputs [observed: draw_deps.py on 0x7853 / 0x7584 / 0x7898, Docking]
   added to outtab. Checked: Docking / Witch 600-1200 frames, count = time; renders land ~every 2nd frame (d 1, 3).
+- M4 part 1: Layer 2 off (blank bank 22) on pages (h_isr: 0x7104 = 0 or 0x70E3 >= 4). Hooks use stacks in the
+  state page (the game's 32-byte one overflowed into ULA row 56: dashes). h_plot is DI while write-over is on (an
+  interrupt there wrote h_isr's stack to Layer 2: Docking hang). Checked: Docking 1800 frames, Witch sun, pages.
 
 ## Hardware checklist
 None yet (no build).

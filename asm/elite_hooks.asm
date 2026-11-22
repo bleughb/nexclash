@@ -20,6 +20,7 @@
 
 L2_A      EQU 16            ; Layer 2 16K banks: 16-18 and 19-21 (8K pages 32-37, 38-43)
 L2_B      EQU 19
+BLANK_BK  EQU 22            ; Layer 2 16K banks 22-24 (8K pages 44-49): all transparent, shown on full-screen pages
 TRANS     EQU 0xE3          ; Layer 2 transparent colour (NR $14 default)
 C_WHITE   EQU 0xFF
 C_RED     EQU 0xE0
@@ -51,6 +52,11 @@ S_PC      EQU 0x0025        ; byte: the last poll counted a frame
 S_FLIGHT  EQU 0x0026        ; byte: the flight loop (0x9C80) ran since the last h_flip
 S_RSP    EQU 0x0028        ; word: SP at render entry (render runs on RSTK)
 S_RA     EQU 0x002A        ; byte: render's A argument across the stack switch
+S_ISP    EQU 0x0032        ; word: SP at h_isr (it runs on HSTK)
+S_HSP    EQU 0x0034        ; word: SP at h_ship / poll (they run on HSTK)
+ISTK     EQU 0x00C0        ; h_isr's stack top (0x00A0-0x00BF), apart from HSTK: an interrupt can come inside one
+HSTK     EQU 0x0100        ; hooks' stack top in the state page (0x00A0-0x00FF): the game's own stack 0x4100
+                           ; has 32 bytes with a screen row below it (M4: dashes on the pages)
 S_CTL    EQU 0x002C        ; 6 bytes: the controls 0xFF08-0xFF0D across scenery (it scales them in place)
 RSAVE    EQU 0x0040        ; 0x60 bytes: game RAM under RSTK, saved around a render
 RSTK     EQU 0x7470        ; render stack top: 0x7410-0x746F, inside 0x7366-0x7470, untouched in all five
@@ -74,6 +80,10 @@ NIN       EQU 100
 R_SLOT    EQU R_IN + NIN    ; 39 bytes: the slot as at the original draw
 SLOTLEN   EQU 39
 BASE_BK   EQU 14            ; Layer 2 16K banks 14-15: everything but ships, drawn by the logic pass (h_plot)
+MIRF      EQU 0x581E        ; 0x40: the logic pass's draws go to the buffer only (NR $7F = C_NOMIRROR), 0: mirror.
+                            ; Attribute row 0 col 30: untouched in all five recordings, 0 (black on black) in every
+                            ; snapshot - 0x40 is bright black on black. Read with no stack (nomirror needed 6 bytes
+                            ; through the port: page text at SP ~0x4104 reached the screen row below, M4).
 C_NOMIRROR EQU 0x01         ; NR $7F: the logic pass's own ship draw - buffer only, the renderer draws ships
 
 ; ---------------------------------------------------------------------------------------------------------------
@@ -131,14 +141,8 @@ h_lddr: push af
 
 ; nomirror: Z if NR $7F = C_NOMIRROR (the logic pass's planet, stars and ship draws). Clobbers A, F only.
 nomirror:
-        push bc
-        ld bc,0x243B
-        ld a,0x7F
-        out (c),a
-        inc b
-        in a,(c)
-        pop bc
-        cp C_NOMIRROR
+        ld a,(MIRF)
+        cp 0x40
         ret
 
 ; Planet / sun fills' stack blit (0x8BCD, 0x8CCD, 0x8DC3: LD SP,0x8FB6 / POP AF / LD SP,HL / JR into 16 x PUSH AF,
@@ -181,11 +185,9 @@ fill2n: push hl
 ; stack). 0x86D0's inputs are memory only (0xFB31 loads A, EX AF,AF'); the caller reads A from 0x861D after.
 h_sun:  call nomirror
         jp z,0x86D0
-        push af
         nextreg 0x7F,C_SUN
         call 0x86D0
-        pop af
-        nextreg 0x7F,a
+        nextreg 0x7F,C_PLANET           ; scenery's colour for 0x7584 (h_sun runs only there while mirroring)
         ret
 
 ; rowfix: repaint ULA row y = 56 (0x40E0-0x40FF), just below the game's 32-byte stack 0x4100-0x411F, as the blank
@@ -218,12 +220,13 @@ rowfix: push af
         ret
 
 ; h_plot: (HL) = A, as the original LD (HL),A, and mirror the changed bits on the Layer 2 back buffer.
-; Keeps every register and flag. Interrupts may be on. Stack: 10 bytes with the RST (4 pushes, no CALL) - the ship
+; Keeps every register and flag. Interrupts may be on. Stack: 12 bytes with the RST (5 pushes, no CALL) - the ship
 ; draw wrapper runs on a 32-byte stack at 0x4000-0x401F and reaches the writers with SP down to 0x400E (site_ctx probe):
 ; one byte more than 14 would push into the ROM and lose a return address (M1 first boot crashed that way).
 h_plot: push af
-        call nomirror
-        jr nz,.mir
+        ld a,(MIRF)
+        or a
+        jr z,.mir
         pop af
         ld (hl),a                       ; the logic pass's planet / stars / ships: the write only (stack: 4 bytes)
         ret
@@ -271,6 +274,9 @@ h_plot: push af
         rlca
         ld l,a                          ; L = x of the byte's first pixel
         ld h,c                          ; H = new byte (C is needed for the ports)
+        ld a,i                          ; P/V = IFF2. No interrupt while write-over is on: every write to
+        push af                         ; 0x0000-0x3FFF goes to Layer 2, h_isr's stack and state included (it ran
+        di                              ; on garbage returns: the Docking hang, 2026-11-23)
         ld a,d
         and 0xC0
         or P_L2
@@ -308,6 +314,9 @@ h_plot: push af
 .woff:  ld bc,0x123B
         ld a,P_SHOW
         out (c),a                       ; write-over off
+        pop af
+        jp po,.skip
+        ei
 .skip:  pop hl
         pop de
 .out:   pop bc
@@ -315,34 +324,46 @@ h_plot: push af
         ret
 
 ; ---- category hooks ----
+SETMIR  MACRO v
+        push af
+        ld a,v
+        ld (MIRF),a
+        pop af
+        ENDM
 h_planet:                               ; M3b: planet, sun and stars are drawn by the renderer (scenery)
         call poll
+        SETMIR 0x40
         nextreg 0x7F,C_NOMIRROR
         jp 0x7584
 h_stars:
         call poll
         call rowfix                     ; the planet draw just before goes deepest on the game's stack
+        SETMIR 0x40
         nextreg 0x7F,C_NOMIRROR
         jp 0x7898
 h_msg:  call poll
+        SETMIR 0
         nextreg 0x7F,C_WHITE
         jp 0xD03C
 h_combat:
         call pollf
+        SETMIR 0
         nextreg 0x7F,C_RED
         jp 0x9C80
 ; h_ship (0x9E44, JP 0xF8B4 = the hack's draw wrapper): record this ship as the original draws it (slot, blueprint,
 ; the draw's varying inputs) into list S_W, for the renderer; the logic pass's own draw goes to the buffer only.
 ; The wrapper starts with DI and ends with EI anyway. Main stack (SP ~0x411x).
 h_ship: di
+        nextreg 0x50,STATE_PG
+        ld (S_HSP),sp                   ; on HSTK: nothing below the game's SP (the original JP uses none)
+        ld sp,HSTK
         push af
         push bc
         push de
         push hl
-        ld hl,9
-        add hl,sp
+        ld hl,(S_HSP)
+        inc hl
         ld b,(hl)                       ; B = A of the AF pushed at 0x9D38 (the wrapper stores it at 0xA79D)
-        nextreg 0x50,STATE_PG
         call fcount
         ld a,(S_W)
         ld hl,S_N
@@ -381,15 +402,19 @@ h_ship: di
         pop hl
         ld bc,SLOTLEN
         ldir
-.full:  nextreg 0x50,0xFF
+.full:  ld a,0x40
+        ld (MIRF),a
         pop hl
         pop de
         pop bc
         pop af
+        ld sp,(S_HSP)
+        nextreg 0x50,0xFF
         nextreg 0x7F,C_NOMIRROR
         jp 0xF8B4
 h_shipend:
         call poll
+        SETMIR 0
         nextreg 0x7F,C_RED
         jp 0x9E47
 
@@ -403,13 +428,22 @@ pollf:  push af                          ; poll, and mark this pass as flight (h
         nextreg 0x50,STATE_PG
         ld a,1
         ld (S_FLIGHT),a
+        push hl                         ; drop ship records from passes since the last h_flip that drew no
+        ld a,(S_W)                      ; flight view (a page in flight, 0x74C3, still moves and records ships)
+        ld hl,S_N
+        add hl,a
+        ld (hl),0
+        pop hl
         jr poll.f
 poll:   push af
         ld a,i                          ; P/V = IFF2
         push af
         di
         nextreg 0x50,STATE_PG
-.f:     call fcount
+.f:     ld (S_HSP),sp
+        ld sp,HSTK
+        call fcount
+        ld sp,(S_HSP)
         nextreg 0x50,0xFF
         pop af
         jp po,.n
@@ -424,6 +458,8 @@ h_clear:
         call poll
         di
         push af                         ; the original keeps A (callers rely on it); pushed before the remap
+        xor a
+        ld (MIRF),a
         nextreg 0x7F,C_WHITE
         ld bc,0x243B
         ld a,0x13
@@ -718,10 +754,20 @@ h_isr:  push af
         ld a,(0xFEFE)
         cp 0xC9
         jr z,.off
+        nextreg 0x50,STATE_PG
+        ld (S_ISP),sp                   ; on ISTK (the interrupted stack keeps only PC + AF, as the original's)
+        ld sp,ISTK
         push bc
         push hl
-        nextreg 0x50,STATE_PG
         call isrcount
+        ld a,(0x7104)                   ; M4: a full-screen page (docked: 0x7104 = 0; view 0x70E3 >= 4: charts,
+        or a                            ; status, inventory in flight) - Layer 2 off (the blank buffer); the
+        jr z,.pg                        ; next render shows it again (design detail 5)
+        ld a,(0x70E3)
+        cp 4
+        jr c,.npg
+.pg:    nextreg 0x12,BLANK_BK
+.npg:
         ld hl,S_OWE
         ld a,(hl)
         or a
@@ -729,11 +775,13 @@ h_isr:  push af
         dec (hl)
         pop hl
         pop bc
+        ld sp,(S_ISP)
         nextreg 0x50,0xFF
         pop af
         jp 0xFF25                       ; the game's ISR (ends EI / RET)
 .no:    pop hl
         pop bc
+        ld sp,(S_ISP)
         nextreg 0x50,0xFF
         pop af
         ei
@@ -800,9 +848,9 @@ setup:  nextreg 0x07,3                  ; 28 MHz (the tail leaves NR $07 alone)
         ld (0xE000 + S_BACK),a
         ld a,0xFF
         ld (0xE000 + S_INTL),a
-        ASSERT BASE_BK + 2 == L2_A && L2_A + 3 == L2_B
+        ASSERT BASE_BK + 2 == L2_A && L2_A + 3 == L2_B && L2_B + 3 == BLANK_BK
         ld a,BASE_BK * 2
-        ld e,16                         ; base, A, B: 8 x 2 pages
+        ld e,22                         ; base, A, B, blank: 11 x 2 pages
 .pg:    nextreg 0x57,a
         ld hl,s_dma
         ld bc,(s_dma_len << 8) | 0x6B

@@ -74,7 +74,8 @@ h_flip: ld a,i                          ; P/V = IFF2
         ei
 .nei:   ld hl,0xC000
         jp 0x7FC1
-.plain: ld a,(S_IFF)
+.plain: nextreg 0x12,BLANK_BK              ; M4: the original's screen only (launch, hyperspace, pages)
+        ld a,(S_IFF)
         nextreg 0x50,0xFF
         or a
         jr z,.nei
@@ -107,6 +108,10 @@ render: ld (S_RA),a
         ASSERT RSAVE + RSTKLEN <= LIST0
 
 render_b:
+        ld b,a
+        xor a
+        ld (MIRF),a                     ; the render mirrors everything it draws
+        ld a,b
         cp TICK
         ld b,0
         jr c,.part
@@ -222,15 +227,9 @@ render_b:
         ld de,SAVE
         call tab_load
         nextreg 0x7F,C_WHITE
-        ld bc,0x243B
-        ld a,0x12
-        out (c),a
-        inc b
-        in a,(c)                        ; A = shown
-        ld e,a
         ld a,(S_BACK)
         nextreg 0x12,a                  ; show the render
-        ld a,e
+        xor L2_A ^ L2_B                 ; the other one next (not NR $12 read back: it may be BLANK_BK, M4)
         ld (S_BACK),a
         nextreg 0x13,BASE_BK            ; the logic pass draws into base
         ret
