@@ -39,6 +39,7 @@ in banks the game never reads.
 """
 import hashlib
 import importlib
+import json
 import os
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -284,6 +285,14 @@ def run(nex_path, colours, layout=None, game=None, output=None, say=print, onto=
         tj = os.path.join(work, 'colours.json')
         cs.save(merged, tj, mod.RECOLOUR.get('note', ''))
         merged = cs.load(tj)
+        pal = None                                     # a map's own sprite palette (Knight Tyme, Stormbringer): kept
+        if str(colours).endswith('.json') and os.path.exists(colours):
+            pal = json.load(open(colours)).get('palette')
+        if pal is not None:
+            d = json.load(open(tj))
+            d['palette'] = pal
+            json.dump(d, open(tj, 'w'), indent=1)
+            merged['palette'] = pal
         out, info = mod.recolour(nex, merged)
         from .z80tonex import automap_off
         out = automap_off(out)                        # an older build given: its start gets automap off too

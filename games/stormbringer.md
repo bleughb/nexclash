@@ -41,5 +41,12 @@ Lightning: 0x7240 draws a line from the sky to the Knight with ROM DRAW (0x24BA)
 - [local: an address map matches code that follows, not code that was inserted] A return address taken from a window
   match landed 7 bytes late; check every "after the call" address is the call site + 3 in the new game.
 
+## Friction
+- reuse: [local: Knight Tyme's engine relocated by address map; its loading-screen code came with Knight Tyme's checksum, found by the Codex review and replaced with Stormbringer's own]
+- retries: [local: the review's recolour finding reproduced only with a normalised map (entries + palette): the engine's own map form is not what recolour.run reads]
+- environment: [local: Stormbringer's reference files are not in the shared reference folder; staged from the scratchpad by MD5 for the rebuild check]
+- hand-rolled: [none: the fixes use the engine's own functions and recolour.run as they are]
+- scratch: [none: the recolour check ran inline; nothing added to tools/]
+
 ## Technique use
 - detect.gameplay-screen-readers: helped: found the flying things' XOR (0xAE0A) as the one figure-pixel reader.

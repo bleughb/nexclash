@@ -1638,15 +1638,16 @@ def sheets(col, prefix, peek, colours=None):
     """<prefix>_PAINTING_SPRITES.png and <prefix>_REFERENCE_ALL_SPRITES.png with their layouts."""
     from . import coloursheet as cs
     rgb16 = cs.palette_rgb(set_palette(colours))
+    entries = {k: v for k, v in (colours or {}).items() if k != 'palette'}   # the sheets take entries; the palette is set above
     comps = list(col.comps.values())
     ident = colour_identity(peek)
     res = []
     paint = cs.choose(comps, col.maxsize, GROUPS)
     png = prefix + '_PAINTING_SPRITES.png'
-    res.append((png, cs.write(paint, png, prefix + '_PAINTING_SPRITES_layout.json', rgb16, colours or {}, unique=False, paint_clear=True, identity=ident)))
+    res.append((png, cs.write(paint, png, prefix + '_PAINTING_SPRITES_layout.json', rgb16, entries, unique=False, paint_clear=True, identity=ident)))
     full = sorted(comps, key=lambda c: (GROUPS.index(c['group']) if c['group'] in GROUPS else 99, str(c['parts'][0]['id'])))
     png = prefix + '_REFERENCE_ALL_SPRITES.png'
-    res.append((png, cs.write(full, png, prefix + '_REFERENCE_ALL_SPRITES_layout.json', rgb16, colours or {}, unique=False, paint_clear=True, identity=ident)))
+    res.append((png, cs.write(full, png, prefix + '_REFERENCE_ALL_SPRITES_layout.json', rgb16, entries, unique=False, paint_clear=True, identity=ident)))
     return res
 
 
@@ -1655,7 +1656,8 @@ def sheets(col, prefix, peek, colours=None):
 # bank 22 (asm: MODULE ldscr), then bank 5's own bytes put back. Applied to the built .nex, every other byte kept.
 # ---------------------------------------------------------------------------------------------
 
-SCREEN_MD5 = '82f0e3dfcfa58054ba0e428cada74b5b'    # the tape's 6,912-byte screen block
+SCREEN_MD5 = '17d2ac295221523ffdf47434af49efd0'    # Stormbringer's own 6,912-byte screen block (every tape of it; the
+                                                    # value copied with the engine was Knight Tyme's)
 L_BANK, L_PIC, L_FINAL = 22, 0x0200, 0x3FD0       # entry bank; offsets of the screen copy and the exit
 
 
