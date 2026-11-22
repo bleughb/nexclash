@@ -1,0 +1,26 @@
+{
+ "id": "lesson.line-interrupt-fires-on-previous-line",
+ "kind": "fact",
+ "claim": "The line interrupt for line n is raised on line n - 1 at dot 243 of its display area, a little over 100 T at 3.5 MHz before line n starts, so a handler has that long to put a change in place.",
+ "limit": "From the book, not measured here; at 28 MHz the same gap is about 800 T less the response time (up to 22 T, plus 13 T in IM 1 or 19 T in IM 2).",
+ "evidence": [
+  {
+   "game": "reference",
+   "source": "I. Novak, Unraveling the ZX Spectrum Next, Vol 1 (2026; core 3.03.03), chapter 10 and 4",
+   "text": "Line numbers count from the first display line and run on through the bottom border to the frame end; a value one past the last frame line acts as line 0 and a higher one never fires. Read 0x1E, 0x1F, 0x1E and retry if the two differ.",
+   "shown_on": "documentation"
+  }
+ ],
+ "level": "inferred",
+ "area": "platform",
+ "words": [
+  "line",
+  "interrupt",
+  "raster",
+  "split",
+  "timing",
+  "handler"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}
