@@ -61,15 +61,15 @@
  "outputs": {
   "plain": {
    "file": "chase_hq.nex",
-   "md5": "2f6628a552412d0a227300fe7cf397b2"
+   "md5": "d31763647a05726a8abb70d96bc4f14d"
   },
   "speed": {
    "file": "chase_hq_speed.nex",
-   "md5": "6729617fd9e3adc131a0451593557b39"
+   "md5": "bfb2bc9d396cb753c5d486544b635d29"
   },
   "orig_pace": {
    "file": "chase_hq_orig_pace.nex",
-   "md5": "498c2119e140480cd16c8f0fda5c5843"
+   "md5": "832995ad342bb23b535050cebfd7e25a"
   }
  },
  "repro": [],
@@ -108,30 +108,30 @@
    "docs/profiles/chase_hq_banks.json": "a94031836b2c7d98",
    "docs/profiles/chase_hq_orig.json": "a6dd2629181d368a",
    "docs/profiles/chase_hq_speed.json": "46a0f7892c03a266",
-   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash.py": "04157df11540c17d",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/chase_hq.py": "4d7c7fcf5da379f2",
-   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "bf75ad27e5bfabce",
+   "nexclash/engines.py": "2abd23b537c0b5d4",
    "nexclash/hooklib.py": "24241497925658d6",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
-   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
-   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/recolour.py": "6f27e87ef0c47a17",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/rzx.py": "e018e000440e0274",
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "d24d9e9fd8e91625",
+   "recipe": "6d333243b02d70f9",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-17"
+  "date": "2026-11-20"
  }
 }

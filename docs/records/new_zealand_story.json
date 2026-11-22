@@ -79,19 +79,19 @@
  "outputs": {
   "sprites": {
    "file": "new_zealand_story_sprites.nex",
-   "md5": "922d2b7fe6b3344e8ffdc1663aeffc6a"
+   "md5": "f9b18dc1f9ce99b045dcb9801f883db3"
   },
   "smooth": {
    "file": "new_zealand_story_smooth.nex",
-   "md5": "1100411a82e75d47b353ba750873cfb0"
+   "md5": "1ef1e92f09bffb7f0a0bc782ab783208"
   },
   "backdrops": {
    "file": "new_zealand_story_backdrops.nex",
-   "md5": "0f0eaa0c43c1944e79dd42462485eac6"
+   "md5": "c26336080af07fa47432300e407dcbc1"
   },
   "smooth_backdrops": {
    "file": "new_zealand_story_smooth_backdrops.nex",
-   "md5": "5b8ac753e6ccb246ed399050ba8cca88"
+   "md5": "6e0c0e08fe35e7724bb4e50f07bb63b9"
   }
  },
  "repro": [],
@@ -117,19 +117,25 @@
    "assets/new_zealand_story/backdrops/w4.json": "b875547db419ac79",
    "assets/new_zealand_story/backdrops/w5.json": "f5005792e539d01d",
    "docs/profiles/new_zealand_story.json": "46fccc3bda96fb52",
-   "nexclash.py": "cc1297e9104ece5f",
-   "nexclash/engines.py": "bf75ad27e5bfabce",
+   "nexclash.py": "04157df11540c17d",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/engines.py": "2abd23b537c0b5d4",
    "nexclash/new_zealand_story.py": "c6a1399518e48725",
    "nexclash/new_zealand_story_backdrops.py": "83201feae444c076",
    "nexclash/new_zealand_story_paint.py": "22926e50511be190",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/sprites.py": "899f635303b25706",
    "nexclash/tapeset.py": "86542e1752fb3110",
-   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "nexclash/z80tonex.py": "50684436558662bd",
    "tools/sjasmplus/pin.json": "f713de264030dc17",
    "tools/sjasmplus/sjasm.py": "5fc4741a8e953aa0",
    "skoolkit": "10.1",
-   "recipe": "84866854e099a24d",
+   "recipe": "1d5a6d0346d89f36",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-17"
+  "date": "2026-11-21"
  }
 }

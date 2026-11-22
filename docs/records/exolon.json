@@ -82,23 +82,23 @@
  "outputs": {
   "plain": {
    "file": "exolon.nex",
-   "md5": "53bccd7881712937941eb106c712af13"
+   "md5": "5f4cf8992995ef622cdd2d4422b32a89"
   },
   "sprites": {
    "file": "exolon_sprites.nex",
-   "md5": "d2852fd29607e124576dc0c08401c479"
+   "md5": "12d5e1d27aad98ce961d2f9703145471"
   },
   "enhanced": {
    "file": "exolon_enhanced.nex",
-   "md5": "992c5123f072aad8296c7c6a31a1e61a"
+   "md5": "2d15ad71bd55dd916f9a7b8afd6e5e09"
   },
   "loading": {
    "file": "exolon_sprites_loading.nex",
-   "md5": "f0eaf0f14d26f11e7649953d89624c5f"
+   "md5": "34e7926e29f814e4f23b469f4fef99e4"
   },
   "enhanced_loading": {
    "file": "exolon_enhanced_loading.nex",
-   "md5": "07b771fcd487d6d85a587c8be562ac68"
+   "md5": "728acef4bee079a65145ff37d8fccc27"
   }
  },
  "repro": [],
@@ -155,19 +155,19 @@
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
    "docs/profiles/exolon.json": "357af46bffa33baa",
-   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash.py": "04157df11540c17d",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "bf75ad27e5bfabce",
+   "nexclash/engines.py": "2abd23b537c0b5d4",
    "nexclash/exolon.py": "3fd22b917670086e",
    "nexclash/hooklib.py": "24241497925658d6",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
-   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
-   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/recolour.py": "6f27e87ef0c47a17",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
    "nexclash/rzx.py": "e018e000440e0274",
@@ -175,13 +175,13 @@
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "37bbc80f892c46f2",
+   "recipe": "d6226a0fb4cdb674",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-17"
+  "date": "2026-11-20"
  },
  "verified": {
   "deps": {
@@ -191,19 +191,19 @@
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
    "docs/profiles/exolon.json": "357af46bffa33baa",
-   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash.py": "04157df11540c17d",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "112c3b17a78ace9a",
+   "nexclash/engines.py": "2abd23b537c0b5d4",
    "nexclash/exolon.py": "3fd22b917670086e",
    "nexclash/hooklib.py": "24241497925658d6",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
-   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
-   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/recolour.py": "6f27e87ef0c47a17",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
    "nexclash/rzx.py": "e018e000440e0274",
@@ -211,12 +211,12 @@
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "37bbc80f892c46f2",
+   "recipe": "d6226a0fb4cdb674",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-12"
+  "date": "2026-11-20"
  }
 }

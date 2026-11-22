@@ -3,7 +3,7 @@
  "order": 11,
  "game": "Crystal Kingdom Dizzy (128K)",
  "doc": "crystal_kingdom_dizzy.md",
- "engine": "plain",
+ "engine": "crystal_kingdom_dizzy_sprites",
  "representative": true,
  "reference": "crystal_kingdom_dizzy",
  "verified_json": false,
@@ -13,25 +13,75 @@
    "md5": "0cb1cb260b2f17305ef41c30af0e1f8f",
    "path": "crystal_kingdom_dizzy/dizzy7128k.z80"
   },
-  "recordings": []
+  "recordings": [
+   {
+    "name": "ck_w1.rzx",
+    "md5": "8e2f9945de04c75dec2d0be427113d1f",
+    "path": "crystal_kingdom_dizzy/ck_w1.rzx",
+    "role": "machine-played walk 1 (the toolkit recorder, ~9,000 frames)"
+   },
+   {
+    "name": "ck_w2.rzx",
+    "md5": "507ee7833a1aa0aaf70c270e33ef531d",
+    "path": "crystal_kingdom_dizzy/ck_w2.rzx",
+    "role": "machine-played walk 2 (the toolkit recorder, ~9,000 frames)"
+   },
+   {
+    "name": "ck_w3.rzx",
+    "md5": "0600bcfcf237ef2f5eeab4d2b4385892",
+    "path": "crystal_kingdom_dizzy/ck_w3.rzx",
+    "role": "machine-played walk 3 (the toolkit recorder, ~9,000 frames)"
+   },
+   {
+    "name": "ck_w4.rzx",
+    "md5": "20626cc7601aa71e971b630c104b702c",
+    "path": "crystal_kingdom_dizzy/ck_w4.rzx",
+    "role": "machine-played walk 4 (the toolkit recorder, ~9,000 frames)"
+   },
+   {
+    "name": "crystal_kingdom_dizzy.pok",
+    "md5": "f937815ebbbe2e0baeabfa99a959235b",
+    "path": "crystal_kingdom_dizzy/crystal_kingdom_dizzy.pok",
+    "note": "not a recording: the cheats in the .nxc, each checked against this release's code"
+   }
+  ]
  },
  "modules": [
-  "build"
+  "crystal_kingdom_dizzy_sprites"
  ],
- "own_modules": [],
- "data": [],
+ "own_modules": [
+  "crystal_kingdom_dizzy_sprites"
+ ],
+ "data": [
+  "docs/profiles/crystal_kingdom_dizzy_sprites.json",
+  "asm/crystal_kingdom_dizzy_hooks.asm"
+ ],
  "shared_data": [],
  "rebuild": {
-  "cmd": "convert",
-  "args": [],
+  "args": [
+   "--no-record"
+  ],
   "rzx": [],
   "decisions": null
  },
- "verify": null,
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "ck_w1.rzx",
+   "ck_w2.rzx",
+   "ck_w3.rzx",
+   "ck_w4.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 40,
+  "note": "machine-played walks; auto also runs the unit cases (the five masked routines, the window and room-drawn hooks) and the negative controls"
+ },
  "outputs": {
-  "plain": {
-   "file": "crystal_kingdom_dizzy.nex",
-   "md5": "99975f65172dc86ecefbac07db2c0c00"
+  "sprites": {
+   "file": "crystal_kingdom_dizzy_sprites.nex",
+   "md5": "d4dfcce8e0d1c6b88909ea6391213971"
   }
  },
  "repro": [],
@@ -41,23 +91,57 @@
  },
  "status": {
   "title": "Crystal Kingdom Dizzy (128K)",
-  "engine_col": "plain only (crystal_kingdom_dizzy.md)",
-  "build": "-",
-  "software": "-",
-  "hardware": "plain runs",
-  "next": "sprites deferred"
+  "engine_col": "crystal_kingdom_dizzy_sprites (crystal_kingdom_dizzy.md)",
+  "build": "crystal_kingdom_dizzy_sprites.nex (as published in nxc: objects as white sprites over the masked figures, a pattern cache)",
+  "software": "replay IDENTICAL on 4 walks (36,183 frames); unit cases (five routines, window, room drawn, four CPU speeds); 9 negatives detected",
+  "hardware": "plain runs (the generic converter, before this engine); sprite build: Tang board run",
+  "next": "owner play"
  },
+ "checks": [
+  "asm2profile:crystal_kingdom_dizzy_sprites"
+ ],
  "checked": {
   "deps": {
-   "nexclash.py": "cc1297e9104ece5f",
+   "asm/crystal_kingdom_dizzy_hooks.asm": "58414892b6087d29",
+   "docs/profiles/crystal_kingdom_dizzy_sprites.json": "2dc4197a8d661ce7",
+   "nexclash.py": "04157df11540c17d",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/engines.py": "bf75ad27e5bfabce",
+   "nexclash/crystal_kingdom_dizzy_sprites.py": "747c52933eaf2992",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/engines.py": "958984d666c49588",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
-   "recipe": "4522e2abfed15ad3",
-   "rom": "8c34d957fb2cbbd0"
+   "recipe": "8f6d1ddf105d09e1",
+   "rom": "sinclair"
   },
-  "date": "2026-11-17"
+  "date": "2026-11-22"
+ },
+ "verified": {
+  "deps": {
+   "asm/crystal_kingdom_dizzy_hooks.asm": "58414892b6087d29",
+   "docs/profiles/crystal_kingdom_dizzy_sprites.json": "2dc4197a8d661ce7",
+   "nexclash.py": "04157df11540c17d",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/crystal_kingdom_dizzy_sprites.py": "747c52933eaf2992",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/engines.py": "958984d666c49588",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "50684436558662bd",
+   "skoolkit": "10.1",
+   "recipe": "8f6d1ddf105d09e1",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-22"
  }
 }

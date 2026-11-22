@@ -5,56 +5,56 @@
    "game": "3D Stock Car Championship",
    "doc": "3d_stock_car_championship.md",
    "nex": {
-    "plain": "7ffdcd3ec8660074a1fcc697d521cfe7",
-    "sprites": "6edc58d59de04c69261df37391ec7fcb"
+    "plain": "1e5d9d12cce23a4dac0e146576f2a2d9",
+    "sprites": "413b1ec2c76898abd7ec96aa3b274e7a"
    }
   },
   "2909c2f0f18eca08479a74ad6dc8d193": {
    "game": "Abu Simbel Profanation",
    "doc": "abu_simbel.md",
    "nex": {
-    "plain": "82c1349ae5d34e68a67a7aabc68e039f",
-    "sprites": "c2dd86f174c55a4ae9155abb90689d8b",
-    "enhanced": "b45603707d1f71bb7704436dbe0c3169",
-    "english": "2e3aa22510d9a925a5b0800aad3f26c9",
-    "english_enhanced": "053806e52684ce68b89a020a848e7196"
+    "plain": "1cb4729ad763c147625bec0a8ce6b14f",
+    "sprites": "75ed5dbfa892de1188d51bfc9d53e3d6",
+    "enhanced": "8f8aec94d62cbcf37c7c2e10c803d79a",
+    "english": "0678b953370ede18d99a326a10b4ee5b",
+    "english_enhanced": "1661e9c766c7284b6961623caf145ec5"
    }
   },
   "f58236395e737aaa0fac1f8476711ad8": {
    "game": "The Arc of Yesod",
    "doc": "arc_of_yesod.md",
    "nex": {
-    "plain": "9858d3f2cd71450c2efb01c116b1426b",
-    "sprites": "97828809e85654dddb0b9e4e117ea718",
-    "enhanced": "d183181a0b7fbd17df9cc638da942785",
-    "sprites_loading": "fda37475786a20fff92a72a5ba78496f",
-    "enhanced_loading": "49b7ac9d62940e8ff5868b91b5f78046"
+    "plain": "cf3ad5b7ab250bd9e0400febd046990c",
+    "sprites": "93c1ac4a53c5d0db83b451ed53d727bb",
+    "enhanced": "dcbc7fa189c093aa4d728f358546a9ba",
+    "sprites_loading": "858ec5cda7dc2782664ed2247310589c",
+    "enhanced_loading": "62b922d83ab47c6abf8f895c7a7af110"
    }
   },
   "9c14e2564e3f9956ff6ff973dac77537": {
    "game": "Army Moves",
    "doc": "army_moves.md",
    "nex": {
-    "sprites": "9cbd2379d8cae020c3b2145d362a4f75",
-    "loading": "1b60bd04304265986cf5ff4a142e44db"
+    "sprites": "fd03197076dc02dd70516a8219e63c3d",
+    "loading": "a2edd6afce2aadb34e6153895fc8080c"
    }
   },
   "06b11e63d60401666332a61626a5789c": {
    "game": "Atic Atac",
    "doc": "atic_atac.md",
    "nex": {
-    "plain": "e710fa8785802f1aa51f214d95c82343",
-    "sprites": "6aa7e780f4ec7892d862c675e61b7fba"
+    "plain": "3a10ced8b127d09de3c68b411f8283da",
+    "sprites": "5ec3d88fb2a28ab604aa9f0bdf42d667"
    }
   },
   "2ae624d49075367226a59766c860ea21": {
    "game": "Atom Ant",
    "doc": "atom_ant.md",
    "nex": {
-    "plain": "04460a950e24898f8144d2ab2b48ff6f",
-    "loading": "66d682f8cbe184c00ad2271ed8cf2a33",
-    "enhanced": "054ce8f73bb5360353113f8a9a72e50c",
-    "enhanced_loading": "c3d35756f871ed85ff24d27ccc52b0c8"
+    "plain": "b9652c798a834eb130e14f905a7932d1",
+    "loading": "90d513dc30b322aa46b0c49d58179e54",
+    "enhanced": "32ecbdebb2aaa1c17fa5c51b5057b8a4",
+    "enhanced_loading": "9add845f2ed6d7b2237d4f93b8db4646"
    }
   },
   "f9a864d1fec2a17e88d8e3259861182d": {
@@ -69,136 +69,136 @@
    "game": "Beyond the Ice Palace (128K)",
    "doc": "beyond_the_ice_palace.md",
    "nex": {
-    "sprites": "da668eb8e6bd5e6ab2b90cf9a103459d",
-    "sprites_loading": "d53ac5f52471b674354caf96cd94221e"
+    "sprites": "54f755bd59ee680e5ed4c7f6060ba177",
+    "sprites_loading": "5b05d5236cac7e451d9a6f59bbc2f609"
    }
   },
   "0b2cb0c5a033e853d62c3a5e492f8bc0": {
    "game": "Booty",
    "doc": "booty.md",
    "nex": {
-    "plain": "7a41de52c061b07ef73c951461f07445",
-    "loading": "6393a6f9ee6f20cf760bb70421eb2d1e",
-    "enhanced": "ebc40ec715755da8db720a1a1c0f8074",
-    "enhanced_loading": "8113662ce1469689d1effa77280b30d3"
+    "plain": "91f8b0c6a627bb3f93aa3a06b6f6848a",
+    "loading": "5fa9ab15cd91d6041cc67521cd5cf6c5",
+    "enhanced": "42f9a3e98e2aa5c2968e92a652c5227d",
+    "enhanced_loading": "f0a38e93ba4b8abf1efb1be61cf43d68"
    }
   },
   "6e088cc665d1cdbcd32effa061ad6e8e": {
    "game": "Bruce Lee",
    "doc": "bruce_lee.md",
    "nex": {
-    "plain": "d393199dfe1cd7ba0372fa6ab0ce0dfa",
-    "sprites": "572bd4499005b81fd8eafac597b5ab0b",
-    "enhanced": "7f762987659ae1c0da54190dd0335b69",
-    "loading": "0a343912c1748f5fcd45230f0c1e1831",
-    "enhanced_loading": "004b76609c33d2414b380c5ab5a8bf47"
+    "plain": "e75b93dc50c37545ec53cbfdb2d1a93c",
+    "sprites": "984686a4dd7b650304d0f7a4839740ff",
+    "enhanced": "00e3d7aa5adc0bd36531a864f5f4255c",
+    "loading": "0f5426a949aabc09b5d4e56799f63f15",
+    "enhanced_loading": "9fc19fa2b86056e20538781e9df60c32"
    }
   },
   "85d7841306333321838d372ea8797ff2": {
    "game": "Bubbler",
    "doc": "bubbler.md",
    "nex": {
-    "plain": "deb79b213eb0d9c11a4e05607a87a3ef",
-    "sprites": "82d178a4d92771e42a9d558a5e2b4940",
-    "enhanced": "7236f0945f5944dea62f6ddb2280cb9e"
+    "plain": "bbd7dda43b96377795776c8e6cdf52fd",
+    "sprites": "1a4bcd4eaeabd335559e2db20d060452",
+    "enhanced": "31be2226ce2867037c792680dbe7a889"
    }
   },
   "00ee637a4f63ffe61fc3503de42d7822": {
    "game": "Cauldron",
    "doc": "cauldron.md",
    "nex": {
-    "plain": "b5b211f1fc6103ec0d42711dcc29cd0d",
-    "sprites": "43c1ca492d7c1cc68541f02aaed9cb4c"
+    "plain": "b2de3ca3afe037e39e95d3050cb2d197",
+    "sprites": "5e9065eff473ed7c7868b9ce6d12c389"
    }
   },
   "cedb31d5860815ef7e871ee249744de5": {
    "game": "Chase H.Q.",
    "doc": "chase_hq.md",
    "nex": {
-    "plain": "2f6628a552412d0a227300fe7cf397b2",
-    "speed": "6729617fd9e3adc131a0451593557b39",
-    "orig_pace": "498c2119e140480cd16c8f0fda5c5843"
+    "plain": "d31763647a05726a8abb70d96bc4f14d",
+    "speed": "bfb2bc9d396cb753c5d486544b635d29",
+    "orig_pace": "832995ad342bb23b535050cebfd7e25a"
    }
   },
   "cddc0cfea8259d0c497b50fae0acd27e": {
    "game": "Chuckie Egg",
    "doc": "chuckie_egg.md",
    "nex": {
-    "plain": "ec0df71e70fae35836eaed521f300777",
-    "sprites": "1c31643371ea36f10175af308d6d01a3"
+    "plain": "daa588edf9cd3a913689da0439f32081",
+    "sprites": "dcd7f744a73eb59e7ce3236b57c8cef9"
    }
   },
   "0268fb4d76200708849269c9747b65ff": {
    "game": "Cobra",
    "doc": "cobra.md",
    "nex": {
-    "plain": "2ec883ba2f88ef4fcda0623c2b985777",
-    "sprites": "82b05dafa0ec1049141db188840d775a"
+    "plain": "bcc8a3e0a4829dba251d0aabbbb96ecb",
+    "sprites": "d5096a93c4052f2737bcc535af48209d"
    }
   },
   "47ff99afedc9f0af0030b63d1fa4d098": {
    "game": "Comando Quatro",
    "doc": "comando_quatro.md",
    "nex": {
-    "sprites": "ffcd877f26f9092b6c2cc950bf06211b",
-    "loading": "66563d3ebc2c985f85cf4d4ee152f8fd"
+    "sprites": "4c043b47801164617477c423da9b9ff8",
+    "loading": "4d5b233a4e42580fd2993ea5089ab1ca"
    }
   },
   "c9af5668191462d77c5859900268c24b": {
    "game": "Commando",
    "doc": "commando.md",
    "nex": {
-    "plain": "a206f950c12f58a8e7f26b366f5a2480",
-    "sprites": "ff488056f4dd8e3c3f5f7c88a2b1946d"
+    "plain": "509b4ad6c9ef57ea95dedc91f0830a48",
+    "sprites": "04b29c6403638def8f74c3971f70bd81"
    }
   },
   "be8173da315689ba0aa6e9e1643a0f23": {
    "game": "Cookie",
    "doc": "cookie.md",
    "nex": {
-    "plain": "df40629882f8b5be3619e90f87690c91",
-    "sprites": "faaacc0beb0c6bc6d5742b0f40ec9cd2",
-    "enhanced": "7df95fe3204d63471c342b8cd6fd9d59"
+    "plain": "f79626650e54545a5818fd0067e33ee5",
+    "sprites": "350767afe81d88de4126c88db1e5d7df",
+    "enhanced": "cd1ec11109c2fd8833178d33527310a7"
    }
   },
   "745cb8f59f865db5118e6dc98d09e385": {
    "game": "Cyclone",
    "doc": "cyclone.md",
    "nex": {
-    "plain": "390516396ca4d385c94b7f7bd2315d31",
-    "sprites": "49fb6d39732f4e77c69e5dabfe88ad58"
+    "plain": "0497202d81162430984beb99d2903794",
+    "sprites": "75110dbddf06df41baad6f8d3ca81905"
    }
   },
   "0659328fd54fd446e39d1740bafd02e7": {
    "game": "Dizzy: The Ultimate Cartoon Adventure",
    "doc": "dizzy_ultimate_cartoon_adventure.md",
    "nex": {
-    "plain": "7892b2e0f1f3f9f19165516db307cbe0",
-    "sprites": "ead92ef747096582da450f162d78e545"
+    "plain": "7714c95e4d1c43d37f7b7e292770274a",
+    "sprites": "47212772fe612ea0c9c5b14e51c73c60"
    }
   },
   "703c934aa64c1c1d37d5041dd28cf9c7": {
    "game": "Spellbound Dizzy (Dizzy V)",
    "doc": "spellbound_dizzy.md",
    "nex": {
-    "plain": "c99189f3274a4803f0b25b0217206bdb",
-    "sprites": "67bc34ff273c2dd45ff9e222e6d56436"
+    "plain": "11d43878aaea551e4ddc10f76a6b5b38",
+    "sprites": "3c676bbdae0b762d244240c14da11110"
    }
   },
   "dd6cd7a3af47a520a260376c6ad4b459": {
    "game": "Prince of the Yolkfolk (Dizzy 6)",
    "doc": "prince_of_the_yolkfolk.md",
    "nex": {
-    "plain": "e02faca34df9504cc1f2f162e0ef791e",
-    "sprites": "f491e1f6621559ccc4d36de3535ff5d0"
+    "plain": "0b29b580915cb360df5837cff95032d2",
+    "sprites": "6f22200d2cbd27d07ae0273f34dba6fc"
    }
   },
   "3470d12b21edb24d6b665dfac5e8d84d": {
    "game": "Dynamite Dan",
    "doc": "dynamite_dan.md",
    "nex": {
-    "plain": "3ad20495c5183b20030190d6abdd479f",
-    "sprites": "1ab3348d3a2619f534d8907a1d89e09e"
+    "plain": "772dc3336f75dc8ba1f28ac62871cb18",
+    "sprites": "8125daa979a8cfd4cd32f0796a7e2afb"
    }
   },
   "a9eeb555a327e5794b0ba19bc80dccf0": {
@@ -213,363 +213,387 @@
    "game": "Exolon",
    "doc": "exolon.md",
    "nex": {
-    "plain": "53bccd7881712937941eb106c712af13",
-    "sprites": "d2852fd29607e124576dc0c08401c479",
-    "enhanced": "992c5123f072aad8296c7c6a31a1e61a",
-    "loading": "f0eaf0f14d26f11e7649953d89624c5f",
-    "enhanced_loading": "07b771fcd487d6d85a587c8be562ac68"
+    "plain": "5f4cf8992995ef622cdd2d4422b32a89",
+    "sprites": "12d5e1d27aad98ce961d2f9703145471",
+    "enhanced": "2d15ad71bd55dd916f9a7b8afd6e5e09",
+    "loading": "34e7926e29f814e4f23b469f4fef99e4",
+    "enhanced_loading": "728acef4bee079a65145ff37d8fccc27"
    }
   },
   "876f474b3441c08ed8ff25bd43d616a3": {
    "game": "Fantasy World Dizzy",
    "doc": "fantasy_world_dizzy.md",
    "nex": {
-    "plain": "cd620010e2f61af0002e76718945716f",
-    "sprites": "fb77af62c5ce975802c354dd8b1943ee"
+    "plain": "1f0c272a669c8d557f8ee21d8d7a93b9",
+    "sprites": "7e972f511ceb19c707b1e0358b7d4231"
    }
   },
   "71dd57b2ece2787dfff915bf3ba50d3f": {
    "game": "The Official Father Christmas Game",
    "doc": "father_christmas.md",
    "nex": {
-    "sprites": "227268fe74c3e2fff3ed8dfbc5b188bf"
+    "sprites": "0a9357198747b9db78648c36b8bb25a4"
+   }
+  },
+  "0244e9b61aa18d6a9f1e77d102da1ea9": {
+   "game": "Finders Keepers",
+   "doc": "finders_keepers.md",
+   "nex": {
+    "plain": "b434bc905a813514567d3cbd38dbe670",
+    "sprites": "ba99b0cb1058987d0ab4549eac9ce46e"
    }
   },
   "c545645a8688f24428492937125fbfcd": {
    "game": "Flying Shark",
    "doc": "flying_shark.md",
    "nex": {
-    "sprites": "5e6a49cafce1d97c50d3f8d3e92b8db9"
+    "sprites": "62def398462731ce0e858bb73ab909b5"
    }
   },
   "e1c2ff3cfbd4f6f5a84034d57b666acf": {
    "game": "Game Over",
    "doc": "game_over.md",
    "nex": {
-    "sprites": "ff1d8067f3ad7e5f5625ab2f85e28a57",
-    "loading": "cb0c403db4058444f38445fb1afbdc19"
+    "sprites": "c2879a731b23ff57e6f47064fb4769e1",
+    "loading": "df968f3774d4c577fd74ac1ae4f60d14"
    }
   },
   "b665f16dee469ee766a4ebccdccc03f6": {
    "game": "Gauntlet",
    "doc": "gauntlet.md",
    "nex": {
-    "plain": "ad2ec631091d589260bd6c20fe80e64f",
-    "sprites": "f33ade47e1f82694f2ed9b68885a04b0",
-    "steady": "545fdeed1ffeabdc91d9363ae04dea32"
+    "plain": "822b70bcaa155f3d7736313951879298",
+    "sprites": "9bb20e5d046a6e984d1de5d69eba13a1",
+    "steady": "2b717b26769f2b5cba09c74ffd9b514c"
    }
   },
   "596acf039452f18c2b052671886279bf": {
    "game": "Gauntlet",
    "doc": "gauntlet.md",
    "nex": {
-    "sprites": "377f6e5fc161c1e6618abb48a4046945",
-    "steady": "c690be8aefacf8cc9d76127daa9b14f3"
+    "sprites": "5d9cdb805fcdc839cf33424d47b2a1bd",
+    "steady": "3f374e019a63d0bdeca8d1cee31459a2"
    }
   },
   "23d69f517506104c36ba429cb2148fa5": {
    "game": "Ghosts 'n Goblins",
    "doc": "ghosts_n_goblins.md",
    "nex": {
-    "plain": "3d71dd0e63371c4cf06f919d46bc2315",
-    "sprites": "9dc84645e18a79f7d70444c6b5b2a478",
-    "enhanced": "6f9e19063f8585e6acf8f841c8e19c2a",
-    "loading": "58da1df5b30abc37a90f94984bd7619a",
-    "enhanced_loading": "d203e42526ea6f0b03ba32591e3e9a8a"
+    "plain": "61b31a77638e7c6393695f61473a518b",
+    "sprites": "49b9383466196c36335b50943e6101b4",
+    "enhanced": "fff9a32e8e4ab38f395550639c8af3b7",
+    "loading": "5f2bd47639ddecd8960998536be05f79",
+    "enhanced_loading": "d1627c16e3edf7f691f24d73614bf64f"
    }
   },
   "c1a76349d08289810323bae0e62a9102": {
    "game": "Green Beret",
    "doc": "green_beret.md",
    "nex": {
-    "plain": "f4d4e3d43e47102af66fb3a7e6e022ab",
-    "sprites": "d982d5ae83e2d54e3fc750006322c25e"
+    "plain": "c55d3d8303928a1dbddca65059674575",
+    "sprites": "8e0d11e37eb93495a1b8d85a75292224"
    }
   },
   "fdab5fb61b2cb01ce38edcfa85ea9e80": {
    "game": "Gryzor",
    "doc": "gryzor.md",
    "nex": {
-    "plain": "180adc9071309e8c9a5a10789040d3a1",
-    "sprites": "444e3f9f018e01c056923ca6b622a811",
-    "outline": "c165f41f9cfbbda74a8b6ee85a80694f"
+    "plain": "23dcc64340b83477b1a289d1d01fd547",
+    "sprites": "f956832d10fa5592423bfaf563beaaf2",
+    "outline": "33c0296d5b725560557e3ae52551df31"
    }
   },
   "0cd9e86a2c6c7afa22025f8d593af093": {
    "game": "Gunfright",
    "doc": "gunfright.md",
    "nex": {
-    "plain": "f26d0a561e25a1a800b19787cd1fe41b",
-    "enhanced": "4ec70c827ae291ce273a09c508f95c87"
+    "plain": "a0893534af6db797084760dbe867e407",
+    "enhanced": "90a75069a4dbec52349c574f101300f6"
    }
   },
   "c9d8ff6b87d413df486a42c988c7079e": {
    "game": "Gunrunner",
    "doc": "gunrunner.md",
    "nex": {
-    "plain": "dabcb3aca5d4cfcdae3f6c9f5548ff90",
-    "loading": "f409ce6064820d2080cc131e87273b73",
-    "enhanced": "a73fe67d3c15d5ddbaf24eda7243896a",
-    "enhanced_loading": "1fef5dfc128e942f679ff681b81ac7b0"
+    "plain": "91ac6cc6ef836637fd225cae6fb600d7",
+    "loading": "7cb1984f1758022536799ce706d73597",
+    "enhanced": "2b8991079d665f55ebf523e58a781d05",
+    "enhanced_loading": "f509de2eb7fff67cbd12d1afb91ec3fe"
    }
   },
   "07bfa8f74d60a53ab64e5b092ffd6cca": {
    "game": "Heartland",
    "doc": "heartland.md",
    "nex": {
-    "plain": "33283547fc7036cdefdf982190c75b73",
-    "sprites": "df3bed3c7278092941de2abfdeadfd21",
-    "enhanced": "6497de71a5bb55eed58957cc65426518"
+    "plain": "62ee38aed9832c67c07dd3b4e088db2e",
+    "sprites": "8ffaeb05bd51a15ec871a5c99c4df7d7",
+    "enhanced": "c51b0e80e16ece6b7902f7e36c4bea9e"
    }
   },
   "ecfe7da10ba9aa395ae54c44301be1af": {
    "game": "Highway Encounter",
    "doc": "highway_encounter.md",
    "nex": {
-    "plain": "1feaa5fc5343f12583bcd6b44cec72d2",
-    "sprites": "8f518edd0cfbf151c67d533d05204176",
-    "enhanced": "fb75964a819f5fc7cf4366e7aef146ef",
-    "loading": "90079ef9c24acc86a3060a90b972031c",
-    "enhanced_loading": "695d7e73d3375a8ac3b8ed7d6adecbb0"
+    "plain": "4f605db1f8aa398cdb857af572a06687",
+    "sprites": "0f217be33787446e8ec645802cb25b75",
+    "enhanced": "9f6bb5d11bfab37a8f6fdde76b88c9f3",
+    "loading": "b8dc556e720a634df900dd84f80efbea",
+    "enhanced_loading": "7d8cbc58efffb6a8b2c5cfaab12e7dff"
    }
   },
   "54ad66af6678df22a9d4443e3d04aadb": {
    "game": "Ikari Warriors (48K form)",
    "doc": "ikari_warriors.md",
    "nex": {
-    "plain": "2d56c304bcb21619d8402d64804fef75",
-    "sprites": "8777f2c4c54afb99640dfe638d735ec2",
-    "enhanced": "82ada11a56d58fadb18be5fc23c0c0eb"
+    "plain": "ac6de2c937b824f92167616d3aad6960",
+    "sprites": "3a063dfb187e60010525ea2528dd0985",
+    "enhanced": "def27c350118aaee48b4216a3418d6da"
    }
   },
   "fc8e7535fc42afb60c12625b5fdfd064": {
    "game": "The Incredible Shrinking Fireman",
    "doc": "incredible_shrinking_fireman-add-OPUS.md",
    "nex": {
-    "plain": "feb706fcdaa29f13844a7b4982dc21fa",
-    "sprites": "284d6a11432e21c992c7f02e6d639885"
+    "plain": "9acfda921f6bd72387f1bca61caec186",
+    "sprites": "f0d136e446f1091be16b51b5de1a9cf9"
    }
   },
   "0566e3b37d49c6fa6f62e81eb883ad0c": {
    "game": "Into the Eagle's Nest",
    "doc": "into_the_eagles_nest.md",
    "nex": {
-    "plain": "b7d029c512c7a7ebee9e67af27f7ccf4",
-    "loading": "2a73be327f9ff7db9667c3aede747f87",
-    "enhanced": "9b32aa8d2a6a124799b10bc3960da282",
-    "enhanced_loading": "6a224cabba87912fdcc5e11a057d9844"
+    "plain": "9cb2840fd7312db1b793c6014703359d",
+    "loading": "c042ccfd28323cbdbe1a293b389bd48d",
+    "enhanced": "689104ecfa83aff869d3384c22dee0a0",
+    "enhanced_loading": "c676f8b37b7a22b05fd13bb04737b5a6"
    }
   },
   "5875d535442974a0de82737652854f1f": {
    "game": "Jetpac",
    "doc": "jetpac.md",
    "nex": {
-    "plain": "feff51b7038606d21c03c260055481e4",
-    "sprites": "72e3cc193325cc8166f8e7d7b6481327"
+    "plain": "abbbaae6b77a27b8b89d272d33d32327",
+    "sprites": "e45b0d5549ead9dd610f3fffa326636e"
    }
   },
   "34e23d4a382e4187de49eb77a33a4758": {
    "game": "Jilly's Farm Volume 1 - SokoBAArn!",
    "doc": "jillys_farm.md",
    "nex": {
-    "plain": "427aab29dd75a73276829f59a02cb23c",
-    "loading": "e50bbd5371c34e3b2a1f58a4c57978bf",
-    "enhanced": "987f52a06c06962e09000d6fe1bf8f48",
-    "enhanced_loading": "9f9cad7c1684667b4b2bd7fcc1cf6334"
+    "plain": "db45ec7ca0d109dde32c51071122090f",
+    "loading": "7414c1e97d936421998d89c8bed5e774",
+    "enhanced": "57dfada5da227093a3adc00b2768a5af",
+    "enhanced_loading": "04450eafe454c5fb60cf5621c8993355"
    }
   },
   "8e720b5cc11fe0d9445fe0af4825c8bf": {
    "game": "Knight Tyme (128K)",
    "doc": "knight_tyme.md",
    "nex": {
-    "plain": "0f91cab91a9261bb8645a0ec9cc871f2",
-    "sprites": "47fe12fb4b9e91106b57903f3376699b"
+    "plain": "ec43a9c6bd1ac6631ab7c8dde3ee36dd",
+    "sprites": "8baef8197af76204c12356931837daf5"
    }
   },
   "47c265e30f51a9b7eb5c98db6cd994c5": {
    "game": "Lode Runner",
    "doc": "lode_runner.md",
    "nex": {
-    "plain": "cd0c1659c8569b2fa80da74962af90d2",
-    "sprites": "85fe6afd593679bf59c787230ba0eaca"
+    "plain": "96b073771a9f712f37f3ff97f2dafb44",
+    "sprites": "49a1719bdf70d5db3da4eaf4c0d66b34"
    }
   },
   "426084d3d941fd7452d6bebf726d9746": {
    "game": "Lunar Jetman",
    "doc": "lunar_jetman.md",
    "nex": {
-    "plain": "3e5ca3908616f76a33f864be57baef95",
-    "sprites": "e5876b5442b0c50fb2b95bbf60a02229",
-    "sprites_loading": "2fdd4986d2aaf0675f3c0eb36fd0fa87",
-    "enhanced": "999da186beccfa0179c602a179730ec9",
-    "enhanced_loading": "b8062918bb7d3fd88a04cd280a07ef1f"
+    "plain": "033e72dcbe37bb59d7e8041006b0e1bb",
+    "sprites": "9fade3f20c63e8ef3e3f47207df55877",
+    "sprites_loading": "28f580cbdd2dcd33e0eb9c9846ffd116",
+    "enhanced": "6074adc6bd4790af80726a465e7410bb",
+    "enhanced_loading": "15e141194a6788449ab1d9018bebd779"
    }
   },
   "f5f5262f7a41d3c55408b45878c31d00": {
    "game": "Mad Mix 2 - en el Castillo de los Fantasmas",
    "doc": "mad_mix_2.md",
    "nex": {
-    "sprites": "d41ee5de8df6951d32d526ea7b333719",
-    "loading": "ebbf27c83c27fe05eb0189ff1fdf797f",
-    "enhanced": "4d8b106df29969ba368112a256fe696e",
-    "enhanced_loading": "5b402870cd95dc34e4bc98096c1cce39"
+    "sprites": "259a464a36cf4c68d385d6705d5b9ad0",
+    "loading": "1c1d116585a067ecdaa89c3fc1a38762",
+    "enhanced": "532c47182be034001b0e6398efb98352",
+    "enhanced_loading": "edc192338a25df497455260c684ac46e"
    }
   },
   "53078ac60141cd808b609600b85f4094": {
    "game": "Magicland Dizzy",
    "doc": "magicland_dizzy.md",
    "nex": {
-    "plain": "09eb18496cff334ea17bfc0b0c94585d",
-    "sprites": "ab66b5011a3e87a54f561502ded0ac24"
+    "plain": "d4209fa73afd96c05936b3b90bf496a6",
+    "sprites": "f0e32785990472fb01a8370e3a187e78"
    }
   },
   "5df07fbd5dabdcb9a909b86cf690a4e8": {
    "game": "Martianoids",
    "doc": "martianoids.md",
    "nex": {
-    "plain": "d7216a9d7cdbed5b819026e7cd71e9d8",
-    "sprites": "cb9e4e2542c5a36fed139e4c7114f673",
-    "enhanced": "09b5741f14d9efc011808b10bb3ce52e"
+    "plain": "1c1204e84911a63e37d3b80d2b1d6832",
+    "sprites": "a222a3dd8b632184998cdee9ed9b041c",
+    "enhanced": "73e08730f0216e0a43133157c77abf57"
    }
   },
   "d5ea19e487141ce922d0e96c02fd9054": {
    "game": "Match Day",
    "doc": "match_day.md",
    "nex": {
-    "plain": "612761ec2772c5a7dcd27f939588d227",
-    "sprites": "0ec500534baae17cd5ce91eae3c13a7d"
+    "plain": "7241054fac66f2752c4f7375de91a874",
+    "sprites": "f7a8e6ad4f2e8c7ff7c9f3e37c955cfc"
    }
   },
   "67bf05d356d51b2b402d88c5f0cdfb21": {
    "game": "Midnight Resistance (128K)",
    "doc": "midnight_resistance.md",
    "nex": {
-    "plain": "17239acaaf67b0f8011478053e17829d",
-    "sprites": "081de91a8427dc4b141574c40ab171d7"
+    "plain": "6d489652889fcfbadb7980c4fe92806e",
+    "sprites": "f28fbbc0e861c5aebcfd47b9de583837"
+   }
+  },
+  "cc90fbe7e7b6568e5f9d00c3226f215b": {
+   "game": "Monty is Innocent",
+   "doc": "monty_is_innocent.md",
+   "nex": {
+    "plain": "673011349213f7feceff3f528bf9b4ea",
+    "sprites": "a776f3429f34364eb7263a1cde03b1c8"
+   }
+  },
+  "0acdc707ef4cf3b4aaf94316bd0f285c": {
+   "game": "Monty on the Run",
+   "doc": "monty_on_the_run.md",
+   "nex": {
+    "plain": "86c30493dbd683b5076dfa43098180bb",
+    "sprites": "7fdb25d99b58c4413042f4b7a7f919c8"
    }
   },
   "facf9b90032759b7012abd91602b4b45": {
    "game": "Movie",
    "doc": "movie.md",
    "nex": {
-    "plain": "ad4b36c8ec0c71229377215aad817e23",
-    "sprites": "0ee50a9cc7dbeb0ec7c6bf1097e2a2f9",
-    "enhanced": "393cfa98ccce45834f046835bb968ee3",
-    "loading": "86c3518beb5d98091dec067e86ec1187",
-    "enhanced_loading": "4cff090a7fdaafe490b94d273baff0df"
+    "plain": "c5c6775ae89e87942fc6e916647af212",
+    "sprites": "ca40e11410641189f5dcbd190bb5a2a4",
+    "enhanced": "85639bf0956d54bde4e764fadc1063a3",
+    "loading": "efb645298dd12a25a6ba6f320e7ff902",
+    "enhanced_loading": "58ba78940b60c9e23cda63dbbda136fb"
    }
   },
   "f7d376977b93b515feaff1672c212b12": {
    "game": "Nemesis the Warlock",
    "doc": "nemesis_the_warlock.md",
    "nex": {
-    "plain": "f1497589ddf479e34d42f6ab0618954d",
-    "sprites": "642fdf0707db7f6f78727e2335d2fd0e"
+    "plain": "d1f685c80642ca96b8f454b7171f34b8",
+    "sprites": "9e20d8e7cf40ae4d654bdc59ba7111dd"
    }
   },
   "7b4e8280896d7ff34b93e83ddba9d01c": {
    "game": "Nightshade",
    "doc": "nightshade.md",
    "nex": {
-    "plain": "e4d954de899563af241cb8db84114654",
-    "sprites": "8dd3f1931a5d307128b2284c8577898c",
-    "enhanced": "666e680d91856edc892b21055ea899ab"
+    "plain": "c2555ad8f43e1ebda5f07094a48bd041",
+    "sprites": "37a5c792172120f2c5f5406e476e83bf",
+    "enhanced": "a09286f6c193f4f911a87a2a2317ebb8"
    }
   },
   "4dd5e967592f0eabd20f113cb64f740e": {
    "game": "Nodes of Yesod",
    "doc": "nodes_of_yesod.md",
    "nex": {
-    "plain": "b578764fc922295ec75a6358d762b397",
-    "sprites": "3f8ce0fc97d32fbcff8bff675b4840b2",
-    "enhanced": "db6f976f9ea855945dff53ce045e8c7b",
-    "backdrops": "2e5cb62e7a65bf833d0fd2615d8a2102",
-    "enhanced_backdrops": "abe82a3085de8ca8a0b29cf9834ec0a6",
-    "sprites_loading": "71a5351b7d016d4a6f425c0caf7f0fd1",
-    "enhanced_loading": "59d95f3ac081b12b886084eb76231a2f",
-    "backdrops_loading": "6a2597eff5d405705b2ac9a7e26eb1eb",
-    "enhanced_backdrops_loading": "b9928a6eb4acd223d15611a498d64fae"
+    "plain": "7f24d66a5c649eab0b9202287c62af8d",
+    "sprites": "5303d5e8866f4123cb9e30ec6cde91e4",
+    "enhanced": "8553f1e57019b63e348ec35b2e1dbf46",
+    "backdrops": "efbde4756feaa085f64837948c8a36a8",
+    "enhanced_backdrops": "b98f2a7213c566b3364ca1743ca07bc6",
+    "sprites_loading": "c129b0decc7c11971581ea57b7337857",
+    "enhanced_loading": "cee16a75581f01be8a7c3623cac610a4",
+    "backdrops_loading": "b325e2ea42bcadd1159486a53f75eda4",
+    "enhanced_backdrops_loading": "7d1e685a6dcc3d0b68159cb7e3e8f30f"
    }
   },
   "5967a2ea00bd0ff5cea81778fb72eb0e": {
    "game": "Olli and Lissa: The Ghost of Shilmoore Castle",
    "doc": "olli_and_lissa.md",
    "nex": {
-    "plain": "12be0e0aa24eb85e39da957cc530edbe",
-    "sprites": "61e0b6d025f05c108a4d7196d4482868",
-    "enhanced": "b9c71476d1925e291a08a0673f455116"
+    "plain": "cc6e717b9aa35e6d08d5a772bd5c7310",
+    "sprites": "76d0bbf64039237d7270eb181f7c4919",
+    "enhanced": "75c66a0ddedf6c218b5d55cde3bc51a0"
    }
   },
   "27523b55f786a871ba4bf7fae1be255a": {
    "game": "Olli and Lissa II: Halloween",
    "doc": "olli_and_lissa_2.md",
    "nex": {
-    "plain": "53516907092eddb3e6e642e4f498be6b",
-    "sprites": "dedec792ec315041fde3569de48befbd",
-    "enhanced": "2744a1af82d0d26f827712be26e101d5"
+    "plain": "2713f076427d909706660b204c27e1a1",
+    "sprites": "5b710e071b0623cab32e48c8966863f2",
+    "enhanced": "ae8c4eaa53adf3286c768cc78e4c3347"
    }
   },
   "ae77b4f151932e0228b99f6a257ea4de": {
    "game": "Olli and Lissa III: The Candlelight Adventure",
    "doc": "olli_and_lissa_3.md",
    "nex": {
-    "plain": "db9e12154c82e582c9bd23d72818c0d7",
-    "sprites": "4eeda9b6d9f83ca885b2df78e86bbf74",
-    "enhanced": "c7056f6de0d91b024d4f72d3d8fb987a"
+    "plain": "bed57f9136b944c575ab52f9f6f8c525",
+    "sprites": "a536ceb5a6e77b0fcb1b52ec3deddfaf",
+    "enhanced": "d529d4139e9adbb4a105369533575e9f"
    }
   },
   "e9cb908bc86661ff81732665741393cc": {
    "game": "Pac-Mania (128K)",
    "doc": "pac_mania.md",
    "nex": {
-    "sprites": "431698a4d2e8a0a67ff50c44c4475b14",
-    "enhanced": "acfbc75c7ce9d78840fec348ae2f2654"
+    "sprites": "90ea1da25f0cdf6c8dd5b86bf34f67ae",
+    "enhanced": "a131a2abc9617b478d2d23b889fc2bfc"
    }
   },
   "5d884aa2608879727e43589dfba44bb7": {
    "game": "Page and the Curse of the Pharaoh",
    "doc": "page_pharaoh.md",
    "nex": {
-    "sprites": "ad82fe2d63f623af54950d2c56d34a44",
-    "loading": "430b6184b2397b0759db1b151984f339",
-    "enhanced": "139bfcafd68061d939d1d2c51efdacc6",
-    "enhanced_loading": "3c710b98afbe12f66d1e6ff03f00285d"
+    "sprites": "6763c47a878852bba0020412d170bcc7",
+    "loading": "75b7ae1bdb9038f610c39765283399d0",
+    "enhanced": "f9f705e610465dcc2f42c99f4de73763",
+    "enhanced_loading": "fb742cd5b18e72c6dda1a5a46e870642"
    }
   },
   "c39caed696ba547f693546b707c9cee8": {
    "game": "Phantis / Game Over 2, part 1",
    "doc": "phantis.md",
    "nex": {
-    "sprites": "068e1f366ea5ddf1e3d075b732bd0a7f",
-    "loading": "1190d208ea139653a44f7d2b91f93dff",
-    "enhanced": "76b119c060a1075b471ee91dbf4d3cb1",
-    "enhanced_loading": "ae7246977be6fbc8df934346d5c4f457"
+    "sprites": "9bc7be780ee378c9d42bbd18f5e8829a",
+    "loading": "f54f7969be2f6aa68930dc165cbfb27a",
+    "enhanced": "7b754be4bb97a99bff3429839c526853",
+    "enhanced_loading": "873aa581572cd978c3ac7a6fb4947952"
    }
   },
   "55c89bb16ffde2f58a43ed3be7b95bcf": {
    "game": "Phantis / Game Over 2, part 2",
    "doc": "phantis.md",
    "nex": {
-    "sprites": "9b080e196f34a34ef89077e83c3acf96",
-    "loading": "a326db4db051bdb12a61c959891186e1"
+    "sprites": "684bdadd06394e0409a3ae347335f7e2",
+    "loading": "fc07a3048883981f6f620730285ee4b6"
    }
   },
   "6515eb52c5216370de6f1ef2bbcaad4c": {
    "game": "Pssst",
    "doc": "pssst.md",
    "nex": {
-    "plain": "db271c07425ad2866b9e9e13d15f1beb",
-    "sprites": "40ae6ece0286d15f71c38c80dbacda92",
-    "enhanced": "6d14ba48110804e62a83ebd3bffbe248"
+    "plain": "acb40bf686174fcfc9ae2b68375faf2d",
+    "sprites": "275dcd59c5d7fc9563913619f2f117f2",
+    "enhanced": "1a45b565ee8eb3e56b98be2e171fd0f0"
    }
   },
   "1ff279754d0730e503816199ac6976f3": {
    "game": "Pyjamarama",
    "doc": "pyjamarama.md",
    "nex": {
-    "plain": "19c7f0ac1c7178839a01b0fc42e47732",
-    "sprites": "fad103126004e18132c9877d7a7606e6",
-    "enhanced": "3ca79dd93d0fdc46968a22382deac6fe"
+    "plain": "43c5611cd261b568aaf15908bf46cff6",
+    "sprites": "878bd94454869e5457941a0af03cbd3b",
+    "enhanced": "bc6c6d85bb625d80c5f90d63505f5a2e"
    }
   },
   "4c98b980b1726af545fccc99665ef29b": {
@@ -585,208 +609,216 @@
    "game": "Rambo",
    "doc": "rambo.md",
    "nex": {
-    "plain": "434a84778881e230d0c930677abad0b4",
-    "sprites": "1c5c71b7252ef354527acde6d8e93a10",
-    "enhanced": "c40a49aee47327d2789238e740af0f13"
+    "plain": "415bec0fff4c750e7e9847a3e42fbf9c",
+    "sprites": "f2dcfb9dc70a9f334402faf098509032",
+    "enhanced": "42c234ddd73912b69e8954315ed1a422"
    }
   },
   "1a931038f3d0152477b7d7e30390f997": {
    "game": "Renegade (128K)",
    "doc": "renegade.md",
    "nex": {
-    "plain": "62a06036dec229a7d19821df2cca6a04",
-    "sprites": "b4b452100f88d54415f3f5f11568c454",
-    "sprites_nooutline": "c8baf422e7a76776f10a48ac270dd1ae",
-    "sprites_blackoutline": "28e56c4fc2789efeecf054f5cb49c80c",
-    "enhanced": "f60ec79d6dd0a62d1b3d262ecf394203"
+    "plain": "59c50d991f292728f95a59170196959c",
+    "sprites": "10070d06abbc98f25160b119e2f9cc80",
+    "sprites_nooutline": "99f6d3abbb8f34ff8d6c1d28e6497b53",
+    "sprites_blackoutline": "4e9b74e76a5467ce4556bc04cb7366c2",
+    "enhanced": "d032ec5d0286ad68d32fef2f96b4018f"
    }
   },
   "d2fa7f2eeb8ccb75c30edbacb432a8b5": {
    "game": "Robin of the Wood (128K)",
    "doc": "robin_of_the_wood.md",
    "nex": {
-    "plain": "d6e8b01ea8b94970ef102afca79e611b",
-    "sprites_raw": "27f9ce7f210c00dae3a01b532a6a5669",
-    "sprites": "fcd321af900797294353a155bfaebfe0",
-    "enhanced_raw": "0d0d7ee180ae921023738cae8e5967be",
-    "enhanced": "d2d4d23b5aded923839ce281bd2271f1"
+    "plain": "b87691eaca24f220ef10332e1b01f324",
+    "sprites_raw": "ce479cac96bcb4274217d91b8e75a720",
+    "sprites": "ed53262082084a53d8119e1efac52265",
+    "enhanced_raw": "69e671e6d0d2b6f475beee82ce521b56",
+    "enhanced": "716dc4fc8136c3ad6eadad5441eafea6"
    }
   },
   "4b6c490438881cb23d0993d4b32788a2": {
    "game": "Ruff and Reddy in the Space Adventure",
    "doc": "ruff_and_reddy.md",
    "nex": {
-    "plain": "59f7de5f3be84ee57184720cf17a1f6d",
-    "loading": "6ea7afb9e48b092fda8cff756f92e50d",
-    "enhanced": "7215bb05314c2c192a61a163579412b7",
-    "enhanced_loading": "7d7fc29eefb3ef79fa829d78f0532d68"
+    "plain": "5ffde90e442cc5b7c30fbc2271c9ea06",
+    "loading": "174008d46ed1b4dac423c14d2e25a461",
+    "enhanced": "e8017c93011341ec41acecbf417a949e",
+    "enhanced_loading": "e6b3a2e82407295ad217947b6e1f1e09"
    }
   },
   "d8fb649ba5d8fa086cac43d0cd1c497e": {
    "game": "Sabre Wulf",
    "doc": "sabre_wulf.md",
    "nex": {
-    "plain": "06fbcf5016f77b868b3d754f621974ab",
-    "sprites": "332c9526cf6ab6b4adb5c1dc2d170969"
+    "plain": "774de1f0205a19b3cdd107203cdc73fe",
+    "sprites": "70e9ea08a649c3b562b3ed9674d43016"
    }
   },
   "8a82e06f6829a2a1c30781491cfbc42e": {
    "game": "Scooby Doo in the Castle Mystery",
    "doc": "scooby_doo.md",
    "nex": {
-    "plain": "994ad69a87d395fadd862205e4d75d52",
-    "loading": "6c52221ef73d17ebd46d31e35f5da963",
-    "enhanced": "37d3a6c44423317fd434e969c7d35c4b",
-    "enhanced_loading": "a81865abef2f1022ea448b5a022c56c6"
+    "plain": "4554d6885e020aad0524671b299a8546",
+    "loading": "d0cc766ed1cf99af5b4764d4b35008c1",
+    "enhanced": "03425207a4562dc6de85cbee19a2434e",
+    "enhanced_loading": "66f664b0198e7beef5ec783513ffdbdd"
    }
   },
   "8fad50cd8c218ade32bf3c2332c8ee03": {
    "game": "Silkworm",
    "doc": "silkworm.md",
    "nex": {
-    "plain": "36a148b54bce181c39c94899f7809c20",
-    "loading": "6ae12fd66946724d9ef6c1e089a6b163",
-    "enhanced": "d5d3a92cce49d1f4d855f3d98ee7f41b",
-    "enhanced_loading": "2058f2e55464eeb68f418320548fb34a"
+    "plain": "ebfedb75fe5d04df236e3e28bb0d58c2",
+    "loading": "696d4c1811af50f822fdcbd0080602cb",
+    "enhanced": "39489b1b91cc147325a08682e1727e6d",
+    "enhanced_loading": "10956537b3e843f11dc911a6f09d6676"
    }
   },
   "14ee8b0b105fbf8b58bfeaed03e97a13": {
    "game": "The Simpsons: Bart vs. the Space Mutants",
    "doc": "simpsons.md",
    "nex": {
-    "plain": "706e208453a6f5db9832731663451d9f",
-    "sprites": "fa3a5f416569ab1684526f9cee231a10",
-    "enhanced": "a7ab6c7690e1f4252ac6c695a66c5b81"
+    "plain": "550b5e66e48fea5b86e244400680e146",
+    "sprites": "2ca0c918cccacc4de78ced515164f6ff",
+    "enhanced": "fee0540c463a383b7af513cc6ab5c15d"
    }
   },
   "158c2124965358c39522f131d680ca55": {
    "game": "The Simpsons: Bart vs. the Space Mutants",
    "doc": "simpsons.md",
    "nex": {
-    "plain": "3ec33dfe52463ba0cac39953b9f3aad5",
-    "sprites": "a634bef137ac4553056faf030bc85fb1",
-    "enhanced": "647240a62fd0e314742ec677095828d1"
+    "plain": "b3a0365e78f6ac5d9b03240b0245646f",
+    "sprites": "3479fe6f18c92c31ec8586c8493787f9",
+    "enhanced": "27db6520e93230788b7ff1d5bc3f430d"
    }
   },
   "86666cbdb6b702b83454dd1fb7d041b4": {
    "game": "The Simpsons: Bart vs. the Space Mutants",
    "doc": "simpsons.md",
    "nex": {
-    "plain": "3e348c601c00629b76d89d551976170c",
-    "sprites": "0530f110bc338e985a6c0c5a91a3e535",
-    "enhanced": "f47b2a8f8282fdef8f8b291b307c9afa"
+    "plain": "b126213428643bd14d968451e33c01df",
+    "sprites": "0fd724c79f63ebfdeaff2bba6624de9e",
+    "enhanced": "0bb06480bdda67a094328ea483b39db7"
    }
   },
   "e5e2f2ef480f31f602f6574015a27bd8": {
    "game": "The Simpsons: Bart vs. the Space Mutants",
    "doc": "simpsons.md",
    "nex": {
-    "plain": "5421d05c7b4b7b46d3c32bf35dde9c28",
-    "sprites": "866dd924e963f8bdd29426b637c9ff19",
-    "enhanced": "09610b6744867df21a110dc286fbdd0d"
+    "plain": "0ead1c229f029f4a3233b557665f4787",
+    "sprites": "6e0a23e9ea0a3a722f19f9c28da38256",
+    "enhanced": "dff5e185e031e6b0742de631e1f77dbf"
    }
   },
   "7702fa208c2096445f0372c3ad37e833": {
    "game": "The Simpsons: Bart vs. the Space Mutants",
    "doc": "simpsons.md",
    "nex": {
-    "plain": "8d894a9cca70cf52def364cb6953d1d6",
-    "sprites": "bbe3b9b883c57a665f8bb66de8dfaf8a",
-    "enhanced": "a9e3b97ed28bc36d682651e79f3629e4"
+    "plain": "10d969b7422baa73a56d6ca966d5ab1a",
+    "sprites": "bd94f22adc91666f0f246aa59d6dd14e",
+    "enhanced": "05a6527d7607b730667358be7fd2fea5"
    }
   },
   "3b89344c6d7e6433bf044bef1880a2f1": {
    "game": "Smash TV",
    "doc": "smash_tv.md",
    "nex": {
-    "plain": "c72ea298486b14036ac1a87ac89c3f0e",
-    "sprites": "5987c29243f026022415bbfe965f7f56"
+    "plain": "68b2f357221f36338d7ec704b15560b4",
+    "sprites": "af7a59f22315e03299bda91758fbe20e"
    }
   },
   "23ee5b2123dbc8a9a5daccbd51db4db0": {
    "game": "Solomon's Key",
    "doc": "solomons_key.md",
    "nex": {
-    "plain": "3ad529e40439ad0ee5fbbb67f66d9170",
-    "sprites": "80e83ae3cab8adf6e58085261517a80f"
+    "plain": "c537a1c7dc6223a42b9e9d015971db36",
+    "sprites": "e01332fe4eda912929e7535a132e9968"
    }
   },
   "3bca7e72f3c9c3abd104b8c92f35d5d4": {
    "game": "Spellbound (128K, Magic Knight 2)",
    "doc": "spellbound_magic_knight.md",
    "nex": {
-    "plain": "656c71c4b2ebb8318f3ad442d70b0ab9",
-    "sprites": "b679ae970a270e89c80979b2eb618026",
-    "enhanced": "33f251edab40d1ce2f223981409f2bbe"
+    "plain": "a3a71c4bc642afb58842e368ebf64682",
+    "sprites": "9e1cf675b59a4c1f555b0870d414818b",
+    "enhanced": "1fa636cdb0c2c2a1f36a2a29eb880b42"
    }
   },
   "b94691b08d31386d3e5661d04e6c164f": {
    "game": "Starquake",
    "doc": "starquake.md",
    "nex": {
-    "plain": "f447d9b3d937837d2427e021002a9648",
-    "sprites": "64b15a7b8477ae97c5807a660e00b1a6",
-    "loading": "4c5ce962f813849d9ff360077266367f"
+    "plain": "85ae15cc51b64c370489185dde3ab48a",
+    "sprites": "a6033f392f2164eaa8219dc5b4208909",
+    "loading": "ab0ed1b4fa860c10747d950d0ade1756"
+   }
+  },
+  "d462589b7b7e63cb7e958323d00d165a": {
+   "game": "Stormbringer (128K)",
+   "doc": "stormbringer.md",
+   "nex": {
+    "plain": "74f64c674eda981e940da907018aa9b2",
+    "sprites": "218f92e530c6c658f37e51d6c24ce641"
    }
   },
   "1895877d638a4a5f37a9402bed18f59a": {
    "game": "Target Renegade (128K)",
    "doc": "target_renegade.md",
    "nex": {
-    "plain": "a0be8dc03a1be8c6d67dc3e0229abc35",
-    "sprites": "8e5f8f0be205aade316106a6db7d4aac"
+    "plain": "452e75d8ba20171f9a4a3dc6f7b451d6",
+    "sprites": "d8e3e19f2d92cad896b4931fa0c9162a"
    }
   },
   "ff400566fee18b14e2b52647ae64eaae": {
    "game": "That Sinking Feeling",
    "doc": "that_sinking_feeling.md",
    "nex": {
-    "sprites": "07fea8b4205b854febc67d44a3d013fe",
-    "loading": "7a34cae8445952cc8c56b0fc52e9908b",
-    "enhanced": "f6838dd33f91b87930d22fa3a584bc9e",
-    "enhanced_loading": "8c9469e34a9fb936e8c1f7709e383ea7"
+    "sprites": "19dbbbbf87a12dca3979e9d6186e6840",
+    "loading": "833ae0f92d8975ff1ba58d7a9ccb17b3",
+    "enhanced": "2f55c148c59518ec1af5dde302c688e8",
+    "enhanced_loading": "b79d44e336f1045fbaf98c500d59096a"
    }
   },
   "72bcb108d7baec2ee10ede47594010dd": {
    "game": "Three Weeks in Paradise (128K)",
    "doc": "three_weeks.md",
    "nex": {
-    "plain": "1a6f1bbe0abfbcfbb5712ad4f4700e95",
-    "sprites": "468b17528c4c1659a2087bbe2d8cc8d1",
-    "enhanced": "b38d048f254302fe942eb2ac58bbf463"
+    "plain": "40e4041f450f383f993cb1b230d403f2",
+    "sprites": "5b88f445504109556daa668a084ae07e",
+    "enhanced": "be261a89bf4680280bafd5dfe0d45f54"
    }
   },
   "8dc717670aa7fc8817e83e8f63a22f72": {
    "game": "Tranz Am",
    "doc": "tranz_am.md",
    "nex": {
-    "plain": "8308134dff22d877c6f70ba236e2e012",
-    "sprites": "637c510df69e95cb621db6f63d02a5fd",
-    "enhanced": "c89e6c5a4707b97a92922cd352b555ef"
+    "plain": "5b7ed517c752b2899bddd6539aaedfc9",
+    "sprites": "62b76f0325fec6055b068f57434bf602",
+    "enhanced": "2d9e69880cf7a8c9a8a8fc27303bc0b3"
    }
   },
   "7578947fcc8dbc4ba822e2c565499d54": {
    "game": "Treasure Island Dizzy (in game)",
    "doc": "treasure_island_dizzy.md",
    "nex": {
-    "plain": "4dae1a3a15b2158642a5d5b82de92ef7",
-    "sprites": "8b4d0847d68fce3215bd43a0e116e682"
+    "plain": "6dc4fec1e4dd2bd28882d520c70456dc",
+    "sprites": "7251663345f34cef7f3b1626a57a8c9c"
    }
   },
   "9443f0cc4c32415849b0419750f1bff3": {
    "game": "Treasure Island Dizzy (title)",
    "doc": "treasure_island_dizzy.md",
    "nex": {
-    "plain": "70890aba7d821fba8a41e63636eb58be",
-    "sprites": "85e054fe4bce8e4b3a8e336aac432f58"
+    "plain": "cc8fcb90942d294d66d33c0b836f24c1",
+    "sprites": "3f887a8475fc214d7174cd59259f8fb4"
    }
   },
   "9f2db0ec44da647aa1d7469f1f25ed67": {
    "game": "Underwurlde",
    "doc": "underwurlde.md",
    "nex": {
-    "plain": "a6e6b38e9e8be1d2b5c32f08ab3c3833",
-    "sprites": "07dff80327ed247a38780413e01a2325"
+    "plain": "8b57d05dd0dff7c43d5f461076957237",
+    "sprites": "e45d07f5650fc6b718092e611cd5d9e7"
    }
   },
   "1a961b20f59e1bac9d88973f4e600ea9": {
@@ -794,7 +826,7 @@
    "doc": "winter_sports.md",
    "nex": {
     "plain": "8dc688fa980454c63f98bc0e802d5f88",
-    "sprites": "e26abf0ba45ba34013608063cd8d6823"
+    "sprites": "eab9ae6fc1ba2e5184b57a7796140cd7"
    }
   }
  }
