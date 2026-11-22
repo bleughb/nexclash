@@ -5,7 +5,14 @@
  "evidence": [
   {
    "game": "games/bruce_lee.md",
-   "text": "Commit C7D2 is after the three visible copies; C3CB is too early for a displayed position; a copy that misses a newly positioned figure retains the previous visible sprite instead of hiding it.",
+   "text": "Commit C7D2 is after the three visible copies; C3CB is too early for a displayed position.",
+   "quote": "Commit C7D2 is after the three visible copies; C3CB is too early for a displayed position.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/bruce_lee.md",
+   "text": "A copy that misses a newly positioned figure retains the previous visible sprite instead of hiding it; the original ULA retains that image too.",
+   "quote": "copy that misses a newly positioned figure retains the previous visible sprite instead of hiding",
    "shown_on": "unknown"
   }
  ],
@@ -24,6 +31,6 @@
   "displayed frame",
   "sprite position"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

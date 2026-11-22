@@ -6,7 +6,8 @@
  "evidence": [
   {
    "game": "games/mad_mix_2.md",
-   "text": "A K window was wrong in both directions: the body's clock ratio differs by path (LDI heavy against register heavy). Windows wait each routine's exact T from replays by path; pace is within 0.1%.",
+   "text": "A K window was wrong in both directions: K is a ratio of body time, and the body's clock ratio differs by path (LDI heavy against register heavy). Replays give the original routines' exact T by path; waiting those out gave +0.1% against +-5%.",
+   "quote": "Replays give the original routines' exact T by path; waiting those out gave +0.1% against +-5%, and needs no tuning per emulator.",
    "shown_on": "unknown"
   }
  ],
@@ -21,6 +22,6 @@
   "LDI",
   "ratio"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

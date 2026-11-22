@@ -5,8 +5,9 @@
  "evidence": [
   {
    "game": "games/cisco_heat.md",
-   "text": "Six recordings supply the stage blocks; IM 2 handler pages with 7FFD and flips the screen; race loop renders into one back buffer 0x6000-0x7AFF; built with --tape-bank.",
-   "shown_on": "unknown"
+   "text": "Six recordings surveyed, same engine in every stage, multiload; the 128K IM 2 handler pages with 7FFD and flips the screen; the race loop renders into the linear back buffer 0x6000-0x7AFF; stage blocks come from the tape with --tape-bank 8,9,11.",
+   "quote": "Stage 0: six recordings surveyed; same engine in every stage, multiload.",
+   "shown_on": "simulator"
   }
  ],
  "level": "observed",
@@ -26,6 +27,6 @@
   "tape",
   "per-stage data"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

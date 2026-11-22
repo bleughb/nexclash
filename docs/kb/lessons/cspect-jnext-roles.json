@@ -6,11 +6,13 @@
   {
    "game": "games/r_type.md",
    "text": "Emulator order CSpect then JNext.",
+   "quote": "emulator order CSpect then JNext;",
    "shown_on": "unknown"
   },
   {
    "game": "games/inferno.md",
    "text": "JNext headless before hardware rounds.",
+   "quote": "JNext headless before hardware rounds.",
    "shown_on": "jnext"
   }
  ],
@@ -24,6 +26,6 @@
   "scripted",
   "hardware rounds"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

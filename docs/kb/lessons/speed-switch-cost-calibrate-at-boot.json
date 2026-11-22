@@ -1,13 +1,14 @@
 {
  "id": "lesson.speed-switch-cost-calibrate-at-boot",
  "kind": "pitfall",
- "claim": "Timing constants for 28 MHz code that include the cost of a NEXTREG 7 speed switch need the machine's own measured figure, not the simulator's.",
+ "claim": "Timing constants for 28 MHz code that include the cost of a NEXTREG 7 speed switch need the machine's own figure (a calibration), not an assumed one.",
  "limit": "Not shown on hardware.",
  "evidence": [
   {
    "game": "games/inferno.md",
    "text": "Constants holding NEXTREG 7,x need the machine's own figure (cw_cal); timed hooks use CW_X, cw_cal and lost-IRQ accounting.",
-   "shown_on": "simulator"
+   "quote": "constants holding NEXTREG 7,x need the machine's own figure (cw_cal).",
+   "shown_on": "unknown"
   }
  ],
  "level": "observed",
@@ -21,6 +22,6 @@
   "timing constants",
   "cw_cal"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

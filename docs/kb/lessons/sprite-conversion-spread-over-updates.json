@@ -6,7 +6,8 @@
   {
    "game": "games/r_type.md",
    "text": "Graphics converted once into 4bpp patterns, 24 tiles converted per update, overflow falls back to native cells; pacing equal to the control (297-299 of 301 updates at 3 frames).",
-   "shown_on": "simulator"
+   "shown_on": "unknown",
+   "quote": "patterns, cached by address + ink with checksum; flips = mirror bits; 24 tiles converted per"
   }
  ],
  "level": "observed",
@@ -22,6 +23,6 @@
   "sprite",
   "spread work"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

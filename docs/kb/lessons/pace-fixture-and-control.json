@@ -5,23 +5,27 @@
  "evidence": [
   {
    "game": "games/sabre_wulf.md",
-   "text": "Trials drifted apart until every time source of the logic was read from the round counter in both runs; then lockstep for 160-600 rounds.",
-   "shown_on": "simulator"
+   "text": "Trials drifted apart (enemy pace follows rounds per second, the player has a once-a-frame gate) until every time source of the logic was read from the round counter in both runs; then the trials stay in lockstep for 160-600 rounds.",
+   "shown_on": "unknown",
+   "quote": "with every time source of the logic read from the round counter in both runs (pilot work2/fixture2) the trials stay in lockstep for 160-600 rounds"
   },
   {
    "game": "games/nodes_of_yesod.md",
-   "text": "Put the objects' own bytes in the audit state list: a time-dependent read before a fixed random sequence moves the sequence.",
-   "shown_on": "unknown"
+   "text": "Put the objects' own bytes in the state list and read every source of chance: a time-dependent read in front of a fixed random sequence moves the sequence.",
+   "shown_on": "unknown",
+   "quote": "put the objects' own bytes in the state list and read every source of chance: a time-dependent read in front of a fixed random sequence moves the sequence."
   },
   {
    "game": "games/underwurlde.md",
-   "text": "Natural-play traces diverge through R-dependent encounters and are not pace evidence; controlled pace trials over several starting video phases meet 2%.",
-   "shown_on": "unknown"
+   "text": "Natural-play traces diverge through R-dependent encounters and are not pace evidence; controlled fixtures keep identical player states over several video phases.",
+   "shown_on": "unknown",
+   "quote": "Natural encounter divergence is not pace evidence; controlled fixtures keep"
   },
   {
    "game": "games/phantis.md",
    "text": "Two pace seeds with identical numbers meant input was not reaching the game.",
-   "shown_on": "unknown"
+   "shown_on": "unknown",
+   "quote": "two pace seeds with identical numbers meant input was not reaching it."
   }
  ],
  "level": "demonstrated",
@@ -36,6 +40,6 @@
   "seed",
   "input"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

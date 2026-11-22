@@ -5,33 +5,39 @@
  "evidence": [
   {
    "game": "games/cobra.md",
-   "text": "First pace runs left the RNG in and diverged at update 3; the fixture fixed it.",
-   "shown_on": "unknown"
+   "text": "The RNG runs in the wait-for-interrupt sound loop, so any timing change gives other enemies; the first pace runs left it in and diverged at update 3; a fixture removing that call and the lives decrement in both copies kept lockstep at every update.",
+   "shown_on": "unknown",
+   "quote": "the RNG runs in the wait-for-interrupt sound loop, so any timing change gives other enemies;"
   },
   {
    "game": "games/army_moves.md",
-   "text": "BA58 INC HL made NOP in both copies keeps pace runs in lockstep (test copies only).",
-   "shown_on": "unknown"
+   "text": "Original and build drift apart through the ISR's RND seed; a test-only fixture (BA58 INC HL made NOP in both) keeps whole pace runs in lockstep.",
+   "shown_on": "unknown",
+   "quote": "Original and build drift apart through the ISR's RND seed; a test-only fixture (BA58 INC HL made NOP in both)"
   },
   {
    "game": "games/father_christmas.md",
-   "text": "LD A,R decides the elves' moves and R runs during HALT; a fixture making those reads constant keeps lockstep.",
-   "shown_on": "unknown"
+   "text": "LD A,R at 15 places decides the elves' moves and R also runs in a HALT, so play is timing-dependent even in the original; a test fixture with those reads constant keeps state in lockstep.",
+   "shown_on": "unknown",
+   "quote": "R: LD A,R at 15 places decides the elves' moves; R also runs in a HALT, so real play is timing-dependent even in the original."
   },
   {
    "game": "games/that_sinking_feeling.md",
-   "text": "ROM-read RNG parts a 128K-ROM game from a Sinclair-ROM build, so random spawns differ.",
-   "shown_on": "unknown"
+   "text": "The RNG at 82D0 reads ROM bytes (LD A,R, XOR (HL)) that differ between 128K ROM 1 and Sinclair's, so the build's random spawns differ from the original's; a fixture makes it constant for lockstep.",
+   "shown_on": "unknown",
+   "quote": "LD A,R and XOR (HL) over bytes of the ROM's first page, which differ between 128K ROM 1 and Sinclair's (004A), so the build's random spawns are not the original's."
   },
   {
    "game": "games/lunar_jetman.md",
-   "text": "LD A,R at 0x9466: pace by seed varied -25% to +18% over 8 JNext seeds; replay pace is the like-for-like figure.",
-   "shown_on": "jnext"
+   "text": "The game takes LD A,R (0x9466) for its randomness, so JNext runs of two builds play different games; pace by seed varies -25% to +18% over 8 seeds; the replay pace is the like-for-like figure.",
+   "shown_on": "jnext",
+   "quote": "so JNext runs of two builds play different games (port 0xFE writes 106 against 179): pace by seed varies -25% to +18%."
   },
   {
    "game": "games/comando_quatro.md",
-   "text": "A full-snapshot scan found a third LD A,R that the first list missed.",
-   "shown_on": "analysis"
+   "text": "The first LD A,R list came from code that ran; a scan of the whole snapshot found a third read; a pace fixture has to cover all of them.",
+   "shown_on": "analysis",
+   "quote": "The first LD A,R list came from code that ran; a scan of the whole snapshot found a third read."
   }
  ],
  "level": "demonstrated",
@@ -48,6 +54,6 @@
   "seed",
   "LD A,I"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

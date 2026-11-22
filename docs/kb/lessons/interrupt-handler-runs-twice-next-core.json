@@ -7,6 +7,7 @@
   {
    "game": "games/altered_beast.md",
    "text": "Measured on the board with a test handler: at 128K timing it re-enters when sampled 38 T after the acknowledge, not at 42 (48K timing: 34 yes, 38 no); unfixed builds crashed at about 8 s.",
+   "quote": "on the board with a test handler: at 128K timing it re-enters when sampled 38 T after the acknowledge, not at 42 (48K",
    "shown_on": "hardware"
   }
  ],
@@ -27,6 +28,6 @@
   "Next core",
   "36 T"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

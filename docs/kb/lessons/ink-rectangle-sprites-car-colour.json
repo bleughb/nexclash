@@ -6,8 +6,9 @@
  "evidence": [
   {
    "game": "games/cisco_heat.md",
-   "text": "Red car as sprites using the ULA palette red, X mirror and a clip window: no clash, shadow black. 43 states/111 frames exact, plus 103 more car frames (mirrored included) in a separate run.",
-   "shown_on": "simulator"
+   "text": "The car, which the game colours by OR-ing ink into a cell rectangle, became sprites of the game's own pixels, coloured from the ULA palette, mirrored by the X flag, clipped to that rectangle: no clash, the shadow black as in the original; 43 states, 111 frames exact, plus 103 more car frames.",
+   "shown_on": "simulator",
+   "quote": "A figure the game colours by OR-ing ink into a cell rectangle (the car) became sprites of the game's own pixels"
   }
  ],
  "level": "demonstrated",
@@ -24,6 +25,6 @@
   "clip window",
   "mirror flag"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

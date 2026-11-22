@@ -5,7 +5,14 @@
  "evidence": [
   {
    "game": "games/cauldron.md",
-   "text": "Main program is compiled BASIC (inferred from its runtime): 0x61D8 PEEK (LD L,(HL)), 0x61DB IN; figure plotter 0x6357 has 14 callers.",
+   "text": "Main program is compiled BASIC (inferred from its runtime): 0x61D8 PEEK (LD L,(HL)), 0x61DB IN, 0x61F1 POINT; figure plotter 0x6357 has 14 callers.",
+   "quote": "Main program is compiled BASIC (inferred from its runtime): 0x61D8 PEEK (`LD L,(HL)`), 0x61DB IN,",
+   "shown_on": "analysis"
+  },
+  {
+   "game": "games/cauldron.md",
+   "text": "Runtime PEEK / POINT / ATTR routines: find them, class reads by return address.",
+   "quote": "runtime PEEK / POINT / ATTR routines: find them, class reads by return address",
    "shown_on": "analysis"
   }
  ],
@@ -20,6 +27,6 @@
   "screen readers",
   "return address"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

@@ -5,8 +5,9 @@
  "evidence": [
   {
    "game": "games/inferno.md",
-   "text": "Copier calls limiter 9907 after row 6; slack after it (p10) 2.9-13.2k T, so +10 ms of hook work slips 56-81% of updates a frame; a '10 ms total' budget is no gate.",
-   "shown_on": "unknown"
+   "text": "Copier calls the 9907 limiter after row 6 (97FB); slack after 9907, p10, is 2.9-13.2 k T, so +10 ms of hook work slips 56-81 % of updates a frame; \"10 ms total\" is no gate.",
+   "shown_on": "analysis",
+   "quote": "2.9-13.2 k T, so +10 ms of hook work slips 56-81 % of updates a frame; \"10 ms total\" is no gate."
   }
  ],
  "level": "observed",
@@ -21,6 +22,6 @@
   "budget",
   "copier"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

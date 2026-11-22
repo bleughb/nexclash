@@ -5,8 +5,9 @@
  "evidence": [
   {
    "game": "games/castle_master.md",
-   "text": "After hardware runs 1-2, m3b_seq replays the build's overlay code along the recording (5,357 views, 3,670 cursor moves, 87 portcullis steps); the printer writes the view buffer between views without reaching the screen.",
-   "shown_on": "simulator"
+   "text": "m3b_seq replays the build's overlay code along the recording (5,357 views, 3,670 cursor moves, 87 portcullis steps); the printer in the handler writes the view buffer between views, never copied.",
+   "quote": "5,357 views, 3,670 cursor moves, 87 portcullis steps)",
+   "shown_on": "unknown"
   }
  ],
  "level": "observed",
@@ -23,6 +24,6 @@
   "printer",
   "recording"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

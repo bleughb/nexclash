@@ -5,22 +5,26 @@
  "evidence": [
   {
    "game": "games/olli_and_lissa.md",
-   "text": "First layout model was wrong (mask a row and a byte larger, a pixel left); the game's own routine run on an empty and a full background showed the layout.",
-   "shown_on": "simulator"
+   "text": "First model of the figure's layout was wrong (the mask is a row and a byte larger and starts a pixel left); the game's own routine run on an empty and a full background showed the layout.",
+   "quote": "the game's own routine run on an empty and a full background showed the layout.",
+   "shown_on": "unknown"
   },
   {
    "game": "games/olli_and_lissa_3.md",
-   "text": "Running the game's routines on an empty and a full screen gave byte order, empty rows and the mask's corner; the model matched at every shift.",
-   "shown_on": "simulator"
+   "text": "The game's own routines run on an empty and a full screen gave the layout (byte order in a row, the empty rows, the mask's corner) at the first try; the model matched at every shift.",
+   "quote": "The game's own routines run on an empty and a full screen gave the layout (byte order",
+   "shown_on": "unknown"
   },
   {
    "game": "games/el_capitan_trueno.md",
-   "text": "Blank buffers 0x00 / 0xFF at frame 5000 showed the mask is a one-pixel outline; a morphological body left 49 mask pixels uncovered, so masks come from the game.",
-   "shown_on": "simulator"
+   "text": "Measured on f5000 with blank buffers 0x00 / 0xFF: the mask is a ~1 px outline built in pixel pairs; a morphological body leaves 49 mask pixels uncovered, so masks must come from the game.",
+   "quote": "fill(close1(dilate1(ink)))) leaves 49 mask pixels uncovered -> masks must come from the game.",
+   "shown_on": "unknown"
   },
   {
    "game": "games/olli_and_lissa_2.md",
    "text": "A masked graphic sits a row below and a pixel right of its mask's corner.",
+   "quote": "a masked graphic sits a row below and a pixel right of its mask's corner",
    "shown_on": "analysis"
   }
  ],
@@ -37,6 +41,6 @@
   "00 buffer",
   "FF buffer"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

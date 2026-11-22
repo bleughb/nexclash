@@ -12,6 +12,9 @@
  ],
  "level": "inferred",
  "area": "platform",
+ "facts": {
+  "machine": "128K"
+ },
  "words": [
   "7FFD lock",
   "NextReg 08",

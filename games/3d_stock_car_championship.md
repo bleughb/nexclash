@@ -141,16 +141,16 @@ pixels on a display).
 7. Faults: Fuse "Record from snapshot" on the .z80, autosave off, send the RZX.
 
 ## Lessons
-- [local: sprite from the accepted state] a sprite set from a routine's proposed fields sat off the car after
+- [kb lesson.sprite-from-committed-state: sprite from the accepted state] a sprite set from a routine's proposed fields sat off the car after
   a refused move; set it after the commit, from what the game drew from.
 - [local: a caller tells the screens apart] one clear routine serves text screens and the track; its return
   address distinguishes them without any state.
-- [local: this engine sets it in auto(); raised in the pull request] a build that adds banks above 47 must say so in
+- [kb lesson.nex-header-bank-byte: this engine sets it in auto(); raised in the pull request] a build that adds banks above 47 must say so in
   .nex header byte 8, which the converter leaves at 0.
-- [local: closed in this pull request, nexclash/nxc.py re-vendored] this repo's packager could not make an
+- [kb lesson.nxc-tape-patch-recipe: closed in this pull request, nexclash/nxc.py re-vendored] this repo's packager could not make an
   option that needs more memory (SET3); the re-vendored one does, with toggles beside it.
 - [card patch.iff-safe-read §Use] `show` first trusted one LD A,I; review caught it, hooklib.iff_audit now says twice.
-- [local: turbosound after setup] the loader clears NR 0x08 bit 1 after the setup stub; a hook that needs the
+- [kb lesson.loader-clears-turbosound-bit: turbosound after setup] the loader clears NR 0x08 bit 1 after the setup stub; a hook that needs the
   second chip must set it itself.
 
 ## Technique use

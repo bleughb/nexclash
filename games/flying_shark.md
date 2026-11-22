@@ -43,13 +43,13 @@ Nothing has run on a Next. To check: the flip below the play area and the blit a
 - verify.update-locked-pace: used: lockstep pace runs on an immunity fixture.
 
 ## Lessons
-- [local: packed snapshot] A loader snapshot holding the game packed takes its sites through a map of the stream's literal bytes; the .nxc's banks stay close to the .z80's, where a build from a state after the unpack would not fit the site table.
-- [local: archive POKEs] One entry of the archive's .pok is an address in the packed snapshot (54462, lives), the rest are live addresses that the unpack overwrites: tested on the real game, translated through the stream map.
-- [local: pace step] When the handler overruns two frames the update takes three: a small time difference near the line moves whole updates, so the blit's window has to be right to within a few hundred T.
-- [local: no sim timing] The simulator's T is not JNext's (140,000 against 131,000 T a handler here): the toolkit's frame length needed 72,000 T to give the 2-frame beat, and death paths starved; POKE tests moved to JNext.
+- [kb lesson.packed-loader-snapshot-stream-map: packed snapshot] A loader snapshot holding the game packed takes its sites through a map of the stream's literal bytes; the .nxc's banks stay close to the .z80's, where a build from a state after the unpack would not fit the site table.
+- [kb lesson.archive-poke-translation: archive POKEs] One entry of the archive's .pok is an address in the packed snapshot (54462, lives), the rest are live addresses that the unpack overwrites: tested on the real game, translated through the stream map.
+- [kb lesson.frame-locked-pace: pace step] When the handler overruns two frames the update takes three: a small time difference near the line moves whole updates, so the blit's window has to be right to within a few hundred T.
+- [kb lesson.simulator-timing-vs-hardware: no sim timing] The simulator's T is not JNext's (140,000 against 131,000 T a handler here): the toolkit's frame length needed 72,000 T to give the 2-frame beat, and death paths starved; POKE tests moved to JNext.
 - [local: pixel lists] Cached per-graphic pixel lists beat recomputing rings by a factor of 7 at 28 MHz, and clearing by replaying the list beats a rectangle.
-- [local: upstream naming] The default is a hook build, so auto names it NAME_sprites.nex, which nxcout packages as the default; the plain conversion would take NAME.nex.
-- [local: fixture start states] A fixture recording that starts after the unpack holds game data where the build's start-up tail sits, so the ROM path check reports tail reads that the real start never makes. Recordings in the verify list start from the snapshot; such a fixture is replayed by hand.
+- [kb lesson.auto-naming-hook-build: upstream naming] The default is a hook build, so auto names it NAME_sprites.nex, which nxcout packages as the default; the plain conversion would take NAME.nex.
+- [kb lesson.recording-start-state-vs-tail-check: fixture start states] A fixture recording that starts after the unpack holds game data where the build's start-up tail sits, so the ROM path check reports tail reads that the real start never makes. Recordings in the verify list start from the snapshot; such a fixture is replayed by hand.
 
 ## Friction
 - reuse: [none: the shared pace and hook libraries were enough]

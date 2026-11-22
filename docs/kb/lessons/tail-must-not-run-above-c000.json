@@ -5,17 +5,22 @@
  "evidence": [
   {
    "game": "games/el_capitan_trueno.md",
-   "text": "Default tail put below SP at 0xFF97 vanished; choose_tail_addr refuses above 0xC000 only for 128K; nextboot.check caught it; fix --tail 0xA6C9 (write-first over the whole RZX).",
-   "shown_on": "simulator"
+   "text": "Default tail put below SP at 0xFF97 vanished (above 0xC000 its OUT 0x7FFD maps bank 0 back); choose_tail_addr refuses above 0xC000 only for 128K; nextboot.check caught it; fix --tail 0xA6C9 (write-first over the whole RZX).",
+   "quote": "back and the tail vanishes (choose_tail_addr refuses >0xC000 only for 128K; nextboot.check catches it:",
+   "shown_on": "unknown"
   },
   {
    "game": "games/rainbow_islands.md",
    "text": "128K start-up tail must end below 0xC000 (its 7FFD write remaps C000-FFFF); tail at 0x9F00.",
+   "quote": "128K start-up tail must end below 0xC000 (its 7FFD write remaps C000-FFFF). Tail at 0x9F00.",
    "shown_on": "unknown"
   }
  ],
  "level": "demonstrated",
  "area": "toolkit",
+ "facts": {
+  "machine": "128K"
+ },
  "words": [
   "tail",
   "0xC000",
@@ -24,6 +29,6 @@
   "boot check",
   "nextboot"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

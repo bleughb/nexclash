@@ -1,16 +1,18 @@
 {
  "id": "lesson.pace-windows-by-displaced-work",
  "kind": "method",
- "claim": "One pace floor per update cannot pace a game whose displaced work varies by figure; use windows on the displaced work, sized from the plain build.",
+ "claim": "One pace floor per update cannot pace a game whose displaced work varies by figure; scale the repayment by the displaced work per figure (windows or a fixed debt per figure), measured on the plain build.",
  "evidence": [
   {
    "game": "games/nodes_of_yesod.md",
-   "text": "One floor on a 332-line player update gave stretches of -13.1 to +13.9%; replaced by one window per displaced job (copy, attribute walk).",
+   "text": "Stretches of 20 updates ran -13.1 to +13.9%; cause: one floor on the time of a player update (332 lines), which knew nothing of what the update had displaced.",
+   "quote": "Cause: one floor on the time of a player update (332 lines), which knew nothing of what the update had displaced.",
    "shown_on": "unknown"
   },
   {
    "game": "games/silkworm.md",
-   "text": "K alone: many-figure updates +10%, quiet -3%; a fixed debt per figure plus higher K flattened it, whole runs within 2%.",
+   "text": "With K alone, updates with many figures ran +10% while quiet ones ran -3%; a fixed debt per figure and a higher K flattened it, whole runs within 2%.",
+   "quote": "With K alone, updates with many figures ran +10% while quiet ones ran -3%: a window scales the logic, not a per-figure cost.",
    "shown_on": "unknown"
   }
  ],
@@ -29,6 +31,6 @@
   "per figure",
   "K"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

@@ -5,7 +5,8 @@
  "evidence": [
   {
    "game": "games/gunfright.md",
-   "text": "DMA selected only where the capability and hardware-IM2 gate allows; CPU-only and older or unknown-core paths pass the same ABI and negative controls; 1,728 DMA gate/fallback cases.",
+   "text": "The shared capability and hardware-IM2 gate selects ordinary DMA only where supported; CPU-only and older/unknown-core paths pass the same ABI and negative controls (1,728 DMA gate/fallback cases).",
+   "quote": "The shared capability and hardware-IM2 gate selects ordinary DMA only where supported; CPU-only and older/unknown-core paths pass the same ABI and negative controls.",
    "shown_on": "simulator"
   }
  ],
@@ -20,6 +21,6 @@
   "negative control",
   "CPU-only"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

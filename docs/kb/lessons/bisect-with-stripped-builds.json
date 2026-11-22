@@ -5,8 +5,9 @@
  "evidence": [
   {
    "game": "games/inferno.md",
-   "text": "JNext headless before hardware rounds; it found that hooks overwrote the IM 2 vector bytes at ROM 3BFF-3C00 (I = 3B).",
-   "shown_on": "jnext"
+   "text": "JNext headless before hardware rounds; it found that the intro's IM 2 vector is ROM 3BFF-3C00 (I = 3B) and hooks must leave those bytes FF.",
+   "shown_on": "jnext",
+   "quote": "The intro uses IM 2 with I = 3B: ROM 3BFF-3C00 is its vector. Hooks must leave them FF; JNext headless found it."
   }
  ],
  "level": "observed",
@@ -20,6 +21,6 @@
   "PC read",
   "debugger"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

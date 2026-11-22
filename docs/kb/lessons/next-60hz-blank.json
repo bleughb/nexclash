@@ -1,11 +1,12 @@
 {
  "id": "lesson.next-60hz-blank",
  "kind": "fact",
- "claim": "On a 60 Hz Next a game whose start-up switches to 50 Hz shows a black flash at load; this does not speed the game up.",
+ "claim": "On a 60 Hz Next, a game whose start-up stub switches to 50 Hz shows a black flash at load.",
  "evidence": [
   {
    "game": "games/castle_master.md",
    "text": "A 60 Hz Next: a black flash at load (the stub's switch to 50 Hz).",
+   "quote": "A 60 Hz Next: a black flash at load (the stub's switch to 50 Hz).",
    "shown_on": "unknown"
   }
  ],
@@ -18,6 +19,6 @@
   "video mode switch",
   "start-up stub"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

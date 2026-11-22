@@ -5,13 +5,15 @@
  "evidence": [
   {
    "game": "games/knight_lore.md",
-   "text": "R must match at player updates, including the bootstrap and ROM baseline (archive bootstrap and ROM baseline differ).",
+   "text": "R must match at player updates, including the bootstrap and hidden ROM; a plain NEX on a different ROM is not a valid original baseline.",
+   "quote": "hidden ROM; a plain NEX on a different ROM is not a valid original baseline.",
    "shown_on": "unknown"
   },
   {
    "game": "games/lunar_jetman.md",
-   "text": "System ROM3 comes from nextboot.system_rom3(); import verify ran with ROM model NextZXOS ROM3.",
-   "shown_on": "unknown"
+   "text": "System ROM3 comes from nextboot.system_rom3(); import verify ran with ROM model NextZXOS ROM3 8c34d957.",
+   "quote": "ROM model NextZXOS ROM3 8c34d957",
+   "shown_on": "simulator"
   }
  ],
  "level": "observed",
@@ -25,6 +27,6 @@
   "bootstrap",
   "system ROM"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

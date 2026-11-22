@@ -16,6 +16,9 @@
  ],
  "level": "observed",
  "area": "toolkit",
+ "enforced_by": [
+  "nexclash.hooklib.iff_audit"
+ ],
  "words": [
   "LD A,I",
   "interrupt flag",

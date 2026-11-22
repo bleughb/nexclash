@@ -5,8 +5,9 @@
  "evidence": [
   {
    "game": "games/tranz_am.md",
-   "text": "The game's own entry marks a draw (a byte in hook RAM); the draw hook places sprites only for a marked draw; an unmarked one changes nothing.",
-   "shown_on": "unknown"
+   "text": "The game's own entry marks a draw (a byte in hook RAM); the draw hook places sprites only for a marked draw, so the two routines that call the set-up past its start change no sprite; an event that starts mid-draw has to be given what the hooks before it left, or all 794 draws failed.",
+   "shown_on": "unknown",
+   "quote": "The game's own entry marks a draw (a byte in hook RAM); the draw hook places sprites only for a marked draw, so"
   }
  ],
  "level": "observed",
@@ -18,6 +19,6 @@
   "hook state",
   "draw hook"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

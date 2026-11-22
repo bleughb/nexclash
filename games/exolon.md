@@ -174,7 +174,7 @@ NextZXOS, RAM and package hash. These are requested checks, not claims of hardwa
 - [local: Exolon fixture tests] Large frame 24 belongs to fixture ownersB201/B281/B301/B381;
   pairing it with player ownerB181 is invalid. Enumerate real owner/frame relationships.
 
-- [local: Exolon particle entry] Moving the speed latch before IFF/R capture removes 29.75us
+- [kb lesson.r-register-checks-local-vs-global: Exolon particle entry] Moving the speed latch before IFF/R capture removes 29.75us
   from a sampled full effect call (340.50 ->310.75us), but R correction must include the 15
   fetches moved before capture. All four incoming clocks and IFF/R boundaries are checked.
 - [local: Exolon deadline evidence] A median pulse error near 2.6% still contains 14.7% outliers.
@@ -183,12 +183,12 @@ NextZXOS, RAM and package hash. These are requested checks, not claims of hardwa
 
 - [local: Exolon source selection] Requested source contains eight banks with paging locked, yet
   executes AY sound output. Retain it; changing to the 48K colour source would discard release behaviour.
-- [local: Exolon recording] The existing private 128K recorder from Treasure Island Dizzy retains
+- [kb lesson.recorder-128k-not-in-toolkit: Exolon recording] The existing private 128K recorder from Treasure Island Dizzy retains
   AY state, all banks and native fetch counts; the shared 48K recorder cannot save this source directly.
 
 - [local: Exolon bitplanes] Each .256 address has eight bitplanes followed by its original byte,
   not eight palette indices. Decode the planes; the first incorrect draft was replaced before editing.
-- [local: Exolon keyboard] Read the actual key decoder before recording movement. The early Z/X
+- [kb lesson.scripted-keys-must-reach-game: Exolon keyboard] Read the actual key decoder before recording movement. The early Z/X
   schedule was stationary in this release; corrected O/P recordings now reach later zones.
 - [local: Exolon paint order] Match before-plot colours by position; an owner-only lookup loses the
   player's colour because its painter's HL is the frame pointer, not the old-picture buffer.
@@ -197,34 +197,34 @@ NextZXOS, RAM and package hash. These are requested checks, not claims of hardwa
 - [local: Exolon empty effects] Profile the deliberate blank drawing separately from real effects;
   passing blank padding through the full sprite hook cost more than the original plot itself.
 
-- [local: Exolon native trap] The first relocated padding copy at 3D80 passed the simple model but
+- [kb lesson.divmmc-3dxx-paging-suspect: Exolon native trap] The first relocated padding copy at 3D80 passed the simple model but
   stopped native JNext after 17 updates. The 3Dxx DivMMC automatic-paging region is a suspected cause;
   moved to 3600; native trials now run 180 updates and match state at every update. The cause remains an inference.
 
 - [local: Exolon pulse spacing] Particle rendering is inside the 95A3 noise oscillator. Identical
   FE values and original CPU speed do not prove sound pitch; compare edge timestamps as well.
-- [local: Exolon pattern publication] Six spare patterns suffice for four-part figures; prepare
+- [kb lesson.cache-spare-slots: Exolon pattern publication] Six spare patterns suffice for four-part figures; prepare
   all parts before one attribute burst. Unit and replay oracle checks catch displaced/changed parts.
 - [local: Exolon checkpoint effects] Mid-game native fixtures must seed active XOR effects;
   otherwise their first erase is mistaken for a new draw. Normal menu starts reset the pool.
-- [local: Exolon loading art] The TAP screen is compressed. Execute its original 8001 decoder
+- [kb lesson.tape-intake-decoded-state: Exolon loading art] The TAP screen is compressed. Execute its original 8001 decoder
   from the sixth block; looking only for a6914-byte tape block misses it.
 
-- [local: Exolon native snapshots] JNext mem/ram.bin includes a 0x40000 physical offset before
+- [kb lesson.jnext-ram-dump-offset: Exolon native snapshots] JNext mem/ram.bin includes a 0x40000 physical offset before
   ordinary Next RAM. Assert the hook-code signature before reading page 24 state; an all-zero
   free-pool count at every checkpoint identified the first check's wrong offset.
 - [local: Exolon menu inspection] The original menu uses the same star plotters as play;
   zero visible sprites is not a valid reset assertion. Check stale multipart actors and the
   source-pixel replay while retaining original animated stars.
 
-- [local: Exolon ROM audit] A static read mismatch is not automatically a consumed value.
+- [kb lesson.rom-audit-read-not-consumed: Exolon ROM audit] A static read mismatch is not automatically a consumed value.
   B0B7's original self-copy LDIR is a delay. Keep a per-read guard and full-function ABI/time
   proof before exempting 2000..3FFF; never broadly waive unknown ROM consumers or final flags.
 
 ## Friction
 
 - reuse: [local: Exolon intake] Reused the private 128K recorder and shared survey.
-- retries: [local: Exolon intake] A48K-only recorder failed before producing a recording; retained logs.
+- retries: [kb lesson.recorder-128k-not-in-toolkit: Exolon intake] A48K-only recorder failed before producing a recording; retained logs.
 - environment: [local: Exolon intake] Own clone and outputs only, existing pilot Python environment.
 - hand-rolled: [local: Exolon intake] Input schedule is specific to the original menu and Kempston mode.
 - scratch: [local: Exolon intake] Private intake scripts retained with source/hash evidence until engine integration.

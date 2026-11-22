@@ -6,11 +6,13 @@
   {
    "game": "games/inferno.md",
    "text": "Store cache keys must cover all code they hold.",
+   "quote": "Store cache keys must cover all code they hold.",
    "shown_on": "unknown"
   },
   {
    "game": "games/gunrunner.md",
-   "text": "A pace script that built its fixture only if the file was missing measured a build from hours earlier under a reused tag; use a new tag per measurement and build once before the runs.",
+   "text": "A pace script that builds its fixture only if the file is missing measured a build from hours earlier under a reused tag; use a new tag per measurement and build once before the runs start.",
+   "quote": "A pace script that builds its fixture only if the file is missing measured a build from hours earlier under a reused tag.",
    "shown_on": "unknown"
   }
  ],
@@ -25,6 +27,6 @@
   "fixture",
   "measurement"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

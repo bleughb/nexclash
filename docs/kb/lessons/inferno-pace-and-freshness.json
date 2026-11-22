@@ -1,12 +1,13 @@
 {
  "id": "lesson.inferno-pace-and-freshness",
  "kind": "method",
- "claim": "Measure publication rate, longest miss run and displayed-state age separately from pace, and re-measure the cumulative figure after each layer added; assumed spare time is not a budget.",
+ "claim": "Re-measure the cumulative dropped-update rate and the longest run of misses after each layer added; assumed spare time is not a budget.",
  "evidence": [
   {
    "game": "games/inferno.md",
-   "text": "Dropped updates rose from 12.3% to 14.9% as a layer was added, with runs of misses up to 14 updates; the notes name publication rate, longest miss run and display age as separate measures.",
-   "shown_on": "simulator"
+   "text": "Dropped updates rose from 12.3% to 14.9% as a layer was added, with runs of misses up to 14 updates.",
+   "quote": "Gate 0 failures, 0 misses; 14.9 % dropped (12.3 % before), runs to 14. NEX m3d.",
+   "shown_on": "unknown"
   }
  ],
  "level": "observed",
@@ -19,6 +20,6 @@
   "cumulative",
   "dropped updates"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

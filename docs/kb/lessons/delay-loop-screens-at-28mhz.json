@@ -5,7 +5,8 @@
  "evidence": [
   {
    "game": "games/r_type.md",
-   "text": "28 MHz only from level draw to the next Layer 2 off; title, scores, name entry and continue stay at 3.5 MHz. At 28 MHz every update took 3 frames (45% fast; recording averages 4.35, title alternates 2 and 3). Title-to-scores 621 frames vs 597 original.",
+   "text": "28MHz only from the level draw to the next Layer 2 off; title, scores, name entry and continue run at 3.5MHz (busy-loop timing). At 28MHz every update took 3 frames (45% fast; recording averages 4.35, title alternates 2 and 3); title to scores 621 vs original 597 frames.",
+   "quote": "28MHz only from the level draw to the next Layer 2 off (title, scores, name entry and",
    "shown_on": "unknown"
   }
  ],
@@ -21,6 +22,6 @@
   "speed switch",
   "turbo"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

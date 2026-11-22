@@ -11,6 +11,13 @@
  ],
  "level": "demonstrated",
  "area": "method",
+ "facts": {
+  "interrupts": "on"
+ },
+ "enforced_by": [
+  "asm/lib/hlib_pace.asm",
+  "nexclash.hooklib.selfcheck"
+ ],
  "words": [
   "line clock",
   "DI",

@@ -5,8 +5,21 @@
  "evidence": [
   {
    "game": "games/inferno.md",
-   "text": "Unfinished coroutine work was dropped (12% of updates, runs to 6, later 14.9% with runs to 14); a 128-slot protected store kept as a recency list.",
-   "shown_on": "simulator"
+   "text": "Unfinished coroutine work is dropped at the window's end (12 %, runs to 6).",
+   "quote": "m3b 8F95 work as a cw_wait coroutine; m3c unfinished work dropped",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/inferno.md",
+   "text": "Later build: 0 gate failures, 0 misses; 14.9 % of work dropped (12.3 % before), runs to 14.",
+   "quote": "Gate 0 failures, 0 misses; 14.9 % dropped (12.3 % before), runs to 14.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/inferno.md",
+   "text": "Later build: 0 gate failures, 0 misses; 14.9 % of work dropped (12.3 % before), runs to 14.",
+   "quote": "Gate 0 failures, 0 misses; 14.9 % dropped (12.3 % before), runs to 14.",
+   "shown_on": "unknown"
   }
  ],
  "level": "observed",
@@ -20,6 +33,6 @@
   "recency list",
   "deferred work"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

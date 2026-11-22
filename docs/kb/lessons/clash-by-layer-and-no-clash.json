@@ -5,12 +5,14 @@
  "evidence": [
   {
    "game": "games/trap_door.md",
-   "text": "Analysed and skipped: no colour clash to remove; a stage-0 measure of two-figure cells was proposed.",
+   "text": "Analysed and skipped by owner decision 2026-11-14 (no colour clash to remove); a stage-0 measure of cells given ink by two figures with different colours is listed as open.",
+   "quote": "State: ANALYSED, SKIPPED - owner decision 2026-11-14 (no colour clash to remove)",
    "shown_on": "analysis"
   },
   {
    "game": "games/scooby_doo.md",
-   "text": "Pending the owner's call on the default's small clash.",
+   "text": "A nearly monochrome look still had a little clash: 0.35% of figure cells in level 1, 0.13% in level 2, 0.08% in level 3, 3.6% in level 4's rooms (measured by the figures' boxes); the owner decides on the default's small clash.",
+   "quote": "Measured by the figures' boxes (work/overlap.py): 0.35% of figure cells in level 1, 0.13% in level 2, 0.08% in level 3, 3.6% in level 4's rooms.",
    "shown_on": "unknown"
   }
  ],
@@ -27,6 +29,6 @@
   "colour",
   "stage 0"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

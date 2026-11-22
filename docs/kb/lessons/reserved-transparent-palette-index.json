@@ -5,7 +5,8 @@
  "evidence": [
   {
    "game": "games/head_over_heels.md",
-   "text": "Index 255 is painted white, not free transparency: duplicate index 71 reserved for transparency, painted 71 mapped to 63 only at the final display copy, ULA bright-black entry 24 reset to black.",
+   "text": "Index255 is painted white, not free transparency; reserve exact duplicate71 and remap painted71 to63 only at final copy, keep source mask values untouched, and reset ULA bright-black entry24 to black.",
+   "quote": "Reserve exact duplicate71 and remap painted71 to63 only at final copy; keep source mask values",
    "shown_on": "unknown"
   }
  ],
@@ -19,6 +20,6 @@
   "bright black",
   "mask"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

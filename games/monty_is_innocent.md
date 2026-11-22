@@ -48,7 +48,7 @@ Infinite lives 56473 DEC A -> OR A; Guards do not catch you 56440 (the death rou
 collision test, 54804) -> RET.
 
 ## Lessons
-- [local: verifier and the fast simulator] the C replay calls before() only at hooks and interrupts: an interior of
+- [kb lesson.displaced-loop-entries: verifier and the fast simulator] the C replay calls before() only at hooks and interrupts: an interior of
   a patched entry hit once means an interrupt between its first instructions; accept sequence and interrupt returns.
 - [local: negative controls] a broken hook can run away in the event simulator: event() reports it as a failure.
 - [local: this game's player is not Monty] check who a figure is (render its images) before naming it in player-facing notes.

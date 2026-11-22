@@ -11,6 +11,9 @@
  ],
  "level": "observed",
  "area": "platform",
+ "facts": {
+  "machine": "128K"
+ },
  "words": [
   "NEX launch",
   "7FFD",

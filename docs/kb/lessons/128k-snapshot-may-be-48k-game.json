@@ -1,11 +1,12 @@
 {
  "id": "lesson.128k-snapshot-may-be-48k-game",
  "kind": "method",
- "claim": "A 128K snapshot may hold a 48K game: count 7FFD writes, AY use, ROM reads and non-empty extra banks before choosing the build path.",
+ "claim": "A 128K snapshot may hold a 48K game: count 7FFD writes, AY use and ROM reads before choosing the build path.",
  "evidence": [
   {
    "game": "games/everyones_a_wally.md",
-   "text": "128K snapshot (7FFD=0x10) of a 48K game: never writes 7FFD, beeper only, never reads the ROM.",
+   "text": "128K snapshot (7FFD=0x10: ROM1, bank 0) of a 48K game: never writes 7FFD, beeper only, never reads the ROM.",
+   "quote": "Never writes 7FFD, beeper only, never reads the ROM.",
    "shown_on": "analysis"
   }
  ],
@@ -23,6 +24,6 @@
   "snapshot",
   "classify"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

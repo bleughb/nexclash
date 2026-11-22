@@ -6,16 +6,19 @@
   {
    "game": "games/gunfright.md",
    "text": "Opacity is mask OR ink, because original ink is not always a subset of mask.",
+   "quote": "opacity is mask OR ink, because original ink is not always a subset of mask",
    "shown_on": "analysis"
   },
   {
    "game": "games/head_over_heels.md",
-   "text": "Colour masks are not binary transparency; ignoring their painted bits made a hollow image.",
+   "text": "Colour masks are not binary transparency: ignoring their painted bits made the first offline colour image hollow; preserve the original AND/OR composition per plane.",
+   "quote": "bits made the first offline colour image hollow; preserve the original AND/OR composition per plane.",
    "shown_on": "unknown"
   },
   {
    "game": "games/knight_lore.md",
-   "text": "Keeps the original complete clear/plot order; a colour canvas holds the exact final pixels and opaque black stays opaque.",
+   "text": "Keeps the original opaque masks and plot order, coincident ink included; opaque black stays opaque.",
+   "quote": "keep the original opaque masks and plot order, coincident ink included.",
    "shown_on": "unknown"
   }
  ],
@@ -29,6 +32,6 @@
   "transparency",
   "plot order"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

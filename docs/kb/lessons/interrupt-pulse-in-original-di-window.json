@@ -5,7 +5,8 @@
  "evidence": [
   {
    "game": "games/head_over_heels.md",
-   "text": "Original 967B sound-bank DI window: trace the actual interrupted PC, then recover the pending pulse.",
+   "text": "Original sound-bank DI window: trace the actual interrupted PC, then recover the pending pulse between companion drawing spans; do not change the sound routine.",
+   "quote": "sound-bank DI window. Trace the actual interrupted PC, then recover the pending",
    "shown_on": "unknown"
   }
  ],
@@ -21,6 +22,6 @@
   "sound routine",
   "interrupted PC"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

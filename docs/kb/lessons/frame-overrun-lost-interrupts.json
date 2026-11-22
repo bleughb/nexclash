@@ -6,17 +6,28 @@
  "evidence": [
   {
    "game": "games/rainbow_z80n.md",
-   "text": "Game frame runs in the IM2 handler at one update per 3 interrupts; a frame over 20 ms makes that cycle take 4 (a 1/50 s hitch): 8% and 17% of frames over 20 ms in two recordings, 32.5% before recovery in one build; recovery needs over 60 ms to hitch.",
+   "text": "A game frame longer than one video frame (20 ms) loses the interrupt it spans; the limiter then counts from the next, so that cycle takes 4 interrupts: 8 % and 17 % of game frames over 20 ms in two recordings (x 8/6.5 for 28 MHz wait states).",
+   "quote": "next one, so that cycle takes 4 interrupts = a 1/50 s hitch, and music ticks bunch. Measured with",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/rainbow_z80n.md",
+   "text": "The raster line is sampled at the interrupt, render start, band ends and frame end; a sample below the previous one is a wrap, and missed interrupts are credited.",
+   "quote": "a sample below the previous one = a wrap (V_WR)",
    "shown_on": "simulator"
   },
   {
    "game": "games/rainbow_z80n_pace.md",
-   "text": "The redraw after a lost life went from 124 frames to 57-58 on JNext; the update then starts at the next interrupt so it moves in 20 ms steps.",
+   "text": "The redraw after a lost life went from 124 frames to 57-58 on JNext; the update then starts at the next interrupt, so it moves in 20 ms steps.",
+   "quote": "Result 57 to 58 frames, on JNext; the update then starts at the next interrupt, so it moves in 20 ms steps.",
    "shown_on": "jnext"
   }
  ],
  "level": "observed",
  "area": "platform",
+ "facts": {
+  "interrupts": "on"
+ },
  "words": [
   "missed interrupt",
   "frame limiter",
@@ -27,6 +38,6 @@
   "overrun",
   "wait states"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

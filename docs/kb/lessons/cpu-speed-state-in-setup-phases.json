@@ -5,7 +5,8 @@
  "evidence": [
   {
    "game": "games/r_type.md",
-   "text": "28 MHz only from the level draw to the next Layer 2 off; title, scores, name entry and continue run at 3.5 MHz; native ISR always 3.5 MHz.",
+   "text": "28MHz only from the level draw to the next Layer 2 off; title, scores, name entry and continue run at 3.5MHz (busy-loop timing); the native ISR (all beeper sound) always 3.5MHz.",
+   "quote": "28MHz only from the level draw to the next Layer 2 off (title, scores, name entry and",
    "shown_on": "unknown"
   }
  ],
@@ -20,6 +21,6 @@
   "setup",
   "transition"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

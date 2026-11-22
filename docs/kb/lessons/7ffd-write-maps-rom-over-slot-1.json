@@ -5,7 +5,8 @@
  "evidence": [
   {
    "game": "games/that_sinking_feeling.md",
-   "text": "The ISR pages by port 7FFD; on a Next (JNext at least) that resets slot 1 to the ROM and the ISR calls the ROM's IM 1, so a hook in slot 1 with interrupts on is unsafe unless the ISR restores it.",
+   "text": "The ISR pages by port 7FFD; on a Next (JNext at least) that resets slot 1 to the ROM and the ISR calls the ROM's IM 1, so a hook in slot 1 with interrupts on is unsafe unless the ISR puts slot 1 back.",
+   "quote": "On a Next (JNext at least) that resets slot 1 to the ROM, and the ISR calls the ROM's IM 1.",
    "shown_on": "jnext"
   }
  ],
@@ -23,6 +24,6 @@
   "hook page",
   "interrupts on"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

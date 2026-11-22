@@ -5,12 +5,14 @@
  "evidence": [
   {
    "game": "games/castle_master.md",
-   "text": "JNext ran the renderer at 1.34-1.42x the simulator's T (wait states), moving the worst outdoor view from in budget to about 10 fps.",
+   "text": "Simulator T is not 28 MHz time: JNext ran the renderer at 1.34-1.42x (wait states), which moved the worst outdoor view from \"in budget\" to ~10 fps. Budget from T x 1.4.",
+   "quote": "Simulator T is not 28 MHz time: JNext ran the renderer at 1.34-1.42x",
    "shown_on": "jnext"
   },
   {
    "game": "games/flying_shark.md",
-   "text": "A handler measured 140,000 T in the simulator against 131,000 in JNext; the toolkit frame length needed 72,000 T to give the 2-frame beat.",
+   "text": "The simulator's T is not JNext's (140,000 against 131,000 T a handler here): the toolkit's frame length needed 72,000 T to give the 2-frame beat, and death paths starved; POKE tests moved to JNext.",
+   "quote": "The simulator's T is not JNext's (140,000 against 131,000 T a handler here): the toolkit's frame length needed 72,000 T to give the 2-frame beat",
    "shown_on": "jnext"
   }
  ],
@@ -26,6 +28,6 @@
   "frame rate",
   "timing"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

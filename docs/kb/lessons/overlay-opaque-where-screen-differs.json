@@ -5,8 +5,9 @@
  "evidence": [
   {
    "game": "games/castle_master.md",
-   "text": "Overlay sprites are opaque per pixel where the screen differs from the raster's output (buffer at the copy, marker out), ink where its bit is set.",
-   "shown_on": "hardware"
+   "text": "Overlay sprites over Layer 2 are opaque per pixel where the screen differs from the raster's output (the buffer at the copy, marker out), ink where its bit is set.",
+   "shown_on": "unknown",
+   "quote": "black), opaque per pixel where the screen differs from the raster's output (ov_s: the buffer at the copy,"
   }
  ],
  "level": "observed",
@@ -19,6 +20,6 @@
   "per pixel",
   "marker"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

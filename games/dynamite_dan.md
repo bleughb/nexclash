@@ -100,10 +100,10 @@ Dan solid cyan in room 43, cables in front of him, legs hidden in the basket; hu
 
 ## Lessons
 - [local: pilot, docs not edited] A per-room census found Dan's sinking (0xDBED); the no-cheat recording never drowned. Poke the start room to reach every room cheaply.
-- [local: pilot, docs not edited] the room census counts Dan spawned inside scenery: use play recordings for the clash numbers, census for coverage.
+- [kb lesson.reach-states-by-poke: pilot, docs not edited] the room census counts Dan spawned inside scenery: use play recordings for the clash numbers, census for coverage.
 - [local: this game] bot rollouts get stuck in room 6 (the lives cheat keeps them alive): 49,000 frames of nothing.
 - [local: this engine] a negative control mutating one table entry passes on states that use another frame: mutate all.
-- [local: this game's start] demonstrated: with the whole alt ROM image the TOSEC snapshot's BASIC runs to USR 51200 as on a 48K (t1: 775 ROM bytes as recorded), so no derived start is needed.
+- [kb lesson.whole-alt-rom-image: this game's start] demonstrated: with the whole alt ROM image the TOSEC snapshot's BASIC runs to USR 51200 as on a 48K (t1: 775 ROM bytes as recorded), so no derived start is needed.
 
 - [none: the v1.1 keys came in from the pilot as they were published; the only change is that the page text is now derived from the snapshot instead of stored]
 

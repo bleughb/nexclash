@@ -5,18 +5,21 @@
  "evidence": [
   {
    "game": "games/lunar_jetman.md",
-   "text": "A recording that starts mid-game leaves the sprite and figure models empty while the screen has figures; start every recording at the title, cheats poked into the start state.",
-   "shown_on": "unknown"
+   "text": "A recording that starts mid-game leaves the sprite model and the figure model empty while the screen has figures; start every recording at the title, cheats poked into the start state.",
+   "shown_on": "unknown",
+   "quote": "while the screen has figures; start every recording at the title, cheats poked into the start state."
   },
   {
    "game": "games/chuckie_egg.md",
-   "text": "The RZX covers levels 1-2 only; lifts are untouched by the patch and the free duck (same plotter call as the caged duck) is covered by unit tests.",
-   "shown_on": "unknown"
+   "text": "The RZX covers levels 1-2 only; lifts are not touched by the patch and the free duck runs the same plotter call (41361) as the caged duck, covered by unit tests.",
+   "shown_on": "unknown",
+   "quote": "the same plotter call (41361) as the caged duck, covered by unit tests."
   },
   {
    "game": "games/rainbow_islands.md",
-   "text": "Banks 3, 4 and 6 were never paged in either RZX (probably later islands); a recording past island 1 was needed.",
-   "shown_on": "unknown"
+   "text": "Banks 3, 4 and 6 never paged in either RZX (probably later islands); a recording past island 1 is needed.",
+   "shown_on": "unknown",
+   "quote": "banks 3/4/6 never paged in either RZX; need a recording past island 1 (item"
   }
  ],
  "level": "observed",
@@ -31,6 +34,6 @@
   "rooms",
   "checklist"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

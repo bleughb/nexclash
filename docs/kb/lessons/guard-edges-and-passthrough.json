@@ -1,16 +1,18 @@
 {
  "id": "lesson.guard-edges-and-passthrough",
  "kind": "method",
- "claim": "Unit-test every guard edge: cases a guard turns into unchanged ULA passthrough (overflow, table full, no sprites left) need tests showing converted versus passthrough matches the guard exactly.",
+ "claim": "Unit-test every guard edge: a hook that leaves the original ULA drawing (index outside the table, overflow, table full) needs tests that cover the guarded cases, with a negative control that must be caught.",
  "evidence": [
   {
    "game": "games/chuckie_egg.md",
-   "text": "Hen index >= 5 (no table entry) gives no sprite (guard); unit tests include hen guard 1,008 cases.",
+   "text": "Hen index >= 5 (no table entry) gives no sprite (guard); unit tests include hen guard 1,008.",
+   "quote": "Hen index >= 5 (no table entry): no sprite (guard).",
    "shown_on": "simulator"
   },
   {
    "game": "games/everyones_a_wally.md",
-   "text": "Unit tests with 2,664 plot cases; negative control detected 12 of 12.",
+   "text": "Unit tests: 2,664 plot cases, 3 commit cases; negative control detected 12/12.",
+   "quote": "3 commit cases, negative control detected 12/12.",
    "shown_on": "simulator"
   }
  ],
@@ -24,6 +26,6 @@
   "negative control",
   "table full"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

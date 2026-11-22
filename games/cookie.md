@@ -107,15 +107,15 @@ game's speed as the original's over a minute of play.
 - 2026-11-20: the bitmap is kept (the figures stay drawn under their sprites); only the colour paint goes.
 
 ## Lessons
-- [local: this engine's build step] An Enhanced build's fixed colours were compared as symbols only, never with
+- [kb lesson.palette-check-reads-tables: this engine's build step] An Enhanced build's fixed colours were compared as symbols only, never with
   the RGB the set-up uploads (Codex review 2026-11-20): palette_wrong replays the boot's NEXTREG writes against the
   painted map, the default build as its negative.
 - [local: this game's verifier] An XOR plotter on an empty screen draws the frame it means to erase: the empty
   screen is a reference only for an entry that draws and erases nothing. A model of the figure is the reference
   elsewhere, and the draw-only entries check the model.
-- [local: this game's verifier] That check found what the model missed: the game draws nothing for a figure whose
+- [kb lesson.xor-empty-screen-reference: this game's verifier] That check found what the model missed: the game draws nothing for a figure whose
   bottom line is above line 31 (a signed compare in the cut), and the sprites had shown one line of it.
-- [local: this game's hooks] A copy of a routine the game rewrites as it runs keeps the bytes it was assembled
+- [kb lesson.rewritten-graphics-no-prebuilt-patterns: this game's hooks] A copy of a routine the game rewrites as it runs keeps the bytes it was assembled
   with. Where every caller wants the change, the one instruction is changed in place.
 
 ## Friction

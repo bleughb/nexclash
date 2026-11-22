@@ -5,33 +5,39 @@
  "evidence": [
   {
    "game": "games/dizzy_ultimate_cartoon_adventure.md",
-   "text": "Opening-room timings missed a room-transition penalty; bench the original recording's room starts separately.",
-   "shown_on": "unknown"
+   "text": "Opening-room timings missed a room-transition penalty; bench original-recording room starts separately, at the player draw call, with state equality and repeated quiet/busy trials.",
+   "shown_on": "unknown",
+   "quote": "Opening-room timings missed a room-transition penalty."
   },
   {
    "game": "games/booty.md",
    "text": "A room at 28 MHz needs its original time back: fit over all rooms, then wait at the game's clock.",
-   "shown_on": "unknown"
+   "shown_on": "unknown",
+   "quote": "A room at 28 MHz needs its original time back: a fit over all rooms, then a wait at the game's clock"
   },
   {
    "game": "games/gunfright.md",
-   "text": "A fixture starting in a duel or busy-looking death is not a sustained live scene; split windows by actor type or mode.",
-   "shown_on": "unknown"
+   "text": "A fixture beginning in a duel or busy-looking death is not a sustained live scene; split windows by actor type/mode and keep cold/death paths separate.",
+   "shown_on": "unknown",
+   "quote": "A fixture beginning in a duel or busy-looking death is not a sustained live scene. Split windows by actor type/mode"
   },
   {
    "game": "games/knight_lore.md",
    "text": "A room entry costs about 0.2 s more than the original before the limiter repays it.",
-   "shown_on": "unknown"
+   "shown_on": "unknown",
+   "quote": "a room entry costs about 0.2 s more than the original before the limiter repays it."
   },
   {
    "game": "games/herbert.md",
    "text": "A rare per-update water strip invokes 22 direct glyph hooks in one room; measure every room.",
-   "shown_on": "unknown"
+   "shown_on": "unknown",
+   "quote": "A rare per-update water strip invokes 22 direct glyph hooks. Measure every room;"
   },
   {
    "game": "games/olli_and_lissa_3.md",
-   "text": "A steady 0.07% drift was counted as 13 frames ahead; steady drift and bursts are two numbers.",
-   "shown_on": "unknown"
+   "text": "The first pace check counted a steady drift of 0.07% as \"13 frames ahead\"; steady drift and bursts are two numbers.",
+   "shown_on": "unknown",
+   "quote": "The first pace check counted a steady drift of 0.07% as \"13 frames ahead\": steady"
   }
  ],
  "level": "observed",
@@ -45,6 +51,6 @@
   "scene types",
   "audit"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

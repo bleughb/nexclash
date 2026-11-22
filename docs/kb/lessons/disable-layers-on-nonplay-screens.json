@@ -5,28 +5,33 @@
  "evidence": [
   {
    "game": "games/r_type.md",
-   "text": "The high-score check (92E8) turns Layer 2 and sprites off.",
-   "shown_on": "unknown"
+   "text": "The high-score check (92E8) turns Layer 2 / sprites off.",
+   "shown_on": "unknown",
+   "quote": "high-score check (92E8) turns Layer 2 / sprites off."
   },
   {
    "game": "games/el_capitan_trueno.md",
    "text": "Pause menu draws in the ULA and Layer 2 and sprites covered it; stub e_mnu writes NEXTREG 0x15,0 and 0x69,0 around the menu call and restores both on return (checked in MAME).",
-   "shown_on": "mame"
+   "shown_on": "mame",
+   "quote": "Checked in MAME by the contributor (2026-10-13)."
   },
   {
    "game": "games/inferno.md",
-   "text": "The hook at 9019 on return to gameplay stops Copper and hides all replacement layers.",
-   "shown_on": "unknown"
+   "text": "Original L4 gameplay return, frame 51,805: the 9019 hook stops Copper and hides all replacement layers.",
+   "shown_on": "unknown",
+   "quote": "Original L4 gameplay return, frame 51,805: 9019 hook stops Copper, hides all replacement layers,"
   },
   {
    "game": "games/rainbow_islands.md",
-   "text": "Death, continue, round end and game over go through alt-ROM stubs that write NextReg $15 = 0 before the original call; the next commit sets it back to 1.",
-   "shown_on": "unknown"
+   "text": "Non-play screens (main loop start 65029, play state ended 65076: death / continue / round end / game over) go through alt-ROM stubs that write NextReg $15 = 0 (sprites off) before the original call; the next commit sets $15 = 1.",
+   "shown_on": "unknown",
+   "quote": "death / continue / round end / game over: CALL 23643) -> alt-ROM stubs NextReg $15 = 0 (sprites"
   },
   {
    "game": "games/ruff_and_reddy.md",
-   "text": "Layers hidden at a new room, title, game over, giving up, and the LEVEL COMPLETE message (D42B); without the D42B hide figures stayed over the message, and giving up in pause left the overlay over the title until FD75 was hidden too.",
-   "shown_on": "unknown"
+   "text": "Layers hidden at a new room (818B), the title (80F7), game over or giving up (8B45, 8B79, FD75) and LEVEL COMPLETE (D42B); without the D42B hide figures stayed over the message, and giving up in the pause left the overlay over the title until FD75 was hidden too.",
+   "shown_on": "unknown",
+   "quote": "Hidden at a new room (818B), the title (80F7), at game over or giving up (8B45, 8B79, FD75) and for a message such as LEVEL COMPLETE (D42B)."
   }
  ],
  "level": "observed",
@@ -41,6 +46,6 @@
   "sprites off",
   "layer 2"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

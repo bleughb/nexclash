@@ -1,11 +1,12 @@
 {
  "id": "lesson.hide-tape-loader-prompts",
  "kind": "owner-rule",
- "claim": "Converted builds drop the tape loading prompts and key waits so the first screen shown is the game's own first real screen.",
+ "claim": "A converted build can patch out the tape loader's prompts (R-Type: FE03) and hold the first screen shown for a few seconds or a key.",
  "evidence": [
   {
    "game": "games/r_type.md",
-   "text": "Tape prompts (FE03) patched out; technical-spec screen held 5 s or a key; level unpack still runs.",
+   "text": "Full build: FE03 tape prompts patched out; technical-spec screen held 5 s or a key; level unpack still runs.",
+   "quote": "Full build: technical-spec screen held 5 s or a key; FE03 tape prompts patched out; level unpack",
    "shown_on": "unknown"
   }
  ],
@@ -19,6 +20,6 @@
   "key wait",
   "nex"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

@@ -5,17 +5,20 @@
  "evidence": [
   {
    "game": "games/olli_and_lissa.md",
-   "text": "Time by size and shift comes from running the routine at build time: hooks within 0.01% at the first try, no fitting from recordings.",
+   "text": "Time by size and shift comes from running the routine itself at build time on the snapshot's memory: no fitting from recordings, hooks within 0.01% at the first try.",
+   "quote": "time on the snapshot's memory: no fitting from recordings, and the hooks came out within 0.01% at the first try",
    "shown_on": "simulator"
   },
   {
    "game": "games/new_zealand_story.md",
-   "text": "Fitting the original's update against the drawing routines' time left a residual of 0.4 ms of 70.",
-   "shown_on": "unknown"
+   "text": "Update time fitted against the drawing routines' lines (target = 5.6 x their lines + a constant): least squares in JNext over 3 runs of 800 updates, residual 0.4 ms an update on 70.",
+   "quote": "Least squares in JNext over 3 runs of 800 updates: residual 0.4 ms an",
+   "shown_on": "jnext"
   },
   {
    "game": "games/nodes_of_yesod.md",
-   "text": "Copy target fitted as 21 T per row and column plus 140 T per row; fits by seed ran 19.9 to 23.0 T, attributed to screen contention.",
+   "text": "Targets fitted on the plain build in JNext: copy 21 T r c + 140 T r; fits by seed run 19.9 to 23.0 r c and 132 to 139 r (screen contention).",
+   "quote": "copy 21 T r c + 140 T r (r rows, c columns; the fits by seed run 19.9 to 23.0 r c, 132 to 139 r: screen contention)",
    "shown_on": "jnext"
   }
  ],
@@ -30,6 +33,6 @@
   "contention",
   "hook timing"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

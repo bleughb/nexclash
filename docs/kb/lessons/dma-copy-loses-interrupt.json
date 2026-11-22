@@ -6,17 +6,22 @@
  "evidence": [
   {
    "game": "games/cisco_heat.md",
-   "text": "32-byte DMA copy lost an interrupt every few seconds in JNext (49.94 a second, one 40.5 ms gap); fixed by using DMA only when the copy ends 90 or more lines before the next interrupt.",
-   "shown_on": "jnext"
+   "text": "The DMA copy lost an interrupt every few seconds in JNext (49.94 a second, a 40.5 ms gap) although each job is 32 bytes; the simulator does not model it; fixed by using DMA only when the copy ends 90 lines before the next interrupt.",
+   "shown_on": "jnext",
+   "quote": "The DMA copy lost an interrupt every few seconds in JNext (49.94 a second, a 40.5 ms gap) although each job is 32 bytes"
   },
   {
    "game": "games/castle_master.md",
-   "text": "Whole-view copy by zxnDMA in 8-row chunks, LDIR when the line is near the interrupt (the DMA hides the frame interrupt).",
-   "shown_on": "unknown"
+   "text": "Whole-view copy by zxnDMA in 8-row chunks, LDIR when the line is near the interrupt (a classic DMA job hides the frame interrupt).",
+   "shown_on": "unknown",
+   "quote": "classic DMA job hides the frame interrupt: chunks, LDIR near it."
   }
  ],
  "level": "observed",
  "area": "platform",
+ "facts": {
+  "interrupts": "on"
+ },
  "words": [
   "DMA",
   "lost interrupt",
@@ -27,6 +32,6 @@
   "JNext",
   "screen copy"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

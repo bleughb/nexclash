@@ -5,7 +5,8 @@
  "evidence": [
   {
    "game": "games/castle_master.md",
-   "text": "Decision: dither kept with colour on top, cursor a sprite, colour switchable off by the player (original look).",
+   "text": "Decision (user 2026-11-19): Layer 2 on top, dither kept, cursor a sprite, colour switchable off by the player (original look).",
+   "quote": "sprite, cycle = palette); colour switchable off by the player (original look).",
    "shown_on": "unknown"
   }
  ],
@@ -19,6 +20,6 @@
   "original look",
   "owner rule"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

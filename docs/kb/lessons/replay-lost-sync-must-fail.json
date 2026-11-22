@@ -5,7 +5,8 @@
  "evidence": [
   {
    "game": "games/cisco_heat.md",
-   "text": "Merged engine rules made a desync fail the replay (main merge 2026-11-23).",
+   "text": "Main merge 2026-11-23: boot restores the caller's speed (patch.restore-speed); a desync fails the replay.",
+   "quote": "boot restores the caller's speed (patch.restore-speed); desync fails replay.",
    "shown_on": "unknown"
   }
  ],
@@ -18,6 +19,6 @@
   "false pass",
   "engine rules"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

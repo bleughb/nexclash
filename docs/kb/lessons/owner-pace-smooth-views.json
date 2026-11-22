@@ -6,6 +6,7 @@
   {
    "game": "games/castle_master.md",
    "text": "Updates keep the original's real-time rate; the freed time renders in-between cameras (display only). Rejected: faster updates, smaller steps.",
+   "quote": "the freed time renders in-between cameras (display only). Rejected: faster updates, smaller steps.",
    "shown_on": "unknown"
   }
  ],
@@ -20,6 +21,6 @@
   "renderer",
   "owner rule"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

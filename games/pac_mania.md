@@ -102,16 +102,16 @@ The panel shows at most five lives faces (the original's own).
 - Frames 68-73 and some ghost-eaten / fruit score forms were not reached by any recording: unit cases cover their pixels.
 
 ## Lessons
-- [local: a plotter with NOPed writes keeps every register and all timing] Removing only the store instructions made the patched run equal the original in every register at each frame boundary, bar A and F inside the plot and blit loops, which follow the bytes read.
-- [local: a lockstep with fetches counted only outside hook ROM] Frames by RZX fetch count stay aligned when hooks run in ROM and each site keeps its fetch count (CALL for CALL, NOP for one-byte store). Whole-RAM, whole-register comparison per frame, 150 frames a second. Hold R across hooks if the game reads it.
-- [local: scan --writers on one recording missed a run-time graphic] The first recording showed no writer in the graphics; a later one showed the score frame rewritten. The composite check found it, and a chase bot found the second one (ghost score) only after six recordings had passed. Treat "static graphics" as provisional until every recording has passed.
+- [kb lesson.nop-stores-keep-timing: a plotter with NOPed writes keeps every register and all timing] Removing only the store instructions made the patched run equal the original in every register at each frame boundary, bar A and F inside the plot and blit loops, which follow the bytes read.
+- [kb lesson.rzx-fetch-count-frames: a lockstep with fetches counted only outside hook ROM] Frames by RZX fetch count stay aligned when hooks run in ROM and each site keeps its fetch count (CALL for CALL, NOP for one-byte store). Whole-RAM, whole-register comparison per frame, 150 frames a second. Hold R across hooks if the game reads it.
+- [kb lesson.whole-recordings-find-rare-paths: scan --writers on one recording missed a run-time graphic] The first recording showed no writer in the graphics; a later one showed the score frame rewritten. The composite check found it, and a chase bot found the second one (ghost score) only after six recordings had passed. Treat "static graphics" as provisional until every recording has passed.
 - [local: unit tests against the real plotter on canvases] Found the y ring wrap no recording had reached.
 - [local: negative controls need a recording where they matter] Yellow cells left in is invisible in a yellow room; a frame-80 sprite is blank. Choose the recording, and the control, accordingly.
 
-- [local: a 128K release paused in BASIC] The snapshot waits in a PAUSE whose statement returns through the 0x5B00 ROM-swap
+- [kb lesson.snapshot-128k-basic-pause: a 128K release paused in BASIC] The snapshot waits in a PAUSE whose statement returns through the 0x5B00 ROM-swap
   code and ROM 0; starting at the USR address with interrupts off avoids both, and a read trace showed the game itself never
   reads the printer buffer. Check what the BASIC path needs before keeping a snapshot's PC in ROM.
-- [local: a CSimulator ROM swap after construction] Replacing skoolkit's Memory.roms tuple after the CSimulator is built does
+- [kb lesson.csimulator-rom-replace-in-place: a CSimulator ROM swap after construction] Replacing skoolkit's Memory.roms tuple after the CSimulator is built does
   nothing: write the new ROM into the existing ROM buffer in place (v1/work/m128b.py). Recordings made the other way desync on
   the 48K ROM (IM 1 at 0x004B differs).
 
@@ -119,7 +119,7 @@ The panel shows at most five lives faces (the original's own).
 - reuse: [local: the pilot's 128K frame model (runs/beyond_the_ice_palace work/m128.py) and nexclash.pace / nextboot.rom_paths used as they are]
 - retries: [local: one round of recordings remade after the ROM-swap fix above; the verifier caught it at frame 1]
 - environment: [local: JNext on private card copies; the v2.10 card shows a welcome page first (one more SPACE)]
-- hand-rolled: [local: the 128K paging in the verifier (a flat view plus banks swapped on 7FFD) is this engine's own, as verifiers stay per engine]
+- hand-rolled: [kb lesson.recorder-128k-not-in-toolkit: the 128K paging in the verifier (a flat view plus banks swapped on 7FFD) is this engine's own, as verifiers stay per engine] 
 - scratch: [local: the run's scripts stay in the pilot folder (v1/work), none in tools/]
 
 ## Technique use

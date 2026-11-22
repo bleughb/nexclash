@@ -1,16 +1,18 @@
 {
  "id": "lesson.fast-frame-level-replay",
  "kind": "method",
- "claim": "Use the C simulator with frame-level hooks for analysis and censuses; per-instruction Python hooks are far slower.",
+ "claim": "Use the C simulator with frame-level hooks for analysis and censuses; the same job in Python is far slower.",
  "evidence": [
   {
    "game": "games/cauldron.md",
-   "text": "rzx_census counts and finds the first frame of given PCs over a 90K-frame recording in about 4 minutes with the C simulator against about an hour in Python; a whole-recording sheet capture takes about 70 s.",
+   "text": "rzx_census counts and finds the first frame of given PCs over a 90K-frame recording in ~4 min with the C simulator vs ~1 h in Python; a whole-RZX sheet capture through rzx.trace takes ~70 s for 90K frames.",
+   "quote": "with the C simulator (~4 min for 90K frames vs ~1 h in Python): which quick run reaches a hook.",
    "shown_on": "simulator"
   },
   {
    "game": "games/el_capitan_trueno.md",
-   "text": "Graphics catalogue over the whole recording with the C simulator, graphics hashed at each frame end, takes 7.6 s.",
+   "text": "Graphics catalogue over the whole RZX (C simulator, graphics hashed at each frame end) takes 7.6 s.",
+   "quote": "Graphics catalogue over the whole RZX (C simulator, gfx hashed at each frame end, 7.6 s)",
    "shown_on": "simulator"
   }
  ],
@@ -25,6 +27,6 @@
   "PC",
   "replay"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

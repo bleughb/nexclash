@@ -87,7 +87,7 @@ Techniques: detect.gameplay-screen-readers
 - [local: this game's cache] When the images on show fit, a miss should replace the group unused longest: rotation throws out what is about to come
   back. Level 3 whole-run pace on this alone: +0.93 -> +0.56, seed 1.
 - [local: this game's shapes] An upload sized to what the shape shows is a one-line test when the key already holds the shape; half the uploads were half empty.
-- [local: this game's frame lock] A frame-locked game needs lateness per update, not mean hook time: log where the HALT lands (work ms from the wake to the HALT)
+- [kb lesson.frame-locked-pace: this game's frame lock] A frame-locked game needs lateness per update, not mean hook time: log where the HALT lands (work ms from the wake to the HALT)
   and cut only until the late tail fits. From main's engine, hook time fell 12% and lost frames in that run 38 -> 8.
 - [local: this game's frame lock] A soak's loop warning at the game's HALT is sampling at one phase once no frame is lost: check the pictures and the clock.
 - [card patch.iff-safe-read §Use / do not use] A hook that keeps R pays for the second read in M1s: count every path

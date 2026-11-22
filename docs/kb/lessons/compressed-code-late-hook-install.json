@@ -1,12 +1,13 @@
 {
  "id": "lesson.compressed-code-late-hook-install",
  "kind": "method",
- "claim": "If a game decompresses its code at load, hooks cannot be applied to the file in advance; install them by redirecting a later call to an installer that runs after decompression.",
+ "claim": "If a game decompresses its code at load, the decompressor is overwritten after use and is no hook site; place hooks at a boundary that runs after decompression.",
  "evidence": [
   {
    "game": "games/inferno.md",
-   "text": "Original TZX/BASIC reaches the first USR 24200; decompressor at 86C5 is overwritten after use.",
-   "shown_on": "analysis"
+   "text": "Original TZX/BASIC reaches the first USR 24200; the decompressor at 86C5 is overwritten, so it is rejected as a hook site; the pause boundary 8EF9 follows the original DI.",
+   "shown_on": "analysis",
+   "quote": "Reject 86C5 (decompressor, overwritten)."
   }
  ],
  "level": "inferred",
@@ -19,6 +20,6 @@
   "hook install",
   "BASIC loader"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

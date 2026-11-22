@@ -1,11 +1,12 @@
 {
  "id": "lesson.windows-crlf-doc-budget",
  "kind": "pitfall",
- "claim": "On Windows, CRLF line endings inflate byte counts, so doc size budgets report false overruns unless core.autocrlf is false or LF bytes are counted.",
+ "claim": "On Windows, the doc check counts CRLF bytes unless core.autocrlf is false, so doc size budgets can report false overruns.",
  "evidence": [
   {
    "game": "games/inferno.md",
-   "text": "A doc check counts CRLF bytes unless core.autocrlf is false.",
+   "text": "doccheck counts CRLF bytes unless core.autocrlf is false.",
+   "quote": "counts CRLF bytes unless core.autocrlf is false.",
    "shown_on": "unknown"
   }
  ],
@@ -19,6 +20,6 @@
   "Windows",
   "line endings"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }
