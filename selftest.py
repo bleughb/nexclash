@@ -268,9 +268,9 @@ def rebuild(rec, d, lines):
         return bad + _check_outputs(rec, out, lines) + _audit_check(rec, alog, lines, 'rebuild')
     if rec['inputs'].get('tapes') and not _tapes(rec, d):         # the primary tape set unavailable: no rebuild from the
         ts0 = rec['inputs']['tapes'][0]['set']                      # snapshot alone passed off as the recipe (Codex T5)
-        lines.append('SKIP %s rebuild: tape set %s (a file the record marks missing)' % (rec['name'], ts0))
+        lines.append('SKIP %s rebuild: tape set %s (a file the record marks missing); its reworks run' % (rec['name'], ts0))
         rec.setdefault('_incomplete', []).append('primary tape set %s missing' % ts0)
-        return bad
+        return bad + _rebuild_reworks(rec, d, lines, z80, env) + _audit_check(rec, alog, lines, 'rebuild')
     cmd = [sys.executable, NEXCLASH, 'auto', '--no-nxc', z80, '--no-record'] + rb.get('args', []) + _tapes(rec, d)
     cmd = [c for i, c in enumerate(cmd) if c != '--no-record' or i == cmd.index('--no-record')]
     for r in rb.get('rzx', []):
@@ -297,6 +297,12 @@ def rebuild(rec, d, lines):
         ro = os.path.join(d, 'rebuild_' + x['strategy'])
         bad += _run(cmd + ['-o', ro, '--strategy', x['strategy']], env, lines)
         bad += _check_outputs(rec, ro, lines, {'repro': x}) + _boot_ok(_report(ro, _snapname(rec)), lines, rec['name'])
+    return bad + _rebuild_reworks(rec, d, lines, z80, env) + _audit_check(rec, alog, lines, 'rebuild')
+
+
+def _rebuild_reworks(rec, d, lines, z80, env):
+    """Each opt-in rework's rebuild (its own args, environment and inputs: never the record's tape sets)."""
+    bad = 0
     for x in rec.get('rework', []):
         if x.get('_missing'):
             lines.append('SKIP %s rework %s (%s)' % (rec['name'], x['name'], x['_missing']))
@@ -305,7 +311,7 @@ def rebuild(rec, d, lines):
         bad += _run(_rework_cmd(z80, x, 'rebuild', d) + ['-o', ro], dict(env, **x.get('env', {})), lines)
         bad += _check_outputs(rec, ro, lines, x['outputs'], 'rebuild rework %s:' % x['name'])
         bad += _boot_ok(_report(ro, _xname(rec, x)), lines, '%s rework %s' % (rec['name'], x['name']))
-    return bad + _audit_check(rec, alog, lines, 'rebuild')
+    return bad
 
 
 def _rework_cmd(z80, x, stage_, d):
@@ -412,6 +418,11 @@ def reverify(rec, d, lines, human=False):
         rec['_vskip'] = gone
         lines.append('SKIP %s verification: %s not in the reference folder (record: "missing"); its reworks run' % (
             rec['name'], ', '.join(gone)))
+        return _reverify_reworks(rec, d, lines, z80, name, env) + _audit_check(rec, alog, lines, 'verify')
+    if rec['inputs'].get('tapes') and not _tapes(rec, d):         # the primary tape set missing (rebuild said so and
+        lines.append('SKIP %s verification: tape set %s (a file the record marks missing); its reworks run' % (
+            rec['name'], rec['inputs']['tapes'][0]['set']))         # marked the run incomplete): no base verification
+        rec.setdefault('_incomplete', []).append('verification without the primary tape set')
         return _reverify_reworks(rec, d, lines, z80, name, env) + _audit_check(rec, alog, lines, 'verify')
     bad = _run(cmd + ['-o', out], env, lines)
     bad += _check_outputs(rec, out, lines, stage_='verify') + _verify_report(_report(out, name), rec['name'], lines, rec)
@@ -657,6 +668,27 @@ def tape_stage_check():
         d, why = stage(r, src, os.path.join(t, 'w4'))
         if d is None or _tapes(r, d, 1) or not _tapes(r, d):
             bad.append('a "missing" tape: %s' % why)
+        # the primary set missing: neither the base rebuild nor the base verification runs (no snapshot-only build
+        # passed off as the recipe), the reworks (their own inputs) still do, and the run is incomplete
+        open(os.path.join(src, 'g', 'a.tzx'), 'wb').write(files['a.tzx'])     # removed above
+        os.remove(os.path.join(src, 'g', 'a.tap'))
+        r = rec()
+        r['inputs']['tapes'][0]['files'][0]['missing'] = 'not in the references'
+        r.update(rebuild={'args': []}, verify={'rzx': []}, outputs={}, rework=[{'name': 'x', 'args': [], 'outputs': {}}])
+        d, why = stage(r, src, os.path.join(t, 'w5'))
+        calls, g = [], globals()
+        real, g['_run'] = g['_run'], lambda cmd, env=None, lines=None: calls.append(cmd[-1]) or 0
+        try:
+            if d is None:
+                bad.append('primary set missing: not staged (%s)' % why)
+            else:
+                rebuild(r, d, [])
+                reverify(r, d, [])
+                runs = sorted(os.path.basename(c) for c in calls)
+                if runs != ['rebuild_rework_x', 'verify_rework_x'] or not r.get('_incomplete'):
+                    bad.append('primary set missing: ran %s, incomplete %s' % (runs, r.get('_incomplete')))
+        finally:
+            g['_run'] = real
     return bad
 
 
