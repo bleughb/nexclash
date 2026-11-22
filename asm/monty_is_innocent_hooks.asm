@@ -15,15 +15,23 @@
 GUARDS  EQU 24962               ; three guard records, 8 bytes each
 NSPR    EQU 20
 
-        MACRO HK_IN
-        push af
+        MACRO HK_IN                     ; the caller's speed (NR 7 bits 1:0) kept on the stack (alt ROM: no RAM latch;
+        push af                         ; card patch.restore-speed), then 28 MHz
         push bc
         push de
         push hl
+        ld bc,0x243B
+        ld a,7
+        out (c),a
+        inc b
+        in a,(c)
+        and 3
+        push af
         nextreg 0x07,3
         ENDM
         MACRO HK_OUT
-        nextreg 0x07,0
+        pop af
+        nextreg 0x07,a                  ; the caller's speed back
         pop hl
         pop de
         pop bc
@@ -34,7 +42,7 @@ NSPR    EQU 20
 ; ---- 54574 PUSH HL / PUSH BC / PUSH DE -> JP e_plot ------------------------------------------------------------
 e_plot: HK_IN
         push ix
-        ld hl,10
+        ld hl,12                ; stack: IX +0, speed +2, HL +4, DE +6, BC +8, AF +10, the return address +12
         add hl,sp
         ld e,(hl)
         inc hl
@@ -96,12 +104,12 @@ pl_fix: ld d,7                  ; Sam and Monty: white
 pl_go:  add a,a
         add a,a                 ; A = first sprite 4f
         ld e,d                  ; E = palette offset (ink)
-        ld hl,6                 ; stack: IX +0, HL +2, DE +4, BC +6, AF +8, the return address +10
+        ld hl,8                 ; the caller's BC
         add hl,sp
         ld c,(hl)               ; the caller's BC (pushed by HK_IN): C = x, B = y
         inc hl
         ld b,(hl)
-        ld hl,2
+        ld hl,4                 ; the caller's HL
         add hl,sp
         push af
         ld a,(hl)
@@ -129,7 +137,12 @@ pl_off: ld a,d
         call hide4
 pl_none:
         pop ix
-        HK_OUT
+        pop af                  ; HK_OUT, written out for the negative control's label
+neg_spd: nextreg 0x07,a
+        pop hl
+        pop de
+        pop bc
+        pop af
         push hl
         push bc
         push de

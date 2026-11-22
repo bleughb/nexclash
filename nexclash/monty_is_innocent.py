@@ -120,9 +120,13 @@ class NextState:
         self.pat = bytearray(16384)
         self.patp = 0
         self.ports = []
+        self.sel = 0                    # NextReg select (port 0x243B)
+        self.speeds = []
 
     def nextreg(self, reg, val):
         self.nr[reg] = val
+        if reg == 7:
+            self.speeds.append(val)
         if 0x35 <= reg <= 0x39:
             self.attr[self.nr.get(0x34, 0) & 0x7F][reg - 0x35] = val
 
@@ -132,6 +136,8 @@ class NextState:
             self.patp += 1
         elif port == 0x303B:
             self.patp = (val & 0x3F) * 256 + (128 if val & 0x80 else 0)
+        elif port == 0x243B:
+            self.sel = val
         else:
             self.ports.append((port & 0xFF, val))
 
@@ -219,6 +225,8 @@ class _Ports:
         self.ns, self.ports = ns, ports
 
     def read_port(self, regs, port):
+        if self.ns is not None and port == 0x253B:    # NextReg read: NR 7 reads back the programmed speed in bits 1:0
+            return self.ns.nr.get(self.ns.sel, 0)
         return 0xFF
 
     def write_port(self, regs, port, value, *x):
@@ -269,6 +277,7 @@ def event(patch, pc, get, R, ns, alt, psite, stop=None):
     install(sp, ns.nextreg)
     sp.set_tracer(_Ports(ns=ns))
     n0 = len(ns.ports)
+    speed = ns.nr.get(7, 0)
     try:
         reached = _run(sp, stop)
     except Exception as x:                     # a broken hook running away (a negative control)
@@ -282,6 +291,8 @@ def event(patch, pc, get, R, ns, alt, psite, stop=None):
             fl.append('register %d: original %02X, patched %02X' % (i, so.registers[i], sp.registers[i]))
     if p.romw:
         fl.append('hook wrote the ROM')
+    if ns.nr.get(7, 0) != speed:
+        fl.append('speed not restored: entered at %d, left at %d' % (speed, ns.nr.get(7, 0)))
     if ports != ns.ports[n0:]:
         fl.append('port writes differ %s %s' % (ports[:3], ns.ports[n0:][:3]))
     del ns.ports[n0:]
@@ -530,6 +541,7 @@ def unit_tests(patch, states):
                 for k in range(3):
                     m[GUARDS + 8 * k + 6] = (m[GUARDS + 8 * k + 6] & 0xF8) | ink
                 ns = NextState()
+                ns.nr[7] = (x + y + ink) % 4                 # entered at each CPU speed in turn
                 for s in range(NSPR):
                     ns.attr[s] = [9, 9, 0, 0xC0 | s, 0x80]
                 fl, _, _ = event(patch, pc, m.__getitem__, R2, ns, alt, psite)
@@ -593,7 +605,8 @@ def negative_patches(patch):
     import copy
     no_paint = copy.copy(patch)
     no_paint.sites = [s for s in patch.sites if s[0] != 54766]
-    return [('the gun leaves the guard shown', _broken(patch, 'neg_kill', b'\0\0\0')),
+    return [('plot hook leaves the CPU at 28 MHz', _broken(patch, 'neg_spd', b'\0\0\0')),
+            ('the gun leaves the guard shown', _broken(patch, 'neg_kill', b'\0\0\0')),
             ('sprites at the wrong row', _broken(patch, 'neg_y', b'\x3C')),     # LD B,A made INC A: B keeps y
             ('ink lost in the pattern upload', _broken(patch, 'neg_pix', b'\xE6\x00')),
             ('plot hook never shows the sprites', _broken(patch, 'neg_fig', b'\0\0\0')),
