@@ -49,7 +49,7 @@ class PaceEvent:
         out = []
         for i, s in enumerate(self.sites):
             a = C.Asm(self.wrap_at + SPACING * i)
-            C.draw_wrapper(a, s.target + (2 if bad == 'target' else 0), self.var_at, s.di, s.halts)
+            C.draw_wrapper(a, (self.var_at + 1 if bad == 'target' else s.target), self.var_at, s.di, s.halts)
             code = bytearray(a.done())
             if bad == 'fast':                                   # drop the "back to 3.5 MHz" write
                 k = bytes([0xED, 0x91, 0x07, 0x00])
@@ -68,6 +68,8 @@ class PaceEvent:
             b.put(addr, code)
             b.put(s.addr, bytes([0xCD, addr & 255, addr >> 8]) + bytes(len(s.orig) - 3))
         b.put(self.var_at, bytes([1 if original_pace else 0]))
+        if bad == 'target':                                   # the negative control calls a bare RET instead of the routine: the drawing is lost
+            b.put(self.var_at + 1, bytes([0xC9]))
         return b.bytes(), {}
 
     def disable_code(self):
