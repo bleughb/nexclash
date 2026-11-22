@@ -67,13 +67,21 @@ Which parts overlap each other is not compared.
 - Colour clash [observed]: practically none to remove (mono viewport; HUD bars and icons only). The toolkit's default
   "every figure a sprite" has no figures here: ships are line drawings into a 128 x 256 buffer, hundreds of line segments.
 - Tail / memory [observed]: 5.5 KB of 0x4000-0xBFFF untouched, largest span 456 bytes; bank 0 at 0xC000 is the game's buffer
-  (128K paging locked). Hook state would go to a Next page in a slot the ISR never touches (card in decision table 4).
+  (128K paging locked). NOT a constraint (user decision 2026-11-22, ## Decisions): the engine may use the Next's whole
+  memory (MMU-paged Next banks), so hook code, state and new renderers live in Next pages, not in the game's 48K.
 - Not measured: T per frame in the line plotters (cost --at 32739 / 41450), the scanner and HUD writers, a safe tail place.
+
+## Decisions
+- 2026-11-22 (user): "for elite, you can totally re-write the engine to utilise all the memory of the spectrum next, free
+  RAM should not be scarce". So: a full engine rewrite is allowed (not only hooks on the original), and memory is not a
+  design constraint. The equivalence rule still holds (gameplay extremely close, docs: owner 2026-11-10).
 
 ## Design question (stage 1, open: answer pending)
 Options put to the user: (A) plain, ULA unchanged, + Next speed (28 MHz) if pacing allows; (B) A + fix the few clash
 cells (HUD bars, condition light, planet / sun icon); (C) B + redraw the viewport on Layer 2 so ships / lines get colour
-(a new line-renderer engine; changes what the user sees).
+(a new line-renderer engine; changes what the user sees). After the rewrite decision, C is no longer limited by memory;
+the open unknowns for C are: is the object (ship type) known where lines are drawn, and does the game erase by XOR redraw
+or by clearing the buffer (decides whether crossing lines need a per-pixel owner model). Next step for C: probe both.
 
 ## Hardware checklist
 None yet (no build).
