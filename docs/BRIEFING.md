@@ -367,16 +367,16 @@ Hardware to confirm
    A1 "7FFD lock"), Magicland, Dizzy 6 (its mirror path is proven only by the unit selftest: wants an
    RZX through the mirror room; Dizzy 6 stays slot1). Later: the tail inside the alt ROM (same
    address in both images, no game RAM).
-26. State a previous program may leave behind (sprites: hit; set-up hides 128 now): the stub resets
-   speed, video, DivMMC, sprites, $C0, 0x123B, and NEXLOAD is asked to reset NextRegs (header byte
-   134 = 0; which registers is not confirmed). Not written, and each would break games if left
-   non-default: a running copper ($62); line offset $64 (shifts $1E/$1F, which the Rainbow raster
-   wait reads); ULA interrupt off ($22 bit 2 / $C4 bit 0) or line interrupt on; ULA output off ($68
-   bit 7), ULA scroll ($26/$27), clip ($1A); Layer 2 resolution ($70), scroll ($16/$17/$71), clip
-   ($18); palette state ($43, $14, $4A); the F3 / F8 keys ($06 bits 5/7) let a player undo the forced
-   50 Hz or the CPU speed. Cheap guard: NEXTREG $62,0 / $64,0 / $22,0 / $C4 bit 0 / $68,0 / $26,0 /
-   $27,0 + $06 AND $5F in the stub - changes every game's .nex bytes: a maintainer decision with a
-   full `selftest.py --stamp`. Check NEXLOAD's reset list first (ped7g NEXLOAD2 source).
+26. State a previous program may leave (sprites board-seen, rest documented): the stub resets
+   speed, video, DivMMC, sprites ($15 only: sprite builds hide all 128 themselves; probe
+   sprite_leftovers), $C0, 0x123B; NEXLOAD is asked to reset NextRegs (header byte 134 = 0; list
+   unconfirmed). Not written, each breaking games if left: a running copper ($62); line offset
+   $64 (shifts $1E/$1F, which the Rainbow raster wait reads); ULA interrupt off ($22 bit 2 / $C4 bit 0)
+   or line interrupt on; ULA output off ($68 bit 7), ULA scroll ($26/$27), clip ($1A); Layer 2
+   resolution ($70), scroll ($16/$17/$71), clip ($18); palette state ($43, $14, $4A); the F3 / F8 keys
+   ($06 bits 5/7) let a player undo the forced 50 Hz or the CPU speed. Cheap guard: NEXTREG $62,0 /
+   $64,0 / $22,0 / $C4 bit 0 / $68,0 / $26,0 / $27,0 + $06 AND $5F in the stub - changes every .nex: a
+   maintainer decision (full `selftest.py --stamp`). Check ped7g NEXLOAD2's reset list first.
 27. Alt image 0: a copy of ROM 0 on the Next is NextZXOS's (Target Renegade's sound bytes, Knight
    Tyme's star map). New engines: `patch.altrom0` (128K ROM 0 + hooks). Unconfirmed on hardware, as OUT
    (0x1FFD) in 128K timing (LEARNINGS 1.2). `scan` cannot split ROM reads by ROM.
