@@ -16,14 +16,14 @@ Limits: no interrupts, so a game waiting for one stops early: "sprites not turne
 Origin: the 2026-11-21 back-catalogue audit (Silkworm Enhanced hid 64 of 128; Bruce Lee, That
   Sinking Feeling, Into the Eagle's Nest, Chase H.Q., Quazatron likewise).
 Smoke test: synthetic attribute logs (no game data): 4 hidden by NEXTREG leave 4-127; 512 zero
-  bytes on port $57 after $303B = 0 hide all 128.
+  bytes on port $57 after $303B = 0 hide all 128; $303B does not move NEXTREG's sprite number.
 """
 import argparse
 import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
-from nexclash import nextboot, dizzy6     # noqa: E402
+from nexclash import nextboot, dizzy6, z80n     # noqa: E402
 
 LOG = []
 _base = dizzy6._rw_simulator
@@ -37,7 +37,8 @@ def _logged():
             if tr is None or not hasattr(tr, 'write_port'):
                 return Sim.set_tracer(self, tr, *a, **k)
             ed, R, mem = self.after_ED, self.registers, self.memory
-            nn, na = ed[0x91], ed[0x92]
+            nn, na = ed[0x91], ed[0x92]                    # boot's NEXTREG (paging); the other Z80N ops next
+            z80n.install(self, nextreg=lambda r, v: None, strict=False)
 
             def nn2():
                 p = R[24]; LOG.append(('nr', mem[(p + 2) % 65536], mem[(p + 3) % 65536])); nn()
@@ -55,25 +56,33 @@ def _logged():
 
 
 def replay(log):
-    """-> (visible records, records written) after log, starting from all 128 visible."""
+    """-> (visible records, records written) after log, starting from all 128 visible. Port 0x303B and NEXTREG $34
+    select separate sprite numbers unless $09 bit 4 locks them together."""
     attr = [[0, 0, 0, 0x80, 0] for _ in range(128)]
-    sel = k = 0
+    psel = nsel = k = 0
+    lock = False
     written = set()
     for kind, a, v in log:
         if kind == 'port':
             if a == 0x303B:
-                sel, k = v & 0x7F, 0
+                psel, k = v & 0x7F, 0
+                if lock: nsel = psel
             elif a & 0xFF == 0x57:
-                written.add(sel)
-                attr[sel][k] = v; k += 1
-                if (k == 4 and not attr[sel][3] & 0x40) or k == 5:
-                    sel, k = (sel + 1) & 0x7F, 0
+                written.add(psel)
+                attr[psel][k] = v; k += 1
+                if (k == 4 and not attr[psel][3] & 0x40) or k == 5:
+                    psel, k = (psel + 1) & 0x7F, 0
+                    if lock: nsel = psel
+        elif a == 0x09:
+            lock = bool(v & 0x10)
         elif a == 0x34:
-            sel = v & 0x7F
+            nsel = v & 0x7F
+            if lock: psel, k = nsel, 0
         elif 0x35 <= a <= 0x39:
-            written.add(sel); attr[sel][a - 0x35] = v
+            written.add(nsel); attr[nsel][a - 0x35] = v
         elif 0x75 <= a <= 0x79:
-            written.add(sel); attr[sel][a - 0x75] = v; sel = (sel + 1) & 0x7F
+            written.add(nsel); attr[nsel][a - 0x75] = v; nsel = (nsel + 1) & 0x7F
+            if lock: psel = nsel
     return [i for i in range(128) if attr[i][3] & 0x80], written
 
 

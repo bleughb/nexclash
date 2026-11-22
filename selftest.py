@@ -509,6 +509,9 @@ def smoke_sprite_leftovers(ez, er, ok):
     ports = [('port', 0x303B, 0)] + [('port', 0x0457, 0)] * 512
     vis, written = sprite_leftovers.replay(ports)
     ok('probe sprite_leftovers: 128 x 4 attribute bytes on port 0x57 hide all', vis == [] and len(written) == 128, vis[:3])
+    split = [('nr', 0x34, 0), ('port', 0x303B, 127), ('nr', 0x38, 0)] + [w for i in range(1, 127) for w in (('nr', 0x34, i), ('nr', 0x38, 0))]
+    vis, written = sprite_leftovers.replay(split)
+    ok('probe sprite_leftovers: port 0x303B and NEXTREG $34 select separately ($09 bit 4 clear)', vis == [127], vis)
 
 
 PROBE_SMOKE = {'rzx_census.py': smoke_rzx_census, 'attr_census.py': smoke_attr_census,
