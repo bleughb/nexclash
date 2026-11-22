@@ -711,6 +711,9 @@ class Dizzy1Patch:
         self.prepare(mem.__getitem__)
         for a, old, new in self.sites:
             ram[a - 0x4000:a - 0x4000 + len(new)] = new
+        # the hooks' variables start at zero whatever the snapshot holds there (V_SELOK = 0 sends the first hook
+        # through spdfix's .first; the speed latches start at 3.5 MHz); zero in the reference snapshot
+        ram[HOOK_RAM[0] - 0x4000:HOOK_RAM[1] - 0x4000] = bytes(HOOK_RAM[1] - HOOK_RAM[0])
         snap.banks[5], snap.banks[2], snap.banks[0] = bytes(ram[0:16384]), bytes(ram[16384:32768]), bytes(ram[32768:])
 
     def alt_image(self):
@@ -1804,6 +1807,17 @@ def unit_tests(patch, states, z80=None):
     for nr8 in (0x10, 0x11):
         at(0, sel=0x08, nrs={0x08: nr8})('boot select missing, NR 8 = 0x%02X' % nr8, _pick(states, COLL), boot,
                                           p=nfirst, want_fail=True)
+    if z80:                                             # the built image's hook variables are zero, not the snapshot's
+        from .z80tonex import Z80Snapshot
+        snap = Z80Snapshot(z80)
+        lo, hi = HOOK_RAM[0] - 0x4000, HOOK_RAM[1] - 0x4000
+        b5 = bytearray(snap.banks[5])
+        b5[lo:hi] = b'\x5a' * (hi - lo)
+        snap.banks[5] = bytes(b5)
+        variant(colours=patch.colours).apply(snap)
+        c['cases'] += 1
+        if any(snap.banks[5][lo:hi]):
+            c['hook variables taken from the snapshot!'] += 1
     t2 = patch.rom_code.index(b'\x3a' + (0x5B66).to_bytes(2, 'little'), S['t_p2'] - ROM_ORG)
     n35 = variant(colours=patch.colours, edit={ROM_ORG + t2: b'\x3e\x00\x00'})       # t_p2 exits at a fixed 3.5 MHz
     at(1)('plotter 2 exit at a fixed 3.5 MHz', p2c, p=n35, want_fail=True)
