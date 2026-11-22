@@ -58,21 +58,28 @@ rom_start:
         push bc
         push de
         push hl
+        ld bc,0x243B            ; the caller's speed published BEFORE the hook's ISR vector goes in: an interrupt
+        ld a,7                  ; between the two reads V_SPEED, so it must already be this hook's (Codex C5); the
+        out (c),a               ; game's own ISR (I still F4) runs until then, and HLIB_SPEED_IN_ABC's
+        inc b                   ; instructions are all here (same R count), the switch to 28 MHz last
+        in a,(c)
+        and 3
+        ld (V_SPEED),a
         ld a,1
         ld (V_IN),a
         ld a,3Bh
         ld i,a
-        HLIB_SPEED_IN_ABC V_SPEED
+        nextreg 0x07,3
         ENDM
         MACRO LEAVE_R
         pop hl
         pop de
         pop bc
         HLIB_SPEED_OUT_A V_SPEED
+        ld a,(V_ILEAVE)         ; I back before the hook flag goes: an interrupt between them read V_IN = 0 as a
+        ld i,a                  ; room and ran the game's ISR at 3.5 MHz, whatever the caller's clock (Codex C5)
         xor a
         ld (V_IN),a
-        ld a,(V_ILEAVE)
-        ld i,a
         pop af
         ld sp,(V_SP)
         HLIB_R_OUT
@@ -171,10 +178,10 @@ h_cll:
         pop de
         pop bc
         HLIB_SPEED_OUT_A V_SPEED
+        ld a,(V_ILEAVE)         ; I back before the hook flag goes: an interrupt between them read V_IN = 0 as a
+        ld i,a                  ; room and ran the game's ISR at 3.5 MHz, whatever the caller's clock (Codex C5)
         xor a
         ld (V_IN),a
-        ld a,(V_ILEAVE)
-        ld i,a
         pop af
         ld sp,(V_SP)
         HLIB_R_OUT
@@ -313,10 +320,10 @@ h_comp:
         pop bc
         ld bc,(V_R0 + 2)
         HLIB_SPEED_OUT_A V_SPEED
+        ld a,(V_ILEAVE)         ; I back before the hook flag goes: an interrupt between them read V_IN = 0 as a
+        ld i,a                  ; room and ran the game's ISR at 3.5 MHz, whatever the caller's clock (Codex C5)
         xor a
         ld (V_IN),a
-        ld a,(V_ILEAVE)
-        ld i,a
         pop af
         ld sp,(V_SP)
         HLIB_R_OUT

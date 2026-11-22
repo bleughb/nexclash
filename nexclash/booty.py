@@ -308,7 +308,7 @@ class State:
             self.l2[m][o] = v
 
 
-def run_hook(patch, st, mem, regs, stop_pc, stop_sp=None, limit=20000000, speed=0, iff_in=None):
+def run_hook(patch, st, mem, regs, stop_pc, stop_sp=None, limit=20000000, speed=0, iff_in=None, each=None):
     Sim = _rw()
     v = View(mem, patch, st)
     s = simpool.machine(Sim, v, list(regs), 'booty-hook')
@@ -320,6 +320,8 @@ def run_hook(patch, st, mem, regs, stop_pc, stop_sp=None, limit=20000000, speed=
     while n == 0 or R[24] != stop_pc or (stop_sp is not None and R[12] != stop_sp):
         s.opcodes[v[R[24]]]()
         n += 1
+        if each is not None:
+            each(R, v)
         if n > limit:
             raise AssertionError('hook did not terminate at %04X' % R[24])
     st.line = m.line()
@@ -598,6 +600,25 @@ def unit_tests(patch, states, neg=True):
                 ref.opcodes[ref.memory[R[24]]]()
                 n += 1
         return ref, stop_pc, hsp
+    def window(kind, speed):
+        """An interrupt at every instruction boundary (Codex C5): while the hook's vector (I = 3B) and flag (V_IN = 1)
+        are in, isr_w runs the game's ISR at V_SPEED (V_ROOMSP when that says 28 MHz): the game's clock by then; and
+        once the flag has gone the vector must be the game's again (a room is the one hook that leaves it)."""
+        seen = [False]
+
+        def each(R, v):
+            if kind == 'roomend' and speed != 3:    # h_re is entered from a room at 28 MHz only: its game clock is V_ROOMSP
+                return
+            if v[V_IN] == 1:
+                seen[0] = True
+                if R[14] == 0x3B:
+                    sp_, room = v[0x3E30], v[0x3E35]
+                    if (room if sp_ == 3 else sp_) != (room if speed == 3 else speed):
+                        c['ISR in the hook window: not the game\'s clock!'] += 1
+            elif seen[0] and R[14] == 0x3B and kind != 'room':
+                c['ISR after the hook flag: room path, game\'s clock lost!'] += 1
+            c['ISR window boundaries'] += 1
+        return each
     for pc, regs, mem in states:
         old, sym, kind, stop_pc = ALL_SITES[pc]
         p = patched(mem)
@@ -609,7 +630,9 @@ def unit_tests(patch, states, neg=True):
                     rr[26] = iff
                     ref, stop, hsp = meet(mem, rr, kind, stop_pc)
                     st = State(patch)
-                    got, v, model = run_hook(patch, st, p, rr, stop, hsp, speed=speed)
+                    st.page[0x3E30 - 0x2000] = (speed + 1) % 4      # a stale latch: the last hook's clock
+                    win = window(kind, speed) if iff and refresh == 0 else None
+                    got, v, model = run_hook(patch, st, p, rr, stop, hsp, speed=speed, each=win)
                     if any(((bool(ref.registers[i]) != bool(got[i])) if i == 26 else ref.registers[i] != got[i]) for i in CMP if i != 14):
                         c['ABI registers differ!'] += 1
                     want = {'room': 3}.get(kind, speed)
