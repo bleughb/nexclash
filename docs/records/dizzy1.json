@@ -89,7 +89,7 @@
   },
   "sprites": {
    "file": "dizzy1_sprites.nex",
-   "md5": "47212772fe612ea0c9c5b14e51c73c60"
+   "md5": "90e4ce0e37bdd1f9f542dd4066450172"
   }
  },
  "repro": [],
@@ -159,19 +159,19 @@
     },
     "sprites": {
      "file": "dizzy1_sprites.nex",
-     "md5": "47212772fe612ea0c9c5b14e51c73c60"
+     "md5": "90e4ce0e37bdd1f9f542dd4066450172"
     },
     "enhanced": {
      "file": "dizzy1_enhanced.nex",
-     "md5": "f03d22a20253422a8ac4d6bb5d6a5716"
+     "md5": "94c3479cbc80f905a59bf2805a0016c0"
     },
     "sprites_loading": {
      "file": "dizzy1_sprites_loading.nex",
-     "md5": "2e2c79aa005f513ea36b26f030def0cc"
+     "md5": "ae15c5dd8e030291febaf13a20a7d1a5"
     },
     "enhanced_loading": {
      "file": "dizzy1_enhanced_loading.nex",
-     "md5": "c75460c6259a91704898043ee6f02c07"
+     "md5": "3aba69634675a735979a67805a9c30c8"
     }
    },
    "proof": "Enhanced colours: Jao Paulo (Spec256). Approved colour map; original executable code unchanged.",
