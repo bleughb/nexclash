@@ -675,6 +675,41 @@ def _t_iff(code, syms):
     return c
 
 
+def line_isr_cases(code, syms, line=0x1A5, speed=1):
+    """A zero-time interrupt after each OUT to 0x243B in a line read, leaving NR 7 selected (what Silkworm's and Into
+    the Eagle's Nest's handlers do; Codex review C7). -> {entry: [result after OUT 1, 2, ...]} with the true line
+    `line`. hlib_line reads NR 7 as the low byte when the interrupt follows its NR $1F select: callers whose ISR
+    moves the selection use hlib_line_di, preserve the selection in the ISR, or count interrupts (hlib_now's retry
+    sees only held lines, and a handler shorter than a line holds none)."""
+    from skoolkit.simutils import PC, SP
+    out = {}
+    for entry in ('hlib_line', 'hlib_line_di'):
+        if entry not in syms:
+            continue
+        res = []
+        for k in range(1, 4):
+            sim, model = _machine(code, speed=speed)
+            model.frozen = line
+            R, m, ops = sim.registers, sim.memory, sim.opcodes
+            sp = (R[SP] - 2) & 0xFFFF
+            m[sp], m[sp + 1] = STOP & 255, STOP >> 8
+            R[SP], R[PC], R[IFF1] = sp, syms[entry], 1
+            outs = 0
+            for _ in range(100000):
+                if R[PC] == STOP:
+                    break
+                pc = R[PC]
+                is_out = m[pc] == 0xED and m[(pc + 1) & 0xFFFF] == 0x79 and R[2] == 0x24
+                ops[m[pc]]()
+                if is_out:
+                    outs += 1
+                    if outs == k and R[IFF1]:
+                        model.sel = 7
+            res.append(R[6] * 256 + R[7])
+        out[entry] = res
+    return out
+
+
 def drift_extremes(samples, window):
     """samples: (time, drift) in time order; -> (most the drift rises, most it falls) between two samples at most
     `window` apart. A rolling minimum / maximum: comparing each sample with the window's oldest alone missed a
@@ -1062,6 +1097,11 @@ def selfcheck():
                 % (len(au), sum(v == 'twice' for *_, v in au), sum(v == 'value' for *_, v in au)),
                 ['IFF read once: %s!' % x for x in once]))
     out.append(speed_audit_check())
+    li = line_isr_cases(code, syms)
+    out.append(('hooklib line read under a selection-moving ISR (C7): hlib_line_di exact %s; hlib_line %s'
+                % (li.get('hlib_line_di'), li.get('hlib_line')),
+                ([] if all(v == 0x1A5 for v in li.get('hlib_line_di', [0])) else ['hlib_line_di read a moved selection!'])
+                + ([] if li.get('hlib_line', [0x1A5])[1] != 0x1A5 else ['hlib_line no longer shows the gap: revise C7 note!'])))
     good = hide_cases([0, 1], {0x100: 'room'}, lambda pc, st, sp: ([], set()))
     broken = hide_cases([0, 1], {0x100: 'room'}, lambda pc, st, sp: ([], {5}))
     out.append(('hooklib hide_cases: %d cases (2 states x 4 speeds), a hook leaving sprite 5 shown caught (%d)'
