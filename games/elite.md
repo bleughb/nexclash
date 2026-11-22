@@ -169,9 +169,9 @@ Verify (step 6):
 Milestones: M1 early integrated diagnostic - NEX boots (JNext headless + CSpect), logic on the fixed tick + ISR pattern,
 Layer 2 shows the ships in colour once per tick (alpha = 1 only). M2 interpolation at 50 fps. M3 own turning. M4 HUD cells,
 pages, colour sheet + recolour. M5 quick runs PASS, evidence record docs/records/elite.json.
-All recordings [observed: pass_frames.py / pass_ints.py, whole recordings; PoliceAnarchy ints still running]:
+All recordings [observed: pass_frames.py / pass_ints.py, whole recordings]:
 frames per pass mean Docking 10.13, Havoc 9.77, PoliceAnarchy 10.47, Witch 9.73, Reidquat 10.14 (p50 9-11, p90 12-16);
-interrupts per pass mean 5.85 / 6.53 / - / 6.24 / 6.57 -> 0.58-0.67 interrupts per frame (outlier passes of 65-344
+interrupts per pass mean 5.85 / 6.53 / 6.99 / 6.24 / 6.57 -> 0.58-0.67 interrupts per frame (outlier passes of 65-344
 interrupts are full-screen pages / hyperspace, not flight). Choice: T = 10 frames per tick (5 game updates a second,
 the original's mean), the game ISR body on ~0.64 of frames (16 of every 25, spread evenly) - turn rate and timers per
 second as the original's flight average. Tunable constants in the engine, revisited at the first hardware test.
