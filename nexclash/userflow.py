@@ -61,6 +61,13 @@ def artifact_state(path):
         return None
 
 
+def match_release(known, got):
+    """The release of this snapshot whose outputs `got` ({kind: md5}) reproduces, or None. Every release counts: a
+    frozen or alternate release shares the snapshot (Everyone's a Wally, Fireman OPUS / ASTRA, Rainbow)."""
+    variants = known.get('variants') or [dict(known, record=known.get('doc'), args=[])]
+    return next((v for v in variants if all(v['nex'].get(k) is not None and v['nex'][k] == got[k] for k in got)), None)
+
+
 def cmd_patch(a, cmd_auto):
     """Build for the user's own snapshot; then say how much of it is proven."""
     z80 = a.z80
@@ -98,12 +105,14 @@ def cmd_patch(a, cmd_auto):
     if known and getattr(a, 'allow_60hz', False):
         print('Recognised snapshot: %s (games/%s); --allow-60hz output has not been compared to the reference.' % (known['game'], known.get('doc', '?')))
     elif known:
-        want = known.get('nex', {})
         got = {'plain': md5(plain) if os.path.exists(plain) else None, 'sprites': md5(spr)}
-        same = all(want.get(k) is not None and want[k] == got[k] for k in got)
+        hit = match_release(known, got)
+        same = hit is not None
+        if same:
+            known = hit
         print('Recognised snapshot: %s (games/%s). Output %s the reference build%s.' % (
             known['game'], known.get('doc', '?'), 'is identical to' if same else 'DIFFERS from',
-            '' if same else ' (report this: %s)' % got))
+            (' (%s)' % ' '.join(hit['args']) if hit.get('args') else '') if same else ' (report this: %s)' % got))
     else:
         print('PATCHED: your snapshot is not byte-identical to the one we verified, but every patch site')
         print('held the original bytes, so the same patch applied. To prove it for YOUR snapshot, record')

@@ -644,7 +644,7 @@ def tools_check(src):
     and adds a check for what it added (one easy game is enough: the commands are game-independent)."""
     from nexclash import snapinfo, memscan, isrinfo, drawcost
     workflow = subprocess.run([sys.executable, os.path.join(HERE, 'tools', 'workflow_check.py')])
-    bad = R.selfcheck() + ([] if workflow.returncode == 0 else ['workflow checks'])
+    bad = R.selfcheck() + R.verified_selfcheck() + ([] if workflow.returncode == 0 else ['workflow checks'])
     bad += [b for r in R.all_records() for b in R.evidence_problems(r)]
     print('%-4s tools: records plan() on synthetic stamps, recipe digest and ROM identity mutations%s' % (
         'OK' if not bad else 'FAIL', '' if not bad else ' (%s)' % bad[:3]))

@@ -494,16 +494,59 @@ def view_checksums(recs):
     return GEN_BEGIN + '\n' + '\n'.join(lines) + '\n' + GEN_END
 
 
+def _proof(r):
+    """How a record's outputs are proven: differential (replayed against a recording), not differential, or rebuild only."""
+    v = r.get('verify')
+    if not v:
+        return 'rebuild only'
+    return 'not differential' if v.get('differential') is False else 'differential'
+
+
 def view_verified(recs):
-    snaps = {}
+    """One entry per snapshot MD5 (the release `patch` builds by default, for its title) with every release of that
+    snapshot under 'variants': a frozen or alternate release shares the snapshot, and a single entry let it
+    overwrite the default (Everyone's a Wally, Fireman OPUS / ASTRA, Rainbow / Rainbow Z80N)."""
+    by = {}
     for r in recs:
         if r.get('verified_json', True) and r['inputs']['snapshot']['md5']:
-            snaps[r['inputs']['snapshot']['md5']] = {
-                'game': r['verified_json_game'] if r.get('verified_json_game') else r['game'], 'doc': r['doc'],
-                'nex': {k: v['md5'] for k, v in r['outputs'].items()}}
+            by.setdefault(r['inputs']['snapshot']['md5'], []).append(r)
+    snaps = {}
+    for m, rs in by.items():
+        variants = [{'record': r['name'], 'game': r['verified_json_game'] if r.get('verified_json_game') else r['game'],
+                     'doc': r['doc'], 'args': [x for x in r['rebuild'].get('args', []) if x != '--no-record'],
+                     'proof': _proof(r), 'nex': {k: v['md5'] for k, v in r['outputs'].items()}}
+                    for r in sorted(rs, key=lambda r: r['name'])]
+        d = min(variants, key=lambda v: ('--engine' in v['args'], len(v['game']), v['record']))
+        snaps[m] = dict({k: d[k] for k in ('game', 'doc', 'nex', 'proof')}, variants=variants)
     return {'_note': 'GENERATED from docs/records by `python -m nexclash.records views` - do not edit. '
-                     'Snapshots whose sprite build was differentially verified against a recording. nex = MD5s '
-                     '`nexclash.py patch` reproduces.', 'snapshots': snaps}
+                     'Snapshots with a recorded build: nex = the MD5s `nexclash.py patch` reproduces for the default '
+                     'release; variants = every release of that snapshot (args: how it is selected; proof: '
+                     'differential = replayed against a recording, otherwise not).', 'snapshots': snaps}
+
+
+def verified_selfcheck():
+    """verified.json for the snapshots two releases share: both kept, the default the one built without --engine,
+    and userflow.match_release taking each release's own outputs and refusing a sprite build neither made. -> failures"""
+    from . import userflow
+    snaps = view_verified(all_records())['snapshots']
+    bad = []
+    for default, other in (('everyones_a_wally_updated', 'wally'), ('rainbow_z80n', 'rainbow'),
+                           ('incredible_shrinking_fireman-add-OPUS', 'incredible_shrinking_fireman-add-GPT6_ASTRA')):
+        e = next((e for e in snaps.values() if {default, other} <= {v['record'] for v in e.get('variants', [])}), None)
+        if e is None:
+            bad.append('verified.json: %s and %s not under one snapshot' % (default, other))
+            continue
+        rel = {v['record']: v for v in e['variants']}
+        if e['nex'] != rel[default]['nex']:
+            bad.append('verified.json: the default of %s / %s is not %s' % (default, other, default))
+        for name in (default, other):
+            got = {k: rel[name]['nex'].get(k) for k in ('plain', 'sprites')}
+            hit = userflow.match_release(e, got)
+            if not hit or hit['record'] != name:
+                bad.append('match_release: %s outputs matched %s' % (name, hit and hit['record']))
+        if userflow.match_release(e, {'plain': rel[default]['nex'].get('plain'), 'sprites': 'f' * 32}):
+            bad.append('match_release: a sprite build no release made was accepted (%s)' % default)
+    return bad
 
 
 def views(check=False):
