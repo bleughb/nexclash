@@ -500,8 +500,20 @@ def smoke_pacing_census(ez, er, ok):
        and r['outs'].get('0x9CA6', {}).get('count') == 751, r)
 
 
+def smoke_sprite_leftovers(ez, er, ok):
+    import sprite_leftovers                     # probe: sprites a build leaves visible (no game data: synthetic logs)
+    four = [w for i in range(4) for w in (('nr', 0x34, i), ('nr', 0x38, 0))]
+    vis, written = sprite_leftovers.replay(four)
+    ok('probe sprite_leftovers: hiding 4 by NEXTREG leaves 4-127', vis == list(range(4, 128)) and written == set(range(4)),
+       (vis[:3], sorted(written)))
+    ports = [('port', 0x303B, 0)] + [('port', 0x0457, 0)] * 512
+    vis, written = sprite_leftovers.replay(ports)
+    ok('probe sprite_leftovers: 128 x 4 attribute bytes on port 0x57 hide all', vis == [] and len(written) == 128, vis[:3])
+
+
 PROBE_SMOKE = {'rzx_census.py': smoke_rzx_census, 'attr_census.py': smoke_attr_census,
-               'routine_skip.py': smoke_routine_skip, 'pacing_census.py': smoke_pacing_census}
+               'routine_skip.py': smoke_routine_skip, 'pacing_census.py': smoke_pacing_census,
+               'sprite_leftovers.py': smoke_sprite_leftovers}
 
 
 def verification_selfcheck():

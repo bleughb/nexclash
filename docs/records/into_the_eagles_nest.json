@@ -114,11 +114,11 @@
   },
   "enhanced": {
    "file": "into_the_eagles_nest_enhanced.nex",
-   "md5": "9b32aa8d2a6a124799b10bc3960da282"
+   "md5": "539049d915ec92d05125be0a3a43ae45"
   },
   "enhanced_loading": {
    "file": "into_the_eagles_nest_enhanced_loading.nex",
-   "md5": "6a224cabba87912fdcc5e11a057d9844"
+   "md5": "3b868632275a6e4cfdeb19b2f1dbb6a9"
   }
  },
  "repro": [],
@@ -143,25 +143,25 @@
  ],
  "checked": {
   "deps": {
-   "asm/into_the_eagles_nest_hooks.asm": "1055aa573de1cd23",
+   "asm/into_the_eagles_nest_hooks.asm": "2248fb5ea8e8d8c7",
    "asm/lib/hlib_iff.asm": "b63b400926847660",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "docs/profiles/into_the_eagles_nest.json": "2d1ead7a301a99ee",
+   "docs/profiles/into_the_eagles_nest.json": "52102a3c12cd494c",
    "nexclash.py": "cc1297e9104ece5f",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "bf75ad27e5bfabce",
+   "nexclash/engines.py": "e7bf4d8d4de708a6",
    "nexclash/hooklib.py": "24241497925658d6",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
    "nexclash/into_the_eagles_nest.py": "343febd9aefb2f35",
    "nexclash/nextboot.py": "05f0fe47c3c3eac6",
-   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/recolour.py": "e0c2de6bfad5c6fb",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/rzx.py": "e018e000440e0274",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
@@ -171,32 +171,32 @@
    "nexclash/z80tonex.py": "9bd684151bdab4ea",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "e812a36ee0064edc",
-   "rom": "8c34d957fb2cbbd0"
+   "recipe": "3ffaf68c75ea3511",
+   "rom": "sinclair"
   },
-  "date": "2026-11-17"
+  "date": "2026-11-21"
  },
  "verified": {
   "deps": {
-   "asm/into_the_eagles_nest_hooks.asm": "1055aa573de1cd23",
+   "asm/into_the_eagles_nest_hooks.asm": "2248fb5ea8e8d8c7",
    "asm/lib/hlib_iff.asm": "b63b400926847660",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "docs/profiles/into_the_eagles_nest.json": "2d1ead7a301a99ee",
+   "docs/profiles/into_the_eagles_nest.json": "52102a3c12cd494c",
    "nexclash.py": "cc1297e9104ece5f",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "112c3b17a78ace9a",
+   "nexclash/engines.py": "e7bf4d8d4de708a6",
    "nexclash/hooklib.py": "24241497925658d6",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
    "nexclash/into_the_eagles_nest.py": "343febd9aefb2f35",
    "nexclash/nextboot.py": "05f0fe47c3c3eac6",
-   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/recolour.py": "e0c2de6bfad5c6fb",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/rzx.py": "e018e000440e0274",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
@@ -206,9 +206,9 @@
    "nexclash/z80tonex.py": "9bd684151bdab4ea",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "e812a36ee0064edc",
-   "rom": "8c34d957fb2cbbd0"
+   "recipe": "3ffaf68c75ea3511",
+   "rom": "sinclair"
   },
-  "date": "2026-11-12"
+  "date": "2026-11-21"
  }
 }

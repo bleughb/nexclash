@@ -79,11 +79,11 @@
    "game": "Bruce Lee",
    "doc": "bruce_lee.md",
    "nex": {
-    "plain": "d393199dfe1cd7ba0372fa6ab0ce0dfa",
-    "sprites": "572bd4499005b81fd8eafac597b5ab0b",
-    "enhanced": "7f762987659ae1c0da54190dd0335b69",
-    "loading": "0a343912c1748f5fcd45230f0c1e1831",
-    "enhanced_loading": "004b76609c33d2414b380c5ab5a8bf47"
+    "plain": "cbb2925c3aa4e21a88898c23d4c84b37",
+    "sprites": "bdc82057afa1d8596c56b6cfe5497742",
+    "enhanced": "1f1733ba16e934d9147f9cfc3f2171de",
+    "loading": "bb7def86fe7c8fb1d8d948edae1306f5",
+    "enhanced_loading": "6fb7457e75a05dc5d01b9b1ff76de0b4"
    }
   },
   "85d7841306333321838d372ea8797ff2": {
@@ -107,9 +107,9 @@
    "game": "Chase H.Q.",
    "doc": "chase_hq.md",
    "nex": {
-    "plain": "2f6628a552412d0a227300fe7cf397b2",
-    "speed": "6729617fd9e3adc131a0451593557b39",
-    "orig_pace": "498c2119e140480cd16c8f0fda5c5843"
+    "plain": "83c34e3da6c75bbfa7913c792f9bb641",
+    "speed": "1707d10ff67e600a4983886d04e665c6",
+    "orig_pace": "8a5fcfea70e3df52c6018da94fc7832b"
    }
   },
   "cddc0cfea8259d0c497b50fae0acd27e": {
@@ -348,8 +348,8 @@
    "nex": {
     "plain": "b7d029c512c7a7ebee9e67af27f7ccf4",
     "loading": "2a73be327f9ff7db9667c3aede747f87",
-    "enhanced": "9b32aa8d2a6a124799b10bc3960da282",
-    "enhanced_loading": "6a224cabba87912fdcc5e11a057d9844"
+    "enhanced": "539049d915ec92d05125be0a3a43ae45",
+    "enhanced_loading": "3b868632275a6e4cfdeb19b2f1dbb6a9"
    }
   },
   "5875d535442974a0de82737652854f1f": {
@@ -638,8 +638,8 @@
    "nex": {
     "plain": "36a148b54bce181c39c94899f7809c20",
     "loading": "6ae12fd66946724d9ef6c1e089a6b163",
-    "enhanced": "d5d3a92cce49d1f4d855f3d98ee7f41b",
-    "enhanced_loading": "2058f2e55464eeb68f418320548fb34a"
+    "enhanced": "5fb64654de2377b2a8e15611a0dbe5f5",
+    "enhanced_loading": "a710134b4a0040eb03b66ea4c36e0b9a"
    }
   },
   "14ee8b0b105fbf8b58bfeaed03e97a13": {
@@ -733,10 +733,10 @@
    "game": "That Sinking Feeling",
    "doc": "that_sinking_feeling.md",
    "nex": {
-    "sprites": "07fea8b4205b854febc67d44a3d013fe",
-    "loading": "7a34cae8445952cc8c56b0fc52e9908b",
-    "enhanced": "f6838dd33f91b87930d22fa3a584bc9e",
-    "enhanced_loading": "8c9469e34a9fb936e8c1f7709e383ea7"
+    "sprites": "a5bd5b3ff7dd75c1f063d06b2d1bd030",
+    "loading": "b9982c80b74a3644231e642ed37e1a87",
+    "enhanced": "123a2e3b3a2e448c60335b8362c6e3a8",
+    "enhanced_loading": "f34d7eb147cfa1ba7411bc0e844426d8"
    }
   },
   "72bcb108d7baec2ee10ede47594010dd": {
