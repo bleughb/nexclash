@@ -1,5 +1,7 @@
 # Finders Keepers (Mastertronic, 1985; 48K, Magic Knight 1) - engine `finders_keepers`
 
+Techniques: `detect.gameplay-screen-readers`, `patch.xor-overlay-keep-ula`, `patch.whole-altrom-image`, `patch.restore-speed`
+
 ## Facts
 - Snapshot: Finders Keepers (1985)(Mastertronic)[Magic Knight 1].z80 (TOSEC), in game at the menu (8 = play), IM 1.
 - One plotter 0x9A05 for the five figures (0 the Knight, 1-4 the room's creatures; the enemy loop at 0x75C7 plots
@@ -23,10 +25,31 @@ game draws and paints it. Rooms, panel, text stay on the ULA.
 ## Results (2026-11-21)
 Recordings (machine-played, the toolkit recorder): fk_s1/2/3 (exploring, seeds 1-3, 12,000+ frames each) and
 fk_rooms (rooms 0-22, 600 frames each, room poked, entered at 0x703F with the Knight's frame 0 as the game's own
-callers do). Verify IDENTICAL on all four (52,127 frames, 16.3M sprite pixels); unit tests 6,912 pass; negatives 8/8.
+callers do). Verify IDENTICAL on all four (52,127 frames, 16.3M sprite pixels); unit tests pass (the plot hook
+6,912, room and erase-all hooks from every state, each at the four CPU speeds); negatives 9/9 (2026-11-22, after
+the hooks were changed to restore the caller's CPU speed). Record docs/records/finders_keepers.json, stamped.
 Tang board: loads with automap on and 124 leftover sprites, plays. OverSpec from the .nxc menu: plays.
 Verifier limits, counted: a segment snapshot taken inside a plot, or in a transition, leaves that figure unchecked
 until the next room set-up.
 
+## Lessons
+- [local: negative controls] the room set-up and erase-all controls were caught only when a recording reached them
+  after a sprite was shown; unit cases from captured states (every sprite shown, the hook run) now catch them always.
+- [local: the card already covers it] every hook left NR 7 at 3.5 MHz; HK_IN keeps the caller's speed on the stack (card patch.restore-speed).
+
+## Friction
+- reuse: [local: Magic Knight's verifier shape (events, truth layers, units) followed; patch.restore-speed card as written]
+- retries: [local: the first record run missed two negatives on three recordings; unit cases added, re-run]
+- environment: [local: reference files staged from the scratchpad; not yet in specnext]
+- hand-rolled: [none: the hook unit cases use the engine's own event()]
+- scratch: [none: the staging script stays in the session's scratchpad]
+
+## Technique use
+- detect.gameplay-screen-readers: helped: `scan --writers` showed only the plotter's XOR reads figure pixels.
+- patch.xor-overlay-keep-ula: used: the XOR kept, one sprite per figure.
+- patch.whole-altrom-image: used: hooks at 0x386E in the 48K ROM image.
+- patch.restore-speed: used: the caller's NR 7 kept and put back.
+
 ## Next session
-Record + stamp (selftest), PR with the other toolkit branches, reference files to specnext.
+Stage 4 (hardware + colour rounds): owner play; reference files to specnext. Republish the nxc patch (hook bytes
+changed by the speed fix) after the owner's quick test.

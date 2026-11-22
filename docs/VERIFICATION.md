@@ -125,6 +125,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Cookie (cookie): `cookie.nex` f79626650e54545a5818fd0067e33ee5, `cookie_sprites.nex` 350767afe81d88de4126c88db1e5d7df, `cookie_enhanced.nex` cd1ec11109c2fd8833178d33527310a7; verified 2026-11-20
 - Tranz Am (tranz_am): `tranz_am.nex` 5b7ed517c752b2899bddd6539aaedfc9, `tranz_am_sprites.nex` 62b76f0325fec6055b068f57434bf602, `tranz_am_enhanced.nex` 2d9e69880cf7a8c9a8a8fc27303bc0b3; verified 2026-11-20
 - Winter Sports (winter_sports): `winter_sports.nex` 8dc688fa980454c63f98bc0e802d5f88, `winter_sports_sprites.nex` eab9ae6fc1ba2e5184b57a7796140cd7; verified 2026-11-22
+- Finders Keepers (finders_keepers): `finders_keepers.nex` b434bc905a813514567d3cbd38dbe670, `finders_keepers_sprites.nex` ba99b0cb1058987d0ab4549eac9ce46e; verified 2026-11-22
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13
