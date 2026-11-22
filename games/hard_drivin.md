@@ -95,3 +95,13 @@ Open: the first calibration interrupt's extra ~574 T (not subtracted, 0.06 %); s
 ## Stage log
 - 2026-11-22: stage 0 (intake) + stage 1 (route choice, feasibility), ~50 tool calls, 1 user round.
 - 2026-11-23: stage 2 build: hd1 (fixed K) then hd2 (run-time K); unit tests pass; JNext pace within 0.16 %.
+- 2026-11-23 (2): hd_verify.py (whole RZX, every loop render, normal + calibration paths: game RAM, registers, each
+  in-between view = the original render at an exactly computed camera, calibration time = the original's) and
+  hd_mutants.py (16 mutants, 16 caught over 9,000 frames). Fixed: setcam read angles from cam0+6 (every in-between
+  view's angles wrong); calibration push repair wrong in the render's write set (tables 0x9C00-0x9DFB: sample dropped,
+  bitmap hd_wset.inc, retry in 2 updates; 20 % dropped); missed first interrupt at line 240-255 (wait); calibration
+  from the post-render carry (block 0x912E-0x91CD + 43337 saved / restored); copy target = its measured 3.5 MHz time
+  (cpy35) less 3 lines of hook overhead (the render's K was 8 % short for the copy). ISR_T 1104. JNext pace: +2
+  frames over 178 updates (0.08 %), 190 in-between views. Full verify: 3,112 checks, 3 FAIL, all calibration path:
+  u605 runaway (push 7 of that render; all pushes kept = PASS; address not yet read: scratchpad push605.py), u963 /
+  u964 short renders (2-3 frames) +0.53 / +0.69 % (plan: drop samples under ~1,000 lines).
