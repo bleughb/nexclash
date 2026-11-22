@@ -26,6 +26,7 @@ from collections import Counter
 from . import tapeset
 from . import winter_sports_dh as dh
 from . import winter_sports_bobsled as bobsled
+from . import winter_sports_ice_hockey as ice_hockey
 from . import winter_sports_common as common
 from . import z80tonex
 
@@ -45,7 +46,7 @@ SCR_BANK = 27                                  # the menu screen, put back after
 WAIT_FRAMES = 260
 NAMES = ['downhill_slalom', 'ice_hockey', 'ski_jumping', 'speed_skating', 'bobsled', 'biathlon']
 MENU_KEYS = ['1', '4', '5', '6', '7', '8']     # the main menu's key for each event
-PLUGINS = [dh, bobsled]                                 # event plugins (winter_sports_common.py): one module per converted event, by INDEX
+PLUGINS = [dh, ice_hockey, bobsled]                                 # event plugins (winter_sports_common.py): one module per converted event, by INDEX
 BANK_PLAN = {0: (28, 29, 30), 1: (31, 32, 33), 2: (34, 35, 36), 3: (37, 38, 39), 4: (40, 41, 42), 5: (43, 44, 45)}   # 16K banks an event's plugin may use
 DISABLE = 0x6D10                               # the loader hook's `CALL DISABLE` routine (every plugin's display-off code), up to 0x6EFF
 

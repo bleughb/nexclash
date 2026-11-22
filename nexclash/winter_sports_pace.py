@@ -21,10 +21,10 @@ SPACING = 0x2C                                 # bytes reserved per wrapper (a w
 
 
 class Site:
-    """One drawing call: `orig` = its bytes (CD lo hi, or F3 CD lo hi FB when di), `target` = the routine."""
+    """One drawing call: `orig` = its bytes (CD lo hi, or F3 CD lo hi FB when di), `target` = the routine, `halts` = frames waited before it."""
 
-    def __init__(self, addr, target, di=False):
-        self.addr, self.target, self.di = addr, target, di
+    def __init__(self, addr, target, di=False, halts=1):
+        self.addr, self.target, self.di, self.halts = addr, target, di, halts
         self.orig = (bytes([0xF3]) if di else b'') + bytes([0xCD, target & 255, target >> 8]) + (bytes([0xFB]) if di else b'')
 
     @property
@@ -48,7 +48,7 @@ class PaceEvent:
         out = []
         for i, s in enumerate(self.sites):
             a = C.Asm(self.wrap_at + SPACING * i)
-            C.draw_wrapper(a, s.target + (2 if bad == 'target' else 0), self.var_at, s.di)
+            C.draw_wrapper(a, s.target + (2 if bad == 'target' else 0), self.var_at, s.di, s.halts)
             code = bytearray(a.done())
             if bad == 'fast':                                   # drop the "back to 3.5 MHz" write
                 k = bytes([0xED, 0x91, 0x07, 0x00])
@@ -112,8 +112,8 @@ class PaceEvent:
         total = self.pre_frames + self.frames
         orig, _fo, _lf = self._run(z80, patch.tape_events, False, None, total)
         build, fast_out, left_fast = self._run(z80, patch.events, True, W._pages(patch.events), total)
-        io = [(b - a) / FRAME_T for a, b in zip(orig, orig[1:]) if b - a < 30 * FRAME_T]
-        ib = [(b - a) / FRAME_T for a, b in zip(build, build[1:]) if b - a < 30 * FRAME_T]
+        io = [(b - a) / FRAME_T for a, b in zip(orig, orig[1:]) if b - a < 20 * FRAME_T]
+        ib = [(b - a) / FRAME_T for a, b in zip(build, build[1:]) if b - a < 20 * FRAME_T]
         mo, mb = statistics.mean(io), statistics.mean(ib)
         pace_ok = len(io) >= 20 and abs(mb - mo) / mo <= 0.08
         lines.append('%s : updates original %d build %d, mean interval %.2f vs %.2f frames (%+.1f %%)%s'
