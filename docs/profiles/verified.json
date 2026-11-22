@@ -107,7 +107,21 @@
    "nex": {
     "plain": "636dcef8d4e456e35bfc1b63f46c8298",
     "sprites": "cf5589795b281d555be085094bd10f41"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "arkanoid",
+     "game": "Arkanoid",
+     "doc": "arkanoid.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "636dcef8d4e456e35bfc1b63f46c8298",
+      "sprites": "cf5589795b281d555be085094bd10f41"
+     }
+    }
+   ]
   },
   "9c14e2564e3f9956ff6ff973dac77537": {
    "game": "Army Moves",
@@ -229,7 +243,21 @@
    "nex": {
     "plain": "55a84a1452b6624d726f682917027d34",
     "sprites": "3494df60c092860d2c9ad18987d92920"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "bomb_jack",
+     "game": "Bomb Jack",
+     "doc": "bomb_jack.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "55a84a1452b6624d726f682917027d34",
+      "sprites": "3494df60c092860d2c9ad18987d92920"
+     }
+    }
+   ]
   },
   "0b2cb0c5a033e853d62c3a5e492f8bc0": {
    "game": "Booty",
@@ -499,7 +527,21 @@
    "nex": {
     "plain": "7c7bd61154709c7c0ac37ef63e59e165",
     "sprites": "c08867f3174b9b8c73cbad5af84d25c7"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "cybernoid",
+     "game": "Cybernoid - The Fighting Machine",
+     "doc": "cybernoid.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "7c7bd61154709c7c0ac37ef63e59e165",
+      "sprites": "c08867f3174b9b8c73cbad5af84d25c7"
+     }
+    }
+   ]
   },
   "745cb8f59f865db5118e6dc98d09e385": {
    "game": "Cyclone",
@@ -1293,7 +1335,21 @@
    "nex": {
     "plain": "6b205fc37cc5791dc07d5caa4df5b139",
     "sprites": "57e9b6df0fc78205566d09648a9553a5"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "manic_miner",
+     "game": "Manic Miner",
+     "doc": "manic_miner.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "6b205fc37cc5791dc07d5caa4df5b139",
+      "sprites": "57e9b6df0fc78205566d09648a9553a5"
+     }
+    }
+   ]
   },
   "5df07fbd5dabdcb9a909b86cf690a4e8": {
    "game": "Martianoids",
@@ -1647,7 +1703,25 @@
     "plain_loading": "eccd4ef26576435ed8a29c7da29e86cb",
     "sprites_loading": "795ff97eba947bd9ad3e2a9c976f03cb",
     "enhanced_loading": "c69d345bc266693dd0d83eb0fcd9c061"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "pentagram",
+     "game": "Pentagram",
+     "doc": "pentagram.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "718d6a4fd3ece6df3db60c53434b3415",
+      "sprites": "8fa89e9acb35245bd0695ab067a059b7",
+      "enhanced": "e2b342b349b1cdbfc3bcc28a75683ea5",
+      "plain_loading": "eccd4ef26576435ed8a29c7da29e86cb",
+      "sprites_loading": "795ff97eba947bd9ad3e2a9c976f03cb",
+      "enhanced_loading": "c69d345bc266693dd0d83eb0fcd9c061"
+     }
+    }
+   ]
   },
   "c39caed696ba547f693546b707c9cee8": {
    "game": "Phantis / Game Over 2, part 1",
