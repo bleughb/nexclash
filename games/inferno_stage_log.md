@@ -2,6 +2,8 @@
 
 Newest first; moved from inferno.md to keep it within its size budget.
 
+- 2026-11-23 (claude/inferno-release): Kempston default, SD saves + autosave (INFERNO.SAV), English briefing titles
+  and attract credits, no Czech flash; gate 0 failures; .nxc v1.1 round-trips; hardware not yet run. [none: details in specnext build/hybrid.md]
 - 2026-11-10 (claude/lessons-cards-equivalence): cards detect.routine-removal, detect.pacing-structure,
   patch.hybrid-display-replacement, patch.timed-side-effect-replay, patch.work-in-timed-gaps; equivalence
   split (CLAUDE.md, PLAYBOOK 6); stale Inferno notes and record updated; doccheck PASS. [none: lessons are the cards]

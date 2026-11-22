@@ -1,21 +1,22 @@
 # Inferno
 
 ## Next session
-Stage: 2 (hybrid sprite build on main, not released)    Branch: main (PRs #201, #207, #230 merged)
+Stage: 2 (.nxc v1.1 2026-11-23, not yet on hardware)    Branch: claude/inferno-release
 State: full game from the tape on the Next: tilemap scenery + hardware sprites committed by Copper at line 224,
-  copier write-out replaced, G3 masks, RAM SAVE/LOAD (page 123), English option (--cw-english), sprite store
-  reused on a same-level restart. JNext: level ends 1-5 reach the next level, L6 the ending.
+  copier write-out replaced, G3 masks, English option (--cw-english: text, briefing titles, attract credits),
+  Kempston default at play start, SAVE/LOAD + autosave at each play start in INFERNO.SAV on the SD card
+  (page 123 code at FC00, esxDOS RST 8). JNext: level ends 1-5 reach the next level, L6 the ending.
 Inputs: specnext/reference/inferno/ (Inferno_masked.nex, Inferno_english_masked.nex)
 Start: specnext build/hybrid.md (current handover); CONTINUE_copier_window.md is history.
 Read: asm wk_select, wo_go, modal_exit, wi_stub; inferno.py copier_window_build (--cw-driver --cw-full).
-Next: Kempston joystick (user 2026-11-10: not working; not fixed on main); freshness readout on hardware
-  (publication rate, longest miss run, display age); shop and level-to-level carry-over on hardware; records.
+Next: hardware round for v1.1 (Kempston; SAVE, power-off, LOAD; INFERNO.SAV beside the game; the shop on L4);
+  freshness readout on hardware. Never apply automap_off / automap_fix to Inferno: its SD saves need automap.
 Gate: copier-window gate 0 failures (OUT/9907 within tolerance) + boot checks; replay game RAM with supplied
   LD A,R values (equivalence: PLAYBOOK 6); pace, sound and freshness on hardware.
 Boundary: 8EF9 follows original DI, before IM2 setup; the pause gate preserves all registers/R/RAM/
   stack and caller clocks (six RZX initialization states). Reject 86C5 (decompressor, overwritten).
-Memory: copier window 80, driver 81, selection/store 82-95, saves 123. Older component pages (owned
-  cache 136-215, pinned 122, DDMA 216-223): check the build uses them before relying on them.
+Memory: copier window 80, driver 81, store 82-95, saves/SD 123, English 121/127 + bank 7. Older pages
+  (owned cache 136-215, pinned 122, DDMA 216-223): check the build uses them before relying on them.
 Workflow: failed states, 1/10 sample, ONE gate (--jobs 6); JNext headless before hardware rounds.
 
 ## Inputs and facts
@@ -60,9 +61,6 @@ Workflow: failed states, 1/10 sample, ONE gate (--jobs 6); JNext headless before
 ## Hardware checklist
 - Plain level-1 Inferno.nex: try CSpect first, then the Next; check title/text to gameplay,
   controls, scrolling, sound, death/restart and the shop. Boot is software-checked only.
-- Inferno_copier_window_*_diagnostic.nex (m2..m3d; NOT releases): play each
-  beside plain Inferno.nex for a minute of level 1: same speed, same beeper sound, no hang at the
-  first gameplay frame, no extra border stripes. Report core/video mode.
 - Plain conversion: no later tape loads.
 - Sprite build (Inferno_masked.nex; still to confirm): check intro beeper speed; title/start; all six continuous loads with
   score, equipment and health retained; scrolling/depth, bullets, explosions, pickups, death;
