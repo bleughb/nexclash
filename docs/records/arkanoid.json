@@ -1,0 +1,185 @@
+{
+ "name": "arkanoid",
+ "order": 23,
+ "game": "Arkanoid",
+ "doc": "arkanoid.md",
+ "engine": "arkanoid",
+ "representative": true,
+ "reference": "arkanoid",
+ "inputs": {
+  "snapshot": {
+   "name": "arkanoid.z80",
+   "md5": "1f0faef52a701cfc9434e2745ccb7fc2",
+   "path": "arkanoid/arkanoid.z80"
+  },
+  "recordings": [
+   {
+    "name": "ark_play.rzx",
+    "md5": "4c610277d707d4cfb9c05a794cd33abf",
+    "path": "arkanoid/ark_play.rzx"
+   },
+   {
+    "name": "ark_r9.rzx",
+    "md5": "c0daeb93d809f1ab1bc146f6794da5b0",
+    "path": "arkanoid/ark_r9.rzx"
+   },
+   {
+    "name": "ark_r17.rzx",
+    "md5": "c997392952e94f2868165f454afce5ce",
+    "path": "arkanoid/ark_r17.rzx"
+   },
+   {
+    "name": "ark_r25.rzx",
+    "md5": "f708f9983888ef93d09233e0ae450071",
+    "path": "arkanoid/ark_r25.rzx"
+   },
+   {
+    "name": "ark_doh.rzx",
+    "md5": "8f7d1ae2e48fb0b975182ae3bb1f9818",
+    "path": "arkanoid/ark_doh.rzx"
+   },
+   {
+    "name": "ark_demo.rzx",
+    "md5": "5ba0bf290c272fd55e57032e7467c50c",
+    "path": "arkanoid/ark_demo.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "arkanoid"
+ ],
+ "own_modules": [
+  "arkanoid"
+ ],
+ "data": [
+  "docs/profiles/arkanoid.json",
+  "asm/arkanoid_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "ark_play.rzx",
+   "ark_r9.rzx",
+   "ark_r17.rzx",
+   "ark_r25.rzx",
+   "ark_doh.rzx",
+   "ark_demo.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 25,
+  "note": "Pilot: recordings by work/bot.py on nexclash's Machine plus a floating bus; no human player; rounds 9, 17, 25 and Doh by memory cheat before the RZX snapshot."
+ },
+ "outputs": {
+  "plain": {
+   "file": "arkanoid.nex",
+   "md5": "636dcef8d4e456e35bfc1b63f46c8298"
+  },
+  "sprites": {
+   "file": "arkanoid_sprites.nex",
+   "md5": "cf5589795b281d555be085094bd10f41"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Arkanoid",
+  "engine_col": "arkanoid (arkanoid.md)",
+  "build": "arkanoid_sprites.nex 5c95f67d",
+  "software": "Verify IDENTICAL on 6 bot recordings; unit PASS; 8 negatives detected (no human recording)",
+  "hardware": "untested; floating bus at port 0xFF is load-bearing",
+  "next": "owner decision: little clash to remove (see arkanoid.md)"
+ },
+ "checks": [
+  "asm2profile:arkanoid"
+ ],
+ "techniques": [
+  {
+   "application": "arkanoid.screen-readers",
+   "id": "detect.gameplay-screen-readers",
+   "revision": 2,
+   "target": "alien erase ANDs its own XOR pixels (0x8917): overlay, every ULA write kept",
+   "phases": []
+  }
+ ],
+ "results": [
+  {
+   "application": "arkanoid.screen-readers",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "5c95f67d",
+   "scope": "6 recordings, 55443 frames, 22.5M sprite pixels IDENTICAL (2026-11-02, stamped, 5c95f67d); bots, no human; cheat rounds 9, 17, 25, 33; no hardware",
+   "evidence": "games/arkanoid.md \"Results\""
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/arkanoid_hooks.asm": "699716e335b001d2",
+   "docs/profiles/arkanoid.json": "7a3d75d1999c27fa",
+   "nexclash.py": "d9b430cef7478a38",
+   "nexclash/arkanoid.py": "98bb82f6078a61c1",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/engines.py": "a2a47a48c20fb25c",
+   "nexclash/nextboot.py": "d4d8a6b6c9055025",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
+   "skoolkit": "10.1",
+   "recipe": "3683054074ddc336",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-22"
+ },
+ "verified": {
+  "deps": {
+   "asm/arkanoid_hooks.asm": "699716e335b001d2",
+   "docs/profiles/arkanoid.json": "7a3d75d1999c27fa",
+   "nexclash.py": "d9b430cef7478a38",
+   "nexclash/arkanoid.py": "98bb82f6078a61c1",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/engines.py": "a2a47a48c20fb25c",
+   "nexclash/nextboot.py": "d4d8a6b6c9055025",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
+   "skoolkit": "10.1",
+   "recipe": "3683054074ddc336",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-22"
+ },
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/arkanoid.md#how-much-clash-owners-question-2026-11-02-no-clash-seen-in-jnext"
+   ],
+   "coverage": "The recordings in the record, in the simulator.",
+   "result": "Bat and ball hook cost measured per frame against the original (the table in \"How much clash\"); no real-machine timing."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/arkanoid.md#rendering-model-playbook-2-xor-to-the-screen-game-reads-figure-pixels"
+   ],
+   "coverage": "The XOR plotter's writes and the game's own reads of figure pixels (Rendering model): the ball's collision reads the screen.",
+   "result": "XOR to the screen with the game reading figure pixels: the pixels stay, sprites cover them; the arcade colours as a set."
+  },
+  "decision": "Bat and ball as sprites over the XOR pixels the game still reads; Arcade colours set.",
+  "next_experiment": "A board run of 1.1 (automap off): play to round 3, no stray sprites."
+ }
+}
