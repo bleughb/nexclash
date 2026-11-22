@@ -124,7 +124,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Pssst (pssst): `pssst.nex` db271c07425ad2866b9e9e13d15f1beb, `pssst_sprites.nex` 40ae6ece0286d15f71c38c80dbacda92, `pssst_enhanced.nex` 6d14ba48110804e62a83ebd3bffbe248; verified 2026-11-20
 - Cookie (cookie): `cookie.nex` df40629882f8b5be3619e90f87690c91, `cookie_sprites.nex` faaacc0beb0c6bc6d5742b0f40ec9cd2, `cookie_enhanced.nex` 7df95fe3204d63471c342b8cd6fd9d59; verified 2026-11-20
 - Tranz Am (tranz_am): `tranz_am.nex` 8308134dff22d877c6f70ba236e2e012, `tranz_am_sprites.nex` 637c510df69e95cb621db6f63d02a5fd, `tranz_am_enhanced.nex` c89e6c5a4707b97a92922cd352b555ef; verified 2026-11-20
-- Winter Sports (winter_sports): `winter_sports.nex` 8dc688fa980454c63f98bc0e802d5f88, `winter_sports_sprites.nex` e26abf0ba45ba34013608063cd8d6823; verified 2026-11-22
+- Winter Sports (winter_sports): `winter_sports.nex` 8dc688fa980454c63f98bc0e802d5f88, `winter_sports_sprites.nex` eab9ae6fc1ba2e5184b57a7796140cd7; verified 2026-11-22
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13
