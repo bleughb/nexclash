@@ -440,6 +440,14 @@
     "sprites": "f28fbbc0e861c5aebcfd47b9de583837"
    }
   },
+  "cc90fbe7e7b6568e5f9d00c3226f215b": {
+   "game": "Monty is Innocent",
+   "doc": "monty_is_innocent.md",
+   "nex": {
+    "plain": "673011349213f7feceff3f528bf9b4ea",
+    "sprites": "a776f3429f34364eb7263a1cde03b1c8"
+   }
+  },
   "0acdc707ef4cf3b4aaf94316bd0f285c": {
    "game": "Monty on the Run",
    "doc": "monty_on_the_run.md",
