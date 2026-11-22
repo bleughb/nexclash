@@ -1,0 +1,205 @@
+{
+ "name": "finders_keepers",
+ "order": 273,
+ "game": "Finders Keepers",
+ "doc": "finders_keepers.md",
+ "engine": "finders_keepers",
+ "representative": true,
+ "reference": "finders_keepers",
+ "inputs": {
+  "snapshot": {
+   "name": "finders_keepers.z80",
+   "md5": "0244e9b61aa18d6a9f1e77d102da1ea9",
+   "path": "finders_keepers/finders_keepers.z80",
+   "note": "TOSEC Finders Keepers (1985)(Mastertronic)[Magic Knight 1].z80, the 48K game (same file)"
+  },
+  "recordings": [
+   {
+    "name": "fk_s1.rzx",
+    "md5": "25f65d59dbc2da108f436471ae8a4651",
+    "path": "finders_keepers/fk_s1.rzx",
+    "role": "machine-played, exploring, seed 1"
+   },
+   {
+    "name": "fk_s2.rzx",
+    "md5": "eee69339117239f63d25eed54cdc8b31",
+    "path": "finders_keepers/fk_s2.rzx",
+    "role": "machine-played, exploring, seed 2"
+   },
+   {
+    "name": "fk_s3.rzx",
+    "md5": "221cac9f20119f7f401b8fee6e911599",
+    "path": "finders_keepers/fk_s3.rzx",
+    "role": "machine-played, exploring, seed 3"
+   },
+   {
+    "name": "fk_rooms.rzx",
+    "md5": "77b308d34cd1027d4f95f825abd3caba",
+    "path": "finders_keepers/fk_rooms.rzx",
+    "role": "rooms 0-22, 600 frames each, room poked in the RZX snapshots only"
+   },
+   {
+    "name": "finders_keepers.pok",
+    "md5": "cb3a55627bde8b2732089797e8ecf0cf",
+    "path": "finders_keepers/finders_keepers.pok",
+    "note": "not a recording: the cheats in the .nxc, each checked against this release's code"
+   }
+  ]
+ },
+ "modules": [
+  "finders_keepers"
+ ],
+ "own_modules": [
+  "finders_keepers"
+ ],
+ "data": [
+  "docs/profiles/finders_keepers.json",
+  "asm/finders_keepers_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "fk_s1.rzx",
+   "fk_s2.rzx",
+   "fk_s3.rzx",
+   "fk_rooms.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 15,
+  "note": "machine-played recordings (the toolkit recorder); auto also runs the unit cases (plot, room, erase-all, four CPU speeds) and the negative controls"
+ },
+ "outputs": {
+  "plain": {
+   "file": "finders_keepers.nex",
+   "md5": "b434bc905a813514567d3cbd38dbe670"
+  },
+  "sprites": {
+   "file": "finders_keepers_sprites.nex",
+   "md5": "ba99b0cb1058987d0ab4549eac9ce46e"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Finders Keepers",
+  "engine_col": "finders_keepers (finders_keepers.md)",
+  "build": "finders_keepers_sprites.nex (as published in nxc: figures as sprites over the XOR plotter, the painter skipped for them)",
+  "software": "replay IDENTICAL on 4 recordings (52,127 frames); unit cases incl. four CPU speeds; 9 negatives detected",
+  "hardware": "Tang board: loads with automap on and leftover sprites, plays",
+  "next": "owner play"
+ },
+ "checks": [
+  "asm2profile:finders_keepers"
+ ],
+ "techniques": [
+  {
+   "application": "finders_keepers.screen-readers",
+   "id": "detect.gameplay-screen-readers",
+   "revision": 2,
+   "target": "readers of the screen and attributes: the plotter's own XOR, LDIR fills, the painter; no logic reads figure pixels or colours",
+   "phases": []
+  },
+  {
+   "application": "finders_keepers.xor-overlay",
+   "id": "patch.xor-overlay-keep-ula",
+   "revision": 2,
+   "target": "the XOR plotter 0x9A05 kept; figure n = sprite n over its own pixels in its ink, the painter skipped for it",
+   "phases": []
+  },
+  {
+   "application": "finders_keepers.alt-rom",
+   "id": "patch.whole-altrom-image",
+   "revision": 2,
+   "target": "Sinclair 48K ROM as alt ROM image 1, hooks at 0x386E",
+   "phases": []
+  },
+  {
+   "application": "finders_keepers.restore-speed",
+   "id": "patch.restore-speed",
+   "revision": 1,
+   "target": "28 MHz inside each hook, the caller's NR 7 kept on the stack and put back",
+   "phases": []
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/finders_keepers_hooks.asm": "2cc43a6f19898b5b",
+   "docs/profiles/finders_keepers.json": "f4affc9d43555817",
+   "nexclash.py": "04157df11540c17d",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/engines.py": "18c5fddd8de1135d",
+   "nexclash/finders_keepers.py": "a256e356c7d1c109",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "50684436558662bd",
+   "skoolkit": "10.1",
+   "recipe": "d82b065101587789",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-22"
+ },
+ "verified": {
+  "deps": {
+   "asm/finders_keepers_hooks.asm": "2cc43a6f19898b5b",
+   "docs/profiles/finders_keepers.json": "f4affc9d43555817",
+   "nexclash.py": "04157df11540c17d",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/engines.py": "18c5fddd8de1135d",
+   "nexclash/finders_keepers.py": "a256e356c7d1c109",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "50684436558662bd",
+   "skoolkit": "10.1",
+   "recipe": "d82b065101587789",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-22"
+ },
+ "results": [
+  {
+   "application": "finders_keepers.xor-overlay",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "ba99b0cb",
+   "scope": "4 machine-played recordings (52,127 frames, rooms 0-22 entered); unit cases for the plot, room and erase-all hooks at four CPU speeds; 9 negatives; no human recording; no hardware timing",
+   "evidence": "games/finders_keepers.md \"Results (2026-11-21)\""
+  }
+ ],
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/finders_keepers.md#results-2026-11-21"
+   ],
+   "coverage": "Hook cost counted in the simulator over the four recordings; Tang board and OverSpec play; no JNext timing against the original.",
+   "result": "The plot hook runs at 28 MHz and the painter is skipped for sprite figures, so a frame does no more work at 3.5 MHz than the original; not measured on JNext."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/finders_keepers.md#facts"
+   ],
+   "coverage": "Every screen and attribute reader in the four recordings (scan); the plotter, the painter, room set-up (8 callers) and the erase-all before a window.",
+   "result": "The game never reads figure pixels or colours back: the XOR stays on the ULA, the painter is skipped for figures that become sprites."
+  },
+  "decision": "Every figure with its own ink as sprite n over its own pixels in its ink, the painter skipped for it; whole-cell figures kept as drawn (the defaults).",
+  "next_experiment": "A human recording through the castle rooms: replay IDENTICAL with every negative control caught."
+ }
+}

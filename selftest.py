@@ -500,8 +500,23 @@ def smoke_pacing_census(ez, er, ok):
        and r['outs'].get('0x9CA6', {}).get('count') == 751, r)
 
 
+def smoke_sprite_leftovers(ez, er, ok):
+    import sprite_leftovers                     # probe: sprites a build leaves visible (no game data: synthetic logs)
+    four = [w for i in range(4) for w in (('nr', 0x34, i), ('nr', 0x38, 0))]
+    vis, written = sprite_leftovers.replay(four)
+    ok('probe sprite_leftovers: hiding 4 by NEXTREG leaves 4-127', vis == list(range(4, 128)) and written == set(range(4)),
+       (vis[:3], sorted(written)))
+    ports = [('port', 0x303B, 0)] + [('port', 0x0457, 0)] * 512
+    vis, written = sprite_leftovers.replay(ports)
+    ok('probe sprite_leftovers: 128 x 4 attribute bytes on port 0x57 hide all', vis == [] and len(written) == 128, vis[:3])
+    split = [('nr', 0x34, 0), ('port', 0x303B, 127), ('nr', 0x38, 0)] + [w for i in range(1, 127) for w in (('nr', 0x34, i), ('nr', 0x38, 0))]
+    vis, written = sprite_leftovers.replay(split)
+    ok('probe sprite_leftovers: port 0x303B and NEXTREG $34 select separately ($09 bit 4 clear)', vis == [127], vis)
+
+
 PROBE_SMOKE = {'rzx_census.py': smoke_rzx_census, 'attr_census.py': smoke_attr_census,
-               'routine_skip.py': smoke_routine_skip, 'pacing_census.py': smoke_pacing_census}
+               'routine_skip.py': smoke_routine_skip, 'pacing_census.py': smoke_pacing_census,
+               'sprite_leftovers.py': smoke_sprite_leftovers}
 
 
 def verification_selfcheck():
@@ -764,8 +779,10 @@ def tools_check(src):
            any('loader snapshot' in w for w in iwarn), iwarn)
         _, r = isrinfo.isr(ez, [er], stop=150)
         ok('isr: handler 40092, no IX/IY reads', 40092 in r['entries'] and not any(r['reads_entry'].values()), r)
-        ok('isr: slots touched 0 r, 3 r, 4 x, 5 r, 7 rw (slot 2 free for a hook page)',
-           r['slots'] == {0: 'r', 3: 'r', 4: 'x', 5: 'r', 7: 'rw'}, r['slots'])
+        # slot 0 'r' was SkoolKit's EI-test read of memory[prev_pc] at each acknowledge (rzxplay passes prev_pc 0:
+        # every slot-0 read was of 0x0000 with the game in RAM); simrun drops that read since 2026-11-22 (#288)
+        ok('isr: slots touched 3 r, 4 x, 5 r, 7 rw (slot 2 free for a hook page)',
+           r['slots'] == {3: 'r', 4: 'x', 5: 'r', 7: 'rw'}, r['slots'])
         tracker = isrinfo.IsrTracker()
         tracker.on_read(0x6000, 0x9000, None)  # outside an interrupt
         tracker.cur = (0x8000, 0xFF00)
@@ -884,6 +901,7 @@ def tools_check(src):
         rom_paths_check(src, ez, er, work, ok)
         altrom0_check(src, work, ok)
         rom3_v210_check(src, work, ok)
+        automap_off_check(src, work, ok)
     finally:
         sys.stderr = old
     shutil.rmtree(work, ignore_errors=True)
@@ -945,6 +963,41 @@ def altrom0_check(src, work, ok):
                % (game, kind), zt.altrom0(p) == (0x3500, 0x3600) and bytes(st['alt'][0]) == bytes(want), zt.altrom0(p))
         finally:
             zt.ALTROM_FILL = fill
+
+
+def automap_off_check(src, work, ok):
+    """DivMMC automap off at start (z80tonex.automap_off, 2026-11-20): Chuckie Egg converted, then automap_off: the
+    code at 0xDE00 of the entry bank and the header PC on it, idempotent, undone to the same bytes; booted with
+    NextReg $0A as NextZXOS leaves it (0x11) it reaches the game with automap off, and the build without the code
+    reaches it with automap still on (negative); a window that is not zero is refused."""
+    import copy
+    from nexclash import chuckie, nextboot as nb, z80tonex as zt
+    rec = R.load('chuckie_egg')
+    z80 = os.path.join(src, rec['inputs']['snapshot']['path'])
+    if not os.path.isfile(z80) or md5(z80) != rec['inputs']['snapshot']['md5']:
+        print('SKIP tools: automap off on chuckie_egg (reference snapshot not found)')
+        return
+    old_p, new_p = os.path.join(work, 'automap_old.nex'), os.path.join(work, 'automap_new.nex')
+    zt.convert(z80, old_p, quiet=True, patch=copy.deepcopy(chuckie.ChuckiePatch()))
+    old = open(old_p, 'rb').read()
+    new = zt.automap_off(old)
+    open(new_p, 'wb').write(new)
+    pc = zt.Z80Snapshot(z80).pc
+    on = nb.boot(old_p, pc, nr={0x0A: nb.NEXTZXOS_NR0A})['nr'][0x0A]
+    off = nb.boot(new_p, pc, nr={0x0A: nb.NEXTZXOS_NR0A})['nr'][0x0A]
+    ok('automap off: chuckie_egg: PC 0xDE00, idempotent, undone exactly; booted from $0A = 0x11: 0x%02X at the game '
+       '(without the code: 0x%02X)' % (off, on),
+       new[14:16] == b'\x00\xde' and zt.automap_off(new) == new and zt.automap_off_undo(new) == old
+       and not off & 0x10 and on & 0x10 and nb.automap_check(new_p) == [] and nb.automap_check(old_p) != [],
+       (new[14:16].hex(), hex(on), hex(off), nb.automap_check(new_p)))
+    full = bytearray(old)
+    full[new.index(zt.automap_off_code(old[14] | old[15] << 8))] = 1
+    try:
+        zt.automap_off(bytes(full))
+        refused = False
+    except ValueError:
+        refused = True
+    ok('automap off: a window that is not zero is refused', refused)
 
 
 def rom3_v210_check(src, work, ok):

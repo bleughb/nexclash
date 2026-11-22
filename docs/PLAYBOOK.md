@@ -235,7 +235,7 @@ Hooks: asm/<engine>_hooks.asm (+ asm/lib, ENGINE_CONTRACT) with `SAVEBIN "<prefi
 `"hooks": {"source": "asm/<engine>_hooks.asm", ...}` in the profile; after every edit
 `python tools/asm2profile.py <engine>` (pinned sjasmplus -> profile hex + symbols).
 What the module must provide: docs/ENGINE_CONTRACT.md (doccheck-checked). The cards' example
-functions first; then copy the nearest engine (docs/ENGINE_TEMPLATES.md; module + asm + profile + games/ file), one function at a time.
+functions first; then copy the nearest engine (docs/ENGINE_TEMPLATES.md, with its New engine checklist), one function at a time.
 Change the profile block + site list, rebuild the asm; every site keeps its original-byte check.
 Sessions build with `--nex`: tests, recolour and play checks use the .nex.
 Colour map (every game): build it and its verify as docs/ENGINE_TEMPLATES.md "Colour map".
@@ -307,8 +307,8 @@ engine) to docs/profiles/, games/<game>.md, and the evidence record docs/records
 the STATUS row, `techniques` + `results` = the recipe and checks, docs/techniques/STANDARD.md 3), then
 `python -m nexclash.records views` (regenerates STATUS / VERIFICATION
 checksums / verified.json). Check it: `python -m nexclash.records deps <game>` lists what your
-game's evidence depends on; the one full verification (6a) stamps it. Canary scope follows CLAUDE.md: shared build/runtime/verifier changes; documentation and
-registry-only additions do not trigger it.
+game's evidence depends on; the one full verification (6a) stamps it. Canary: CLAUDE.md (docs do not trigger it).
+No .nxc from `auto`, or options on the loader's menu: docs/NXC_PATCHES.md.
 Send with the sprite build: the colour sheets (docs/COLOURS.md "What to send") and the hardware
 checklist, so the user tests and paints in the same pass.
 

@@ -4,7 +4,7 @@
 {
   "schema": 4,
   "id": "verify.update-locked-pace",
-  "revision": 1,
+  "revision": 2,
   "kind": "verify",
   "title": "Measure a build's pace against the original with input keyed to game updates",
   "question": "Does the build play the same game work in the same time as the original, in quiet and in busy scenes?",
@@ -17,7 +17,7 @@
   "phases": [],
   "order": {},
   "owns": {},
-  "examples": [],
+  "examples": ["cisco_heat"],
   "sources": ["pilot runs/three_weeks work/pace (Jon's evidence, 2026-11-04): d386a699 +9.8%, 25eab33d +0.15%",
               "pilot runs/leonis_triage REPORT.md 4 (hook time from NR 7 over 23 games)"]
 }
@@ -49,6 +49,9 @@ probe chose a different loop (0x8B5D) and read +10.94%.
 3. Profile `state` addresses: the runs must stay in lockstep; the penalty counts only up to the first
    difference.
 Stop when the penalty and its busy third are within the pace target (ORIGINAL: about 0).
+Builds differing by under a percent: compare each with the original per update over the updates in
+lockstep, on two input seeds, never two builds' totals with each other (Cisco Heat: one seed's spread
+hid a 1.2% loss).
 
 ## Contract
 - Output: time for the same updates, original against build, all / quiet third / busy third / worst window;

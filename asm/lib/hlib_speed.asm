@@ -53,3 +53,31 @@
         ld a,(latch)
         nextreg 0x07,a
         ENDM
+
+; Stack forms, for hooks with no RAM of their own (hooks in the alt ROM image, which most new engines
+; use): the caller's speed is kept on the stack instead of in a latch. Use them as a pair, stack
+; balanced between them:
+;       push af / push bc               ; the hook saves A, F, B, C first (the IN form loses them)
+;       HLIB_SPEED_IN_SP                ; one word pushed: the caller's speed in A
+;       ...the hook's work...           ; leaves the stack as it found it
+;       HLIB_SPEED_OUT_SP               ; that word popped, the speed written back
+;       pop bc / pop af
+; Never write a constant to NextReg 7 on a hook's way out: a speed the player chose (F8) is lost.
+; HLIB_SPEED_IN_SP: A, F, B, C lost; 2 bytes of stack kept until HLIB_SPEED_OUT_SP.
+        MACRO HLIB_SPEED_IN_SP
+        ld bc,0x243B
+        ld a,7
+        out (c),a
+        inc b
+        in a,(c)
+        and 3
+        push af
+        nextreg 0x07,3
+        ENDM
+
+; HLIB_SPEED_OUT_SP: the word HLIB_SPEED_IN_SP pushed taken back; A and F lost (the hook's own POP AF
+; restores them).
+        MACRO HLIB_SPEED_OUT_SP
+        pop af
+        nextreg 0x07,a
+        ENDM
