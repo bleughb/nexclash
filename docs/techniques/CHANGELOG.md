@@ -89,3 +89,10 @@ patch.native-renderer-own-pages, patch.inbetween-views, verify.staged-port-gates
 optimise.layer2-renderer-speed, patch.loader-screen-from-game-file. One game each; the lessons were
 `[local]` bullets in games/castle_master.md, now tagged to the cards. The implementation and harness
 scripts are in specnext reference/castle_master/build (not shared code). No runtime code changed.
+
+## Cisco Heat v1.2 (2026-11-22)
+
+| Before | After | Why |
+|---|---|---|
+| - | New: patch.ink-rectangle-sprites (candidate) | The car coloured by an ink rectangle, as sprites clipped to it (Cisco Heat v1.2, on a Next) |
+| verify.update-locked-pace r1 | r2: builds under a percent apart compared each with the original per update, two seeds | One seed's spread hid a 1.2% loss from line-clock reads in JNext |
