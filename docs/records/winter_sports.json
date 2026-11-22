@@ -39,12 +39,16 @@
  },
  "modules": [
   "winter_sports",
+  "winter_sports_common",
   "winter_sports_dh",
+  "winter_sports_dh_test",
   "winter_sports_paint"
  ],
  "own_modules": [
   "winter_sports",
+  "winter_sports_common",
   "winter_sports_dh",
+  "winter_sports_dh_test",
   "winter_sports_paint"
  ],
  "data": [
@@ -70,17 +74,17 @@
   },
   "sprites": {
    "file": "winter_sports_sprites.nex",
-   "md5": "e26abf0ba45ba34013608063cd8d6823"
+   "md5": "d82f72275356f65762ef0aca56fd65bd"
   }
  },
  "repro": [],
  "status": {
   "title": "Winter Sports",
   "engine_col": "winter_sports (winter_sports.md)",
-  "build": "plain: all six events in one .nex (tape blocks in banks, RAM loader hook), 5.2 s loading screen; sprites: Downhill / Slalom / Giant Slalom's view painted on Layer 2 (hardware scroll), poles stay ULA",
+  "build": "plain: all six events in one .nex; default (sprites): Downhill/Slalom/Giant Slalom on Layer 2 in the ORIGINAL 16 colours per pixel, even 25-updates/s pace, drawing at 28 MHz in the blank; .nxc: colour set Enhanced (painted scenery), toggle Original pace",
   "software": "Rebuild byte-exact from either tape set; simulator differential per event, Downhill hybrid vs original (scroll model 581/581 updates, poles 401/412 state-matched), hook unit tests + negative controls; JNext: all six events play, Downhill/Slalom/Giant Slalom painted",
-  "hardware": "plain: loads, Downhill played; sprites build (Downhill/Slalom/Giant Slalom on Layer 2): tested and plays OK (user, 2026-11-22)",
-  "next": "other five events one at a time (Ice Hockey, Ski Jumping, Speed Skating, Bobsled, Biathlon)"
+  "hardware": "plain and the first sprites build (painted) played OK (user, 2026-11-22); the new default (original colours, even pace), Enhanced and Original pace: not yet on hardware",
+  "next": "events 1-5 as plugins (BANK_PLAN); hardware round for the new Downhill default"
  },
  "feasibility": {
   "pacing": {
@@ -104,18 +108,30 @@
   "deps": {
    "docs/profiles/winter_sports.json": "a48576bcc8832f07",
    "nexclash.py": "cc1297e9104ece5f",
+   "nexclash/analyse.py": "4c7e2c2391fb64a1",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
    "nexclash/engines.py": "e7bf4d8d4de708a6",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/nxc.py": "d4c135babd8cd53e",
+   "nexclash/nxcout.py": "f1bf468312cb5367",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
    "nexclash/rzx.py": "e018e000440e0274",
    "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/sprites.py": "899f635303b25706",
    "nexclash/tapeset.py": "86542e1752fb3110",
-   "nexclash/winter_sports.py": "0c118783dc0d2c75",
-   "nexclash/winter_sports_dh.py": "28a18fe851d40f3b",
+   "nexclash/verify.py": "2d4c0e3b68e6354a",
+   "nexclash/winter_sports.py": "21293b9833c1170b",
+   "nexclash/winter_sports_common.py": "c28243851e1caf46",
+   "nexclash/winter_sports_dh.py": "b8f533223ecf7c5b",
+   "nexclash/winter_sports_dh_test.py": "f881e06c77446efb",
    "nexclash/winter_sports_paint.py": "1dcf667c010270fe",
    "nexclash/z80n.py": "7843b0da444ced1d",
    "nexclash/z80tonex.py": "9bd684151bdab4ea",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "3a7bd1faf953be35",
+   "recipe": "807ed0b3ca30ddd4",
    "rom": "sinclair"
   },
   "date": "2026-11-22"
@@ -124,18 +140,30 @@
   "deps": {
    "docs/profiles/winter_sports.json": "a48576bcc8832f07",
    "nexclash.py": "cc1297e9104ece5f",
+   "nexclash/analyse.py": "4c7e2c2391fb64a1",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
    "nexclash/engines.py": "e7bf4d8d4de708a6",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/nxc.py": "d4c135babd8cd53e",
+   "nexclash/nxcout.py": "f1bf468312cb5367",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
    "nexclash/rzx.py": "e018e000440e0274",
    "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/sprites.py": "899f635303b25706",
    "nexclash/tapeset.py": "86542e1752fb3110",
-   "nexclash/winter_sports.py": "0c118783dc0d2c75",
-   "nexclash/winter_sports_dh.py": "28a18fe851d40f3b",
+   "nexclash/verify.py": "2d4c0e3b68e6354a",
+   "nexclash/winter_sports.py": "21293b9833c1170b",
+   "nexclash/winter_sports_common.py": "c28243851e1caf46",
+   "nexclash/winter_sports_dh.py": "b8f533223ecf7c5b",
+   "nexclash/winter_sports_dh_test.py": "f881e06c77446efb",
    "nexclash/winter_sports_paint.py": "1dcf667c010270fe",
    "nexclash/z80n.py": "7843b0da444ced1d",
    "nexclash/z80tonex.py": "9bd684151bdab4ea",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "3a7bd1faf953be35",
+   "recipe": "807ed0b3ca30ddd4",
    "rom": "sinclair"
   },
   "date": "2026-11-22"

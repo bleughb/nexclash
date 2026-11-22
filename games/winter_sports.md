@@ -120,3 +120,33 @@ The user chose "auto-paint first". Code: nexclash/winter_sports_dh.py (hooks, pa
   an unchanged heading takes < 400 T. Negative controls: a wrong-sign scroll register fails every update, a rotated pad table fails 15 of 17 cases.
   JNext 1.2.0: Downhill, Slalom, Giant Slalom play with the painted panorama at the same game state as the plain build at the same frames; GAME OVER, then the options, Exit, Ice Hockey: no panorama, no magenta,
   the rink as in the plain build. Hardware (user, 2026-11-22): the sprites build tests and plays OK on a real Next (the transparency and clip-window risk did not bite). Not covered: the other five events.
+
+## Event plugins (the contract for converting Ice Hockey, Ski Jumping, Speed Skating, Bobsled, Biathlon; 2026-11-22)
+**Priorities (user, 2026-11-22), in order.** (1) The DEFAULT build of every event is smoother, similar gameplay in the ORIGINAL 16 colours: the speed of play stays the
+original's, the picture may be redrawn per pixel (Layer 2, sprites, hi-colour, whatever removes the attribute clash) but only the 16 Spectrum colours
+(winter_sports_common.SPECCY) appear. (2) Anything beyond that (extended colours, painted scenery, effects) is an OPTION the player turns on in the .nxc menu, never the default.
+
+**How options reach the player.** One .nxc holds the whole game: the default build, one colour set ("Enhanced": every plugin's extended colours together) and the toggles
+(an .nxc has at most 4 toggles for the whole game; "Original pace" is the first). A set or toggle is the byte difference from the default, so its bytes must be picture data / flag
+bytes the default does not share with another option (nxc.py refuses overlapping writes). Plugins therefore take `enhanced` and `original_pace` and put extended colours in their own
+picture banks (BANK_PLAN) and the pace flag in one data byte. NAME_outputs.json (winter_sports.auto) tells nxcout what is what; `make_nxc` builds NAME.nxc for the TAPE as target with the
+menu snapshot as start state and reads every combination back.
+
+**A plugin** is nexclash/winter_sports_<event>.py (see winter_sports_dh.py, the worked example, and winter_sports_dh_test.py) with `INDEX`, `BANKS` (inside BANK_PLAN[INDEX]), `patch_event(block, enhanced,
+original_pace) -> (block, {bank: bytes})`, `disable_code()` (NextReg writes the menu's loader hook runs before ANY event loads: put the display back), `tests(patch, z80, say) -> (ok, lines)`, and a line in
+`winter_sports.PLUGINS`. Helpers: winter_sports_common.py (`Asm` assembler with labels, `Block` (checked reads / writes by runtime address), `SPECCY`, `pace_wrapper`, `CADENCE`).
+The shared parts are measured and tested once (the loader hook, the loading screen, the NEX layout); a plugin owns only its event's bytes: patch sites are checked against the original bytes, hook
+code goes in free bytes of the event's own block (find a zero run in the tape block that no run touched: survey `scan --writers`), variables there too.
+
+**Rules learned in Downhill (apply them, or say why not).**
+- Find the game's per-update loop and its drawing call first; the cheapest honest pace fix is the wrapper `pace_wrapper(call)`: halt to the frame interrupt, draw at 28 MHz (NextReg 0x07 = 3) inside the vertical
+  blank, 3.5 MHz back; the game's own sound / timing loops (the beeper routine at 0xFE44 runs with interrupts off) must stay at 3.5 MHz, so only the drawing is sped up. Measure the original's update interval over a run
+  (mean, spread) and pick the cadence whose mean is within a few percent (Downhill: 2.24 frames per update originally, cadence 2).
+- Prove display-only before replacing a display routine: trace every read of the screen / attributes / buffers (`simrun` hooks, `on_read`); what the game reads back must stay as the game writes it.
+- The ULA transparent trick (bright white paper = NextReg 0x14's colour 0xE3, NextReg 0x15 = 0x08 ULA over Layer 2, a clip window): works on hardware (Downhill, user 2026-11-22). Layer 2 uses banks via NextReg 0x12; its
+  palette is the default RRRGGGBB; `SPECCY` values are the toolkit's 16 colours (do not use 0xE3 except as transparent).
+- Test as Downhill does: the same key script through the original (tape served at ROM 0x0562) and the build, per-update comparison where the runs can be aligned (scroll / state models, not heading by update),
+  unit tests calling the hooks with measured T-states, negative controls that must fail. `winter_sports._sim` models NextReg 0x50 and 0x07; `_exec` in the Downhill test module adds HALT and the 28 MHz time scale.
+- JNext (script frames = program frame + 500; screenshot frames = program frame) for the pictures: C:\1NEXT\wintersports_work\jrun.py / jall.py; event snapshots from tapeload.py / runall.py.
+
+**Banks.** Events 12-26 (tape blocks), 27 (menu screen), per plugin BANK_PLAN: 0: 28-30, 1: 31-33, 2: 34-36, 3: 37-39, 4: 40-42, 5: 43-45 (banks 46/47 are the alt-ROM sources of other builds: never).
