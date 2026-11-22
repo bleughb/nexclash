@@ -129,6 +129,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Monty is Innocent (monty_is_innocent): `monty_is_innocent.nex` 673011349213f7feceff3f528bf9b4ea, `monty_is_innocent_sprites.nex` a776f3429f34364eb7263a1cde03b1c8; verified 2026-11-22
 - Finders Keepers (finders_keepers): `finders_keepers.nex` b434bc905a813514567d3cbd38dbe670, `finders_keepers_sprites.nex` ba99b0cb1058987d0ab4549eac9ce46e; verified 2026-11-22
 - Monty on the Run (monty_on_the_run): `monty_on_the_run.nex` 86c30493dbd683b5076dfa43098180bb, `monty_on_the_run_sprites.nex` 7fdb25d99b58c4413042f4b7a7f919c8; verified 2026-11-22
+- Auf Wiedersehen Monty (auf_wiedersehen_monty): `auf_wiedersehen_monty.nex` a29cf9b873dec7c71238c90004b8df9c, `auf_wiedersehen_monty_sprites.nex` ad20fe1d69ccc920798b6c1dc5ba89d9; verified 2026-11-22
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13

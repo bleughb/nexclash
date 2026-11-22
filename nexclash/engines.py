@@ -102,6 +102,7 @@ ENGINES = [
     ('olli_and_lissa_3', 'is_olli_and_lissa_3', None),                    # Olli and Lissa III (48K): figures staged from the draw list
     ('olli_and_lissa_2', 'is_olli_and_lissa_2', None),                    # Olli and Lissa II: Halloween (48K): default and Enhanced
     ('chase_hq', 'is_chase_hq', None),                                    # Chase H.Q. (128K): Speed, Enhanced in two sets (local art)
+    ('auf_wiedersehen_monty', 'is_auf_wiedersehen_monty', None),          # Auf Wiedersehen Monty (128K): figures as sprites
     ('monty_is_innocent', 'is_monty_is_innocent', None),                  # Monty is Innocent (48K): figures as sprites
     ('atom_ant', 'is_atom_ant', None),                                    # Atom Ant (128K tape form): default and Enhanced
     ('silkworm', 'is_silkworm', None),                                    # Silkworm (128K): default and Enhanced
