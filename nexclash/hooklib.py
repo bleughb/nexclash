@@ -678,10 +678,14 @@ def _t_iff(code, syms):
 SPEED_LEGACY = {
     'atic_atac_hooks.asm', 'atic_atac_v14_hooks.asm', 'cauldron_hooks.asm', 'incredible_shrinking_fireman_hooks-add-GPT6_ASTRA.asm',
     'inferno_hooks.asm', 'matchday_hooks.asm', 'matchday_v21_hooks.asm', 'new_zealand_story_hooks.asm',
-    'rainbow_hooks.asm', 'rainbow_z80n_hooks.asm', 'robin_of_the_wood_hooks.asm', 'trueno_hooks.asm', 'wally_hooks.asm',
-    'altered_beast_hooks.asm', 'jsw_hooks.asm'}       # the last two: published 2026-11-21, landed in main after the audit
-# Shipped in jattree/nxc (fix these): altered_beast, atic_atac_v14, gauntlet, jsw, matchday_v21, new_zealand_story,
-# rainbow_z80n, robin_of_the_wood. Not shipped (frozen earlier versions or no patch; their outputs stay): atic_atac,
+    'rainbow_hooks.asm', 'rainbow_z80n_hooks.asm', 'trueno_hooks.asm', 'wally_hooks.asm',
+    }
+# Shipped in jattree/nxc (fixed: gauntlet, altered_beast, jsw, robin_of_the_wood). Left, not the plain kind:
+# matchday_v21 and new_zealand_story run the game's own interrupt handler at 3.5 MHz on purpose (its sound) and give the
+# interrupted speed back after it; new_zealand_story's title restart also sets 3.5 MHz (F8 lost at each game over; its
+# proof is the run folder's JNext clock guards). rainbow_z80n and atic_atac_v14 pace with their own clocks (28 MHz
+# game frame; a 7 MHz catch-up): how F8 meets that pacing is a decision, not a mechanical fix.
+# Not shipped (frozen earlier versions or no patch; their outputs stay): atic_atac,
 # cauldron (v1.1 ships, own hooks), incredible_shrinking_fireman GPT6 (OPUS ships), inferno, matchday (v21 ships),
 # rainbow (z80n ships), trueno, wally (wally2 ships, keeps the speed).
 _SPEED_RE = re.compile(r'^\s*(?:[A-Za-z_.][\w.]*:?)?\s*nextreg\s+(?:0x0?7|\$0?7|7|07h)\s*,\s*([^\s;]+)', re.I)
