@@ -1,0 +1,222 @@
+{
+ "name": "jet_set_willy",
+ "order": 23,
+ "game": "Jet Set Willy",
+ "doc": "jet_set_willy.md",
+ "engine": "jsw",
+ "representative": true,
+ "reference": "jet_set_willy",
+ "inputs": {
+  "snapshot": {
+   "name": "jet_set_willy.z80",
+   "md5": "a4963e747af1145fe0f2710da592abc6",
+   "path": "jet_set_willy/jet_set_willy.z80"
+  },
+  "recordings": [
+   {
+    "name": "jsw_play1.rzx",
+    "md5": "cb89e62430891efa2291e2cc3ef37d0c",
+    "path": "jet_set_willy/jsw_play1.rzx"
+   },
+   {
+    "name": "jsw_rope.rzx",
+    "md5": "e60ac37dd32da84ba2cacef7aa5100db",
+    "path": "jet_set_willy/jsw_rope.rzx"
+   },
+   {
+    "name": "jsw_idle.rzx",
+    "md5": "35c93f0bfb094dcead7eda7a5374cb05",
+    "path": "jet_set_willy/jsw_idle.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "jsw"
+ ],
+ "own_modules": [
+  "jsw"
+ ],
+ "data": [
+  "docs/profiles/jet_set_willy.json",
+  "asm/jsw_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "jsw_play1.rzx",
+   "jsw_rope.rzx",
+   "jsw_idle.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 15,
+  "note": "Pilot: recordings made by nexclash record --script, no human player. They begin at the code sheet, which the builds bypass: compared from the state after the check."
+ },
+ "outputs": {
+  "plain": {
+   "file": "jet_set_willy.nex",
+   "md5": "e6da94d233366f87aec67f9da2358859"
+  },
+  "sprites": {
+   "file": "jet_set_willy_sprites.nex",
+   "md5": "d148c9e8011b9e5f83944fb6b1cc9c07"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Jet Set Willy",
+  "engine_col": "jsw (jet_set_willy.md)",
+  "build": "jet_set_willy_sprites.nex 5048ef71",
+  "software": "Lockstep IDENTICAL on 3 script/search recordings from after the code sheet; unit PASS; negatives detected (no human recording); code sheet bypassed at the owner's request; recolour",
+  "hardware": "untested; JNext runs to gameplay",
+  "next": "hardware test; a human's design answers"
+ },
+ "checks": [
+  "asm2profile:jet_set_willy"
+ ],
+ "techniques": [
+  {
+   "application": "jsw.buffer-layout",
+   "id": "detect.buffer-layout-producer",
+   "revision": 1,
+   "target": "LDIR 0x6000 -> 0x4000 (0x89F5), LDIR 0x5C00 -> 0x5800 (0x8A26); clean layers 0x7000, 0x5E00",
+   "phases": []
+  },
+  {
+   "application": "jsw.screen-readers",
+   "id": "detect.gameplay-screen-readers",
+   "revision": 2,
+   "target": "scan --writers over the ULA: no logic reads it",
+   "phases": []
+  },
+  {
+   "application": "jsw.pattern-banks",
+   "id": "patch.display-atomic-switch",
+   "revision": 1,
+   "target": "every plot hook: pattern into the bank not on show, attributes last",
+   "phases": [
+    "entry"
+   ],
+   "params": {
+    "sprite_ids": "plot order",
+    "pattern_slots": "sprite + BANK"
+   }
+  },
+  {
+   "application": "jsw.colour-map",
+   "id": "patch.runtime-colour-map",
+   "revision": 1,
+   "target": "upgfx / out8o: pages 28-33 at slot 7 inside an upload; Willy, pig, Maria, toilet, guardians, items",
+   "phases": []
+  }
+ ],
+ "results": [
+  {
+   "application": "jsw.screen-readers",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "5048ef71",
+   "scope": "3 recordings, 27894 frames, 4297 pictures compared (4219 identical, 78 cut short by a death), stamped 2026-11-02; no human recording; end game unit cases only; no hardware",
+   "evidence": "games/jet_set_willy.md \"Results\""
+  },
+  {
+   "application": "jsw.pattern-banks",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "5048ef71",
+   "scope": "3 recordings, 27894 frames, 4297 pictures compared (4219 identical, 78 cut short by a death), stamped 2026-11-02; no human recording; end game unit cases only; no hardware",
+   "evidence": "games/jet_set_willy.md \"Results\""
+  },
+  {
+   "application": "jsw.colour-map",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "5048ef71",
+   "scope": "synthetic map through a real run; wrong check ignored; map left out detected; painted Willy hat in JNext; no hardware",
+   "evidence": "games/jet_set_willy.md \"Colour map\""
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/jsw_hooks.asm": "c4cdd535fea3454b",
+   "docs/profiles/jet_set_willy.json": "edeffd39438b77e2",
+   "nexclash.py": "04157df11540c17d",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/engines.py": "1d31dad99e52a27b",
+   "nexclash/jsw.py": "e0d8bc9610837221",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/recolour.py": "ed8eaa22008da1a7",
+   "nexclash/recorder.py": "8b959db3b8dc838b",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "50684436558662bd",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "4cd8c6e54bdafdbd",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-22"
+ },
+ "verified": {
+  "deps": {
+   "asm/jsw_hooks.asm": "c4cdd535fea3454b",
+   "docs/profiles/jet_set_willy.json": "edeffd39438b77e2",
+   "nexclash.py": "04157df11540c17d",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/engines.py": "1d31dad99e52a27b",
+   "nexclash/jsw.py": "e0d8bc9610837221",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/recolour.py": "ed8eaa22008da1a7",
+   "nexclash/recorder.py": "8b959db3b8dc838b",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "50684436558662bd",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "4cd8c6e54bdafdbd",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-22"
+ },
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/jet_set_willy.md#results",
+    "games/jet_set_willy.md#jnext-emulator-not-hardware"
+   ],
+   "coverage": "Hook T over the recordings in the simulator ((patched - original T) / 6); JNext runs; no real-machine timing.",
+   "result": "The hooks add about 2.9 % of the T-states, estimated; the game keeps its own frame pacing."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/jet_set_willy.md#rendering-model-playbook-2-back-buffer-composer",
+    "games/jet_set_willy.md#code-sheet-bypassed-at-the-owners-request-2026-11-02"
+   ],
+   "coverage": "scan --writers over jsw_play1: every ULA reader; the code sheet and its table read sites in the disassembly 0x8400-0xA000.",
+   "result": "No game logic reads the ULA (only LDIR fills, the title and the code sheet; pause cycles attributes); logic reads the clean back buffers at 0x5C00 / 0x6000, so the figures can move to sprites with the buffers untouched."
+  },
+  "decision": "Figures as sprites over the back-buffer composer, the code sheet bypassed and the Attic bug fixed, both at the owner's request.",
+  "next_experiment": "A board run of the published 1.1 through the Attic: no corruption in other rooms, no stray sprites."
+ }
+}

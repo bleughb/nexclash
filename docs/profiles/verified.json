@@ -376,6 +376,14 @@
     "enhanced_loading": "58f2f433bd283220aa89da2f0145e41c"
    }
   },
+  "a4963e747af1145fe0f2710da592abc6": {
+   "game": "Jet Set Willy",
+   "doc": "jet_set_willy.md",
+   "nex": {
+    "plain": "e6da94d233366f87aec67f9da2358859",
+    "sprites": "d148c9e8011b9e5f83944fb6b1cc9c07"
+   }
+  },
   "5875d535442974a0de82737652854f1f": {
    "game": "Jetpac",
    "doc": "jetpac.md",
