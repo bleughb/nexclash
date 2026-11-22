@@ -224,12 +224,13 @@ reproduced in 8 later samples; to watch with a render assert); Havoc.z80 crashes
 --control build (no hooks; status page snapshot - the start-up tail at 0x4800 sits in its text rows); hardware.
 - M3b (planet, sun, stars): the pass draws them to the mono buffer only; render's scenery, before the ships (they are drawn over it), scales
   the control bytes 0xFF09 / 0xFF0B (magnitude) and 0xFF0D ((speed + 1) * w - 1: 0xA173 moves z by (speed + 1) * 2)
-  by the weight, then the game's own 0x713C, 0x7853 (move), 0x7584 (draw, if 0x7103 = 0), 0x7898 (stars move + draw)
+  by the weight, then the game's own 0x713C, 0x7853 (move), 0x7584 (draw, if 0x7103 = 0), stars_x
   - their place now (cur + w of a pass). Outputs [observed: draw_deps.py on 0x7853 / 0x7584 / 0x7898, Docking]
-  added to outtab. Checked: Docking / Witch 600-1200 frames, count = time; renders land ~every 2nd frame (d 1, 3).
+  added to outtab. Checked: Docking / Witch 600-1200 frames, count = time.
 - M4 part 1: Layer 2 off (blank bank 22) on pages (h_isr: 0x7104 = 0 or 0x70E3 >= 4). Hooks use stacks in the
   state page (the game's 32-byte one overflowed into ULA row 56: dashes). h_plot is DI while write-over is on (an
-  interrupt there wrote h_isr's stack to Layer 2: Docking hang). Checked: Docking 1800 frames, Witch sun, pages.
+  interrupt there wrote h_isr's stack to Layer 2: Docking hang). Checked: Docking 1800, Witch sun, pages.
+  stars_x: stars moved on by w along their last move (0x7898 on scaled speed wobbled).
 
 ## Hardware checklist
 None yet (no build).

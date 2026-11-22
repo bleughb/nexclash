@@ -334,8 +334,13 @@ scenery:
         di
         call .poll
 .nopl:  nextreg 0x7F,C_WHITE
-        call 0x7898
-        di
+        ld a,(0x7EDD)
+        dec a
+        jr nz,.stx
+        call 0x7898                     ; hyperspace: the game's own (its streaks draw the stars several times)
+        jr .std
+.stx:   call stars_x                    ; not 0x7898 on the scaled controls: its step is speed / 2 + 1 whole
+.std:   di                              ; pixels (0xFF on a small weight: stars ran ahead, then back: wobble)
         ld a,0x18
         ld (0xFEFE),a
         nextreg 0x50,STATE_PG
@@ -347,6 +352,119 @@ scenery:
 .poll:  nextreg 0x50,STATE_PG           ; a frame is lost if a whole one passes between polls (a big sun fill)
         call fcount
         nextreg 0x50,0xFF
+        ret
+
+; stars_x (slot 0 = ROM, DI): the star table 0x7A39 (16 x (y, x), sign | magnitude, FF FF = none; restored after
+; the render, outtab) moved on by S_WGT of a pass along each star's last move (S_STP -> now), then drawn by the
+; game's own draw loop 0x79CC (16 stars, 4 when 0x7103 != 0, as 0x790C). A star new this pass (none before, or
+; a jump over STJMP) is drawn where it is. Keeps IX.
+STJMP   EQU 32
+stars_x:
+        push ix
+        nextreg 0x50,STATE_PG
+        ld a,(S_WGT)
+        ld c,a                          ; C = w
+        ld hl,0x7A39
+        ld ix,S_STP
+        ld b,16
+.st:    ld a,(hl)
+        inc hl
+        and (hl)
+        dec hl
+        inc a
+        jr z,.nx                        ; no star now
+        ld a,(ix+0)
+        and (ix+1)
+        inc a
+        jr z,.nx                        ; no star before: new
+        ld e,(ix+0)
+        ld a,(hl)
+        call exco
+        jr c,.nx
+        push af                         ; new y
+        inc hl
+        ld e,(ix+1)
+        ld a,(hl)
+        call exco
+        dec hl
+        jr c,.nx1
+        inc hl
+        ld (hl),a
+        dec hl
+        pop af
+        ld (hl),a
+        jr .nx
+.nx1:   pop af
+.nx:    inc hl
+        inc hl
+        inc ix
+        inc ix
+        djnz .st
+        nextreg 0x50,0xFF
+        pop ix
+        ld a,(0x7103)
+        and a
+        ld a,16
+        jr z,.n16
+        ld a,4
+.n16:   ld hl,.ret
+        push hl
+        push af                         ; the loop's count (B), as 0x79AB leaves it
+        ld hl,0x7A39
+        jp 0x79CC
+.ret:   ret
+
+; exco: A = now, E = before (sign | magnitude), C = w: A = now + (now - before) * w / 256 as sign | magnitude
+; (magnitude at most 127); carry: |now - before| > STJMP. Keeps BC.
+exco:   call sm2s
+        ld d,a                          ; D = now
+        ld a,e
+        call sm2s
+        ld e,a
+        ld a,d
+        sub e                           ; A = move
+        jp pe,.big
+        push bc
+        ld b,a
+        bit 7,a
+        jr z,.p
+        neg
+.p:     cp STJMP + 1
+        jr nc,.big2
+        push de
+        ld d,a
+        ld e,c
+        mul d,e
+        ld a,d                          ; |move| * w / 256
+        pop de
+        bit 7,b
+        jr z,.a
+        neg
+.a:     add a,d
+        jp po,.ok
+        ld a,d                          ; past the end: the end on now's side
+        rlca
+        ld a,127
+        jr nc,.ok
+        ld a,-127
+.ok:    cp 0x80
+        jr nz,.ok2
+        ld a,-127
+.ok2:   pop bc
+        or a                            ; carry clear, S = sign
+        ret p
+        neg
+        or 0x80
+        ret                             ; or clears carry
+.big2:  pop bc
+.big:   scf
+        ret
+
+; sm2s: A sign | magnitude -> two's complement.
+sm2s:   bit 7,a
+        ret z
+        and 0x7F
+        neg
         ret
 
 ; scale_sm: (HL) = sign | magnitude byte, magnitude * E / 256. Keeps E, HL.

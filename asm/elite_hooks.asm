@@ -70,6 +70,7 @@ S_N       EQU 0x0020        ; 2 bytes: ship counts of list 0 / 1
 LIST0     EQU 0x0100        ; ship records (REC bytes each, MAXREC per list)
 LIST1     EQU 0x0B00
 SAVE      EQU 0x1600        ; game RAM the ship draw writes (outtab), saved around a render
+S_STP     EQU 0x1F00        ; 32 bytes: the star table 0x7A39 before this pass's move (stsave), for stars_x
 REC       EQU 160
 MAXREC    EQU 16
 R_IX      EQU 0             ; word: slot
@@ -338,9 +339,32 @@ h_planet:                               ; M3b: planet, sun and stars are drawn b
 h_stars:
         call poll
         call rowfix                     ; the planet draw just before goes deepest on the game's stack
+        call stsave
         SETMIR 0x40
         nextreg 0x7F,C_NOMIRROR
         jp 0x7898
+; stsave: the star table as the last pass left it -> S_STP (stars_x extrapolates from it). Keeps all registers.
+stsave: push af
+        push bc
+        push de
+        push hl
+        ld a,i                          ; P/V = IFF2
+        push af
+        di                              ; h_isr unmaps the state page on its way out
+        nextreg 0x50,STATE_PG
+        ld hl,0x7A39
+        ld de,S_STP
+        ld bc,32
+        ldir
+        nextreg 0x50,0xFF
+        pop af
+        jp po,.n
+        ei
+.n:     pop hl
+        pop de
+        pop bc
+        pop af
+        ret
 h_msg:  call poll
         SETMIR 0
         nextreg 0x7F,C_WHITE
