@@ -5,6 +5,9 @@ Stage: 4 (hardware + colour)    State: stages 0-3 done unattended; never run on 
 Inputs: the pilot's run folder (altered_beast.z80 md5 9df49e05, recordings rzx/*.rzx, sheets/)
 Start with: the hardware checklist below; then a human's answers to "Defaults taken".
 Read: this file. Open: everything under "Open".
+Before any Enhanced build (Codex, 2026-11-22; default build unaffected): unit_tests' layer_check expectations use
+the original colours, not the patch's map (a correct painted build fails); a map that clears an opaque pixel drops its
+code entry, so the buffer check compares it as scenery (F86B cleared: 5 false failures by frame 430 of ab_first).
 
 Techniques: `optimise.pattern-cache` (recipe, owns and results: docs/records/altered_beast.json)
 
