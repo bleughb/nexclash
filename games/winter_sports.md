@@ -154,7 +154,7 @@ code goes in free bytes of the event's own block (find a zero run in the tape bl
 ## Events 1-5 (2026-11-22): pace-only plugins
 Ice Hockey (nexclash/winter_sports_ice_hockey.py), Speed Skating (_speed_skating), Bobsled (_bobsled) and Biathlon (_biathlon) are plugins built on winter_sports_pace.PaceEvent: each of the event's screen-copy call
 sites becomes a wrapper (winter_sports_common.draw_wrapper): halt to the frame interrupt (N frames where the loop is free-running), the copy at 28 MHz (NextReg 0x07 = 3), 3.5 MHz back; the
-beeper (blocking, interrupts off) is never sped up (tests: no port 0xFE write while fast). Per event, found with C:NEXT\wintersports_workindloop.py / freecheck.py (work folder, not in the repo):
+beeper (blocking, interrupts off) is never sped up (tests: no port 0xFE write while fast). Per event, found with C:\1NEXT\wintersports_work\findloop.py / freecheck.py (work folder, not in the repo):
 - Ice Hockey: 0x7809 (the rink, 423,000 T) from 0x7FC1 and 0x8063; halts 5; interval 6.80 -> 6.41 frames (-5.7 %); wrappers 0xF42A, mode byte 0xF482.
 - Speed Skating: 0x8BFE (78,600 T) from 0x84C3 (loop 0x841E..0x84F1, interrupts on after 0x848F); halts 1; 9.10 -> 8.56 (-5.9 %); wrapper 0xC390, mode byte 0xC3C0; the race starts with SPACE on the ready screen (port 0x7FFE bit 0 at 0x8415).
 - Bobsled: 0x87E6 (a row-blit, 28,400 T) from 0x7A43 (`DI / CALL / EI`, the run), 0x8446, 0x8554; self-paced (its delay loops set the speed: 8 frames per update at a standstill to 2 at speed), halts 1; 2.29 -> 2.23 (-2.8 %); wrappers 0xC390, mode byte 0xC414.
@@ -164,3 +164,23 @@ Tests per plugin (winter_sports_pace.PaceEvent.tests): the key script through th
 (from a copy of the build's state, halts NOPed, its registers and memory equal the plain call's), negative controls (a wrapper that leaves 28 MHz on; one that calls a bare RET instead of the routine) caught.
 **Not done:** Ski Jumping stays the plain conversion: the jump needs a key at the right moment (the loop at 0x864F is the GAME OVER exit; without a key the jump ends GAME OVER by ~frame 2200) and its jump control was not found; no per-pixel clash fix and no Enhanced colours for events 1-5; no
 hardware test of events 1,3,4,5 and of the new Downhill default. Events keep their original colours; the Enhanced set changes Downhill only.
+
+## Lessons
+- [local: this game's pace] An event's pacing decides the smoothing: Downhill is free-running (an even cadence of halts at the original's mean fits), Bobsled paces itself with delay loops (a single halt, never a cadence), Ice Hockey and
+  Speed Skating are draw- or logic-bound (halts chosen by measuring the mean interval). Measure the original's update interval over a run before choosing, and compare means within a few percent.
+- [local: this game's free memory] A zero run in a tape block is not free: Bobsled's and Ice Hockey's runs at 0x9E3D-0xABFF are written when the event starts (the snapshot is taken after that). Only use runs that stay zero through
+  menu, options and a run (freecheck over the whole flow, from the menu).
+- [local: this game's keys] A snapshot that sits in a delay loop is waiting for a key: Speed Skating and Biathlon start the race on SPACE (port 0x7FFE bit 0), Ski Jumping's loop at 0x864F is the GAME OVER exit. Read the port the loop polls before guessing keys.
+- [none: the shared wrapper (winter_sports_common.draw_wrapper) and the pace plugin (winter_sports_pace) are in this game's engine modules; no other game uses them yet]
+
+## Technique use
+- patch.hybrid-display-replacement: helped: Downhill's left view (display-only, proven by read-back tracing) moved to Layer 2 with the game's own pole drawing left on the ULA (2026-11-22)
+- patch.pace-limiter: no help: events 1-5 use a halt-to-interrupt wrapper with the drawing at 28 MHz instead; Downhill's pad table is the limiter's original-pace form (2026-11-22)
+- detect.routine-removal: no help: read-back tracing of screen / buffer reads (simrun on_read) answered display-only without removing the routine
+
+## Friction
+- reuse: [tool nexclash.winter_sports_pace] the tear-free fast-draw plugin (wrapper, transparency test, negative controls) is generic for events that copy their screen with one routine
+- retries: [local: this game's key flows] several runs to find what starts each event's race (SPACE on the ready screen) and which zero runs are really free
+- environment: [none: no workaround needed]
+- hand-rolled: [local: this game's work folder] callprof / findloop / freecheck / varwatch / tapeload / jrun scripts in C:\1NEXT\wintersports_work were hand-rolled for the surveys and JNext pictures
+- scratch: [none: the scratch scripts answer game-specific questions; the reusable parts are in winter_sports_pace and winter_sports_dh_test]
