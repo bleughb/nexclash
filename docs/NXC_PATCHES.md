@@ -10,6 +10,10 @@ repo's spec/NXC-FORMAT.md; its README covers `nxc.py` commands.
   then the base build with that byte changed: the same length, no two options on one byte, which is
   what a toggle must be (NXC-FORMAT "Toggles").
 - Build every variant and diff them against the base byte by byte before packaging.
+- Variants built by calling the engine's `build()` directly miss what `auto` adds last
+  (`finish_outputs`): apply `z80tonex.automap_off` to each, or the patch starts with DivMMC automap on
+  (Cisco Heat 1.0, fixed in 1.1). Check: the variant with the bare build's options equals the
+  record's MD5.
 - Display-only options are kind 3 (`--toggle "Name=VAR.nex"`); one that changes game logic is kind 4
   (`--toggle-logic`, plus a `toggle_N` proof line). Without rules a menu lets two be on at once;
   `--no-cap` lifts that when any combination plays.
