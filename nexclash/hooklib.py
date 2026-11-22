@@ -676,7 +676,7 @@ def _t_iff(code, syms):
 # Hook files whose NEXTREG 7 writes a fixed speed (the player's F8 choice lost on the way out), published before
 # the stack forms existed; the back-catalogue speed fix takes each off this list. A new engine is never added here.
 SPEED_LEGACY = {
-    'atic_atac_hooks.asm', 'atic_atac_v14_hooks.asm', 'cauldron_hooks.asm', 'gauntlet_hooks.asm', 'incredible_shrinking_fireman_hooks-add-GPT6_ASTRA.asm',
+    'atic_atac_hooks.asm', 'atic_atac_v14_hooks.asm', 'cauldron_hooks.asm', 'incredible_shrinking_fireman_hooks-add-GPT6_ASTRA.asm',
     'inferno_hooks.asm', 'matchday_hooks.asm', 'matchday_v21_hooks.asm', 'new_zealand_story_hooks.asm',
     'rainbow_hooks.asm', 'rainbow_z80n_hooks.asm', 'robin_of_the_wood_hooks.asm', 'trueno_hooks.asm', 'wally_hooks.asm',
     'altered_beast_hooks.asm', 'jsw_hooks.asm'}       # the last two: published 2026-11-21, landed in main after the audit

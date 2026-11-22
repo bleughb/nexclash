@@ -76,11 +76,11 @@
  "outputs": {
   "sprites": {
    "file": "gauntlet_start_sprites.nex",
-   "md5": "5d9cdb805fcdc839cf33424d47b2a1bd"
+   "md5": "6d5cc48a5cbe39322780d061f4c38bb2"
   },
   "steady": {
    "file": "gauntlet_start_steady.nex",
-   "md5": "3f374e019a63d0bdeca8d1cee31459a2"
+   "md5": "2f074c37282bcef8ae1c46915590f236"
   }
  },
  "repro": [],
@@ -158,72 +158,72 @@
  },
  "checked": {
   "deps": {
-   "asm/gauntlet_hooks.asm": "6cb4c75541da76d7",
+   "asm/gauntlet_hooks.asm": "f9afbc5d04be04b7",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
-   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "docs/profiles/gauntlet.json": "96a03cf4615bbbe9",
-   "nexclash.py": "04157df11540c17d",
+   "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
+   "docs/profiles/gauntlet.json": "775094327c07ae60",
+   "nexclash.py": "d9b430cef7478a38",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "b22123bdf2572c9b",
+   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "2abd23b537c0b5d4",
-   "nexclash/gauntlet.py": "12d05d6c44a90a46",
-   "nexclash/hooklib.py": "24241497925658d6",
+   "nexclash/engines.py": "8163679cd401837e",
+   "nexclash/gauntlet.py": "7e15af7af4c41cd7",
+   "nexclash/hooklib.py": "2abd8019af99607e",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
-   "nexclash/nextboot.py": "9272cb3a8c980c98",
-   "nexclash/recolour.py": "6f27e87ef0c47a17",
+   "nexclash/nextboot.py": "d4d8a6b6c9055025",
+   "nexclash/recolour.py": "ed8eaa22008da1a7",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/rzx.py": "e018e000440e0274",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
-   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/tapeset.py": "86542e1752fb3110",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "50684436558662bd",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "589f1dd312abd555",
-   "rom": "8c34d957fb2cbbd0"
+   "recipe": "1c3091210f81281d",
+   "rom": "sinclair"
   },
-  "date": "2026-11-20"
+  "date": "2026-11-22"
  },
  "verified": {
   "deps": {
-   "asm/gauntlet_hooks.asm": "6cb4c75541da76d7",
+   "asm/gauntlet_hooks.asm": "f9afbc5d04be04b7",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
-   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "docs/profiles/gauntlet.json": "96a03cf4615bbbe9",
-   "nexclash.py": "04157df11540c17d",
+   "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
+   "docs/profiles/gauntlet.json": "775094327c07ae60",
+   "nexclash.py": "d9b430cef7478a38",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "b22123bdf2572c9b",
+   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "2abd23b537c0b5d4",
-   "nexclash/gauntlet.py": "12d05d6c44a90a46",
-   "nexclash/hooklib.py": "24241497925658d6",
+   "nexclash/engines.py": "8163679cd401837e",
+   "nexclash/gauntlet.py": "7e15af7af4c41cd7",
+   "nexclash/hooklib.py": "2abd8019af99607e",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
-   "nexclash/nextboot.py": "9272cb3a8c980c98",
-   "nexclash/recolour.py": "6f27e87ef0c47a17",
+   "nexclash/nextboot.py": "d4d8a6b6c9055025",
+   "nexclash/recolour.py": "ed8eaa22008da1a7",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/rzx.py": "e018e000440e0274",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
-   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/tapeset.py": "86542e1752fb3110",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "50684436558662bd",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "589f1dd312abd555",
-   "rom": "8c34d957fb2cbbd0"
+   "recipe": "1c3091210f81281d",
+   "rom": "sinclair"
   },
-  "date": "2026-11-20"
+  "date": "2026-11-22"
  }
 }
