@@ -109,6 +109,72 @@ def engine_contract():
     return out
 
 
+# Engines whose auto() reaches no unit_tests call or no negative-control call (checked by name, one call deep),
+# from before the rule (2026-11-22); each comes off when checked or fixed. A new engine is never added here.
+AUTO_LEGACY = {'alien_8', 'bruce_lee', 'bubbler', 'chase_hq', 'green_beret', 'head_over_heels', 'highway_encounter',
+               'ice_palace', 'ikari_warriors', 'knight_lore', 'lunar_jetman', 'martianoids', 'movie', 'new_zealand_story',
+               'pacmania', 'quazatron', 'rainbow', 'rainbow_z80n', 'rainbow_z80n_sky', 'renegade_v12',
+               'robin_of_the_wood', 'winter_sports',
+               'altered_beast'}   # its negative control runs inside unit_tests ('map negative'): not seen by name
+
+
+def auto_contract():
+    """docs/ENGINE_CONTRACT.md auto(): it runs the unit tests and the negative controls (a call whose name has
+    'unit' / 'neg', in auto or one call deep), and an engine replaying through simrun.play_rzx defines on_desync
+    (without it a lost sync is a warning and the run passes on the frames before it)."""
+    t = ast.parse(open(os.path.join(ROOT, 'nexclash', 'engines.py')).read())
+    table = next(n.value for n in t.body if isinstance(n, ast.Assign) and getattr(n.targets[0], 'id', '') == 'ENGINES')
+    out = collections.defaultdict(list)
+
+    def calls(fn):
+        return {getattr(n.func, 'id', None) or getattr(n.func, 'attr', None) or '' for n in ast.walk(fn)
+                if isinstance(n, ast.Call)}
+    for mod in sorted({e.elts[0].value for e in table.elts}):
+        src = open(os.path.join(ROOT, 'nexclash', mod + '.py'), encoding='utf-8').read()
+        tree = ast.parse(src)
+        defs = {n.name: n for n in tree.body if isinstance(n, ast.FunctionDef)}
+        c = calls(defs['auto']) if 'auto' in defs else set()
+        for name in list(c):
+            if name in defs and name != 'auto':
+                c |= calls(defs[name])
+        ok = any('unit' in x.lower() for x in c) and any('neg' in x.lower() for x in c)
+        if not ok and mod not in AUTO_LEGACY:
+            out['engine contract: auto() must run unit_tests and the negative controls'].append('nexclash/%s.py' % mod)
+        if ok and mod in AUTO_LEGACY:
+            out['engine contract: AUTO_LEGACY entry now passes, take it off (tools/doccheck.py)'].append(mod)
+        if 'play_rzx(' in src and not re.search(r'\bdef on_desync\b|\bon_desync\s*=', src):
+            out['engine contract: replays through simrun.play_rzx without on_desync (a lost sync would pass)'].append(
+                'nexclash/%s.py' % mod)
+    return out
+
+
+# MD5 literals two engines may share, with why. Any other value in two engine modules is refused: a port
+# carries its source's pins along (Stormbringer kept Knight Tyme's loading-screen MD5, 2026-11-22).
+SHARED_MD5 = {'cc822d044ec89ffcffbfb3a122f4d088': 'the emu256 256-colour palette table, shared by its sets',
+              'b095dc99a047bab844b87b06657b0a7a': 'the same palette file (booty, lode runner v3, lunar jetman, silkworm)',
+              '2f0ef98e5c59552663b15d5eb1175236': 'Cauldron and Cauldron 1.1: one game, one recording'}
+
+
+def copied_pins():
+    """Every 32-hex string literal in the engine modules: one owned by two engines (not SHARED_MD5) fails."""
+    t = ast.parse(open(os.path.join(ROOT, 'nexclash', 'engines.py')).read())
+    table = next(n.value for n in t.body if isinstance(n, ast.Assign) and getattr(n.targets[0], 'id', '') == 'ENGINES')
+    where = collections.defaultdict(set)
+    for mod in sorted({e.elts[0].value for e in table.elts}):
+        tree = ast.parse(open(os.path.join(ROOT, 'nexclash', mod + '.py'), encoding='utf-8').read())
+        for n in ast.walk(tree):
+            if isinstance(n, ast.Constant) and isinstance(n.value, str) and re.fullmatch(r'[0-9a-f]{32}', n.value):
+                where[n.value].add(mod)
+    out = collections.defaultdict(list)
+    for v, mods in sorted(where.items()):
+        if len(mods) > 1 and v not in SHARED_MD5:
+            out['engine pins: one MD5 in two engines (a port\'s copied pin? re-derive it, or SHARED_MD5 with why)'].append(
+                '%s  %s' % (v, ', '.join(sorted(mods))))
+    for v in sorted(set(SHARED_MD5) - {v for v, m in where.items() if len(m) > 1}):
+        out['engine pins: SHARED_MD5 entry no longer shared, take it off (tools/doccheck.py)'].append(v)
+    return out
+
+
 def has_section(heads, doc, sec):
     if sec.lower().startswith('stage'):
         pat = re.compile(r'^#+\s*' + re.escape(sec) + r'\b', re.I)
@@ -174,6 +240,10 @@ def main():
                 if '<' not in p and '*' not in p and p not in SIBLING and not os.path.exists(p):
                     warn['path does not exist'].append('%s  %s' % (loc, p))
     for k, v in engine_contract().items():
+        fail[k].extend(v)
+    for k, v in auto_contract().items():
+        fail[k].extend(v)
+    for k, v in copied_pins().items():
         fail[k].extend(v)
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     import techindex                      # technique cards, predicates, recipes (docs/techniques/STANDARD.md)

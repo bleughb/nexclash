@@ -235,7 +235,7 @@ Hooks: asm/<engine>_hooks.asm (+ asm/lib, ENGINE_CONTRACT) with `SAVEBIN "<prefi
 `"hooks": {"source": "asm/<engine>_hooks.asm", ...}` in the profile; after every edit
 `python tools/asm2profile.py <engine>` (pinned sjasmplus -> profile hex + symbols).
 What the module must provide: docs/ENGINE_CONTRACT.md (doccheck-checked). The cards' example
-functions first; then copy the nearest engine (docs/ENGINE_TEMPLATES.md; module + asm + profile + games/ file), one function at a time.
+functions first; then copy the nearest engine (docs/ENGINE_TEMPLATES.md, with its New engine checklist), one function at a time.
 Change the profile block + site list, rebuild the asm; every site keeps its original-byte check.
 Sessions build with `--nex`: tests, recolour and play checks use the .nex.
 Colour map (every game): build it and its verify as docs/ENGINE_TEMPLATES.md "Colour map".

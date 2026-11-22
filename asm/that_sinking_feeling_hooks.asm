@@ -836,6 +836,12 @@ setup:
         nextreg 0x70,0
         nextreg 0x14,0xE3
         nextreg 0x4B,0
+        xor a                   ; hide all 128 sprites: another program may have left any of them visible
+.hide:  nextreg 0x34,a
+        nextreg 0x38,0
+        inc a
+        cp 128
+        jr nz,.hide
         nextreg 0x15,1          ; sprites on; sprites, Layer 2, ULA
         nextreg 0x1C,3
         nextreg 0x18,0

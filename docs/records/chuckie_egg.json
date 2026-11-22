@@ -51,11 +51,11 @@
  "outputs": {
   "plain": {
    "file": "chuckie_egg.nex",
-   "md5": "ec0df71e70fae35836eaed521f300777"
+   "md5": "daa588edf9cd3a913689da0439f32081"
   },
   "sprites": {
    "file": "chuckie_egg_sprites.nex",
-   "md5": "1c31643371ea36f10175af308d6d01a3"
+   "md5": "dcd7f744a73eb59e7ce3236b57c8cef9"
   }
  },
  "repro": [],
@@ -78,43 +78,43 @@
   "deps": {
    "asm/chuckie_hooks.asm": "5fed61c8f674f78b",
    "docs/profiles/chuckie_egg.json": "8cfb95560319426a",
-   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash.py": "04157df11540c17d",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/chuckie.py": "6fd6788ea9e54985",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
-   "nexclash/engines.py": "bf75ad27e5bfabce",
-   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
+   "nexclash/engines.py": "2abd23b537c0b5d4",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
    "nexclash/rzx.py": "e018e000440e0274",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
-   "recipe": "e59f3d3e8820d48a",
+   "recipe": "ee47cfd1494baa61",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-17"
+  "date": "2026-11-20"
  },
  "verified": {
   "deps": {
    "asm/chuckie_hooks.asm": "5fed61c8f674f78b",
    "docs/profiles/chuckie_egg.json": "8cfb95560319426a",
-   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash.py": "04157df11540c17d",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/chuckie.py": "6fd6788ea9e54985",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
-   "nexclash/engines.py": "112c3b17a78ace9a",
-   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
+   "nexclash/engines.py": "2abd23b537c0b5d4",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
    "nexclash/rzx.py": "e018e000440e0274",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
-   "recipe": "e59f3d3e8820d48a",
+   "recipe": "ee47cfd1494baa61",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-12"
+  "date": "2026-11-20"
  },
  "canary": 1
 }

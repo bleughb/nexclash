@@ -1,0 +1,184 @@
+{
+ "name": "altered_beast",
+ "order": 25,
+ "game": "Altered Beast (128K)",
+ "doc": "altered_beast.md",
+ "engine": "altered_beast",
+ "representative": true,
+ "reference": "altered_beast",
+ "inputs": {
+  "snapshot": {
+   "name": "altered_beast.z80",
+   "md5": "9df49e056fdf38a2f6da21fc4dfbf34f",
+   "path": "altered_beast/altered_beast.z80"
+  },
+  "recordings": [
+   {
+    "name": "ab_first.rzx",
+    "md5": "741757929bd0c29f2f8c1673ff2afa52",
+    "path": "altered_beast/ab_first.rzx"
+   },
+   {
+    "name": "ab_walk.rzx",
+    "md5": "5ab87d148e1a091e784683be67c0502b",
+    "path": "altered_beast/ab_walk.rzx"
+   },
+   {
+    "name": "ab_level.rzx",
+    "md5": "2d8a91e847f7a29239abfbc377b72200",
+    "path": "altered_beast/ab_level.rzx"
+   },
+   {
+    "name": "ab_2p.rzx",
+    "md5": "1f0c421180e88a59f8d65f00a79508ee",
+    "path": "altered_beast/ab_2p.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "altered_beast"
+ ],
+ "own_modules": [
+  "altered_beast"
+ ],
+ "data": [
+  "docs/profiles/altered_beast.json",
+  "asm/altered_beast_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "ab_first.rzx",
+   "ab_walk.rzx",
+   "ab_level.rzx",
+   "ab_2p.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 10
+ },
+ "outputs": {
+  "plain": {
+   "file": "altered_beast.nex",
+   "md5": "3a40cd83e14bad535b3f147708b2284e"
+  },
+  "sprites": {
+   "file": "altered_beast_sprites.nex",
+   "md5": "4d79dca84641647336e99baf858dc99a"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Altered Beast (128K)",
+  "engine_col": "altered_beast (altered_beast.md)",
+  "build": "altered_beast_sprites.nex 91c2b6ba (pilot, unattended): every figure of the cell plotter a sprite, the game's cell colours, level 1 only (snapshot has no other level); blit from the clean copy",
+  "software": "4 RZX IDENTICAL (32,291 frames, level 1, boss, two players, game over), unit + 15 negative controls; JNext both builds reach play",
+  "hardware": "untested",
+  "next": "hardware test; level 2-5 need tape data this snapshot lacks"
+ },
+ "checks": [
+  "asm2profile:altered_beast"
+ ],
+ "techniques": [
+  {
+   "application": "altered_beast.commit.pattern-cache",
+   "id": "optimise.pattern-cache",
+   "revision": 1,
+   "target": "commit in e_bl after the blit (0xAE40): 32-entry figure cache, 128 patterns",
+   "phases": [
+    "commit"
+   ]
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/altered_beast_hooks.asm": "dc4dd517246b27b1",
+   "docs/profiles/altered_beast.json": "df2950658eed9da7",
+   "nexclash.py": "04157df11540c17d",
+   "nexclash/altered_beast.py": "eb928eefe0bc2259",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/engines.py": "8ab1ed899a6b2c94",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/rainbow.py": "e247f602b7cecb7b",
+   "nexclash/recolour.py": "ed8eaa22008da1a7",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "8042cffbe0ee9117",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80tonex.py": "50684436558662bd",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "b0ed3d263666ee92",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-22"
+ },
+ "verified": {
+  "deps": {
+   "asm/altered_beast_hooks.asm": "dc4dd517246b27b1",
+   "docs/profiles/altered_beast.json": "df2950658eed9da7",
+   "nexclash.py": "04157df11540c17d",
+   "nexclash/altered_beast.py": "eb928eefe0bc2259",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/engines.py": "8ab1ed899a6b2c94",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/rainbow.py": "e247f602b7cecb7b",
+   "nexclash/recolour.py": "ed8eaa22008da1a7",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "8042cffbe0ee9117",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80tonex.py": "50684436558662bd",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "b0ed3d263666ee92",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-22"
+ },
+ "results": [
+  {
+   "application": "altered_beast.commit.pattern-cache",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "91c2b6ba",
+   "scope": "4 RZX IDENTICAL, unit + 15 negative controls",
+   "evidence": "games/altered_beast.md"
+  }
+ ],
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/altered_beast.md#rendering-model",
+    "games/altered_beast.md#results"
+   ],
+   "coverage": "Four recordings of level 1 (menu, intro, play, boss, two players); hook T per game frame on the simulator; JNext plain against sprites from one state over 400 frames. Tang board: menu, intro and play, 45 s of attract mode.",
+   "result": "A game frame is about 4.8 TV frames; the hooks cost about 10-20K T at 3.5 MHz of its ~340K T. The game's interrupt handlers must run once per interrupt: on the Next core they ran twice until EI moved later (INT_SITES)."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/altered_beast.md#rendering-model",
+    "games/altered_beast.md#next-interrupt-fix-2026-11-21-tang-board"
+   ],
+   "coverage": "Readers and writers of the buffer and screen over the recordings (scan --writers); the plotters, the blit and the three interrupt handlers; ROM use (none) and the paging writes (bank 1 for the music).",
+   "result": "Buffer read only by the plotters and the blit, screen only before the first blit, so the ULA may differ. Game code changed: six hook sites and the three handlers' first three bytes (same state after them, int_fix_check)."
+  },
+  "decision": "Every figure a hardware sprite drawn from the game's plot calls; blit from the clean copy; the game's own colours; HUD build optional. The Next interrupt fix in every build.",
+  "next_experiment": "Board: the boss scene and two-player game run without a crash or slowdown beyond the plain build."
+ }
+}

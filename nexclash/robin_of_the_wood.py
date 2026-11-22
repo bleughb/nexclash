@@ -162,6 +162,7 @@ def item_variant(peek,index,raw=False):
 class RobinPatch:
     name='Robin of the Wood 128K figure sprites'
     uses_printer_buffer=True
+    keep_printer_buffer=True       # the snapshot's stack is at 0x5B76: NEXLOAD overwrites 0x5B00-0x5BFF, put it back
     def __init__(self,cmap=None,enhanced=False):
         self.prof=load_profile();self.cmap=cmap or {};self.enhanced=enhanced
         h=self.prof['hooks'];self.syms={k:int(v,16) for k,v in h['syms'].items()}
@@ -829,7 +830,7 @@ def build_all(z80, out, name, say=print):
     # and the pilot that built these ran none; the replay starts from the snapshot as the .nex does.
     scr = Path(z80).resolve().parent / LOADING
     plain = os.path.join(out, name + '.nex')
-    convert(z80, plain, None, True, quiet=True)
+    convert(z80, plain, None, True, quiet=True, keep_printer_buffer=True)   # stack at 0x5B76, as RobinPatch
     ok = True
     say('Plain     : %s  %s  (boot not simulated: 128K paging)' % (os.path.basename(plain), md5(plain)))
     for tag, enh in (('sprites', False), ('enhanced', True)):

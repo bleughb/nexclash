@@ -103,19 +103,19 @@
  "outputs": {
   "plain": {
    "file": "ruff_and_reddy.nex",
-   "md5": "59f7de5f3be84ee57184720cf17a1f6d"
+   "md5": "5ffde90e442cc5b7c30fbc2271c9ea06"
   },
   "loading": {
    "file": "ruff_and_reddy_loading.nex",
-   "md5": "6ea7afb9e48b092fda8cff756f92e50d"
+   "md5": "174008d46ed1b4dac423c14d2e25a461"
   },
   "enhanced": {
    "file": "ruff_and_reddy_enhanced.nex",
-   "md5": "7215bb05314c2c192a61a163579412b7"
+   "md5": "e8017c93011341ec41acecbf417a949e"
   },
   "enhanced_loading": {
    "file": "ruff_and_reddy_enhanced_loading.nex",
-   "md5": "7d7fc29eefb3ef79fa829d78f0532d68"
+   "md5": "e6b3a2e82407295ad217947b6e1f1e09"
   }
  },
  "repro": [],
@@ -145,18 +145,18 @@
    "asm/ruff_and_reddy_hooks.asm": "d0a3cb548871a695",
    "docs/profiles/ruff_and_reddy.json": "28efb1a18518707d",
    "docs/profiles/ruff_and_reddy_enh.json": "720dee4f3888b87b",
-   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash.py": "04157df11540c17d",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "bf75ad27e5bfabce",
+   "nexclash/engines.py": "2abd23b537c0b5d4",
    "nexclash/hooklib.py": "24241497925658d6",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
-   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
-   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/recolour.py": "6f27e87ef0c47a17",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/ruff_and_reddy.py": "d4f19a6f7d4b2e8f",
    "nexclash/ruff_and_reddy_enh.py": "47e45561cad97611",
@@ -165,13 +165,13 @@
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "59c0d35eb5a2ea6b",
+   "recipe": "cf8ed74c9e190c46",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-17"
+  "date": "2026-11-20"
  },
  "verified": {
   "deps": {
@@ -179,18 +179,18 @@
    "asm/ruff_and_reddy_hooks.asm": "d0a3cb548871a695",
    "docs/profiles/ruff_and_reddy.json": "28efb1a18518707d",
    "docs/profiles/ruff_and_reddy_enh.json": "720dee4f3888b87b",
-   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash.py": "04157df11540c17d",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "112c3b17a78ace9a",
+   "nexclash/engines.py": "2abd23b537c0b5d4",
    "nexclash/hooklib.py": "24241497925658d6",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
-   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
-   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/recolour.py": "6f27e87ef0c47a17",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/ruff_and_reddy.py": "d4f19a6f7d4b2e8f",
    "nexclash/ruff_and_reddy_enh.py": "47e45561cad97611",
@@ -199,12 +199,12 @@
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "59c0d35eb5a2ea6b",
+   "recipe": "cf8ed74c9e190c46",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-12"
+  "date": "2026-11-20"
  }
 }

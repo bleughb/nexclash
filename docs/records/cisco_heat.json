@@ -118,18 +118,18 @@
  "outputs": {
   "plain": {
    "file": "cisco_heat.nex",
-   "md5": "31ddb32697b25756db09faae1fe7b6fc"
+   "md5": "5a30200632338bbbf64c4e60f2174440"
   },
   "orig_pace": {
    "file": "cisco_heat_orig_pace.nex",
-   "md5": "76c7a3527b15aa8217c3ae6e1d1018b8"
+   "md5": "6ebeabd1a687b6e6ad3f061f87b70037"
   }
  },
  "repro": [],
  "status": {
   "title": "Cisco Heat",
   "engine_col": "cisco_heat (cisco_heat.md)",
-  "build": "v1.2 Smooth; cisco_heat.nex 31ddb326: the race update at 28 MHz paced to the original, the time between filled with run-ahead in-between frames (road, stripes, scenery, curves, hills, other cars, lateral and skyline; cadence up to 50 pictures a second, about 25 reached, against about 5.6); the player's car as red hardware sprites (no colour clash with road lines and other cars); fast paths (zxnDMA copy away from interrupts, sprite rows) with pace credit; the tape's loading screen at once, 4 s or a key; cisco_heat_orig_pace.nex 76c7a352 the same hooks without in-between frames; stages load from Next pages, no tape",
+  "build": "v1.2 Smooth; cisco_heat.nex 5a302006: the race update at 28 MHz paced to the original, the time between filled with run-ahead in-between frames (road, stripes, scenery, curves, hills, other cars, lateral and skyline; cadence up to 50 pictures a second, about 25 reached, against about 5.6); the player's car as red hardware sprites (no colour clash with road lines and other cars); fast paths (zxnDMA copy away from interrupts, sprite rows) with pace credit; the tape's loading screen at once, 4 s or a key; cisco_heat_orig_pace.nex 6ebeabd1 the same hooks without in-between frames; stages load from Next pages, no tape",
   "software": "auto, 6 recordings: 159 race updates, real update (V1, R supplied) and in-between frames (V2) exact in all, 754 in-between frames, none late; six stage loads, DMA copy, 54 sprite blits and 8 car-as-sprites frames exact against the game's code (103 more car frames in a separate run); negative W and R controls caught; boot check with R, both builds; JNext 300 updates in lockstep, two input seeds: pace -0.09% / -1.14%, music and interrupts equal (50/s, longest gap 20.3 ms), flicker no flags",
   "hardware": "untested",
   "next": "hardware checklist (car sprites, 50 fps cadence, key on the loading screen); NXC option for 25/50 pictures a second; DDMA review"
@@ -144,5 +144,71 @@
    "scope": "JNext 1.2.0, v1.2 page without the loading screen (ce70891c) against the unpatched control, 300 updates keyed to updates, game state in lockstep throughout, seeds 1 and 2: pace -0.09% / -1.14% (v1.1: +0.13% / -0.71%), AY and interrupts equal (longest gap 20.3 ms both); flicker 100 frames, 59 picture changes against 11, no flags. Not a selftest stamp.",
    "evidence": "games/cisco_heat.md \"Evidence\""
   }
- ]
+ ],
+ "checked": {
+  "deps": {
+   "asm/cisco_heat_hooks.asm": "de40591dcdf05eab",
+   "asm/lib/hlib_iff.asm": "569c378a71f141c9",
+   "asm/lib/hlib_r.asm": "581c566c63d64e9a",
+   "asm/lib/hlib_speed.asm": "51f3e3d669507c51",
+   "docs/profiles/cisco_heat.json": "74eece5fbd66835c",
+   "nexclash.py": "16bce8a764268056",
+   "nexclash/build.py": "8cc45f5649300ac9",
+   "nexclash/cisco_heat.py": "551ea2bddc375315",
+   "nexclash/coloursheet.py": "a1939652b0301887",
+   "nexclash/dizzy6.py": "b39c06e17442c856",
+   "nexclash/dma.py": "aaaa19c4f8cb8191",
+   "nexclash/dma_check.py": "bb7031f4eff0f3ef",
+   "nexclash/engines.py": "00681059fd6b3ff9",
+   "nexclash/hooklib.py": "867562b30c6b16c7",
+   "nexclash/hookprofile.py": "741e20f7f3dc21b0",
+   "nexclash/ikari_warriors.py": "8e209f3e3f0bf63f",
+   "nexclash/nextboot.py": "5b72fba2e34a2ef9",
+   "nexclash/recolour.py": "044daa64903f7e23",
+   "nexclash/records.py": "9b7da2b6151b849c",
+   "nexclash/rzx.py": "986fbd724ea6a5c3",
+   "nexclash/simrun.py": "f705e181e1fbdc9a",
+   "nexclash/sprites.py": "221f343dd2d0b941",
+   "nexclash/z80n.py": "951f5c205361968c",
+   "nexclash/z80tonex.py": "6720f3bf5f60c352",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "3530dee12836d664",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-23"
+ },
+ "verified": {
+  "deps": {
+   "asm/cisco_heat_hooks.asm": "de40591dcdf05eab",
+   "asm/lib/hlib_iff.asm": "569c378a71f141c9",
+   "asm/lib/hlib_r.asm": "581c566c63d64e9a",
+   "asm/lib/hlib_speed.asm": "51f3e3d669507c51",
+   "docs/profiles/cisco_heat.json": "74eece5fbd66835c",
+   "nexclash.py": "16bce8a764268056",
+   "nexclash/build.py": "8cc45f5649300ac9",
+   "nexclash/cisco_heat.py": "551ea2bddc375315",
+   "nexclash/coloursheet.py": "a1939652b0301887",
+   "nexclash/dizzy6.py": "b39c06e17442c856",
+   "nexclash/dma.py": "aaaa19c4f8cb8191",
+   "nexclash/dma_check.py": "bb7031f4eff0f3ef",
+   "nexclash/engines.py": "00681059fd6b3ff9",
+   "nexclash/hooklib.py": "867562b30c6b16c7",
+   "nexclash/hookprofile.py": "741e20f7f3dc21b0",
+   "nexclash/ikari_warriors.py": "8e209f3e3f0bf63f",
+   "nexclash/nextboot.py": "5b72fba2e34a2ef9",
+   "nexclash/recolour.py": "044daa64903f7e23",
+   "nexclash/records.py": "9b7da2b6151b849c",
+   "nexclash/rzx.py": "986fbd724ea6a5c3",
+   "nexclash/simrun.py": "f705e181e1fbdc9a",
+   "nexclash/sprites.py": "221f343dd2d0b941",
+   "nexclash/z80n.py": "951f5c205361968c",
+   "nexclash/z80tonex.py": "6720f3bf5f60c352",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "3530dee12836d664",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-23"
+ }
 }

@@ -3931,12 +3931,16 @@ setup:  nextreg 0x07,3
         nextreg 0x16,0
         nextreg 0x17,0
         nextreg 0x71,0
-        nextreg 0x15,0
-        nextreg 0x1C,2
+        nextreg 0x1C,2          ; (NR 0x15 is 0 already: the stub clears it before it calls this)
         nextreg 0x19,0
         nextreg 0x19,255
         nextreg 0x19,0
         nextreg 0x19,151
+        xor a                   ; hide all 128 sprites: another program may have left any of them visible
+.hide:  nextreg 0x34,a
+        nextreg 0x38,0
+        inc a
+        jp p,.hide              ; to 127 (A = 128 sets S)
         nextreg 0x07,0
         ret
 SETUP_END:

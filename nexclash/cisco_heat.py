@@ -648,6 +648,9 @@ def capture(rzx_path, every=25, stop=None):
         def on_sim(s, sim):
             s.sim = sim
 
+        def on_desync(s, f, msg):
+            raise RuntimeError('%s: replay desynchronised at frame %d (%s)' % (rzx_path, f, msg))
+
         def on_interrupt(s, sim, prev):
             s.ist.append((sim.registers[24], sim.registers[12]))
 

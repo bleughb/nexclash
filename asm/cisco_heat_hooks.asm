@@ -1818,6 +1818,13 @@ boot_resume:
         push hl
         ld a,r
         ld (HLIB_V_R),a
+        ld bc,0x243B                    ; the caller's speed (NR 7 bits 1:0) kept on the scratch stack,
+        ld a,7                          ; given back at the end, never a fixed 3.5 MHz (patch.restore-speed)
+        out (c),a
+        inc b
+        in a,(c)
+        and 3
+        push af
         nextreg 7,3
         ld hl,printer_saved
         ld de,0x5B00
@@ -1838,7 +1845,8 @@ boot_resume:
         ld bc,6912
         ldir
         nextreg 0x50,26
-.ns:    nextreg 7,0
+.ns:    pop af
+        nextreg 7,a                     ; the caller's speed back
         ld a,-23
         call hlib_r_set
         HLIB_R_OUT

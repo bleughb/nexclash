@@ -421,15 +421,15 @@
  "outputs": {
   "plain": {
    "file": "pyjamarama.nex",
-   "md5": "19c7f0ac1c7178839a01b0fc42e47732"
+   "md5": "43c5611cd261b568aaf15908bf46cff6"
   },
   "sprites": {
    "file": "pyjamarama_sprites.nex",
-   "md5": "fad103126004e18132c9877d7a7606e6"
+   "md5": "878bd94454869e5457941a0af03cbd3b"
   },
   "enhanced": {
    "file": "pyjamarama_enhanced.nex",
-   "md5": "3ca79dd93d0fdc46968a22382deac6fe"
+   "md5": "bc6c6d85bb625d80c5f90d63505f5a2e"
   }
  },
  "repro": [],
