@@ -128,6 +128,7 @@ class NextState:
         self.pat = bytearray(16384)
         self.patp = 0
         self.ports = []
+        self.sel = 0                    # NextReg select (port 0x243B)
 
     def nextreg(self, reg, val):
         self.nr[reg] = val
@@ -140,6 +141,8 @@ class NextState:
             self.patp += 1
         elif port == 0x303B:
             self.patp = (val & 0x3F) * 256 + (128 if val & 0x80 else 0)
+        elif port == 0x243B:
+            self.sel = val
         else:
             self.ports.append((port & 0xFF, val))
 
@@ -235,6 +238,8 @@ class _Ports:
         self.ns, self.ports = ns, ports
 
     def read_port(self, regs, port):
+        if self.ns is not None and port == 0x253B:    # NextReg read: NR 7 reads back the programmed speed in bits 1:0
+            return self.ns.nr.get(self.ns.sel, 0)
         return 0xFF
 
     def write_port(self, regs, port, value, *x):
@@ -285,7 +290,13 @@ def event(patch, pc, get, R, ns, alt, psite, stop=None):
     install(sp, ns.nextreg)
     sp.set_tracer(_Ports(ns=ns))
     n0 = len(ns.ports)
-    if not _run(sp, stop):
+    speed = ns.nr.get(7, 0)
+    try:
+        reached = _run(sp, stop)
+    except Exception as x:                     # a broken hook running away (a negative control)
+        fl.append('hook crashed: %s' % str(x)[:80])
+        return fl, 0, 0
+    if not reached:
         fl.append('hook did not reach the resume point')
         return fl, 0, 0
     for i in CMP:
@@ -293,6 +304,8 @@ def event(patch, pc, get, R, ns, alt, psite, stop=None):
             fl.append('register %d: original %02X, patched %02X' % (i, so.registers[i], sp.registers[i]))
     if p.romw:
         fl.append('hook wrote the ROM')
+    if ns.nr.get(7, 0) != speed:
+        fl.append('speed not restored: entered at %d, left at %d' % (speed, ns.nr.get(7, 0)))
     if ports != ns.ports[n0:]:
         fl.append('port writes differ %s %s' % (ports[:3], ns.ports[n0:][:3]))
     del ns.ports[n0:]
@@ -385,6 +398,9 @@ def verify(patch, rzx_path, stop=None, progress=None, collect=0):
             h.reset()
             c['segments'] += 1
             h.lost = set(range(NSLOT + 1))             # a segment's start: what is on its screen is not tracked yet
+
+        def on_desync(h, *a):
+            h.fail('replay desynchronised', a[:2])
 
         def on_frame(h, n):
             h.frame = n
@@ -536,6 +552,7 @@ def unit_tests(patch, states):
                     else:
                         m[MX], m[MY] = x, y
                 ns = NextState()
+                ns.nr[7] = (x + y + col) % 4                     # entered at each CPU speed in turn
                 for s in range(NSPR):
                     ns.attr[s] = [9, 9, 0, 0xC0 | s, 0x80]           # shown before: a hidden result must hide it
                 fl, _, _ = event(patch, pc, m.__getitem__, R, ns, alt, psite)
@@ -586,7 +603,8 @@ def negative_patches(patch):
     import copy
     no_paint = copy.copy(patch)
     no_paint.sites = [s for s in patch.sites if s[0] != 46542]
-    return [('sprites one row high', _broken(patch, 'neg_y', b'\x3D')),        # DEC A before LD B,A
+    return [('enemy hook leaves the CPU at 28 MHz', _broken(patch, 'neg_spd', b'\0\0\0')),
+            ('sprites one row high', _broken(patch, 'neg_y', b'\x3D')),        # DEC A before LD B,A
             ('ink lost in the pattern upload', _broken(patch, 'neg_pix', b'\xE6\x00')),
             ('enemy hook never shows the sprites', _broken(patch, 'neg_en', b'\0\0\0')),
             ('Monty hook never shows the sprites', _broken(patch, 'neg_mo', b'\0\0\0')),
@@ -619,8 +637,19 @@ def auto(a, z80, name, out, say):
     say('Engine    : monty_on_the_run (two XOR plotters, sprites as an overlay, painter stores off)')
     ok, patch = build(z80, out, name, say)
     for r in list(a.rzx or []):
-        c, ex = verify(patch, r, stop=getattr(a, 'quick', None))
+        c, ex, states = verify(patch, r, stop=getattr(a, 'quick', None), collect=8)
         fails = {k: v for k, v in c.items() if k.endswith('!')}
+        if not c['figure checks']:
+            fails['no figure draw reached: nothing verified'] = 1
+        u = unit_tests(patch, states)
+        fails.update({k: v for k, v in u.items() if k.endswith('FAIL!')})
+        missed = [name for name, q in negative_patches(patch)
+                  if not ({k for k, v in verify(q, r, stop=min(getattr(a, 'quick', None) or 1800, 1800))[0].items() if k.endswith('!')}
+                          or any(k.endswith('FAIL!') for k in unit_tests(q, states[:2])))]
+        if missed:
+            fails['negative controls not caught: %s' % ', '.join(missed)] = len(missed)
+        say('Units     : %s; negative controls: %d of %d caught' % (
+            ', '.join('%s %d' % (k, v) for k, v in sorted(u.items()) if not k.startswith('  ')), len(negative_patches(patch)) - len(missed), len(negative_patches(patch))))
         ok = ok and not fails
         say('Verify    : %s  %d frames, %d segments, %d enemy draws, %d Monty draws, %d rooms, %d figure checks, '
             '%d sprite pixels; %d attribute bytes not painted -> %s' % (
