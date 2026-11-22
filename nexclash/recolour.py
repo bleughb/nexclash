@@ -110,9 +110,37 @@ def colours_path(mod):
 
 def build_map(mod):
     """The colour map the build uses ({} when the engine has none yet)."""
-    from . import coloursheet as cs
     p = colours_path(mod)
-    return cs.load(p) if os.path.exists(p) else {}
+    return load_map(p, mod) if os.path.exists(p) else {}
+
+
+def load_map(path, mod):
+    """coloursheet.load, plus the file's top-level sprite 'palette' for an engine whose maps carry one
+    (RECOLOUR 'palette': the Magic Knight engines); other engines get the entries only, as before."""
+    import json
+    from . import coloursheet as cs
+    m = cs.load(path)
+    if mod.RECOLOUR.get('palette') and os.path.exists(path):
+        pal = json.load(open(path)).get('palette')
+        if pal is not None:
+            m['palette'] = pal
+    return m
+
+
+def entries(m):
+    """The map's colour entries, without its palette (what the sheet code and merge take)."""
+    return {k: v for k, v in m.items() if k != 'palette'}
+
+
+def save_map(m, path, note):
+    """coloursheet.save of the entries, the palette (if any) kept at the top level."""
+    import json
+    from . import coloursheet as cs
+    cs.save(entries(m), path, note)
+    if 'palette' in m:
+        d = json.load(open(path))
+        d['palette'] = m['palette']
+        json.dump(d, open(path, 'w'), indent=0)
 
 
 def pick(nex, game=None):
@@ -200,11 +228,11 @@ def current_map(nex, mod, nex_path, onto=None):
     it explicitly. None when nothing reproduces the build (the caller refuses)."""
     from . import coloursheet as cs
     if onto:
-        m = cs.load(onto)
+        m = load_map(onto, mod)
         same = mod.recolour(nex, m)[0] == nex
         return m, '--onto %s%s' % (onto, '' if same else ' (NOTE: it does not reproduce this build\'s colours)')
     side = os.path.splitext(nex_path)[0] + '_colours.json'
-    for where, m in (('sidecar %s' % os.path.basename(side), cs.load(side) if os.path.exists(side) else None),
+    for where, m in (('sidecar %s' % os.path.basename(side), load_map(side, mod) if os.path.exists(side) else None),
                      ('the build default %s' % mod.RECOLOUR['colours'], build_map(mod)),
                      ('the empty map (unpainted build)', {})):
         if m is not None and mod.recolour(nex, m)[0] == nex:
@@ -263,36 +291,30 @@ def run(nex_path, colours, layout=None, game=None, output=None, say=print, onto=
                                  'default, not empty): give the map it was made with (--onto MAP.json), or --replace '
                                  'to start from this sheet alone' % (os.path.basename(nex_path), os.path.splitext(
                                      os.path.basename(nex_path))[0]))
-        say('current map: %s (%d entries)' % (where, len(cur)))
-        merged, mconf = cs.merge(base, chg, meta, cur)
+        say('current map: %s (%d entries)' % (where, len(entries(cur))))
+        merged, mconf = cs.merge(base, chg, meta, entries(cur))
+        if 'palette' in cur:
+            merged['palette'] = cur['palette']        # the build's palette stays; the sheet changes entries only
         if mconf:
             lines = ['%s bit %d: sheet showed %s, painted %s, the build now has %s' % (k, b, _st(bs), _st(u), _st(c))
                      for (k, b), bs, u, c in mconf[:20]]
             raise ValueError('%d painted pixel(s) conflict with the current map (changed since this sheet was drawn); '
                              'repaint them on the refreshed sheet:\n  %s' % (len(mconf), '\n  '.join(lines)))
-        if not replace and cur is not base and base != cur:
+        if not replace and cur is not base and base != entries(cur):
             say('merged onto the current map: the sheet was drawn with another map (%d entries); %d changed pixels '
                 'applied, everything else kept' % (len(base), len(chg)))
         report.update({'current map': where, 'changed pixels': len(chg),
                        'report': {k: v for k, v in rep.items()}})
     else:
-        merged = cs.load(colours)
+        merged = load_map(colours, mod)
         report.update({'current map': 'replaced by %s' % os.path.basename(colours)})
     work = tempfile.mkdtemp(prefix='.recolour_', dir=os.path.dirname(os.path.abspath(output)))
     try:
         files = {}
         cj = ostem + '_colours.json'
         tj = os.path.join(work, 'colours.json')
-        cs.save(merged, tj, mod.RECOLOUR.get('note', ''))
-        merged = cs.load(tj)
-        pal = None                                     # a map's own sprite palette (Knight Tyme, Stormbringer): kept
-        if str(colours).endswith('.json') and os.path.exists(colours):
-            pal = json.load(open(colours)).get('palette')
-        if pal is not None:
-            d = json.load(open(tj))
-            d['palette'] = pal
-            json.dump(d, open(tj, 'w'), indent=1)
-            merged['palette'] = pal
+        save_map(merged, tj, mod.RECOLOUR.get('note', ''))
+        merged = load_map(tj, mod)
         out, info = mod.recolour(nex, merged)
         from .z80tonex import automap_off
         out = automap_off(out)                        # an older build given: its start gets automap off too
@@ -310,7 +332,7 @@ def run(nex_path, colours, layout=None, game=None, output=None, say=print, onto=
                 sn = os.path.basename(lp)[:-len('_layout.json')] if lp.endswith('_layout.json') else os.path.splitext(os.path.basename(lp))[0]
                 dst = '%s_%s' % (ostem, sn)
                 tp, tl = os.path.join(work, kind + '.png'), os.path.join(work, kind + '.json')
-                cs.redraw(lp, merged, tp, tl)
+                cs.redraw(lp, entries(merged), tp, tl)
                 files[dst + '.png'], files[dst + '_layout.json'] = tp, tl
         else:
             missing.append('sheets: no layout (a colours .json without --layout) - none in this bundle')

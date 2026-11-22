@@ -1494,7 +1494,7 @@ def synthetic_colours(banks, idx):
 
 COLOUR_BANKS = tuple([13] + [14 + n for n in range(NSTORE // 2)])
 GROUPS = ['Knight', 'Characters', 'Objects']
-RECOLOUR = {'game': RECORD, 'output': 'sprites', 'colours': 'docs/profiles/knight_tyme_colours.json', 'clear': True,
+RECOLOUR = {'game': RECORD, 'output': 'sprites', 'colours': 'docs/profiles/knight_tyme_colours.json', 'clear': True, 'palette': True,
             'note': 'keys: graphics byte address 0xC000-0xFFFF, store pages 28-43, read at build time per figure'}
 
 
