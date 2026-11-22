@@ -2,6 +2,7 @@
 
 Before recording: Options -> RZX -> turn OFF "autosave". Load the SAME .z80 you
 will give the agent (title screen or in game, keyboard controls) and use "Record from snapshot".
+Agent: an RZX alone is enough - `nexclash.py rzx extract R -o GAME.z80` gives its snapshot.
 
 Record one session of 3-5 minutes. Cover what the game has - every figure the build will
 turn into a sprite, in every situation it can be in:
