@@ -443,10 +443,6 @@ Designs not built yet (use when a game needs them)
    on the next frame: the game's sound at the original timing whatever speed the code runs at
    (one frame late; 11 kHz quantises fast tones). Needs: a T clock in the hooks (or the game loop's
    own count), the DAC enable (NextReg $08 bit 3), a hardware listen test. Not tried.
-38. selftest.push_access() treats a git WORKTREE as "no push access": it tests isdir(HERE/.git), and in
-   a worktree .git is a file. LEARNINGS 2.6 says to run stamping / --affected runs in a worktree, so
-   they stop with exit 3 there (Fireman, 2026-10-25; ran with NEXCLASH_MAINTAINER=1). Fix: test
-   os.path.exists, or ask `git rev-parse --git-dir`; add a selftest --tools case with a worktree.
 39. `isr` should list, for every routine the ISR's call tree reaches, the main-code callers too, and
    the original's slack at each (T from the main-code call's return to the next interrupt, over an
    RZX): a routine on both lists with little slack is a nesting risk once hooks add cost (LEARNINGS
@@ -465,6 +461,9 @@ Designs not built yet (use when a game needs them)
 45. Spellbound's _boot and three_weeks.boot_check still copy the raster line (+ 128K paging) nextboot has
    now: drop them at their next rework. nextboot.boot ignores a NEX's entry bank: a _loading.nex's picture
    stub runs only in its engine's loading_check.
+46. scan with several --rzx keeps one first access over all of them, so "write-first" means first in the
+   run, not in every recording. A tail site needs bytes no recording reads before writing (Green Beret
+   2026-11-23: four scans by hand plus a scratch intersection). Add a per-recording view; tools_check case.
 
 ### C3b. Two verification levels (agreed with Dean 2026-09-29; how to run them: PLAYBOOK 6)
 - ITERATE (per change): original bytes at every site, boot check, unit tests (with negative
