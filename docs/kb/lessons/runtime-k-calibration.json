@@ -1,0 +1,31 @@
+{
+ "id": "lesson.runtime-k-calibration",
+ "kind": "method",
+ "claim": "When the 3.5 MHz : 28 MHz ratio K sets a pace window, measure it at run time: re-run the routine at 3.5 MHz on scratch copies of its pages with a frame counter, rather than trusting a K measured in an emulator.",
+ "limit": "One game; hardware K not yet seen. Costs one 3.5 MHz render per calibration (updates 1, 3, 5, then every 16).",
+ "evidence": [
+  {
+   "game": "games/hard_drivin.md",
+   "text": "kept samples within -0.14 .. +0.43 % of the original render's time over the whole RZX; JNext pace +3 frames over 178 updates",
+   "quote": "kept samples -0.14 .. +0.43 % of the",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "facts": {
+  "machine": "128K"
+ },
+ "next_check": "Compare the calibrated K with a hardware cycle count of the same render.",
+ "words": [
+  "calibration",
+  "ratio",
+  "speed",
+  "pace",
+  "window",
+  "scratch",
+  "render"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}
