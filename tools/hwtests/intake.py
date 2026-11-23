@@ -634,6 +634,21 @@ def _v10(e, rec, src):
     return st, 'operator: %s.' % say
 
 
+def _v18(e, rec, src):
+    a, b = e.get('o33'), e.get('o32')
+    if not a or not b:
+        return None
+    lit = [o for o, w in (('33', a), ('32', b)) if w == 'two']
+    if a == 'two' and b == 'one':
+        st, how = 'PASS', 'copper line 0 is Layer 2 row 0 with $64 = 33, not with 32'
+    elif a == 'one' and b == 'two':
+        st, how = 'FAIL', 'copper line 0 is Layer 2 row 0 with $64 = 32, not with 33'
+    else:
+        st, how = None, 'not one setting alone (row 0 lit with: %s)' % (', '.join(lit) or 'neither')
+    return st, 'operator: $64 = 33 -> %s line(s), $64 = 32 -> %s (two = row 0 lit by the copper at its line 0 plus ' \
+        'the reference): %s.' % (a, b, how)
+
+
 RESETS = {'soft': 'an F4 soft reset', 'hard': 'a hard reset', 'power': 'power off and on'}
 
 
@@ -658,7 +673,7 @@ def _xh2(e, rec, src):
     return st, 'board: %s.' % '; '.join(parts)
 
 
-DERIVE = {('XH2', 'dma-wr4-interrupt-lock'): _xh2, ('V10', 'lay-l2-flip-not-synced'): _v10,
+DERIVE = {('XH2', 'dma-wr4-interrupt-lock'): _xh2, ('V18', 'frame-64-33-l2-top'): _v18, ('V10', 'lay-l2-flip-not-synced'): _v10,
           ('XT2', 'frame-timing-change-frame-end'): _xt2,
           ('XT4', 'mem-48k-timing-7ffd'): _xt4, ('D02', 'dma-default-cycle-length'): _d02_default, ('D02', 'dma-cost-per-byte'): _d02_cost,
           ('D04', 'dma-prescaler-rate'): _d04, ('D05', 'dma-burst-cpu-share'): _d05,

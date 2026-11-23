@@ -86,6 +86,7 @@ OVL_G6  equ 63                  ; G6 DMA (program buffer $F700)
 OVL_G1  equ 60                  ; G1 CPU (below SCRATCH: C15 copies 1 KB to $F000)
 OVL_G7  equ 61                  ; G7 BENCH (nextbench rows; slot 6 = page 38 during a row)
 OVL_V   equ 41                  ; V VISUAL shares page 41 with G3 (G3's tables: $F800-$FFFF)
+OVL2_V  equ 42                  ; V tests in gv2.asm, after g3b.asm on page 42 (flag 8)
 OVL_XT  equ 61                  ; X-T after G7 on page 61
 OVL_XD  equ 60                  ; X-D after G1 on page 60
 OVL_XH  equ 63                  ; X-H after G6 on page 63 (IM2 table $FC00)
@@ -93,6 +94,7 @@ OVL_XH  equ 63                  ; X-H after G6 on page 63 (IM2 table $FC00)
         ORG $E000
         INCLUDE "nxsuite/g2b.asm"
         INCLUDE "nxsuite/g4.asm"
+g4_end:
         ASSERT $ <= $F000
         MMU 7,OVL_G3
         ORG $E000
@@ -103,6 +105,12 @@ gv_end:
         MMU 7,OVL2_G3
         ORG $E000
         INCLUDE "nxsuite/g3b.asm"
+g3b_end:
+        ASSERT $ <= $F800
+        MMU 7,OVL2_V
+        ORG g3b_end
+        INCLUDE "nxsuite/gv2.asm"
+gv2_end:
         ASSERT $ <= $F800
         MMU 7,OVL_G5
         ORG $E000
