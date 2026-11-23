@@ -1,0 +1,4811 @@
+{
+ "schema": 1,
+ "about": "nxsuite inventory: the 147 hardware claims (spec v1) and the test table that answers them. Read by tools/hwtests/nxsuite_gen.py (the .nex test table) and tools/hwtests/intake.py. GPL-3.0-or-later, part of nexclash.",
+ "groups": [
+  {
+   "id": "G0",
+   "index": 0,
+   "name": "SYS",
+   "key": "0",
+   "kind": "auto",
+   "stage": 1
+  },
+  {
+   "id": "G1",
+   "index": 1,
+   "name": "CPU",
+   "key": "1",
+   "kind": "auto",
+   "stage": 1
+  },
+  {
+   "id": "G2",
+   "index": 2,
+   "name": "Z80N",
+   "key": "2",
+   "kind": "auto",
+   "stage": 1
+  },
+  {
+   "id": "G3",
+   "index": 3,
+   "name": "IRQ",
+   "key": "3",
+   "kind": "auto",
+   "stage": 1
+  },
+  {
+   "id": "G4",
+   "index": 4,
+   "name": "FRAME",
+   "key": "4",
+   "kind": "auto",
+   "stage": 1
+  },
+  {
+   "id": "G5",
+   "index": 5,
+   "name": "COPPER",
+   "key": "5",
+   "kind": "auto",
+   "stage": 2
+  },
+  {
+   "id": "G6",
+   "index": 6,
+   "name": "DMA",
+   "key": "6",
+   "kind": "auto",
+   "stage": 2
+  },
+  {
+   "id": "G7",
+   "index": 7,
+   "name": "BENCH",
+   "key": "7",
+   "kind": "auto",
+   "stage": 2
+  },
+  {
+   "id": "G8",
+   "index": 8,
+   "name": "SPRITES",
+   "key": "8",
+   "kind": "auto",
+   "stage": 2
+  },
+  {
+   "id": "G9",
+   "index": 9,
+   "name": "MEM",
+   "key": "9",
+   "kind": "auto",
+   "stage": 2
+  },
+  {
+   "id": "V",
+   "index": 10,
+   "name": "VISUAL",
+   "key": "V",
+   "kind": "operator",
+   "stage": 2
+  },
+  {
+   "id": "XT",
+   "index": 11,
+   "name": "TIMING",
+   "key": "T",
+   "kind": "opt-in",
+   "stage": 2
+  },
+  {
+   "id": "XD",
+   "index": 12,
+   "name": "DIVMMC",
+   "key": "D",
+   "kind": "opt-in",
+   "stage": 2
+  },
+  {
+   "id": "XH",
+   "index": 13,
+   "name": "DMA-HAZARD",
+   "key": "H",
+   "kind": "opt-in",
+   "stage": 2
+  }
+ ],
+ "tests": [
+  {
+   "id": "S00",
+   "group": "G0",
+   "claims": [
+    "sys-nexload-printer-buffer"
+   ],
+   "risk": "none",
+   "title": "printer buffer after NEXLOAD",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "S01",
+   "group": "G0",
+   "claims": [
+    "sys-launch-nextreg-state",
+    "sys-launch-divmmc-regs",
+    "sys-launch-7ffd-unlocked",
+    "lay-l2-default-banks",
+    "lay-tilemap-reset-bases"
+   ],
+   "risk": "none",
+   "title": "NextReg snapshot at launch",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "S02",
+   "group": "G0",
+   "claims": [
+    "sys-core-version-regs",
+    "sys-board-id"
+   ],
+   "risk": "none",
+   "title": "core version, board id",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "S03",
+   "group": "G0",
+   "claims": [
+    "sys-ram-size"
+   ],
+   "risk": "none",
+   "title": "RAM size (page 96)",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "S04",
+   "group": "G0",
+   "claims": [
+    "sys-rom3-bytes-386e"
+   ],
+   "risk": "none",
+   "title": "ROM3 bytes",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "S05",
+   "group": "G0",
+   "claims": [
+    "sys-nextreg-keeps-select"
+   ],
+   "risk": "none",
+   "title": "NEXTREG keeps 243B select",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "S06",
+   "group": "G0",
+   "claims": [
+    "sys-cpu-speed-readback"
+   ],
+   "risk": "none",
+   "title": "CPU speed read-back",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "S07",
+   "group": "G0",
+   "claims": [
+    "sys-sd-write-rst8"
+   ],
+   "risk": "sd",
+   "title": "SD file write + read back",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "C01",
+   "group": "G1",
+   "claims": [
+    "cpu-28-wait-sram-fetch"
+   ],
+   "risk": "none",
+   "title": "28 MHz SRAM fetch",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "C02",
+   "group": "G1",
+   "claims": [
+    "cpu-28-wait-bank5"
+   ],
+   "risk": "none",
+   "title": "28 MHz bank 5",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "C03",
+   "group": "G1",
+   "claims": [
+    "cpu-28-wait-page0e"
+   ],
+   "risk": "none",
+   "title": "28 MHz page $0E",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "C04",
+   "group": "G1",
+   "claims": [
+    "cpu-28-wait-page0f"
+   ],
+   "risk": "none",
+   "title": "28 MHz page $0F",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "C05",
+   "group": "G1",
+   "claims": [
+    "cpu-28-wait-reads-only"
+   ],
+   "risk": "none",
+   "title": "28 MHz writes / IO",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "C06",
+   "group": "G1",
+   "claims": [
+    "cpu-speed-scaling-7-14"
+   ],
+   "risk": "none",
+   "title": "7 / 14 MHz scaling",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "C07",
+   "group": "G1",
+   "claims": [
+    "cpu-speed-switch-cost"
+   ],
+   "risk": "none",
+   "title": "speed switch cost",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "C08",
+   "group": "G1",
+   "claims": [
+    "cpu-contention-bank5-3m5"
+   ],
+   "risk": "none",
+   "title": "bank 5 contention",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "C09",
+   "group": "G1",
+   "claims": [
+    "cpu-contention-08b6-latch"
+   ],
+   "risk": "none",
+   "title": "$08 bit 6 latch",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "C10",
+   "group": "G1",
+   "claims": [
+    "cpu-io-contention"
+   ],
+   "risk": "none",
+   "title": "IO contention",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "C11",
+   "group": "G1",
+   "claims": [
+    "cpu-undoc-timings"
+   ],
+   "risk": "none",
+   "title": "undocumented opcode T",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "C12",
+   "group": "G1",
+   "claims": [
+    "cpu-out-c-0"
+   ],
+   "risk": "none",
+   "title": "OUT (C),0",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "C13",
+   "group": "G1",
+   "claims": [
+    "cpu-block-io-flags"
+   ],
+   "risk": "none",
+   "title": "block IO flags",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "C14",
+   "group": "G1",
+   "claims": [
+    "cpu-undoc-flags-xy"
+   ],
+   "risk": "none",
+   "title": "undocumented flags X/Y",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "C15",
+   "group": "G1",
+   "claims": [
+    "lay-l2-no-cpu-wait"
+   ],
+   "risk": "none",
+   "title": "Layer 2 vs CPU waits",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "Z01",
+   "group": "G2",
+   "claims": [
+    "z80n-func-suite",
+    "z80n-ldix-flags",
+    "z80n-ldpirx-fixed",
+    "z80n-jpc-flags",
+    "z80n-test-nf"
+   ],
+   "risk": "none",
+   "title": "z80ntest FUNC cases",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1,
+   "sub_prefix": "zf."
+  },
+  {
+   "id": "Z02",
+   "group": "G2",
+   "claims": [
+    "z80n-add-rr-a-carry"
+   ],
+   "risk": "none",
+   "title": "ADD rr,A carry",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "Z03",
+   "group": "G2",
+   "claims": [
+    "z80n-ldws-flags"
+   ],
+   "risk": "none",
+   "title": "LDWS flags",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "Z04",
+   "group": "G2",
+   "claims": [
+    "z80n-ed-b6"
+   ],
+   "risk": "none",
+   "title": "ED B6 sandbox",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "Z05",
+   "group": "G2",
+   "claims": [
+    "z80n-pixel-edges"
+   ],
+   "risk": "none",
+   "title": "PIXELDN / PIXELAD edges",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "Z06",
+   "group": "G2",
+   "claims": [
+    "cpu-z80n-tstates-3m5"
+   ],
+   "risk": "none",
+   "title": "Z80N T-states 3.5 MHz",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1,
+   "sub_prefix": "zt."
+  },
+  {
+   "id": "Z07",
+   "group": "G2",
+   "claims": [
+    "cpu-z80n-tstates-28"
+   ],
+   "risk": "none",
+   "title": "Z80N clocks 28 MHz",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1,
+   "sub_prefix": "zu."
+  },
+  {
+   "id": "I01",
+   "group": "G3",
+   "claims": [
+    "irq-pulse-bus-ff"
+   ],
+   "risk": "none",
+   "title": "pulse IM2 bus $FF",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "I02",
+   "group": "G3",
+   "claims": [
+    "cpu-ed7e-im2"
+   ],
+   "risk": "none",
+   "title": "IM 2 by ED 7E",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "I03",
+   "group": "G3",
+   "claims": [
+    "irq-im2hold-suite"
+   ],
+   "risk": "hang",
+   "title": "im2hold T1-T7",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1,
+   "sub_prefix": "ih."
+  },
+  {
+   "id": "I04",
+   "group": "G3",
+   "claims": [
+    "irq-pulse-length-3m5"
+   ],
+   "risk": "hang",
+   "title": "pulse length 3.5 MHz",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "I05",
+   "group": "G3",
+   "claims": [
+    "irq-pulse-length-28"
+   ],
+   "risk": "hang",
+   "title": "pulse length 7-28 MHz",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "I06",
+   "group": "G3",
+   "claims": [
+    "irq-hwim2-vector-layout"
+   ],
+   "risk": "none",
+   "title": "HW IM2 vector layout",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "I07",
+   "group": "G3",
+   "claims": [
+    "irq-status-bit-diagnostics"
+   ],
+   "risk": "none",
+   "title": "status bits $C8",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "I08",
+   "group": "G3",
+   "claims": [
+    "irq-22-bit7-int-low"
+   ],
+   "risk": "none",
+   "title": "$22 bit 7 /INT time",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "I09",
+   "group": "G3",
+   "claims": [
+    "irq-ula-int-line"
+   ],
+   "risk": "none",
+   "title": "ULA interrupt line",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "I10",
+   "group": "G3",
+   "claims": [
+    "irq-line-int-position"
+   ],
+   "risk": "none",
+   "title": "line interrupt position",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "I11",
+   "group": "G3",
+   "claims": [
+    "irq-line-int-numbering"
+   ],
+   "risk": "none",
+   "title": "line interrupt numbering",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "I12",
+   "group": "G3",
+   "claims": [
+    "irq-ctc-rate-fixed"
+   ],
+   "risk": "none",
+   "title": "CTC rate per speed",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "I13",
+   "group": "G3",
+   "claims": [
+    "irq-ctc-time-constant",
+    "irq-ctc-status-polled"
+   ],
+   "risk": "none",
+   "title": "CTC time constant",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "I14",
+   "group": "G3",
+   "claims": [
+    "irq-ack-cost"
+   ],
+   "risk": "none",
+   "title": "interrupt ack cost",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "I15",
+   "group": "G3",
+   "claims": [
+    "cpu-ld-a-i-pv"
+   ],
+   "risk": "none",
+   "title": "LD A,I P/V",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "I16",
+   "group": "G3",
+   "claims": [
+    "irq-line-shares-int"
+   ],
+   "risk": "none",
+   "title": "line int shares /INT",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "I17",
+   "group": "G3",
+   "claims": [
+    "irq-ula-enable-shared"
+   ],
+   "risk": "none",
+   "title": "ULA enable $22 / $C4",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "I18",
+   "group": "G3",
+   "claims": [
+    "irq-hwim2-im1-fallback"
+   ],
+   "risk": "none",
+   "title": "HW IM2 priority",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "I19",
+   "group": "G3",
+   "claims": [
+    "irq-reti-retn-rules"
+   ],
+   "risk": "hang",
+   "title": "RETI / RETN rules",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "I20",
+   "group": "G3",
+   "claims": [
+    "irq-one-outstanding"
+   ],
+   "risk": "none",
+   "title": "one outstanding CTC",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "I21",
+   "group": "G3",
+   "claims": [
+    "irq-nr20-generate"
+   ],
+   "risk": "none",
+   "title": "NR $20 generate",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "I22",
+   "group": "G3",
+   "claims": [
+    "dma-pulse-lost"
+   ],
+   "risk": "none",
+   "title": "DMA loses pulse",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "I23",
+   "group": "G3",
+   "claims": [
+    "dma-burst-prescaler-int"
+   ],
+   "risk": "none",
+   "title": "burst DMA + interrupt",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "I24",
+   "group": "G3",
+   "claims": [
+    "dma-hwim2-yield"
+   ],
+   "risk": "hang",
+   "title": "DMA yields to HW IM2",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "F01",
+   "group": "G4",
+   "claims": [
+    "frame-lines-50"
+   ],
+   "risk": "none",
+   "title": "lines per frame",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "F02",
+   "group": "G4",
+   "claims": [
+    "frame-line-length"
+   ],
+   "risk": "none",
+   "title": "line length",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "F03",
+   "group": "G4",
+   "claims": [
+    "frame-lines-60",
+    "frame-60hz-display-start",
+    "sys-60hz-switch-timing"
+   ],
+   "risk": "monitor",
+   "title": "60 Hz frame",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "F04",
+   "group": "G4",
+   "claims": [
+    "frame-raster-read"
+   ],
+   "risk": "none",
+   "title": "raster read monotonic",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "F05",
+   "group": "G4",
+   "claims": [
+    "frame-64-offset"
+   ],
+   "risk": "none",
+   "title": "$64 line offset",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 1
+  },
+  {
+   "id": "P01",
+   "group": "G5",
+   "claims": [
+    "copper-wait-passed-line"
+   ],
+   "risk": "none",
+   "title": "WAIT for a passed line",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "P02",
+   "group": "G5",
+   "claims": [
+    "copper-wait-h-same-line"
+   ],
+   "risk": "none",
+   "title": "WAIT h on same line",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "P03",
+   "group": "G5",
+   "claims": [
+    "copper-wait-max-h"
+   ],
+   "risk": "none",
+   "title": "largest WAIT h",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "P04",
+   "group": "G5",
+   "claims": [
+    "copper-line-vs-raster"
+   ],
+   "risk": "none",
+   "title": "copper line vs raster",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "P05",
+   "group": "G5",
+   "claims": [
+    "copper-instruction-time"
+   ],
+   "risk": "none",
+   "title": "copper instruction time",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "P06",
+   "group": "G5",
+   "claims": [
+    "copper-restart-line"
+   ],
+   "risk": "none",
+   "title": "copper restart line",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "P07",
+   "group": "G5",
+   "claims": [
+    "copper-move-44-pair"
+   ],
+   "risk": "none",
+   "title": "MOVE $44 pair",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "P08",
+   "group": "G5",
+   "claims": [
+    "copper-cpu-coexist"
+   ],
+   "risk": "none",
+   "title": "copper + CPU coexist",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "P09",
+   "group": "G5",
+   "claims": [
+    "copper-nextreg-collision"
+   ],
+   "risk": "none",
+   "title": "NEXTREG collision",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "P10",
+   "group": "G5",
+   "claims": [
+    "copper-same-mode-no-restart"
+   ],
+   "risk": "none",
+   "title": "same mode no restart",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "D01",
+   "group": "G6",
+   "claims": [
+    "dma-correct-3m5"
+   ],
+   "risk": "none",
+   "title": "DMA correct",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "D02",
+   "group": "G6",
+   "claims": [
+    "dma-cost-per-byte",
+    "dma-default-cycle-length"
+   ],
+   "risk": "none",
+   "title": "DMA cost per byte",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "D03",
+   "group": "G6",
+   "claims": [
+    "dma-length-rule"
+   ],
+   "risk": "none",
+   "title": "DMA length rule",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "D04",
+   "group": "G6",
+   "claims": [
+    "dma-prescaler-rate"
+   ],
+   "risk": "none",
+   "title": "DMA prescaler",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "D05",
+   "group": "G6",
+   "claims": [
+    "dma-burst-cpu-share"
+   ],
+   "risk": "none",
+   "title": "burst CPU share",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "D06",
+   "group": "G6",
+   "claims": [
+    "dma-read-status"
+   ],
+   "risk": "none",
+   "title": "DMA read status",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "D07",
+   "group": "G6",
+   "claims": [
+    "dma-c3-reset-keeps"
+   ],
+   "risk": "none",
+   "title": "$C3 keeps program",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "D08",
+   "group": "G6",
+   "claims": [
+    "dma-overlap-fill"
+   ],
+   "risk": "none",
+   "title": "overlap fill",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "D09",
+   "group": "G6",
+   "claims": [
+    "dma-blitter-detect"
+   ],
+   "risk": "none",
+   "title": "blitter detect",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "D10",
+   "group": "G6",
+   "claims": [
+    "dma-blitter-physical"
+   ],
+   "risk": "none",
+   "title": "blitter physical",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "D11",
+   "group": "G6",
+   "claims": [
+    "dma-blitter-bram"
+   ],
+   "risk": "none",
+   "title": "blitter BRAM",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "D12",
+   "group": "G6",
+   "claims": [
+    "dma-blitter-2d"
+   ],
+   "risk": "none",
+   "title": "blitter 2D",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "D13",
+   "group": "G6",
+   "claims": [
+    "dma-blitter-transparent-fill"
+   ],
+   "risk": "none",
+   "title": "blitter transparent / fill",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "D14",
+   "group": "G6",
+   "claims": [
+    "dma-blitter-l2-xy"
+   ],
+   "risk": "none",
+   "title": "blitter Layer 2 X,Y",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "D15",
+   "group": "G6",
+   "claims": [
+    "dma-blitter-cost"
+   ],
+   "risk": "none",
+   "title": "blitter cost",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "D16",
+   "group": "G6",
+   "claims": [
+    "dma-setup-costs"
+   ],
+   "risk": "none",
+   "title": "DMA set-up costs",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "N01",
+   "group": "G7",
+   "claims": [
+    "cpu-speed-ratio-routines",
+    "dma-setup-costs",
+    "dma-correct-3m5",
+    "copper-cpu-coexist",
+    "copper-line-vs-raster"
+   ],
+   "risk": "none",
+   "title": "nextbench v3 table",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2,
+   "sub_prefix": "nb."
+  },
+  {
+   "id": "SP01",
+   "group": "G8",
+   "claims": [
+    "spr-collision-rules"
+   ],
+   "risk": "none",
+   "title": "collision rules",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "SP02",
+   "group": "G8",
+   "claims": [
+    "spr-303b-shared-index"
+   ],
+   "risk": "none",
+   "title": "303B shared index",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "SP03",
+   "group": "G8",
+   "claims": [
+    "spr-34-vs-303b"
+   ],
+   "risk": "none",
+   "title": "$34 vs 303B",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "SP04",
+   "group": "G8",
+   "claims": [
+    "spr-4byte-records"
+   ],
+   "risk": "none",
+   "title": "4-byte records",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "SP05",
+   "group": "G8",
+   "claims": [
+    "spr-nr-postinc"
+   ],
+   "risk": "none",
+   "title": "NR post-increment",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "SP06",
+   "group": "G8",
+   "claims": [
+    "spr-4bit-attr4-halves"
+   ],
+   "risk": "none",
+   "title": "4-bit halves",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "SP07",
+   "group": "G8",
+   "claims": [
+    "spr-transparency-before-offset"
+   ],
+   "risk": "none",
+   "title": "transparency before offset",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "SP08",
+   "group": "G8",
+   "claims": [
+    "spr-relative-accidental"
+   ],
+   "risk": "none",
+   "title": "accidental relative",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "SP09",
+   "group": "G8",
+   "claims": [
+    "spr-position-wrap"
+   ],
+   "risk": "none",
+   "title": "X wrap",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "SP10",
+   "group": "G8",
+   "claims": [
+    "spr-line-limit"
+   ],
+   "risk": "none",
+   "title": "sprites per line",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "SP11",
+   "group": "G8",
+   "claims": [
+    "spr-port-low-byte"
+   ],
+   "risk": "none",
+   "title": "port low byte",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "M01",
+   "group": "G9",
+   "claims": [
+    "mem-7ffd-unlocked-remap"
+   ],
+   "risk": "none",
+   "title": "7FFD unlocked remap",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "M02",
+   "group": "G9",
+   "claims": [
+    "mem-7ffd-locked"
+   ],
+   "risk": "none",
+   "title": "7FFD locked",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "M03",
+   "group": "G9",
+   "claims": [
+    "div-automap-off-0a",
+    "mem-altrom-select"
+   ],
+   "risk": "none",
+   "title": "automap off + alt ROM",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "M04",
+   "group": "G9",
+   "claims": [
+    "lay-l2-writemap-over-altrom"
+   ],
+   "risk": "none",
+   "title": "L2 write map over alt ROM",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "M05",
+   "group": "G9",
+   "claims": [
+    "mem-high-pages"
+   ],
+   "risk": "none",
+   "title": "pages above RAM",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "M06",
+   "group": "G9",
+   "claims": [
+    "mem-fetch-wrap-ffff"
+   ],
+   "risk": "none",
+   "title": "fetch wraps $FFFF",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "V01",
+   "group": "V",
+   "claims": [
+    "spr-clip-units"
+   ],
+   "risk": "none",
+   "title": "sprite clip units",
+   "auto": false,
+   "operator": true,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "V02",
+   "group": "V",
+   "claims": [
+    "spr-order-bit6",
+    "spr-change-one-line-late"
+   ],
+   "risk": "none",
+   "title": "sprite order / late change",
+   "auto": false,
+   "operator": true,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "V03",
+   "group": "V",
+   "claims": [
+    "spr-scale-rotate"
+   ],
+   "risk": "none",
+   "title": "sprite scale / rotate",
+   "auto": false,
+   "operator": true,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "V04",
+   "group": "V",
+   "claims": [
+    "lay-transparency-rules"
+   ],
+   "risk": "none",
+   "title": "transparency rules",
+   "auto": false,
+   "operator": true,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "V05",
+   "group": "V",
+   "claims": [
+    "lay-border-transparent"
+   ],
+   "risk": "none",
+   "title": "border transparent",
+   "auto": false,
+   "operator": true,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "V06",
+   "group": "V",
+   "claims": [
+    "lay-l2-priority-bit"
+   ],
+   "risk": "none",
+   "title": "L2 priority bit",
+   "auto": false,
+   "operator": true,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "V07",
+   "group": "V",
+   "claims": [
+    "lay-l2-wide-clip-default"
+   ],
+   "risk": "none",
+   "title": "L2 wide clip default",
+   "auto": false,
+   "operator": true,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "V08",
+   "group": "V",
+   "claims": [
+    "lay-l2-640-whole-pixels"
+   ],
+   "risk": "none",
+   "title": "L2 640 pixels",
+   "auto": false,
+   "operator": true,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "V09",
+   "group": "V",
+   "claims": [
+    "lay-l2-scroll-ranges"
+   ],
+   "risk": "none",
+   "title": "L2 scroll ranges",
+   "auto": false,
+   "operator": true,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "V10",
+   "group": "V",
+   "claims": [
+    "lay-l2-flip-not-synced"
+   ],
+   "risk": "none",
+   "title": "L2 flip not synced",
+   "auto": false,
+   "operator": true,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "V11",
+   "group": "V",
+   "claims": [
+    "lay-tilemap-bank7-wrap"
+   ],
+   "risk": "none",
+   "title": "tilemap bank 7 wrap",
+   "auto": false,
+   "operator": true,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "V12",
+   "group": "V",
+   "claims": [
+    "lay-tilemap-text-and-6b"
+   ],
+   "risk": "none",
+   "title": "tilemap text / $6B",
+   "auto": false,
+   "operator": true,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "V13",
+   "group": "V",
+   "claims": [
+    "lay-sprites-between-ula-tilemap"
+   ],
+   "risk": "none",
+   "title": "sprites between ULA / tiles",
+   "auto": false,
+   "operator": true,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "V14",
+   "group": "V",
+   "claims": [
+    "lay-blend-stencil"
+   ],
+   "risk": "none",
+   "title": "blend / stencil",
+   "auto": false,
+   "operator": true,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "V15",
+   "group": "V",
+   "claims": [
+    "lay-ula-reads-bank5"
+   ],
+   "risk": "none",
+   "title": "ULA reads bank 5",
+   "auto": false,
+   "operator": true,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "V16",
+   "group": "V",
+   "claims": [
+    "lay-port-ff-timex"
+   ],
+   "risk": "none",
+   "title": "port FF Timex",
+   "auto": false,
+   "operator": true,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "V17",
+   "group": "V",
+   "claims": [
+    "copper-15-resets-clip"
+   ],
+   "risk": "none",
+   "title": "copper $15 clip",
+   "auto": false,
+   "operator": true,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "V18",
+   "group": "V",
+   "claims": [
+    "frame-64-33-l2-top"
+   ],
+   "risk": "none",
+   "title": "$64 = 32 / 33 L2 top",
+   "auto": false,
+   "operator": true,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "V19",
+   "group": "V",
+   "claims": [
+    "sys-video-timing-frame-rate"
+   ],
+   "risk": "none",
+   "title": "frame rate (stopwatch)",
+   "auto": false,
+   "operator": true,
+   "opt_in": false,
+   "stage": 2
+  },
+  {
+   "id": "XT1",
+   "group": "XT",
+   "claims": [
+    "frame-ula-int-per-timing",
+    "frame-lines-50"
+   ],
+   "risk": "timing",
+   "title": "per machine timing",
+   "auto": false,
+   "operator": false,
+   "opt_in": true,
+   "stage": 2
+  },
+  {
+   "id": "XT2",
+   "group": "XT",
+   "claims": [
+    "frame-timing-change-frame-end"
+   ],
+   "risk": "timing",
+   "title": "timing change frame end",
+   "auto": false,
+   "operator": false,
+   "opt_in": true,
+   "stage": 2
+  },
+  {
+   "id": "XT3",
+   "group": "XT",
+   "claims": [
+    "cpu-contention-by-timing"
+   ],
+   "risk": "timing",
+   "title": "contention per timing",
+   "auto": false,
+   "operator": false,
+   "opt_in": true,
+   "stage": 2
+  },
+  {
+   "id": "XT4",
+   "group": "XT",
+   "claims": [
+    "mem-48k-timing-7ffd"
+   ],
+   "risk": "timing",
+   "title": "48K timing 7FFD",
+   "auto": false,
+   "operator": false,
+   "opt_in": true,
+   "stage": 2
+  },
+  {
+   "id": "XT5",
+   "group": "XT",
+   "claims": [
+    "mem-1ffd-128k-timing"
+   ],
+   "risk": "timing",
+   "title": "128K timing 1FFD",
+   "auto": false,
+   "operator": false,
+   "opt_in": true,
+   "stage": 2
+  },
+  {
+   "id": "XT6",
+   "group": "XT",
+   "claims": [],
+   "risk": "timing",
+   "title": "restore timing",
+   "auto": false,
+   "operator": false,
+   "opt_in": true,
+   "stage": 2
+  },
+  {
+   "id": "XD1",
+   "group": "XD",
+   "claims": [
+    "div-bb-bit6"
+   ],
+   "risk": "hang",
+   "title": "$BB bit 6",
+   "auto": false,
+   "operator": false,
+   "opt_in": true,
+   "stage": 2
+  },
+  {
+   "id": "XD2",
+   "group": "XD",
+   "claims": [
+    "div-3dxx-instant-automap"
+   ],
+   "risk": "hang",
+   "title": "$3Dxx instant automap",
+   "auto": false,
+   "operator": false,
+   "opt_in": true,
+   "stage": 2
+  },
+  {
+   "id": "XD3",
+   "group": "XD",
+   "claims": [
+    "div-rst38-trap-hidden-rom"
+   ],
+   "risk": "hang",
+   "title": "RST 38 trap",
+   "auto": false,
+   "operator": false,
+   "opt_in": true,
+   "stage": 2
+  },
+  {
+   "id": "XH1",
+   "group": "XH",
+   "claims": [
+    "dma-autorestart-freeze"
+   ],
+   "risk": "hang",
+   "title": "auto-restart freeze",
+   "auto": false,
+   "operator": false,
+   "opt_in": true,
+   "stage": 2
+  },
+  {
+   "id": "XH2",
+   "group": "XH",
+   "claims": [
+    "dma-wr4-interrupt-lock"
+   ],
+   "risk": "dma-lock",
+   "title": "WR4 interrupt lock",
+   "auto": false,
+   "operator": false,
+   "opt_in": true,
+   "stage": 2
+  }
+ ],
+ "claims_not_tested": [],
+ "claims": [
+  {
+   "id": "sys-sd-write-rst8",
+   "claim": "A .nex started from NextZXOS can create and write a file on the SD card through esxDOS RST 8 (F_OPEN $9A, F_WRITE $9E, F_CLOSE $9B) with MMU slots 0/1 = $FF, interrupts off and a stack outside slots 0/1.",
+   "sources": [
+    "asm/inferno_hooks.asm:7553",
+    "games/inferno.md:260"
+   ],
+   "values": {
+    "repo": "works in JNext; hardware to confirm"
+   },
+   "measure": "The suite's own result file: written, closed, reopened read-only and its first 64 bytes compared with the buffer; the intake tool also checks the file exists.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "could corrupt SD/settings (writes one new file only)",
+   "matters_for": "Inferno SD save/load (INFERNO.SAV); the suite's own result path",
+   "priority": 1
+  },
+  {
+   "id": "sys-launch-divmmc-regs",
+   "claim": "NextZXOS/NEXLOAD leave DivMMC automap on at .nex launch: NextReg $0A = $11, $B8 = $82, and $BB has bit 7 set ($CD at reset).",
+   "sources": [
+    "docs/BRIEFING.md:108",
+    "docs/NEXT_REGISTERS.md:34",
+    "docs/NEXT_REGISTERS.md:35"
+   ],
+   "values": {
+    "repo": "$0A $11, $B8 $82 on a Tang board 2026-11-20; $BB reset $CD"
+   },
+   "measure": "Read $0A, $B8, $B9, $BA, $BB at start (before the suite touches anything) and record raw values.",
+   "result_type": "number",
+   "unit": "-",
+   "tolerance": "exact (recorded)",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "z80tonex.automap_off (every build), Inferno SD saves (needs automap on)",
+   "priority": 2
+  },
+  {
+   "id": "sys-core-version-regs",
+   "claim": "NextReg $01 (major/minor nibbles) and $0E (sub-minor) give the core version: $33 / $03 for 3.03.03.",
+   "sources": [
+    "book ch 1 (report D, 3.02 vs 3.03 L1533)",
+    "docs/NEXT_REGISTERS.md:17"
+   ],
+   "values": {
+    "book": "$01 = $33, $0E = $03 on 3.03.03"
+   },
+   "measure": "Read $01 and $0E; print as a.b.cc in the header; compare with the version the owner reads in the NextZXOS menu.",
+   "result_type": "number",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "core gate for DDMA (DDMA.md step 3), every result's core key",
+   "priority": 3
+  },
+  {
+   "id": "sys-board-id",
+   "claim": "NextReg $0F identifies the board issue (book: check $0F before using memory above 1/2 MB; value 3 on an Issue 5) and NextReg $00 the machine id.",
+   "sources": [
+    "book ch 3 (report D-N17, B-N22)"
+   ],
+   "values": {
+    "book": "$0F = 3 on Issue 5; Issue 2 value not stated"
+   },
+   "measure": "Read $00 and $0F raw; record; the intake maps the pair to a board name given by the owner.",
+   "result_type": "number",
+   "unit": "-",
+   "tolerance": "exact (recorded)",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "result keying per board; physical DMA range",
+   "priority": 2
+  },
+  {
+   "id": "sys-ram-size",
+   "claim": "An unexpanded KS1 (Issue 2) has 1 MB: 8K pages 0-95; pages at or above 96 are not distinct RAM (Issue 4 drops address bit 21, so high pages wrap onto ROM/DivMMC memory).",
+   "sources": [
+    "docs/LEARNINGS.md:127",
+    "book ch 5 (report B-N22)",
+    "book ch 3 (report D-N17)"
+   ],
+   "values": {
+    "repo": "1024K = pages 0-95; 2048K = 0-223",
+    "book": "Issue 2 1 MB (2 MB expanded); Issue 4 wraps at 2 MB; Issue 5 4 MB"
+   },
+   "measure": "Read-only probe: map page 96 ($60) into slot 6 and compare its 8K with ROM 0 read through slot 0; also compare pages 96 and 0. Report 'wraps-to-basement', 'aliases-page-0' or 'distinct' plus $0F. Never write a page >= 96.",
+   "result_type": "choice",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none (read-only)",
+   "matters_for": "every build keeps pages < 96 (Rainbow); DDMA physical range",
+   "priority": 2
+  },
+  {
+   "id": "sys-launch-7ffd-unlocked",
+   "claim": "At .nex launch 7FFD paging is unlocked (NextReg $08 bit 7 reads 1).",
+   "sources": [
+    "docs/BRIEFING.md:117",
+    "docs/LEARNINGS.md:882"
+   ],
+   "values": {
+    "repo": "unlocked (all hardware-tested builds page with legacy writes)"
+   },
+   "measure": "Read $08 at start before any write; record bit 7.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "z80tonex tail/altrom stub paging",
+   "priority": 2
+  },
+  {
+   "id": "sys-launch-nextreg-state",
+   "claim": "The NextRegs C2 #26 lists ($62 copper, $64 offset, $22/$23 and $C4 interrupt enables, $68, $26/$27, $1A, $18, $70, $16/$17/$71, $43, $14, $4A, $06, $C0, $8C, $12/$13, $15, $07, $05, $03, $11, $08) have known values when a .nex starts (NEXLOAD reset list unconfirmed).",
+   "sources": [
+    "docs/BRIEFING.md:373",
+    "docs/BRIEFING.md:381",
+    "lesson.loader-clears-turbosound-bit"
+   ],
+   "values": {
+    "repo": "list unconfirmed; $8C = 0 at launch (hardware 2026-09-27); NextZXOS moves Layer 2 to banks 9-11"
+   },
+   "measure": "Snapshot every readable NextReg $00-$FF (243B/253B) as the first action and write them all as INFO lines; flag the C2 #26 list in the header.",
+   "result_type": "number",
+   "unit": "-",
+   "tolerance": "exact (recorded)",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "z80tonex stub guard proposal (C2 #26)",
+   "priority": 2
+  },
+  {
+   "id": "sys-nextreg-keeps-select",
+   "claim": "NEXTREG n,v / n,A do not change the register selected on port $243B.",
+   "sources": [
+    "docs/NEXT_REGISTERS.md:101",
+    "lesson.nextreg-select-shared-state"
+   ],
+   "values": {
+    "repo": "documented; hooks rely on it"
+   },
+   "measure": "OUT $243B = $7F; NEXTREG $56,x (and n,A); IN $253B must return $7F's value, not $56's. Repeat at 3.5 and 28 MHz.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "every hook's NEXTREG next to a game's 243B/253B pair; hlib_speed",
+   "priority": 1
+  },
+  {
+   "id": "sys-cpu-speed-readback",
+   "claim": "Reading NextReg $07 gives the actual speed in bits 5:4 and the programmed speed in bits 1:0.",
+   "sources": [
+    "docs/NEXT_REGISTERS.md:36"
+   ],
+   "values": {
+    "repo": "core zxnext.vhd; JNext composes the same"
+   },
+   "measure": "Write 0,1,2,3 to $07; read back after 1 instruction and after 1 frame; record bits.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "hlib_speed latch/restore (patch.restore-speed)",
+   "priority": 2
+  },
+  {
+   "id": "sys-60hz-switch-timing",
+   "claim": "A new 50/60 Hz rate written to NextReg $05 bit 2 takes effect at the next frame and $05 reads back the old rate until then.",
+   "sources": [
+    "docs/NEXT_REGISTERS.md:32",
+    "book ch 10 (report A, AGREES note)"
+   ],
+   "values": {
+    "repo": "NextMasterSystem notes",
+    "book": "silent on the read-back"
+   },
+   "measure": "Read-modify-write $05 bit 2, read $05 immediately and each line until it changes; record the line of the change and the frame length before/after; restore.",
+   "result_type": "number",
+   "unit": "lines",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "monitor may resync briefly",
+   "matters_for": "z80tonex stub (forces 50 Hz)",
+   "priority": 2
+  },
+  {
+   "id": "sys-video-timing-frame-rate",
+   "claim": "The frame rate follows the VGA timing in NextReg $11 (clk28 28.0-33 MHz): a '50 Hz' frame runs at 50.00-58.93 Hz on VGA 0-6 and 50.00 on HDMI.",
+   "sources": [
+    "docs/BRIEFING.md:108",
+    "docs/TECHNIQUES.md:639"
+   ],
+   "values": {
+    "repo": "from register notes / RustyPixelsUK tables; not measured on a board"
+   },
+   "measure": "Read $11; show a frame counter for 3000 frames with a start/stop beep-free border flash; the owner times it with a stopwatch and types the seconds into the intake (manual).",
+   "result_type": "number",
+   "unit": "Hz",
+   "tolerance": "+-0.5 %",
+   "auto": false,
+   "risk": "none",
+   "matters_for": "every converted game's speed on VGA 1-6",
+   "priority": 1
+  },
+  {
+   "id": "sys-rom3-bytes-386e",
+   "claim": "The NextZXOS ROM3 is not Sinclair's 48K ROM in the spare area 0x386E-0x3CFF: its IM 1 handler calls 0x386E and other code uses 0x387E, and 0x3B00-0x3CFF hold data.",
+   "sources": [
+    "lesson.alt-rom-patch-location",
+    "lesson.whole-alt-rom-image",
+    "docs/LEARNINGS.md:1023"
+   ],
+   "values": {
+    "repo": "seen in JNext / MAME / analysis"
+   },
+   "measure": "With 1FFD/7FFD selecting ROM3 and MMU0/1 = $FF read 0x0000-0x3FFF; record CRC16 of the whole ROM, of 0x386E-0x3CFF, and the bytes at 0x0038-0x0050 and 0x386E-0x3880.",
+   "result_type": "number",
+   "unit": "-",
+   "tolerance": "exact (recorded)",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "alt-ROM engines, slot1 builds, IM 2 vectors 0x39FF-0x3CFF (C2 #35)",
+   "priority": 2
+  },
+  {
+   "id": "sys-nexload-printer-buffer",
+   "claim": "NEXLOAD overwrites the printer buffer 0x5B00-0x5BFF after loading bank 5 (NextZXOS 2.10 wrote only 0x5B00-0x5B65).",
+   "sources": [
+    "docs/BRIEFING.md:391",
+    "docs/BRIEFING.md:435",
+    "lesson.nexload-printer-buffer"
+   ],
+   "values": {
+    "repo": "Match Day hardware 2026-10-20 (whole page model); 2.10: 0x5B00-0x5B65"
+   },
+   "measure": "The .nex bank 5 image holds a known pattern at 0x5B00-0x5BFF; at start (first instruction) compare and record the first/last changed offset and the count.",
+   "result_type": "number",
+   "unit": "bytes",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "z80tonex keep_printer_buffer, nextboot.NEXLOAD_PRINTER",
+   "priority": 2
+  },
+  {
+   "id": "cpu-z80n-tstates-3m5",
+   "claim": "Every Z80N instruction takes the T-states of the NEXT_REGISTERS table at 3.5 MHz (e.g. LDWS 14, PUSH nn 23, NEXTREG 20/17, TEST 11, LDIX 16, repeats 21/16).",
+   "sources": [
+    "tools/hwtests/README.md:82",
+    "docs/NEXT_REGISTERS.md:121",
+    "book ch 2 (report D-N30)",
+    "docs/LEARNINGS.md:1005"
+   ],
+   "values": {
+    "repo": "board 3.02.00 all within 0.5 T",
+    "book": "all 29 agree",
+    "cspect": "PUSH nn 19"
+   },
+   "measure": "z80ntest TIME page cases re-run in the suite harness (2048 runs, 4 dithered passes, calibrated by LD A,(IX+0)).",
+   "result_type": "number",
+   "unit": "T",
+   "tolerance": "+-0.5 T",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "hook T budgets, z80n.py",
+   "priority": 2
+  },
+  {
+   "id": "cpu-z80n-tstates-28",
+   "claim": "At 28 MHz the Z80N instructions take the same number of CPU clocks as at 3.5 MHz on core 3.03 (no read wait).",
+   "sources": [
+    "book ch 2 (report D, 3.02 vs 3.03 L1921)",
+    "lesson.core-302-read-wait-state-gone-in-303"
+   ],
+   "values": {
+    "book": "same clocks on 3.03; 3.02 adds one per memory read"
+   },
+   "measure": "Same blocks as cpu-z80n-tstates-3m5 run at NextReg $07 = 3; clocks = lines x clocks-per-line at that speed (calibrated by the 3.5 MHz reference x 8, cross-checked with the CTC).",
+   "result_type": "number",
+   "unit": "clocks",
+   "tolerance": "+-0.5 clock",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "28 MHz hook budgets",
+   "priority": 2
+  },
+  {
+   "id": "cpu-28-wait-sram-fetch",
+   "claim": "Core 3.03 has no wait state at 28 MHz: a NOP takes 4 clocks (3.02: 5), LD A,(nn) 13 (3.02: 17), POP BC 10 (3.02: 13), LD (IX+d),n 19 (3.02: 23), code and data in SRAM.",
+   "sources": [
+    "lesson.core-302-read-wait-state-gone-in-303",
+    "docs/TECHNIQUES.md:57",
+    "book ch 2 (report D L1861, L1921, L5172)"
+   ],
+   "values": {
+    "repo": "3.02.00 board: 28 MHz 6.3-7x of 3.5 MHz",
+    "book": "3.03 none; 3.02 one per read"
+   },
+   "measure": "2048 x NOP / LD A,(nn) / POP BC / LD (IX+d),n with code and data in an SRAM page (bank 2), at 28 MHz; clocks per instruction.",
+   "result_type": "number",
+   "unit": "clocks",
+   "tolerance": "+-0.2 clock",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "TECHNIQUES 1.0 x1.4 budgets, every 28 MHz hook",
+   "priority": 1
+  },
+  {
+   "id": "cpu-28-wait-bank5",
+   "claim": "On core 3.03 reads from bank 5 (block RAM, pages $0A/$0B) at 28 MHz take no wait state; on 3.02 they waited like SRAM.",
+   "sources": [
+    "book ch 2 (report D L1921, L2543)",
+    "lesson.core-302-read-wait-state-gone-in-303"
+   ],
+   "values": {
+    "book": "3.02 waits on bank 5; 3.03 not measured by the book (it times loops from bank 5)"
+   },
+   "measure": "The NOP and LD A,(HL) blocks run with code in bank 5 ($6000) and data in bank 5, at 28 MHz, outside the display (no contention at 28 MHz anyway).",
+   "result_type": "number",
+   "unit": "clocks",
+   "tolerance": "+-0.2 clock",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "hooks whose code or tables sit in bank 5",
+   "priority": 1
+  },
+  {
+   "id": "cpu-28-wait-page0e",
+   "claim": "Reads from page $0E (block RAM, first half of bank 7) never had the 28 MHz wait, even on 3.02.",
+   "sources": [
+    "book ch 2 (report D L1921, L2543)"
+   ],
+   "values": {
+    "book": "no wait on 3.02 and 3.03"
+   },
+   "measure": "Map page $0E into slot 3; NOP and LD A,(HL) blocks from it at 28 MHz; restore slot 3.",
+   "result_type": "number",
+   "unit": "clocks",
+   "tolerance": "+-0.2 clock",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "tilemap/hook tables in bank 7",
+   "priority": 2
+  },
+  {
+   "id": "cpu-28-wait-page0f",
+   "claim": "Page $0F (second half of bank 7) is ordinary SRAM and waited at 28 MHz on 3.02.",
+   "sources": [
+    "book ch 2 (report D L2543)"
+   ],
+   "values": {
+    "book": "SRAM: waits on 3.02, none on 3.03"
+   },
+   "measure": "As cpu-28-wait-page0e with page $0F.",
+   "result_type": "number",
+   "unit": "clocks",
+   "tolerance": "+-0.2 clock",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "reference only",
+   "priority": 3
+  },
+  {
+   "id": "cpu-28-wait-reads-only",
+   "claim": "The 3.02 28 MHz wait applied to memory reads only (opcode, operand, data), not to writes or I/O.",
+   "sources": [
+    "book ch 2 (report D L1921)",
+    "lesson.core-302-read-wait-state-gone-in-303"
+   ],
+   "values": {
+    "book": "reads only"
+   },
+   "measure": "Blocks of LD (HL),A, OUT ($FE),A-free OUT to $243B (select $7F) and IN from $253B at 28 MHz vs the 3.5 MHz T; clocks per instruction.",
+   "result_type": "number",
+   "unit": "clocks",
+   "tolerance": "+-0.2 clock",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "port-heavy hooks (sprite uploads) on 3.02 builds",
+   "priority": 3
+  },
+  {
+   "id": "cpu-speed-scaling-7-14",
+   "claim": "At 7 and 14 MHz instructions take the same CPU clocks as at 3.5 MHz (contention gone above 3.5 MHz).",
+   "sources": [
+    "book ch 2 (report D L1915)",
+    "book ch 3 (report D-N21)"
+   ],
+   "values": {
+    "book": "~8x ratio over the four speeds on 3.03, ~6.5x on 3.02"
+   },
+   "measure": "NOP / LD A,(HL) / LDIR 256 blocks at $07 = 1 and 2; clocks per instruction.",
+   "result_type": "number",
+   "unit": "clocks",
+   "tolerance": "+-0.2 clock",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "reference only (hooks use 28 MHz)",
+   "priority": 3
+  },
+  {
+   "id": "cpu-speed-ratio-routines",
+   "claim": "Real routines run 6.3-7x faster at 28 MHz than at 3.5 MHz on 3.02 (budget simulator T x 1.4) and ~8x on 3.03.",
+   "sources": [
+    "docs/TECHNIQUES.md:57",
+    "lesson.simulator-timing-vs-hardware",
+    "lesson.jnext-28mhz-ratio-varies",
+    "book ch 2 (report D L1915)"
+   ],
+   "values": {
+    "repo": "board 3.02.00: 6.3-7x; JNext 5-6.6x",
+    "book": "~8x on 3.03"
+   },
+   "measure": "The nextbench CPU rows (LDIR, LDI unrolled, stack, PUSH fill, OTIR, OUTI, ULA cell, L2 cell) at both speeds; ratio per row.",
+   "result_type": "number",
+   "unit": "ratio",
+   "tolerance": "+-1 %",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "every 28 MHz hook budget; lesson simulator-timing-vs-hardware",
+   "priority": 1
+  },
+  {
+   "id": "cpu-speed-switch-cost",
+   "claim": "A NEXTREG $07 speed switch takes effect at once and costs only its own 20 T; timing constants including it need the machine's own figure.",
+   "sources": [
+    "lesson.speed-switch-cost-calibrate-at-boot",
+    "docs/NEXT_REGISTERS.md:36"
+   ],
+   "values": {
+    "repo": "unknown (calibrated at boot in Inferno)"
+   },
+   "measure": "Block of 256 x (NEXTREG 7,3 ; NEXTREG 7,0) and of 256 x (NEXTREG 7,0 ; NEXTREG 7,0) at 3.5 MHz start; difference per pair in 3.5 MHz T.",
+   "result_type": "number",
+   "unit": "T",
+   "tolerance": "+-1 T",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "Inferno cw_cal, hlib_speed exits",
+   "priority": 2
+  },
+  {
+   "id": "cpu-contention-bank5-3m5",
+   "claim": "At 3.5 MHz in 48K/128K timing code or data in bank 5 is contended during the display (up to 6 T per access); not at 7 MHz and above; NextReg $08 bit 6 = 1 turns it off.",
+   "sources": [
+    "docs/LEARNINGS.md:30",
+    "docs/NEXT_REGISTERS.md:37",
+    "book ch 3 (report D-N21)",
+    "book ch 5 (report B-N2)",
+    "lesson.beeper-contention"
+   ],
+   "values": {
+    "repo": "documented",
+    "book": "48K: bank 5; 128K: banks 1,3,5,7; +3: 4-7; only pages $00-$0F"
+   },
+   "measure": "2048 x LD A,(HL) with HL in bank 5 timed inside display lines 0-191 vs in bank 2; again with $08 bit 6 set (then restored); again at 7 MHz.",
+   "result_type": "number",
+   "unit": "T",
+   "tolerance": "+-0.3 T",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "beam-racing game detection, 3.5 MHz game fidelity, beeper",
+   "priority": 2
+  },
+  {
+   "id": "cpu-contention-08b6-latch",
+   "claim": "The ULA samples NextReg $08 bit 6 only from dot 256 of each line, and $08 reads the old bit until then.",
+   "sources": [
+    "book ch 3 (report D-N21)"
+   ],
+   "values": {
+    "book": "as stated"
+   },
+   "measure": "Write $08 bit 6 at a known line position and read $08 back at once and every 20 T until it changes; record the delay in T.",
+   "result_type": "number",
+   "unit": "T",
+   "tolerance": "+-10 T",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "reference only",
+   "priority": 3
+  },
+  {
+   "id": "cpu-io-contention",
+   "claim": "In 48K/128K timing every even port (and $7FFD in 128K timing) is I/O-contended at 3.5 MHz.",
+   "sources": [
+    "book ch 3 (report D-N21)"
+   ],
+   "values": {
+    "book": "as stated"
+   },
+   "measure": "2048 x IN A,($FE) during display vs border at 3.5 MHz; T per IN.",
+   "result_type": "number",
+   "unit": "T",
+   "tolerance": "+-0.3 T",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "beeper fidelity (lesson.beeper-contention)",
+   "priority": 3
+  },
+  {
+   "id": "cpu-contention-by-timing",
+   "claim": "Which banks are contended follows the machine timing: 128K banks 1,3,5,7; +3 banks 4-7; Pentagon none.",
+   "sources": [
+    "book ch 3 (report D-N21)"
+   ],
+   "values": {
+    "book": "as stated"
+   },
+   "measure": "Opt-in: write $03 timing bits (128K, +3, Pentagon), repeat cpu-contention-bank5-3m5 for banks 1,3,4,5,7; restore $03.",
+   "result_type": "choice",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "persists across soft reset (machine timing $03): restored at the end; a hang leaves it until power-off",
+   "matters_for": "128K games' fidelity (z80tonex writes $03)",
+   "priority": 3
+  },
+  {
+   "id": "cpu-undoc-timings",
+   "claim": "Every ED opcode not listed is an 8 T NOP; ED 63 / ED 6B take 4 T more than LD (nn),HL / LD HL,(nn); a DD/FD prefix before a non-HL instruction costs 4 T.",
+   "sources": [
+    "book ch 2 (report D-N29)",
+    "docs/LEARNINGS.md:50"
+   ],
+   "values": {
+    "book": "as stated"
+   },
+   "measure": "Timed blocks of ED 00, ED 63, ED 6B, DD 00 (DD NOP) at 3.5 MHz; T each. ED B6 excluded (z80n-ed-b6).",
+   "result_type": "number",
+   "unit": "T",
+   "tolerance": "+-0.5 T",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "games that execute stray ED opcodes (LEARNINGS 1.1)",
+   "priority": 3
+  },
+  {
+   "id": "cpu-out-c-0",
+   "claim": "OUT (C),0 (ED 71) outputs 0 on the Next (NMOS behaviour).",
+   "sources": [
+    "docs/LEARNINGS.md:48",
+    "book ch 2 (report D-N29)"
+   ],
+   "values": {
+    "repo": "0",
+    "book": "0"
+   },
+   "measure": "Select NextReg $7F on $243B, set it to $55, BC = $253B, ED 71; read $7F back.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "reference only",
+   "priority": 3
+  },
+  {
+   "id": "cpu-ld-a-i-pv",
+   "claim": "LD A,I / LD A,R report P/V = 0 when an interrupt is accepted during them (NMOS bug), so code reads I twice.",
+   "sources": [
+    "docs/BRIEFING.md:123",
+    "docs/LEARNINGS.md:14",
+    "book ch 2 (report D-N25: P/V correct)"
+   ],
+   "values": {
+    "repo": "NMOS quirk present (JNext too)",
+    "book": "LD A,I/R P/V correct on the Next"
+   },
+   "measure": "Pulse mode, IM 2 with a counting handler, EI; loop LD A,I ; JP PO,bad for 500 frames; count P/V = 0 events (IFF2 is 1 throughout).",
+   "result_type": "number",
+   "unit": "count",
+   "tolerance": "0 = no bug; >0 = bug present",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "HLIB_IFF_DI, hooklib.iff_audit",
+   "priority": 2
+  },
+  {
+   "id": "cpu-block-io-flags",
+   "claim": "After INI/IND/OUTI/OUTD and their repeats the Next sets flags from the decremented B (N=1, S/Z from B, H on borrow, P/V if B was $80, C if B was 0); repo rule: only ZF is reliable.",
+   "sources": [
+    "docs/LEARNINGS.md:16",
+    "docs/NEXT_REGISTERS.md:107",
+    "docs/BRIEFING.md:112",
+    "book ch 2 (report D-N25)"
+   ],
+   "values": {
+    "repo": "only ZF reliable; sources disagree",
+    "book": "formula above"
+   },
+   "measure": "For B in {1,$80,$81,0,$10,$11} and F in {0,$FF}: OUTI / OUTD to $243B (port $7F select via low byte), INI from $253B, OTIR with B=2; record F; compare with the book formula and with Zilog.",
+   "result_type": "choice",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "verify cannot prove flags after block I/O (simulator blind spot)",
+   "priority": 2
+  },
+  {
+   "id": "cpu-undoc-flags-xy",
+   "claim": "Y/X (bits 5/3) departures from Zilog: BIT n,(HL) clears them, SCF/CCF copy them from A, CPI/CPD copy from the compared byte, IN r,(C) and LD A,I/R keep them.",
+   "sources": [
+    "book ch 2 (report D-N25)"
+   ],
+   "values": {
+    "book": "as stated"
+   },
+   "measure": "Each instruction from F = 0 and $FF with A = $28 / $D7; record F.",
+   "result_type": "number",
+   "unit": "-",
+   "tolerance": "exact (recorded)",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "reference only (games testing bits 5/3)",
+   "priority": 3
+  },
+  {
+   "id": "z80n-func-suite",
+   "claim": "The 46 z80ntest FUNC cases give the register, memory and flag results nexclash/z80n.py predicts.",
+   "sources": [
+    "tools/hwtests/README.md:59",
+    "tools/hwtests/README.md:82",
+    "docs/NEXT_REGISTERS.md:115"
+   ],
+   "values": {
+    "repo": "3.02.00 board: all green except LDPIRX (core bug) after the LDWS fix"
+   },
+   "measure": "z80ntest FUNC page cases run inside the suite (same generator, same expected values), status per case.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "z80n.py used by every verifier",
+   "priority": 2
+  },
+  {
+   "id": "z80n-add-rr-a-carry",
+   "claim": "ADD HL/DE/BC,A always clears CF (even on a wrap) and keeps the other flags; ADD rr,nn leaves all flags.",
+   "sources": [
+    "lesson.z80n-add-rr-a-and-ldws-carry-unsettled",
+    "docs/NEXT_REGISTERS.md:117",
+    "docs/NEXT_REGISTERS.md:126",
+    "docs/LEARNINGS.md:1005",
+    "book ch 2 (report D-C1)"
+   ],
+   "values": {
+    "repo": "board 3.02.00: clears CF (z80ntest ADDHLA0/F green); CSpect keeps CF",
+    "book": "clears CF"
+   },
+   "measure": "ADD HL,A with HL=$FFF0 A=$20 (wrap) and no wrap, from F = 0 / $FF; same for DE, BC; ADD HL,nn from F = $FF; record F.",
+   "result_type": "choice",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "z80n.py, hooks that test carry after pointer adds",
+   "priority": 1
+  },
+  {
+   "id": "z80n-ldws-flags",
+   "claim": "LDWS sets the flags of ADD D,1 (CF set when D was $FF), not those of INC D (CF kept).",
+   "sources": [
+    "lesson.z80n-add-rr-a-and-ldws-carry-unsettled",
+    "docs/NEXT_REGISTERS.md:134",
+    "docs/LEARNINGS.md:1005",
+    "book ch 2 (report D-C2)"
+   ],
+   "values": {
+    "repo": "board 3.02.00: ADD D,1 (7F->$94, FF->$51)",
+    "book": "INC D flags",
+    "cspect": "INC D (7F->$95, FF->$50)"
+   },
+   "measure": "LDWS with D = $7F and $FF from F = $FF and F = 0; record F; decide ADD-D-1 / INC-D / other.",
+   "result_type": "choice",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "z80n.py, Layer 2 column copies",
+   "priority": 1
+  },
+  {
+   "id": "z80n-jpc-flags",
+   "claim": "JP (C) leaves the flags unchanged (VHDL, book) - CSpect sets IN-style flags; repo also calls them undefined.",
+   "sources": [
+    "docs/NEXT_REGISTERS.md:117",
+    "docs/NEXT_REGISTERS.md:135",
+    "docs/LEARNINGS.md:1005",
+    "book ch 2 (report D-C3)"
+   ],
+   "values": {
+    "repo": "board 3.02.00 green with unchanged flags model; NEXT_REGISTERS says undefined",
+    "book": "unchanged (silent)"
+   },
+   "measure": "JP (C) with IN = 5 from F = 0 and $FF (and IN = $00 / $80 to vary S/Z/P); record F and the landing address.",
+   "result_type": "choice",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "z80n.py",
+   "priority": 3
+  },
+  {
+   "id": "z80n-test-nf",
+   "claim": "TEST n sets the flags of AND n with A kept; its N flag is 0.",
+   "sources": [
+    "docs/NEXT_REGISTERS.md:136",
+    "book ch 2 (report D-N26)"
+   ],
+   "values": {
+    "repo": "NF 0 in Ped7g's table, unknown in wiki/guide",
+    "book": "AND flags, NF not given"
+   },
+   "measure": "TEST n for (A,n) in {($F0,$0F),($F3,$B1),($FF,$80)} from F = 0 and $FF; record F.",
+   "result_type": "number",
+   "unit": "-",
+   "tolerance": "exact (recorded)",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "z80n.py, ped7g arithmetic snippets",
+   "priority": 3
+  },
+  {
+   "id": "z80n-ldix-flags",
+   "claim": "LDIX/LDIRX/LDDX/LDDRX change flags like LDI/LDIR, bits 5/3 included (CSpect keeps 5/3).",
+   "sources": [
+    "docs/NEXT_REGISTERS.md:131",
+    "docs/LEARNINGS.md:1005"
+   ],
+   "values": {
+    "repo": "board 3.02.00 as LDI; CSpect keeps bits 5/3",
+    "book": "agrees (D-N30)"
+   },
+   "measure": "z80ntest LDIX0/F .. LDDRX0/F cases; record F.",
+   "result_type": "number",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "z80n.py, transparent blits",
+   "priority": 3
+  },
+  {
+   "id": "z80n-ldpirx-fixed",
+   "claim": "LDPIRX gives the documented result from core 3.02.02 on (wrong memory and flags on 3.02.00).",
+   "sources": [
+    "docs/NEXT_REGISTERS.md:133",
+    "tools/hwtests/README.md:84"
+   ],
+   "values": {
+    "repo": "wrong on 3.02.00; changelog fixes in 3.02.02"
+   },
+   "measure": "z80ntest LDPIRX0 / LDPIRXF cases (memory checksum + F).",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "pattern fills; minimum core for LDPIRX",
+   "priority": 2
+  },
+  {
+   "id": "z80n-ed-b6",
+   "claim": "ED B6 behaves exactly like LDIRX (book) - the repo treats it as an unfinished LDIRSCALE and raises Z80NError.",
+   "sources": [
+    "docs/LEARNINGS.md:647",
+    "book ch 2 (report D-C5)"
+   ],
+   "values": {
+    "repo": "unknown behaviour, never execute",
+    "book": "same as LDIRX"
+   },
+   "measure": "Sandbox: HL = $6000 (8 bytes 01..08 with one $E3), DE = $6100, BC = 8, A = $E3; run ED B6 once; compare memory, HL/DE/BC/F with an LDIRX run; guard bytes around both buffers.",
+   "result_type": "choice",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "could corrupt memory inside the sandbox only",
+   "matters_for": "z80n.py strict mode",
+   "priority": 3
+  },
+  {
+   "id": "z80n-pixel-edges",
+   "claim": "PIXELDN past row 191 runs on into the attribute area; PIXELAD for D >= 192 returns an undefined address.",
+   "sources": [
+    "docs/NEXT_REGISTERS.md:130",
+    "book ch 2 (report D-N27)"
+   ],
+   "values": {
+    "repo": "PIXELAD undefined for D >= 192",
+    "book": "PIXELDN continues into attributes"
+   },
+   "measure": "PIXELDN from HL = $57FF / $57E0; PIXELAD with D = 192, 200, 255 and E = 0 / 255; record HL.",
+   "result_type": "number",
+   "unit": "-",
+   "tolerance": "exact (recorded)",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "reference only",
+   "priority": 3
+  },
+  {
+   "id": "irq-pulse-length-3m5",
+   "claim": "In pulse mode /INT stays low for a fixed number of CPU clocks: 32 in 48K/+3 timing, 36 in 128K/Pentagon (repo: ~30 T; an op ending 38 T after the acknowledge re-enters, 42 does not).",
+   "sources": [
+    "lesson.int-pulse-length-unsettled",
+    "lesson.interrupt-handler-runs-twice-next-core",
+    "docs/TECHNIQUES.md:251",
+    "docs/BRIEFING.md:111",
+    "book ch 4 (report A-C2)"
+   ],
+   "values": {
+    "repo": "~30 T (TECHNIQUES); outlasts 36 T, re-entry at 38 not 42 (Tang)",
+    "book": "32 / 36 T"
+   },
+   "measure": "Pulse mode IM 2; handler = EI then k NOPs then a counter INC and RETI-free return (EI;RET at the end of a second-entry check); sweep the EI position k = 0..60 T in 1 T steps (NOP/LD r,r/padding) and record the largest k that still re-enters; plus a direct read: poll NextReg $22 bit 7 from the handler entry and count T until it reads 0.",
+   "result_type": "number",
+   "unit": "T",
+   "tolerance": "+-1 T",
+   "auto": true,
+   "risk": "could hang (handler re-entry loop is bounded by a counter)",
+   "matters_for": "every EI-first game handler on the Next (altered_beast), hooks that EI early",
+   "priority": 1
+  },
+  {
+   "id": "irq-pulse-length-28",
+   "claim": "The pulse length is counted in CPU clocks at every speed, so at 28 MHz it is 8x shorter in real time.",
+   "sources": [
+    "lesson.int-pulse-length-unsettled",
+    "book ch 4 (report A-C2)"
+   ],
+   "values": {
+    "book": "same clocks at every speed"
+   },
+   "measure": "irq-pulse-length-3m5 repeated at $07 = 1, 2, 3 (handler and foreground at that speed).",
+   "result_type": "number",
+   "unit": "clocks",
+   "tolerance": "+-2 clocks",
+   "auto": true,
+   "risk": "could hang (bounded)",
+   "matters_for": "28 MHz hooks with interrupts on; DMA chunk sizing",
+   "priority": 1
+  },
+  {
+   "id": "irq-ack-cost",
+   "claim": "Accepting an interrupt costs 13 T in IM 1 and 19 T in IM 2 on 3.03 at every speed (IM 2 21 T on 3.02 at 28 MHz); NMI 11 T.",
+   "sources": [
+    "book ch 2 (report D-N28, L2100)",
+    "book ch 4 (report A, latency)"
+   ],
+   "values": {
+    "book": "IM1 13, IM2 19 (3.02 28 MHz: 21)"
+   },
+   "measure": "Hardware IM2 mode, ULA source raised by NEXTREG $20 bit 6 with interrupts off, then EI;NOP;handler RETI; time the sequence on the CTC (prescaler 16) against the same sequence without the request; 64 repeats; IM 1 variant through an alt-ROM-free RAM vector is not possible (IM 1 jumps to ROM $0038): IM 1 measured with the pulse-mode frame interrupt and the ROM handler excluded = INFO only.",
+   "result_type": "number",
+   "unit": "T",
+   "tolerance": "+-1 T",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "hook interrupt budgets, beeper timing in handlers",
+   "priority": 2
+  },
+  {
+   "id": "irq-pulse-bus-ff",
+   "claim": "In pulse mode the interrupt acknowledge reads $FF from the bus: IM 2 takes its vector from I*256+$FF and IM 0 behaves as IM 1.",
+   "sources": [
+    "lesson.pulse-mode-im2-bus-reads-ff",
+    "docs/BRIEFING.md:434",
+    "docs/BRIEFING.md:424",
+    "book ch 4 (report A-N, D-N22)"
+   ],
+   "values": {
+    "repo": "unconfirmed, relied on",
+    "book": "FPGA drives $FF (expansion bus may override)"
+   },
+   "measure": "Pulse mode IM 2, I = $90, a 257-byte table where every entry except $90FF/$9100 points to a 'wrong' handler; record which handler runs (5 frames); ED 7E variant too (cpu-ed7e).",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "IM 2 games with I in 0x39-0x3C (C2 #35), every IM 2 game",
+   "priority": 1
+  },
+  {
+   "id": "cpu-ed7e-im2",
+   "claim": "The undocumented ED 7E sets IM 2 (from core 3.01.08).",
+   "sources": [
+    "docs/LEARNINGS.md:46"
+   ],
+   "values": {
+    "repo": "changelog 3.01.08"
+   },
+   "measure": "Pulse mode; IM 1 then ED 7E; with I and a RAM table as irq-pulse-bus-ff: the IM 2 handler runs (not ROM $0038).",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "copy-protected games using ED 7E",
+   "priority": 3
+  },
+  {
+   "id": "irq-hwim2-vector-layout",
+   "claim": "Hardware IM2 vector = $C0 bits 7:5, then the 4-bit source index, then 0: line 0 (+$00), CTC 0-3 = 3-6, ULA 11 (+$16), UART slots 1,2,12,13.",
+   "sources": [
+    "lesson.pulse-mode-im2-bus-reads-ff",
+    "docs/NEXT_REGISTERS.md:86",
+    "tools/hwtests/README.md:27",
+    "book ch 4 (report A-N)"
+   ],
+   "values": {
+    "repo": "ULA +$16 board-proven (im2hold T1, 3.02.00); 'CTC 3-10'",
+    "book": "CTC 4-7 reserved, never fire"
+   },
+   "measure": "Hardware IM2 with $C0 bits 7:5 = 101; fire ULA (frame), line interrupt and CTC0 (timer) one at a time; a 32-byte table of distinct handlers records the offset.",
+   "result_type": "number",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "C2 #34 engine design (vector page)",
+   "priority": 2
+  },
+  {
+   "id": "irq-im2hold-suite",
+   "claim": "im2hold T1-T7 hold on core 3.03: interrupts held through a 3-frame DI, lost in pulse mode, a RET-ended handler blocks all later interrupts until a RETI, a RETI trampoline and a uniform 257-byte table each give one run per frame.",
+   "sources": [
+    "tools/hwtests/README.md:19",
+    "docs/BRIEFING.md:415",
+    "docs/TECHNIQUES.md:596",
+    "lesson.frame-overrun-lost-interrupts"
+   ],
+   "values": {
+    "repo": "board 3.02.00 v2: all pass, details 01 01 00 01 06 06 06",
+    "book": "agrees (held, RET blocks)"
+   },
+   "measure": "The seven im2hold tests in the suite harness in the same order (T4 late, T7 last).",
+   "result_type": "pass-fail",
+   "unit": "count",
+   "tolerance": "as im2hold: 4-6 runs in 5 frames",
+   "auto": true,
+   "risk": "could hang (T4 blocks interrupts; bounded by frame polling)",
+   "matters_for": "C2 #34 hardware-IM2 engine, every hook that runs with interrupts off",
+   "priority": 1
+  },
+  {
+   "id": "irq-status-bit-diagnostics",
+   "claim": "NextReg $C8 bit 0 (ULA) / bit 1 (line) record an interrupt since cleared; writing 1 clears in pulse mode, writing 0 does nothing; in hardware IM2 with interrupts on a write cannot clear before RETI; the bit is set even when the pulse was missed under DI.",
+   "sources": [
+    "docs/LEARNINGS.md:185",
+    "docs/LEARNINGS.md:193",
+    "docs/NEXT_REGISTERS.md:56",
+    "book ch 4 (report A-N)"
+   ],
+   "values": {
+    "repo": "guide r3",
+    "book": "agrees; status set even if missed"
+   },
+   "measure": "Pulse mode: DI over a frame, read $C8 (expect bit 0 = 1), write 0 (still 1), write 1 (0); hardware IM2 with a held request: write 1 before RETI (still 1).",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "Rainbow overrun diagnostic",
+   "priority": 2
+  },
+  {
+   "id": "irq-22-bit7-int-low",
+   "claim": "NextReg $22 bit 7 reads 1 while the pulse-mode /INT is low, from any source (frame, line).",
+   "sources": [
+    "docs/NEXT_REGISTERS.md:85",
+    "docs/LEARNINGS.md:193",
+    "book ch 4 (report A-N)"
+   ],
+   "values": {
+    "repo": "/INT asserted",
+    "book": "any source"
+   },
+   "measure": "DI; poll $22 at 28 MHz around the frame interrupt and around a line interrupt (line enabled, status cleared afterwards); record clocks bit 7 = 1.",
+   "result_type": "number",
+   "unit": "clocks",
+   "tolerance": "+-30 clocks (poll period)",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "diagnostic overrun clear (LEARNINGS 1.4)",
+   "priority": 2
+  },
+  {
+   "id": "irq-line-int-position",
+   "claim": "The line interrupt for line n is raised on line n-1 at dot 243 of the display area, a little over 100 T before line n starts at 3.5 MHz.",
+   "sources": [
+    "lesson.line-interrupt-fires-on-previous-line",
+    "docs/NEXT_REGISTERS.md:85",
+    "book ch 10 (report A-N)"
+   ],
+   "values": {
+    "repo": "as the previous line's pixels end",
+    "book": "line n-1 dot 243"
+   },
+   "measure": "Hardware IM2, line interrupt at n = 100 (and 0, 191, 250); handler reads $1E/$1F and the CTC phase relative to a CTC sync taken at a frame start; T from the interrupt to the line change.",
+   "result_type": "number",
+   "unit": "T",
+   "tolerance": "+-4 T",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "raster splits, chained line-interrupt multiplexing",
+   "priority": 2
+  },
+  {
+   "id": "irq-line-int-numbering",
+   "claim": "Line-interrupt numbers follow the raster count ($64 = 0: display row 0 = line 0, through the border to the frame end); a value one past the last line acts as line 0, higher values never fire; 9 bits ($22 bit 0 + $23).",
+   "sources": [
+    "lesson.line-interrupt-fires-on-previous-line",
+    "book ch 4/10 (report A-N)"
+   ],
+   "values": {
+    "book": "as stated"
+   },
+   "measure": "Enable the line interrupt for last+1, last+2 and 511; count interrupts and the line they land on over 5 frames each.",
+   "result_type": "number",
+   "unit": "count",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "frame-end raster waits",
+   "priority": 2
+  },
+  {
+   "id": "irq-ula-int-line",
+   "claim": "The ULA frame interrupt comes at raster line 248 (48K/128K VGA 50 Hz), 239 (Pentagon), 256 (HDMI 50 Hz), lands on the same line every frame, so line readings a frame apart differ by 0 or the frame length.",
+   "sources": [
+    "docs/TECHNIQUES.md:284",
+    "docs/LEARNINGS.md:165",
+    "lesson.line-clock-frame-multiple",
+    "book ch 10 (report A-N)"
+   ],
+   "values": {
+    "repo": "248 / 239 / 256; 'near 248'",
+    "book": "128K: line 1 dot 128 in its own count; +3 one T earlier"
+   },
+   "measure": "Pulse mode IM 2, handler reads $1E/$1F (LSB,MSB,LSB) and the CTC phase first; 250 frames; record min/max line and the T offset from the line start.",
+   "result_type": "number",
+   "unit": "lines",
+   "tolerance": "+-0 lines, T offset +-4",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "Rainbow deferred commit at line 248, pace clocks",
+   "priority": 1
+  },
+  {
+   "id": "irq-line-shares-int",
+   "claim": "In pulse mode an enabled line interrupt raises the same /INT, so a game's handler runs a second time per frame.",
+   "sources": [
+    "docs/TECHNIQUES.md:372",
+    "book ch 4 (report A)"
+   ],
+   "values": {
+    "repo": "documented",
+    "book": "agrees"
+   },
+   "measure": "Pulse mode IM 2 counting handler; enable the line interrupt (line 100) for 50 frames; expect 100 runs; restore $22/$C4.",
+   "result_type": "number",
+   "unit": "count",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "never enable line int under a game (rule)",
+   "priority": 3
+  },
+  {
+   "id": "irq-ula-enable-shared",
+   "claim": "The ULA interrupt enable is one flip-flop shared by $22 bit 2 (1 = off) and $C4 bit 0 (1 = on); the line enable by $22 bit 1 and $C4 bit 1; the last write wins.",
+   "sources": [
+    "docs/BRIEFING.md:374",
+    "book ch 4 (report A-N)"
+   ],
+   "values": {
+    "book": "shared, last write wins (also port $FF bit 6)"
+   },
+   "measure": "Write $22 bit 2 = 1 then $C4 bit 0 = 1: count frame interrupts (expect on); reverse order (expect off); read both registers back. Port $FF is not written.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none (restores both)",
+   "matters_for": "stub guard C2 #26",
+   "priority": 3
+  },
+  {
+   "id": "irq-hwim2-im1-fallback",
+   "claim": "With hardware IM2 enabled but the CPU in IM 1 only the ULA interrupt falls back to a pulse; other sources wait and all fire (priority order) when IM 2 is executed.",
+   "sources": [
+    "book ch 4 (report A-N)"
+   ],
+   "values": {
+    "book": "as stated"
+   },
+   "measure": "$C0 bit 0 = 1, IM 1 with I/table ready, ROM handler avoided by DI: request CTC0 and line via NEXTREG $20, then IM 2 + EI; record handler order.",
+   "result_type": "choice",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "C2 #34 engine with games that use IM 1",
+   "priority": 3
+  },
+  {
+   "id": "irq-reti-retn-rules",
+   "claim": "Only RETI (ED 4D) releases the in-service source and only in IM 2; RETN releases nothing; $C0 bits 2:1 read back the mode the chain saw.",
+   "sources": [
+    "book ch 4 (report A-N)",
+    "docs/TECHNIQUES.md:606"
+   ],
+   "values": {
+    "book": "as stated"
+   },
+   "measure": "Hardware IM2; handler ends RETN instead of RETI: count later interrupts (expect blocked); read $C0 bits 2:1 in IM 1 and IM 2; recover with a dummy RETI.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "could hang (bounded)",
+   "matters_for": "C2 #34 trampoline",
+   "priority": 3
+  },
+  {
+   "id": "irq-one-outstanding",
+   "claim": "A source has one outstanding request: ticks arriving while it is in service fold into it (only the status bit records them).",
+   "sources": [
+    "book ch 4 (report A-N)"
+   ],
+   "values": {
+    "book": "as stated"
+   },
+   "measure": "CTC0 at ~10 kHz in hardware IM2, handler busy for 3 periods; count handler runs vs CTC periods over one frame.",
+   "result_type": "number",
+   "unit": "count",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "CTC sample players (TECHNIQUES 2.6)",
+   "priority": 3
+  },
+  {
+   "id": "irq-nr20-generate",
+   "claim": "NextReg $20 raises an interrupt request in software (bit 7 line, bit 6 ULA, bits 3:0 CTC) whatever the enables, in either mode.",
+   "sources": [
+    "book ch 4 (report A-N)"
+   ],
+   "values": {
+    "book": "as stated"
+   },
+   "measure": "Pulse mode and hardware IM2: write $20 bit 6 with the ULA interrupt enabled and disabled; count handler runs and $C8.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "suite harness (irq-ack-cost) and ISR self-tests",
+   "priority": 3
+  },
+  {
+   "id": "irq-ctc-status-polled",
+   "claim": "CTC channels set their status bits even with their interrupt disabled; the ULA and line interrupt raise nothing when switched off.",
+   "sources": [
+    "book ch 4 (report A-N)"
+   ],
+   "values": {
+    "book": "as stated"
+   },
+   "measure": "CTC0 timer, interrupt off: poll $C9 bit 0; ULA interrupt off: $C8 bit 0 stays 0 over 3 frames.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "lesson.ctc-polled-clock",
+   "priority": 3
+  },
+  {
+   "id": "irq-ctc-rate-fixed",
+   "claim": "The CTC counts the 28 MHz clock / 16 or 256, independent of CPU speed: one prescaler-256 tick = 32 T of 3.5 MHz.",
+   "sources": [
+    "lesson.ctc-polled-clock",
+    "asm/exolon_hooks.asm:1040",
+    "docs/TECHNIQUES.md:636",
+    "book ch 6 (report A-N)"
+   ],
+   "values": {
+    "repo": "32 T per tick (Exolon, Inferno); not board-checked",
+    "book": "independent of CPU speed"
+   },
+   "measure": "CTC3 free-running ($27, tc 0); count ticks between two frame starts at each speed $07 = 0..3 (counter wraps tracked by polling); ticks per frame.",
+   "result_type": "number",
+   "unit": "count",
+   "tolerance": "+-1 tick per frame",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "Exolon / Inferno CTC clocks",
+   "priority": 2
+  },
+  {
+   "id": "irq-ctc-time-constant",
+   "claim": "A CTC timer interrupts at clk28 / (prescaler x time constant) with time constant 0 = 256 (RustyPixelsUK) - Next Point writes (1 + time constant).",
+   "sources": [
+    "docs/TECHNIQUES.md:634"
+   ],
+   "values": {
+    "repo": "two formulas, ~1 % apart, not checked"
+   },
+   "measure": "CTC0 prescaler 16, tc = 109 and 219: count zero crossings (status bit, polled, cleared each time) over 50 frames; also tc = 0.",
+   "result_type": "choice",
+   "unit": "-",
+   "tolerance": "exact (distinguishes 1 %)",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "CTC sample players, C2 #37",
+   "priority": 2
+  },
+  {
+   "id": "dma-pulse-lost",
+   "claim": "A continuous zxnDMA transfer that covers the pulse-mode frame interrupt loses it (DI or EI alike).",
+   "sources": [
+    "docs/TECHNIQUES.md:250",
+    "lesson.dma-copy-loses-interrupt",
+    "book ch 5 (report B-N19)"
+   ],
+   "values": {
+    "repo": "JNext observed; documented",
+    "book": "lost in pulse mode (16K at 6 T/byte costs one)"
+   },
+   "measure": "Pulse mode IM 2 counting handler, EI; start a 16K continuous DMA copy 20 lines before the interrupt line; count handler runs over that frame (expect 0 extra) and $C8 bit 0.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "Castle Master / Cisco Heat DMA scheduling (90-line rule)",
+   "priority": 1
+  },
+  {
+   "id": "dma-burst-prescaler-int",
+   "claim": "Burst mode with a prescaler hands the bus back between bytes, so a pulse interrupt is seen during a slow transfer.",
+   "sources": [
+    "docs/TECHNIQUES.md:256",
+    "book ch 5 (report B-N15)"
+   ],
+   "values": {
+    "repo": "hardware to confirm",
+    "book": "CPU keeps >95 % at P=100"
+   },
+   "measure": "Burst, P = 100, 2K transfer spanning the frame interrupt; count handler runs (expect 1).",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "background DMA copies / sample players",
+   "priority": 2
+  },
+  {
+   "id": "dma-hwim2-yield",
+   "claim": "In hardware IM2 mode with $CC-$CE enables the DMA releases the bus after each byte while an enabled source requests, the CPU takes the interrupt and the transfer resumes after RETI.",
+   "sources": [
+    "docs/TECHNIQUES.md:259",
+    "docs/DDMA.md:35",
+    "book ch 4/5 (report A-C3, B-N19)"
+   ],
+   "values": {
+    "repo": "may let interrupts break in; may wait indefinitely under DI",
+    "book": "per-byte release, resume after RETI"
+   },
+   "measure": "Hardware IM2, $CC bit for ULA set, EI: continuous 16K DMA across the frame interrupt; handler records the DMA counter (read-back) and the line; afterwards check the copy; then the same under DI with a 2-frame timeout (could hang).",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "could hang (DI variant; guarded by progress record)",
+   "matters_for": "C2 #34 engine with DMA hooks",
+   "priority": 2
+  },
+  {
+   "id": "frame-lines-50",
+   "claim": "A 50 Hz frame has 312 lines at 48K timing, 311 at 128K, 320 at Pentagon (VGA) and 312 on HDMI whatever the timing.",
+   "sources": [
+    "docs/TECHNIQUES.md:281",
+    "book ch 10 (report A, AGREES)"
+   ],
+   "values": {
+    "repo": "312/311/320; HDMI 312",
+    "book": "312/311/320"
+   },
+   "measure": "Track the highest $1E/$1F value over 10 frames (LSB,MSB,LSB read, tight loop) at the timing in use; record timing ($03) and output; other timings in the opt-in TIMING group.",
+   "result_type": "number",
+   "unit": "lines",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "raster waits, nextbench frame_sync, Rainbow rsafe",
+   "priority": 1
+  },
+  {
+   "id": "frame-lines-60",
+   "claim": "A 60 Hz frame has 264 lines (book) or 262 (48K/HDMI) / 261 (128K VGA) (repo).",
+   "sources": [
+    "lesson.frame-lines-at-60hz-unsettled",
+    "docs/TECHNIQUES.md:282",
+    "docs/TECHNIQUES.md:425",
+    "book ch 10 (report A-C1)"
+   ],
+   "values": {
+    "repo": "262 / 261",
+    "book": "264 (display from line 40)",
+    "wiki": "zxnext-copper-samples: 264"
+   },
+   "measure": "Switch $05 bit 2 to 60 Hz (read-modify-write), wait 2 frames, measure as frame-lines-50; restore the start rate.",
+   "result_type": "number",
+   "unit": "lines",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "monitor may resync briefly",
+   "matters_for": "--allow-60hz builds, freeze trap (waits below 261)",
+   "priority": 1
+  },
+  {
+   "id": "frame-line-length",
+   "claim": "A line is 224 T at 48K timing, 228 T at 128K (896 / 912 clocks of 28 MHz); HDMI 864 (50 Hz) / 858 (60 Hz) clocks.",
+   "sources": [
+    "docs/TECHNIQUES.md:282",
+    "docs/LEARNINGS.md:33",
+    "book ch 10 (report A-N)"
+   ],
+   "values": {
+    "repo": "896/912/864/858 clocks",
+    "book": "456 dots 128K"
+   },
+   "measure": "CTC (prescaler 16) ticks over 256 lines measured between line changes; T per line; at 50 and 60 Hz.",
+   "result_type": "number",
+   "unit": "T",
+   "tolerance": "+-0.1 T",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "beam racing, copper h positions",
+   "priority": 2
+  },
+  {
+   "id": "frame-60hz-display-start",
+   "claim": "At 60 Hz the frame interrupt comes only 40 lines before the display (display from line 40 in the book's count) and there is no border above/below the wide area.",
+   "sources": [
+    "lesson.frame-lines-at-60hz-unsettled",
+    "book ch 10 (report A-N)"
+   ],
+   "values": {
+    "book": "as stated"
+   },
+   "measure": "At 60 Hz: line of the ULA interrupt and lines from it to $1E/$1F = 0 (display row 0).",
+   "result_type": "number",
+   "unit": "lines",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "monitor may resync briefly",
+   "matters_for": "60 Hz builds' commit windows",
+   "priority": 2
+  },
+  {
+   "id": "frame-raster-read",
+   "claim": "Reading $1F, $1E, $1F (retry if the second LSB is lower) gives a correct line; a pair read until two agree returns 0-3 lines late at 3.5 MHz; core 3.01.00 sometimes read a wrong $1F.",
+   "sources": [
+    "docs/TECHNIQUES.md:332",
+    "docs/LEARNINGS.md:590",
+    "book ch 10 (report A-N)"
+   ],
+   "values": {
+    "repo": "3.02.00: no wrong read in 880 reads",
+    "book": "read $1E,$1F,$1E"
+   },
+   "measure": "100,000 reads at 3.5 MHz and 28 MHz in a tight loop; count non-monotonic sequences other than the frame wrap and values above the frame length.",
+   "result_type": "number",
+   "unit": "count",
+   "tolerance": "0",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "hlib_pace, Rainbow raster wait",
+   "priority": 2
+  },
+  {
+   "id": "frame-64-offset",
+   "claim": "NextReg $64 offsets $1E/$1F, the line interrupt and the copper alike; a new value takes effect when the beam reaches display row 0 (up to a frame late); with $64 = 32 line 32 = ULA row 0.",
+   "sources": [
+    "docs/TECHNIQUES.md:279",
+    "docs/TECHNIQUES.md:293",
+    "docs/BRIEFING.md:383",
+    "book ch 10 (report A, AGREES)"
+   ],
+   "values": {
+    "repo": "register text 32; demos use 33 for Layer 2 top",
+    "book": "agrees on 32"
+   },
+   "measure": "Write $64 = 32 at line 100; record the frame and line where $1E/$1F jump; check the line interrupt and a copper WAIT line 32 against $1E/$1F; restore $64 = 0.",
+   "result_type": "number",
+   "unit": "lines",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "C2 #28 copper alignment, stub reset of $64 (C2 #26)",
+   "priority": 2
+  },
+  {
+   "id": "frame-64-33-l2-top",
+   "claim": "With $64 = 33 (not 32) a copper line 0 change lines up with the first row of 320x256 Layer 2.",
+   "sources": [
+    "docs/TECHNIQUES.md:211",
+    "docs/TECHNIQUES.md:295",
+    "docs/BRIEFING.md:385"
+   ],
+   "values": {
+    "repo": "demos 33; register text 32 - test both"
+   },
+   "measure": "Visual: 320x256 Layer 2 with a 1-line white rule on row 0 and row 1; copper changes palette index 1 at copper line 0 with $64 = 32 and 33; photograph which row the colour change aligns with (reference ruler drawn beside).",
+   "result_type": "visual",
+   "unit": "lines",
+   "tolerance": "exact",
+   "auto": false,
+   "risk": "none",
+   "matters_for": "copper-driven Layer 2 effects",
+   "priority": 3
+  },
+  {
+   "id": "frame-timing-change-frame-end",
+   "claim": "A machine-timing change (NextReg $03) is taken by the video counters only at the end of a frame.",
+   "sources": [
+    "book ch 10 (report A-N)"
+   ],
+   "values": {
+    "book": "as stated"
+   },
+   "measure": "Opt-in: write $03 timing at line 100; record the frame length of that frame and the next.",
+   "result_type": "number",
+   "unit": "lines",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "persists across soft reset (restored at the end)",
+   "matters_for": "z80tonex tail ($03 written last)",
+   "priority": 3
+  },
+  {
+   "id": "frame-ula-int-per-timing",
+   "claim": "The ULA interrupt line and frame length per timing (48K 248/312, 128K 248/311, Pentagon 239/320, +3) and HDMI 256.",
+   "sources": [
+    "docs/TECHNIQUES.md:284",
+    "book ch 10 (report A-N)"
+   ],
+   "values": {
+    "repo": "varmfskii tables",
+    "book": "+3 interrupt 1 T earlier than 128K"
+   },
+   "measure": "Opt-in TIMING group: for each $03 timing run frame-lines-50 and irq-ula-int-line; restore.",
+   "result_type": "number",
+   "unit": "lines",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "persists across soft reset (restored)",
+   "matters_for": "128K / Pentagon builds",
+   "priority": 2
+  },
+  {
+   "id": "copper-wait-passed-line",
+   "claim": "A copper WAIT for a line the beam has already passed holds the rest of the list until that line comes next frame.",
+   "sources": [
+    "lesson.copper-wait-line-equality",
+    "docs/TECHNIQUES.md:203",
+    "docs/BRIEFING.md:383"
+   ],
+   "values": {
+    "repo": "inferred from guide r3; not tested",
+    "wiki": "copper page: equality match"
+   },
+   "measure": "List: MOVE $7F,1; WAIT 150; MOVE $7F,2; WAIT 50; MOVE $7F,3; HALT, mode 01 started at line 10; record the lines at which the CPU sees 2 and 3 (3 at line 50 of the next frame = holds).",
+   "result_type": "choice",
+   "unit": "lines",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "copper lists rebuilt per frame (sorting), C2 #28",
+   "priority": 1
+  },
+  {
+   "id": "copper-wait-h-same-line",
+   "claim": "A WAIT for a horizontal position already passed on the current line does not wait (>= compare).",
+   "sources": [
+    "docs/TECHNIQUES.md:324",
+    "docs/BRIEFING.md:384"
+   ],
+   "values": {
+    "repo": "hardware-tested on core 3.01.05 (Ped7g)"
+   },
+   "measure": "WAIT (100, 50); MOVE $7F,1; WAIT (100, 10); MOVE $7F,2: both seen on line 100.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "copper lists",
+   "priority": 3
+  },
+  {
+   "id": "copper-wait-max-h",
+   "claim": "The last ~128 dots of a line are never matched: the largest h a WAIT can match is 52 (HDMI), 54 (48K, Pentagon), 55 (128K).",
+   "sources": [
+    "docs/TECHNIQUES.md:418"
+   ],
+   "values": {
+    "repo": "zxnext-copper-samples / varmfskii tables"
+   },
+   "measure": "For h = 48..63: WAIT (100, h); MOVE $7F,h; read $7F at line 101: matched on line 100 or not; largest h matched.",
+   "result_type": "number",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "copper split timing",
+   "priority": 2
+  },
+  {
+   "id": "copper-line-vs-raster",
+   "claim": "Copper line numbers equal the $1E/$1F raster line (CP WAIT 120 -> 120), and the copper counts the left border of line n+1 (12 dots before the display) as line n.",
+   "sources": [
+    "lesson.copper-wait-line-equality",
+    "docs/TECHNIQUES.md:110",
+    "docs/LEARNINGS.md:596"
+   ],
+   "values": {
+    "repo": "board 3.02.00: 120 at both speeds (one mode)",
+    "wiki": "horizontal count starts 12 dots before display"
+   },
+   "measure": "nextbench CP WAIT row (lines 0, 120, 191, 250) plus the CTC offset between the MOVE becoming visible and the $1F change; at 50 and 60 Hz.",
+   "result_type": "number",
+   "unit": "lines",
+   "tolerance": "exact; offset +-8 T",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "every copper list in builds",
+   "priority": 2
+  },
+  {
+   "id": "copper-instruction-time",
+   "claim": "The copper runs at 28 MHz: a MOVE takes 2 copper clocks and a WAIT 1; the register holds the new value 2 clocks after the MOVE.",
+   "sources": [
+    "lesson.copper-clock-and-instruction-time"
+   ],
+   "values": {
+    "wiki": "copper page: MOVE 2, WAIT 1"
+   },
+   "measure": "List: WAIT 100; MOVE $7F,1; 1000 x MOVE $7F,1; MOVE $7F,$AA; HALT; the CPU at 28 MHz polls $7F, CTC time from 1 to $AA; same with 1000 WAIT(100,0) (already matched); clocks per instruction.",
+   "result_type": "number",
+   "unit": "clocks",
+   "tolerance": "+-0.1 clock",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "copper budgets (palette bars, per-line MOVEs)",
+   "priority": 2
+  },
+  {
+   "id": "copper-restart-line",
+   "claim": "In mode 11 the list restarts every frame at line 0 of the copper count (after the top border, not at the frame's first line).",
+   "sources": [
+    "lesson.copper-wait-offsets",
+    "docs/TECHNIQUES.md:423"
+   ],
+   "values": {
+    "repo": "CSpect: restart after the top border"
+   },
+   "measure": "List: MOVE $7F,9 (first), WAIT 200, MOVE $7F,1, HALT in mode 11; CPU writes $7F = 0 at line 210 and records the line where 9 appears.",
+   "result_type": "number",
+   "unit": "lines",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "lists touching the top border (Gen4 patch_copper_y)",
+   "priority": 2
+  },
+  {
+   "id": "copper-move-44-pair",
+   "claim": "Copper MOVE pairs to NextReg $44 (9-bit palette) work.",
+   "sources": [
+    "lesson.copper-wait-offsets",
+    "docs/TECHNIQUES.md:207"
+   ],
+   "values": {
+    "repo": "failed in CSpect; copper-bar demos use them"
+   },
+   "measure": "Copper: MOVE $43,$10; MOVE $40,200; MOVE $44,hi; MOVE $44,lo; CPU then reads entry 200 via $40/$41 (and $44 read if documented) = hi.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "patch.copper-palette-bands",
+   "priority": 2
+  },
+  {
+   "id": "copper-cpu-coexist",
+   "claim": "The copper looping MOVEs does not slow CPU LDIR nor disturb CPU NEXTREG / port-pair access to other registers (CP APART 0), but corrupts a shared index pair (CP SHARE 255).",
+   "sources": [
+    "docs/TECHNIQUES.md:125",
+    "docs/LEARNINGS.md:594"
+   ],
+   "values": {
+    "repo": "board 3.02.00: 220.9 = without; 0 / 255 (one mode)"
+   },
+   "measure": "nextbench LDIR+COP, CP APART and CP SHARE rows, 5 runs.",
+   "result_type": "number",
+   "unit": "count",
+   "tolerance": "APART exact 0",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "copper next to hooks",
+   "priority": 2
+  },
+  {
+   "id": "copper-nextreg-collision",
+   "claim": "When the copper and the CPU write a NextReg in the same 28 MHz tick the copper wins and the CPU waits one tick; the copper writes at most every other tick.",
+   "sources": [
+    "book ch 3 (report D-N23)"
+   ],
+   "values": {
+    "book": "as stated"
+   },
+   "measure": "Time 2048 x NEXTREG $7F,v at 28 MHz with the copper idle vs looping MOVE $7F; clocks per NEXTREG.",
+   "result_type": "number",
+   "unit": "clocks",
+   "tolerance": "+-0.2 clock",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "hooks writing NextRegs while a copper list runs",
+   "priority": 3
+  },
+  {
+   "id": "copper-same-mode-no-restart",
+   "claim": "Rewriting $61/$62 with the same mode bits only moves the index and does not restart a running list.",
+   "sources": [
+    "docs/TECHNIQUES.md:326",
+    "docs/NEXT_REGISTERS.md:82"
+   ],
+   "values": {
+    "repo": "hardware-tested on 3.01.05 (Ped7g)"
+   },
+   "measure": "Mode 11 list: MOVE $7F,9; WAIT 150; MOVE $7F,2; HALT. At line 100 CPU writes $7F = 0 then $61/$62 with mode 11 and index 0; read $7F at line 110 (0 = no restart, 9 = restart).",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "live copper list patching",
+   "priority": 3
+  },
+  {
+   "id": "copper-15-resets-clip",
+   "claim": "A copper MOVE to NextReg $15 resets the clip windows (unverified claim in a demo).",
+   "sources": [
+    "docs/TECHNIQUES.md:215"
+   ],
+   "values": {
+    "repo": "UNVERIFIED; not in the core spec"
+   },
+   "measure": "Visual: sprite clip window narrowed to a 64x64 box (white frame drawn as reference); copper MOVE $15,same value at line 100 every frame; photograph whether sprites outside the box appear below line 100.",
+   "result_type": "visual",
+   "unit": "-",
+   "tolerance": "-",
+   "auto": false,
+   "risk": "none",
+   "matters_for": "copper lists next to clip windows",
+   "priority": 3
+  },
+  {
+   "id": "dma-correct-3m5",
+   "claim": "DMA copies are correct at 3.5 MHz on core 3.03 (3.02.00 gave wrong copies at 3.5 MHz, fixed in 3.02.02).",
+   "sources": [
+    "docs/TECHNIQUES.md:49",
+    "tools/hwtests/README.md:196",
+    "docs/LEARNINGS.md:553"
+   ],
+   "values": {
+    "repo": "wrong on 3.02.00 at 3.5 MHz; right at 28"
+   },
+   "measure": "nextbench DMA rows with their copy checks at 3.5 and 28 MHz.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "rule 'DMA only at 28 MHz' in hooks",
+   "priority": 1
+  },
+  {
+   "id": "dma-cost-per-byte",
+   "claim": "A zxnDMA byte costs 6 CPU clocks with the reset timing (3+3) at every speed on 3.03 (7 at 28 MHz on 3.02) and 4 with cycle length 2 on both ports (~12 % faster end to end).",
+   "sources": [
+    "docs/DDMA.md:62",
+    "docs/DDMA.md:88",
+    "docs/TECHNIQUES.md:232",
+    "lesson.jnext-dma-cycle-length",
+    "book ch 5 (report B-N1, N2, N31)"
+   ],
+   "values": {
+    "repo": "0.179 us/byte at 28 MHz on 3.02.00 (=5 clocks?)",
+    "book": "6 / 4 clocks; 7 on 3.02",
+    "jnext": "12.5 vs 3.6 T"
+   },
+   "measure": "2048-byte memory->memory and memory->port ($5B) copies with timing bytes absent / 3 / 2 on both ports at 3.5 and 28 MHz; clocks per byte from the slope between 256 and 2048 bytes.",
+   "result_type": "number",
+   "unit": "clocks",
+   "tolerance": "+-0.1 clock",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "every DMA hook budget",
+   "priority": 1
+  },
+  {
+   "id": "dma-default-cycle-length",
+   "claim": "Without a timing byte the DMA uses 3-clock cycles per port (not 'standard Z80 timing' of 4).",
+   "sources": [
+    "docs/TECHNIQUES.md:233",
+    "docs/DDMA.md:62",
+    "book ch 5 (report B-C1)"
+   ],
+   "values": {
+    "repo": "TECHNIQUES: standard Z80 timing; DDMA.md: 3",
+    "book": "3 after reset"
+   },
+   "measure": "From dma-cost-per-byte: the 'no timing byte after $C3' case equals the explicit 3-cycle case.",
+   "result_type": "choice",
+   "unit": "clocks",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "TECHNIQUES 1 zxnDMA paragraph",
+   "priority": 2
+  },
+  {
+   "id": "dma-length-rule",
+   "claim": "Port $6B (zxnDMA) moves exactly the programmed length; port $0B (Zilog mode) moves length + 1; length 0 moves one byte in both; the mode sticks to the last port touched.",
+   "sources": [
+    "lesson.zxn-dma-length-exact-zilog-plus-one",
+    "book ch 5 (report B-N7)"
+   ],
+   "values": {
+    "wiki": "exact / +1 since core 3.1.2",
+    "book": "same; reset restores zxnDMA"
+   },
+   "measure": "Copy with lengths 0, 1, 16 through $6B and through $0B into a guard-filled buffer; count bytes written; finish with a $6B access so zxnDMA mode is restored.",
+   "result_type": "number",
+   "unit": "bytes",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "every DMA hook (Z80-DMA ports of code)",
+   "priority": 1
+  },
+  {
+   "id": "dma-prescaler-rate",
+   "claim": "With prescaler P the DMA moves a byte every 4P+3 T at 3.5 MHz and every 32P+3 clocks at 28 MHz (repo: rate = 875 kHz / P scaled by $11); P = 0 is off, P = 1 at 3.5 MHz has no effect.",
+   "sources": [
+    "docs/TECHNIQUES.md:257",
+    "docs/TECHNIQUES.md:631",
+    "docs/DDMA.md:90",
+    "book ch 5 (report B-N14)"
+   ],
+   "values": {
+    "repo": "875 kHz / P",
+    "book": "4P+3 T / 32P+3 clocks"
+   },
+   "measure": "Burst-mode 256-byte transfers with P = 0, 1, 12, 55, 100, 144 at 3.5 and 28 MHz timed on the CTC; clocks per byte.",
+   "result_type": "number",
+   "unit": "clocks",
+   "tolerance": "+-1 %",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "sample players (C2 #37), background copies",
+   "priority": 2
+  },
+  {
+   "id": "dma-burst-cpu-share",
+   "claim": "In burst mode with a prescaler the CPU keeps most of the bus (book: >95 % at P = 100); continuous mode with a prescaler freezes the CPU for the whole block.",
+   "sources": [
+    "book ch 5 (report B-N15)",
+    "docs/TECHNIQUES.md:241"
+   ],
+   "values": {
+    "book": "as stated"
+   },
+   "measure": "A CPU counting loop runs during a P = 100 2K burst transfer and during a continuous one; loop iterations vs the same time without DMA.",
+   "result_type": "number",
+   "unit": "%",
+   "tolerance": "+-1 %",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "background DMA design",
+   "priority": 2
+  },
+  {
+   "id": "dma-setup-costs",
+   "claim": "On 3.02.00 at 28 MHz a full 16-byte DMA program costs ~14.5 us, addresses + length ~10.3 us, LOAD + ENABLE ~3.5 us, then 0.179 us a byte (break-even vs LDIR ~21 bytes, re-run ~5); $D3 CONTINUE re-run cost not measured; a 5-OUT re-arm costs ~87 T.",
+   "sources": [
+    "docs/TECHNIQUES.md:45",
+    "docs/TECHNIQUES.md:117",
+    "docs/TECHNIQUES.md:338",
+    "docs/BRIEFING.md:406",
+    "lesson.blitter-tiny-copies-cpu"
+   ],
+   "values": {
+    "repo": "board 3.02.00 nextbench v2/v3"
+   },
+   "measure": "nextbench DMA rows (full, rtg, rrun, brst, port uploads) re-run on 3.03 plus new rows: $D3+$87 continue, 5-OUT re-arm ($1D,lo,hi,$CF,$87).",
+   "result_type": "number",
+   "unit": "us",
+   "tolerance": "+-0.5 %",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "DMA vs CPU break-even in every hook (midres/renegade caches, C2 #31)",
+   "priority": 1
+  },
+  {
+   "id": "dma-read-status",
+   "claim": "The DMA status byte read through $BB/$BF reads $3A idle, $1A after a finished block; the read sequence follows the read mask.",
+   "sources": [
+    "book ch 5 (report B-N18)",
+    "docs/NEXT_REGISTERS.md:80"
+   ],
+   "values": {
+    "book": "as stated"
+   },
+   "measure": "After $C3: $BF, IN; after a finished 16-byte copy: $BF, IN; mask $7F read of 7 entries.",
+   "result_type": "number",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "burst-mode completion polling",
+   "priority": 3
+  },
+  {
+   "id": "dma-c3-reset-keeps",
+   "claim": "$C3 keeps start addresses, length and modes but clears the timing (to 3), prescaler, auto-restart and blitter settings.",
+   "sources": [
+    "book ch 5 (report B-N12, N26)"
+   ],
+   "values": {
+    "book": "as stated"
+   },
+   "measure": "Program a copy, send $C3, then only $CF,$87: does it copy the same block (addresses kept) at 6 clocks/byte?",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "cheap DMA re-arm design",
+   "priority": 3
+  },
+  {
+   "id": "dma-wr4-interrupt-lock",
+   "claim": "A WR4 byte with bit 4 (interrupt control follows) leaves the DMA deaf until a machine reset.",
+   "sources": [
+    "book ch 5 (report B-N10)",
+    "lesson.zxn-dma-wr4-interrupt-lock"
+   ],
+   "values": {
+    "repo": "board: locks until power-off",
+    "book": "a hard or soft reset frees it"
+   },
+   "measure": "OPT-IN, last test: send WR4 with bit 4, then $C3 and a 1-byte copy; record whether the copy happens; the progress record notes it; the owner soft-resets and restarts the suite, whose first DMA sanity copy then decides reset-frees / power-off-only.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "leaves the DMA unusable until reset",
+   "matters_for": "reference only (never emit)",
+   "priority": 3
+  },
+  {
+   "id": "dma-autorestart-freeze",
+   "claim": "Auto-restart in continuous mode never gives the CPU the bus back (only a reset or a yielding interrupt frees it).",
+   "sources": [
+    "book ch 5 (report B-N17)",
+    "lesson.zxn-dma-autorestart-freeze"
+   ],
+   "values": {
+    "repo": "board: freezes the machine (continuous)",
+    "book": "only a reset or a yielding interrupt frees it"
+   },
+   "measure": "OPT-IN: hardware IM2 + $CC ULA enable + EI so the handler can send $83 to stop it; continuous auto-restart 256 bytes; handler counts and stops after 2 frames; without the IM2 escape the test is not run.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "could hang (needs reset if the escape fails)",
+   "matters_for": "sample players (use burst)",
+   "priority": 3
+  },
+  {
+   "id": "dma-overlap-fill",
+   "claim": "A forward DMA copy with destination = source + 1 fills a block (the LDIR fill idiom), so forward DMA cannot do an overlapping right shift.",
+   "sources": [
+    "docs/TECHNIQUES.md:213",
+    "lesson.overlapping-dma-shift"
+   ],
+   "values": {
+    "repo": "Happy Next Year uses it"
+   },
+   "measure": "256-byte DMA copy src -> src+1 at 3.5 and 28 MHz; check fill.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "IM2 table fills, Bubbler shift fallback",
+   "priority": 3
+  },
+  {
+   "id": "dma-blitter-detect",
+   "claim": "Core 3.03 has the zxnDDMA blitter commands on port $6B on every board; on older cores or $0B the command bytes are dropped and their data become base bytes; a probe after $C3 with data < $80 then eight $83 is safe.",
+   "sources": [
+    "docs/DDMA.md:25",
+    "docs/NEXT_REGISTERS.md:80",
+    "book ch 5 (report B-N27, D1-D4)"
+   ],
+   "values": {
+    "book": "on all boards in 3.03",
+    "repo": "gate on core version"
+   },
+   "measure": "Book probe: $C3, $DF with a data byte < $80 selecting fill into a scratch page we own, eight $83, then a 1-byte fill; check which of two scratch bytes changed; also gate by $01/$0E.",
+   "result_type": "choice",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none (scratch pages owned by the suite)",
+   "matters_for": "DDMA hooks (DDMA.md step 3)",
+   "priority": 1
+  },
+  {
+   "id": "dma-blitter-physical",
+   "claim": "Blitter physical addresses are SRAM addresses: RAM page n at $40000 + n*$2000 (16K bank n at $40000 + n*$4000), 22 bits via $D7/$DB.",
+   "sources": [
+    "lesson.blitter-sram-aperture-offset",
+    "lesson.jnext-ram-dump-offset",
+    "book ch 5 (report B-N21)",
+    "book ch 3 (report D-N15)"
+   ],
+   "values": {
+    "repo": "040000 aperture offset (Inferno)",
+    "book": "as stated"
+   },
+   "measure": "Physical-mode 16-byte copy from page A to page B (both suite pages) by physical address; read both through the MMU.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "Inferno DDMA staging pages 216-223 (2 MB only)",
+   "priority": 1
+  },
+  {
+   "id": "dma-blitter-bram",
+   "claim": "Physical-mode writes cannot reach bank 5 / page $0E (block RAM): a write to their SRAM address lands in an invisible twin; page $0F is SRAM and shows.",
+   "sources": [
+    "docs/DDMA.md:54",
+    "book ch 5 (report B-N22)",
+    "book ch 3 (report D-N16)"
+   ],
+   "values": {
+    "repo": "physical mode does not reach BRAM banks 5/7",
+    "book": "twin SRAM at $054000 / $05C000; page $0F shows"
+   },
+   "measure": "Physical fill of 16 bytes at the SRAM address of page $0A (screen corner) and $0F; read both through the MMU; restore page $0F bytes.",
+   "result_type": "choice",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "DDMA Layer 2/tilemap targets",
+   "priority": 2
+  },
+  {
+   "id": "dma-blitter-2d",
+   "claim": "2D mode moves row length x rows bytes with strides measured start-of-row to start-of-row; row length or rows of 0 still moves one byte.",
+   "sources": [
+    "docs/DDMA.md:52",
+    "book ch 5 (report B-N23)"
+   ],
+   "values": {
+    "repo": "as stated",
+    "book": "as stated"
+   },
+   "measure": "32x32 out of a 256-wide sheet into an 80-wide buffer (Rainbow 20x64 case too); compare with a CPU copy; zero cases.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "Rainbow tcommit prototype (DDMA_IMPLEMENTATION)",
+   "priority": 2
+  },
+  {
+   "id": "dma-blitter-transparent-fill",
+   "claim": "Transparent mode skips bytes equal to $F3's value but still spends the write cycle; fill mode ($F7) has no read cycle (half the time of a fixed-source copy).",
+   "sources": [
+    "docs/DDMA.md:90",
+    "book ch 5 (report B-N20)",
+    "lesson.blitter-hardware-benchmark"
+   ],
+   "values": {
+    "repo": "fill 2x (guide); CSpect fill 0.07 us/byte",
+    "book": "as stated"
+   },
+   "measure": "2048-byte transparent copy (half the bytes transparent) vs opaque; fill vs fixed-source copy; clocks per byte at 28 MHz.",
+   "result_type": "number",
+   "unit": "clocks",
+   "tolerance": "+-0.1 clock",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "DDMA fills/transparent blits (Wally, Castle Master)",
+   "priority": 2
+  },
+  {
+   "id": "dma-blitter-l2-xy",
+   "claim": "Layer 2 X,Y mode writes row-major in 256x192 (only X's low byte counts) and column-major in 320x256 / 640x256, bank from $12 (or $13 with the hidden-screen flag), stride forced to 256.",
+   "sources": [
+    "docs/DDMA.md:57",
+    "book ch 5 (report B-N24)"
+   ],
+   "values": {
+    "repo": "layouts",
+    "book": "adds X low byte only, $12/$13/$70 sources"
+   },
+   "measure": "Write a 4x4 block at (X,Y) = (300,10) in 320x256 and (10,10) / (266,10) in 256x192 into suite-owned Layer 2 banks; read back through the MMU.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "DDMA Layer 2 hooks",
+   "priority": 2
+  },
+  {
+   "id": "dma-blitter-cost",
+   "claim": "The guide's 32-ball example: 2D DMA 2.1 ms vs LDIR 7.2, CPU transparent 15.6, zxnDMA per column 8.2 (repo: measured on 3.02.21; book: Issue 5 with the 3.03 blitter core; 3.02 bars 8.3/18.9/9.7).",
+   "sources": [
+    "docs/DDMA.md:68",
+    "docs/DDMA.md:92",
+    "book ch 5 (report B-C2)"
+   ],
+   "values": {
+    "repo": "core 3.02.21",
+    "book": "3.03 blitter core, Issue 5"
+   },
+   "measure": "Reproduce the workload shape: 32 x 16x16 rectangles into 320x256 Layer 2 by LDIR, zxnDMA per column and DDMA 2D (opaque/transparent), 3-cycle timing, 28 MHz; ms per frame.",
+   "result_type": "number",
+   "unit": "us",
+   "tolerance": "+-1 %",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "DDMA candidate ranking (DDMA.md table)",
+   "priority": 2
+  },
+  {
+   "id": "spr-line-limit",
+   "claim": "The sprite engine has 1,824 clocks a line (1,792 at 48K timing): a sprite off the line costs 1, one on it 1 + its drawn width (17 unscaled, 129 at 8x); later sprites are dropped and port $303B bit 1 is set; at least ~100 unscaled sprites fit.",
+   "sources": [
+    "lesson.sprite-line-time-budget",
+    "docs/LEARNINGS.md:153",
+    "book ch 16 (report C-S13)"
+   ],
+   "values": {
+    "repo": ">= 100 unscaled guaranteed",
+    "book": "75 when all 128 stack; 102 when moved off the line"
+   },
+   "measure": "Stack k sprites on one line (k = 60..128, scale 1x/2x/4x/8x), read $303B bit 1 after a frame; smallest k that sets it; collision oracle tells which sprite numbers still draw.",
+   "result_type": "number",
+   "unit": "count",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "sprite builds' per-line budgets",
+   "priority": 2
+  },
+  {
+   "id": "spr-collision-rules",
+   "claim": "Port $303B bit 0 collision is exact to the dot (opaque over opaque in the line buffer); dots outside the clip window, overlaps hidden by $15 bit 6 and sprites switched off by $15 bit 0 still collide; reading clears both bits.",
+   "sources": [
+    "lesson.sprite-collision-is-per-dot-in-line-buffer",
+    "docs/NEXT_REGISTERS.md:63",
+    "book ch 16 (report C-S12, S14)"
+   ],
+   "values": {
+    "book": "as stated"
+   },
+   "measure": "Two 1-dot-opaque patterns: side by side (0), same dot (1), overlap outside clip (?), with $15 bit 0 = 0 (?), second read (0).",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "the suite's own sprite oracle; collision-based tests",
+   "priority": 3
+  },
+  {
+   "id": "spr-303b-shared-index",
+   "claim": "A port $303B write sets both the pattern-upload slot for $5B and the attribute index for $57.",
+   "sources": [
+    "lesson.port-303b-shared",
+    "docs/NEXT_REGISTERS.md:63",
+    "docs/TECHNIQUES.md:134"
+   ],
+   "values": {
+    "repo": "documented; Rainbow ISR garbled uploads"
+   },
+   "measure": "Write $303B = 5; send 64 pattern bytes to $5B; write $303B = 7; send 5 attribute bytes to $57; collision oracle: sprite 7 uses pattern 5 at the intended X; a sprite at index 5 is untouched.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "Rainbow / R-Type upload loops (patch.figure-glide)",
+   "priority": 1
+  },
+  {
+   "id": "spr-34-vs-303b",
+   "claim": "NextReg $34 and port $303B are separate sprite indices unless NextReg $09 bit 4 (lockstep) is set; with lockstep a $34 write also moves the pattern pointer.",
+   "sources": [
+    "docs/TECHNIQUES.md:218",
+    "docs/NEXT_REGISTERS.md:77",
+    "lesson.sprite-selector-aliasing",
+    "book ch 16 (report C-S9)"
+   ],
+   "values": {
+    "repo": "separate (VHDL / docs); simulator aliasing bug",
+    "book": "agrees"
+   },
+   "measure": "$303B = 3, NEXTREG $34,9, then 5 bytes to $57: which sprite moved (3 expected); repeat with $09 bit 4 set (9 expected); restore $09.",
+   "result_type": "choice",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "every sprite hook (heartland/herbert echoes)",
+   "priority": 2
+  },
+  {
+   "id": "spr-4byte-records",
+   "claim": "On port $57 a sprite whose byte 3 bit 6 = 0 takes 4 bytes and the index steps to the next sprite; the index wraps 127 -> 0.",
+   "sources": [
+    "docs/NEXT_REGISTERS.md:65",
+    "docs/TECHNIQUES.md:131",
+    "docs/TECHNIQUES.md:186",
+    "book ch 16 (report C-S8)"
+   ],
+   "values": {
+    "repo": "documented; simulated only"
+   },
+   "measure": "Stream for sprites 126,127,0: 4-byte, 5-byte, 5-byte; collision oracle on their X positions.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "HIDE records, port-57 OTIR uploads",
+   "priority": 2
+  },
+  {
+   "id": "spr-nr-postinc",
+   "claim": "NextRegs $75-$79 write like $35-$39 and then advance the sprite number.",
+   "sources": [
+    "docs/TECHNIQUES.md:221",
+    "docs/NEXT_REGISTERS.md:78"
+   ],
+   "values": {
+    "repo": "nextreg.txt"
+   },
+   "measure": "NEXTREG $34,10; $75,x twice; collision oracle: sprites 10 and 11 moved.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "hide loops (HIDE NR row)",
+   "priority": 3
+  },
+  {
+   "id": "spr-4bit-attr4-halves",
+   "claim": "For a 4-bit anchor attr4 $80 picks bytes 0-127 of the 256-byte slot and $C0 bytes 128-255 (N6 is the lowest bit of the 4-bit pattern number).",
+   "sources": [
+    "lesson.sprite-pattern-and-attribute-facts",
+    "docs/LEARNINGS.md:137",
+    "book ch 16 (report C-S1)"
+   ],
+   "values": {
+    "repo": "0x80 = 0-127 (Rainbow on hardware, implicit)",
+    "book": "N6 = lowest bit"
+   },
+   "measure": "Slot 2: first half opaque only in row 0, second half only in row 15; collision oracle vs a probe sprite at row 0 / row 15 for attr4 $80 and $C0.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "all 4-bit sprite builds",
+   "priority": 2
+  },
+  {
+   "id": "spr-transparency-before-offset",
+   "claim": "Sprite transparency is tested on the index before the palette offset (8-bit: whole byte vs $4B; 4-bit: low nibble), so index 0 under a non-zero palette offset stays transparent (MAME draws it opaque).",
+   "sources": [
+    "docs/NEXT_REGISTERS.md:50",
+    "docs/LEARNINGS.md:1019",
+    "docs/BRIEFING.md:113",
+    "book ch 16 (report C-S2)"
+   ],
+   "values": {
+    "repo": "MAME 0.289: opaque; hardware unchecked",
+    "book": "before the offset"
+   },
+   "measure": "4-bit sprite of all-0 pixels, palette offset 3, $4B = 0, over a probe sprite: collision (opaque) or not.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "Trueno (palette offset 0 workaround), Rainbow offset 15",
+   "priority": 2
+  },
+  {
+   "id": "spr-relative-accidental",
+   "claim": "An 8-bit-pattern sprite whose byte 4 bits 7:6 = 01 becomes a relative sprite of the previous anchor.",
+   "sources": [
+    "book ch 16 (report C-S4)",
+    "docs/TECHNIQUES.md:224"
+   ],
+   "values": {
+    "book": "as stated"
+   },
+   "measure": "Anchor at X=50, next sprite byte 4 = $40 with byte 0 = 10: collision oracle at X=60 (relative) or X=10 (absolute).",
+   "result_type": "choice",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "attribute streams with 8-bit patterns",
+   "priority": 3
+  },
+  {
+   "id": "spr-position-wrap",
+   "claim": "Sprite positions are 9-bit and wrap at 512 (X 500 = -12); a 4-byte (E=0) sprite has no Y8.",
+   "sources": [
+    "book ch 16 (report C-S3)",
+    "docs/BRIEFING.md:119"
+   ],
+   "values": {
+    "repo": "coords = screen + 32",
+    "book": "as stated"
+   },
+   "measure": "Sprite at X=500 against a probe at X=0..3 (collision) and at X=4 (none).",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "figure clipping at the left edge",
+   "priority": 3
+  },
+  {
+   "id": "spr-clip-units",
+   "claim": "The sprite clip window $19 is in display-area pixels (+32) while sprites are not over the border; with $15 bit 1 it is ignored unless bit 5 is set, then X is in 2-dot units across the wide area.",
+   "sources": [
+    "lesson.sprite-clip-window-units-follow-over-border",
+    "docs/NEXT_REGISTERS.md:39",
+    "book ch 9/16 (report C-C1)"
+   ],
+   "values": {
+    "repo": "screen pixels, default 0,255,0,191",
+    "book": "units follow $15 bits 1 and 5"
+   },
+   "measure": "Visual: a column of sprites across the wide area; clip X 64-127 / Y 64-127 in the three $15 settings, one band each; a ruler of 8-dot ticks drawn on the ULA/Layer 2 beside it; photograph.",
+   "result_type": "visual",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": false,
+   "risk": "none",
+   "matters_for": "patch.ink-rectangle-sprites, Cisco Heat car clip",
+   "priority": 2
+  },
+  {
+   "id": "spr-order-bit6",
+   "claim": "With $15 bit 6 = 0 the higher sprite number is drawn on top; bit 6 = 1 puts sprite 0 on top.",
+   "sources": [
+    "lesson.sprite-order-and-layers",
+    "docs/LEARNINGS.md:157",
+    "book ch 16 (report C-S11)"
+   ],
+   "values": {
+    "repo": "guide r3; Rainbow relies on it, hardware to confirm"
+   },
+   "measure": "Visual: red sprite 1 and green sprite 2 overlapping, labelled; left half bit 6 = 0, right half by copper MOVE $15 bit 6 = 1 (also shows the one-line delay); photograph.",
+   "result_type": "visual",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": false,
+   "risk": "none",
+   "matters_for": "Rainbow item order, Gen4-style splits",
+   "priority": 2
+  },
+  {
+   "id": "spr-change-one-line-late",
+   "claim": "A sprite attribute change (and a copper write of $15 bit 6) shows one scanline later than the line it is made on.",
+   "sources": [
+    "docs/TECHNIQUES.md:329",
+    "book ch 16 (report C-N16, S10)"
+   ],
+   "values": {
+    "repo": "hardware-tested on 3.00.07+ (Ped7g)",
+    "book": "inferred for bit 6"
+   },
+   "measure": "Visual: copper moves sprite X at line 100; a ULA ruler with line 100 marked; photograph which row the shift starts on.",
+   "result_type": "visual",
+   "unit": "lines",
+   "tolerance": "exact",
+   "auto": false,
+   "risk": "none",
+   "matters_for": "copper-driven sprites, commit timing",
+   "priority": 3
+  },
+  {
+   "id": "spr-scale-rotate",
+   "claim": "Sprite scale is applied after rotation (a 4x1 sprite stays wide when rotated); rotation first, then mirror.",
+   "sources": [
+    "book ch 16 (report C-S7)"
+   ],
+   "values": {
+    "book": "as stated"
+   },
+   "measure": "Visual: an arrow pattern at four rotate/mirror combinations with X scale 4, beside drawn references.",
+   "result_type": "visual",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": false,
+   "risk": "none",
+   "matters_for": "reference only",
+   "priority": 3
+  },
+  {
+   "id": "spr-port-low-byte",
+   "claim": "Ports $57 and $5B decode the low byte only, so OUTI with any B reaches them.",
+   "sources": [
+    "docs/LEARNINGS.md:121",
+    "docs/LEARNINGS.md:173",
+    "docs/NEXT_REGISTERS.md:64"
+   ],
+   "values": {
+    "repo": "Rainbow (simulated; hardware to confirm)"
+   },
+   "measure": "Upload a pattern with B = $12 and attributes with B = $34 via OUTI; collision oracle.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "Rainbow OUTI uploads",
+   "priority": 2
+  },
+  {
+   "id": "lay-transparency-rules",
+   "claim": "ULA, LoRes and Layer 2 are transparent where the colour after the palette equals $14; sprites and tilemap where the index before the palette equals $4B / $4C (text mode: colour vs $14).",
+   "sources": [
+    "lesson.border-colour-equal-to-transparency-is-transparent",
+    "lesson.transparent-paper-layer2-backdrop",
+    "docs/NEXT_REGISTERS.md:55",
+    "docs/TECHNIQUES.md:369",
+    "book ch 17 (report C-N1)"
+   ],
+   "values": {
+    "repo": "documented separately",
+    "book": "colour vs index split"
+   },
+   "measure": "Visual: four panels (ULA paper colour = $14, Layer 2 index whose palette colour = $14, tilemap index = $4C under an offset, sprite index = $4B under an offset) over a striped layer below, with a printed key of what each panel should show.",
+   "result_type": "visual",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": false,
+   "risk": "none",
+   "matters_for": "Rainbow layer B, Dizzy 1 Layer 2 ($E3)",
+   "priority": 2
+  },
+  {
+   "id": "lay-border-transparent",
+   "claim": "A ULA border whose colour equals $14 is transparent, showing the layers below; the ULA clip window never clips the border.",
+   "sources": [
+    "lesson.border-colour-equal-to-transparency-is-transparent",
+    "book ch 17 (report C-N2, N15)"
+   ],
+   "values": {
+    "book": "as stated"
+   },
+   "measure": "Visual: Layer 2 320x256 stripes; border palette entry set to the $14 colour for the top half (copper), normal for the bottom; photograph.",
+   "result_type": "visual",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": false,
+   "risk": "none",
+   "matters_for": "palette tricks on games with coloured borders",
+   "priority": 3
+  },
+  {
+   "id": "lay-l2-priority-bit",
+   "claim": "A Layer 2 palette entry with the priority bit (second $44 write bit 7) draws above all layers including sprites, also in blend modes, and only where the Layer 2 dot is not transparent.",
+   "sources": [
+    "lesson.layer2-priority-bit-foreground",
+    "docs/TECHNIQUES.md:363",
+    "book ch 17 (report C-N5)"
+   ],
+   "values": {
+    "repo": "MAME only",
+    "book": "adds blend/transparent caveats"
+   },
+   "measure": "Visual: a sprite crossing a Layer 2 bush with/without priority bit, in SLU and in blend mode 110, plus a priority-bit entry whose colour = $14.",
+   "result_type": "visual",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": false,
+   "risk": "none",
+   "matters_for": "El Capitan Trueno sprite behind bush",
+   "priority": 2
+  },
+  {
+   "id": "lay-l2-wide-clip-default",
+   "claim": "In 320x256 / 640x256 Layer 2 the reset clip (0-255, 0-191) hides the bottom 64 lines until X 0-159, Y 0-255 is written to $18 (X in 2-dot units, 4 in 640).",
+   "sources": [
+    "lesson.layer2-wide-mode-clip-and-shadow-defaults",
+    "book ch 9/14 (report C-N15, D-N2)"
+   ],
+   "values": {
+    "book": "as stated"
+   },
+   "measure": "Visual: wide Layer 2 with a numbered row ruler; clip index reset via $1C, then left as found for a frame, then 0-159/0-255; two photos.",
+   "result_type": "visual",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": false,
+   "risk": "none",
+   "matters_for": "R-Type 640x256 / 320x256 builds",
+   "priority": 2
+  },
+  {
+   "id": "lay-l2-default-banks",
+   "claim": "Layer 2 resets to active bank 8 and shadow bank 11 (a wide picture from bank 8 runs into the shadow); NextZXOS moves them (9-11, shadow 11-13).",
+   "sources": [
+    "lesson.layer2-wide-mode-clip-and-shadow-defaults",
+    "docs/LEARNINGS.md:128",
+    "book ch 14 (report D-N1)"
+   ],
+   "values": {
+    "repo": "NextZXOS moves it to 9-11",
+    "book": "8 / 11 at reset"
+   },
+   "measure": "Read $12 and $13 at launch (sys-launch-nextreg-state).",
+   "result_type": "number",
+   "unit": "-",
+   "tolerance": "exact (recorded)",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "builds relying on default banks (none today)",
+   "priority": 3
+  },
+  {
+   "id": "lay-l2-640-whole-pixels",
+   "claim": "640x256 Layer 2 scrolls only in 2-dot steps (whole 320-resolution pixels); a half-pixel scroll needs a second screen.",
+   "sources": [
+    "lesson.layer2-640-half-pixel",
+    "book ch 14 (report D-N3, N4)"
+   ],
+   "values": {
+    "repo": "R-Type card",
+    "book": "X 0-319 in steps of 2 dots"
+   },
+   "measure": "Visual: 640x256 picture of 1-dot vertical lines; $16 = 0 and 1 in two bands (copper); reference lines drawn in the ULA layer; photograph.",
+   "result_type": "visual",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": false,
+   "risk": "none",
+   "matters_for": "patch.layer2-half-pixel-scroll",
+   "priority": 2
+  },
+  {
+   "id": "lay-l2-scroll-ranges",
+   "claim": "Layer 2 scroll wraps: 256x192 X 256 / Y 192; 320x256 X 320 ($71 bit 0) / Y 256.",
+   "sources": [
+    "docs/TECHNIQUES.md:174",
+    "book ch 14 (report D-N3)"
+   ],
+   "values": {
+    "repo": "320x256 case",
+    "book": "all modes"
+   },
+   "measure": "Visual: numbered grid picture; scroll to the wrap edges in bands; photograph.",
+   "result_type": "visual",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": false,
+   "risk": "none",
+   "matters_for": "ring-buffer scrolling",
+   "priority": 3
+  },
+  {
+   "id": "lay-l2-flip-not-synced",
+   "claim": "Writing $12 takes effect mid-frame (not raster-synced): a frame can show the top of one buffer and the bottom of the other.",
+   "sources": [
+    "docs/BRIEFING.md:114"
+   ],
+   "values": {
+    "repo": "Wally, hardware to confirm"
+   },
+   "measure": "Visual: two buffers (red/blue) flipped at line 96 every frame by the CPU polling $1F; photograph whether the switch is at line 96.",
+   "result_type": "visual",
+   "unit": "lines",
+   "tolerance": "+-1 line",
+   "auto": false,
+   "risk": "none",
+   "matters_for": "Wally double buffering commit timing",
+   "priority": 3
+  },
+  {
+   "id": "lay-l2-writemap-over-altrom",
+   "claim": "Port $123B write-mapping of Layer 2 over 0x0000-0x3FFF wins over the alt ROM ($8C) while reads and fetches stay on the ROM image.",
+   "sources": [
+    "docs/BRIEFING.md:402",
+    "docs/TECHNIQUES.md:164",
+    "book ch 3 (report D-N18)"
+   ],
+   "values": {
+    "repo": "proven over RAM in slots 0/1 only (Ped7g, 3.01.05)",
+    "book": "Layer 2 mapping ranks above MMU and ROM/alt ROM"
+   },
+   "measure": "Alt ROM enabled with a test image (write-mode fill, as the altrom stub does); $123B = write-only map of a suite Layer 2 bank; LD (0x1000),$5A; read 0x1000 (expect the image byte) and the Layer 2 bank via the MMU (expect $5A); unmap; restore $8C as found.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none (restores $8C and $123B)",
+   "matters_for": "C2 #30 alt-ROM hooks writing Layer 2",
+   "priority": 2
+  },
+  {
+   "id": "lay-l2-no-cpu-wait",
+   "claim": "Layer 2 display never makes the CPU wait (it fetches one dot ahead with lower priority than the CPU).",
+   "sources": [
+    "book ch 14 (report D-N5)"
+   ],
+   "values": {
+    "book": "no contention at any speed"
+   },
+   "measure": "LDIR 2048 at 28 MHz with Layer 2 on (320x256) vs off, both during display lines; clocks per byte.",
+   "result_type": "number",
+   "unit": "clocks",
+   "tolerance": "+-0.05 clock",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "Layer 2 builds' budgets",
+   "priority": 3
+  },
+  {
+   "id": "lay-tilemap-bank7-wrap",
+   "claim": "A tilemap or tile-definition offset in bank 7 counts only 13 bits: past 8K it wraps to the start of page 14 and never reaches page 15.",
+   "sources": [
+    "docs/TECHNIQUES.md:523",
+    "docs/NEXT_REGISTERS.md:46",
+    "book ch 15 (report D-N8)"
+   ],
+   "values": {
+    "repo": "inference, not tested",
+    "book": "as stated"
+   },
+   "measure": "Visual: tile definitions at bank 7 offset $1F00-$20FF (wrap) with distinct patterns in page 14 start and page 15 start; photograph which appears.",
+   "result_type": "visual",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": false,
+   "risk": "none",
+   "matters_for": "Rainbow tilemap in bank 7",
+   "priority": 2
+  },
+  {
+   "id": "lay-tilemap-reset-bases",
+   "claim": "$6E resets to $2C and $6F to $0C (map $6C00, tiles $4C00 in bank 5).",
+   "sources": [
+    "book ch 15 (report D-N7)"
+   ],
+   "values": {
+    "book": "as stated"
+   },
+   "measure": "Read $6E/$6F at launch (sys-launch-nextreg-state); NextZXOS may have changed them.",
+   "result_type": "number",
+   "unit": "-",
+   "tolerance": "exact (recorded)",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "reference only",
+   "priority": 3
+  },
+  {
+   "id": "lay-tilemap-text-and-6b",
+   "claim": "Tilemap text mode ($6B bit 3) uses 1-bit 8-byte tiles with a 7-bit palette offset and colour-vs-$14 transparency; $6B bit 0 forces the whole tilemap over the ULA.",
+   "sources": [
+    "docs/TECHNIQUES.md:307",
+    "docs/TECHNIQUES.md:313",
+    "book ch 15 (report D-N11)"
+   ],
+   "values": {
+    "repo": "text mode NOT tested; $4C before the offset",
+    "book": "text mode uses $14"
+   },
+   "measure": "Visual: text-mode tiles over a ULA pattern with $14 colour pixels, and a $6B bit 0 on/off band with per-tile bit 0 set; key printed.",
+   "result_type": "visual",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": false,
+   "risk": "none",
+   "matters_for": "Rainbow tile budget (text-mode candidate)",
+   "priority": 3
+  },
+  {
+   "id": "lay-sprites-between-ula-tilemap",
+   "claim": "Layer order %110 with $68 bits 6:5 = %01 puts ULA+tilemap in front of the sprites and per-tile attribute bit 0 moves a tile behind them (Layer 2 stays at the bottom).",
+   "sources": [
+    "docs/TECHNIQUES.md:349",
+    "docs/BRIEFING.md:408",
+    "book ch 17 (report C-N7, N8)"
+   ],
+   "values": {
+    "repo": "NOT tested (Dailly's post)",
+    "book": "full blend-mode stack; L2 at the bottom"
+   },
+   "measure": "Visual: tiles A (bit 0 = 0) and B (bit 0 = 1), a sprite crossing both, Layer 2 stripes underneath; photograph with the expected-order key.",
+   "result_type": "visual",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": false,
+   "risk": "none",
+   "matters_for": "C2 #32 per-cell depth",
+   "priority": 2
+  },
+  {
+   "id": "lay-blend-stencil",
+   "claim": "Blend modes 110 (add, clamp 7) and 111 (add then -5) combine Layer 2 with the $68 source; stencil ($68 bit 0) shows the AND of ULA and tilemap where both are opaque.",
+   "sources": [
+    "docs/TECHNIQUES.md:318",
+    "book ch 17 (report C-N9, N10)"
+   ],
+   "values": {
+    "book": "as stated (example 5,2,0 + 5,5,0)"
+   },
+   "measure": "Visual: colour swatches for the book's example plus a stencil panel, each beside its expected colour drawn in a non-blended layer.",
+   "result_type": "visual",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": false,
+   "risk": "none",
+   "matters_for": "lighting / shadow ideas",
+   "priority": 3
+  },
+  {
+   "id": "lay-ula-reads-bank5",
+   "claim": "The ULA reads bank 5 directly: pages mapped over 0x4000-0x7FFF are invisible to it.",
+   "sources": [
+    "lesson.ula-reads-bank5-directly",
+    "docs/LEARNINGS.md:99"
+   ],
+   "values": {
+    "repo": "Rainbow (hardware-built, not isolated)"
+   },
+   "measure": "Visual: bank 5 shows a checkerboard; map another page in slot 2 and fill it white; photograph (checkerboard stays).",
+   "result_type": "visual",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": false,
+   "risk": "none",
+   "matters_for": "canvas pages in slots 2/3 (Rainbow plotter)",
+   "priority": 3
+  },
+  {
+   "id": "lay-port-ff-timex",
+   "claim": "A write to port $FF selects Timex screen modes on the Next (a 128K game writing it scrambles the picture).",
+   "sources": [
+    "lesson.port-ff-timex",
+    "docs/LEARNINGS.md:123"
+   ],
+   "values": {
+    "repo": "JNext only"
+   },
+   "measure": "Visual: ULA picture; OUT ($FF),2 for one band of frames then OUT ($FF),0; photograph both; $69 restored to 0.",
+   "result_type": "visual",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": false,
+   "risk": "none (restored)",
+   "matters_for": "plain conversions grep OUT (0xFF)",
+   "priority": 3
+  },
+  {
+   "id": "mem-7ffd-unlocked-remap",
+   "claim": "An unlocked 7FFD write sets MMU0/1 = $FF (ROM) and MMU6/7 to the selected bank's pages, slots 2-5 untouched; the latest of MMU and legacy writes wins.",
+   "sources": [
+    "docs/NEXT_REGISTERS.md:66",
+    "docs/BRIEFING.md:116",
+    "lesson.legacy-paging-remap-order",
+    "lesson.7ffd-write-maps-rom-over-slot-1",
+    "lesson.paging-write-hides-hook-code",
+    "book ch 3 (report D-N24)"
+   ],
+   "values": {
+    "repo": "ports.txt; JNext",
+    "book": "agrees"
+   },
+   "measure": "Map pages into all 8 slots by NEXTREG, OUT 7FFD (bank 3, ROM1, unlocked), read $50-$57; then NEXTREG $57 and OUT 7FFD again in the other order.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none (DI, own stack in slot 4/5)",
+   "matters_for": "every hook page in slots 0/1/6/7 (That Sinking Feeling, Cisco Heat)",
+   "priority": 1
+  },
+  {
+   "id": "mem-7ffd-locked",
+   "claim": "While 7FFD bit 5 locks paging, writes to 7FFD/1FFD/DFFD are ignored and remap no MMU slot; NextReg $08 bit 7 write 1 unlocks, write 0 does nothing, read 1 = unlocked.",
+   "sources": [
+    "docs/BRIEFING.md:117",
+    "lesson.legacy-paging-lock-semantics"
+   ],
+   "values": {
+    "repo": "VHDL 3.01.09; hardware to confirm (Dizzy 6)"
+   },
+   "measure": "OUT 7FFD with bit 5 (lock); OUT 7FFD other bank; read $50-$57 (unchanged?); NEXTREG $08 bit 7 = 0 (still locked?), = 1 (unlocked?), read $08.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none (unlocks at the end)",
+   "matters_for": "Dizzy 6 / Dizzy V slot-1 hooks",
+   "priority": 1
+  },
+  {
+   "id": "mem-48k-timing-7ffd",
+   "claim": "48K machine timing ($03) does not stop 7FFD/1FFD decoding; with 48K/128K timing 7FFD decodes on A15=0, A1:0=01 (A14 ignored).",
+   "sources": [
+    "docs/BRIEFING.md:109",
+    "docs/NEXT_REGISTERS.md:26",
+    "lesson.legacy-paging-lock-semantics"
+   ],
+   "values": {
+    "repo": "VHDL reading"
+   },
+   "measure": "OPT-IN TIMING: $03 = 48K timing; OUT to $7FFD and to $3FFD; read MMU6/7; restore $03.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "persists across soft reset (restored)",
+   "matters_for": "48K tails' paging writes",
+   "priority": 2
+  },
+  {
+   "id": "mem-1ffd-128k-timing",
+   "claim": "OUT 0x1FFD selects the ROM pair (with 7FFD bit 4) in 128K timing too (alt image 0 for patch.altrom0).",
+   "sources": [
+    "docs/BRIEFING.md:381",
+    "docs/NEXT_REGISTERS.md:68"
+   ],
+   "values": {
+    "repo": "unconfirmed on hardware"
+   },
+   "measure": "OPT-IN TIMING: 128K timing; 1FFD bit 2 = 0/1 with 7FFD bit 4 = 0/1; read ROM byte signatures at 0x0000 (CRC of 256 bytes vs ROM0-3 from sys-rom3-bytes); restore.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "persists across soft reset (restored)",
+   "matters_for": "patch.altrom0 (C2 #27)",
+   "priority": 2
+  },
+  {
+   "id": "mem-altrom-select",
+   "claim": "Alt ROM ($8C) image 0/1 follows the ROM selection (1FFD bit 2 + 7FFD bit 4), write mode copies, reads are read-only.",
+   "sources": [
+    "docs/BRIEFING.md:118"
+   ],
+   "values": {
+    "repo": "verified on hardware 2026-09-27 (core then)"
+   },
+   "measure": "Re-run of the 2026-09-27 checks inside lay-l2-writemap-over-altrom's set-up: fill both images in write mode, select each, read signatures, try a write (ignored).",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none (restores $8C)",
+   "matters_for": "every altrom build",
+   "priority": 2
+  },
+  {
+   "id": "mem-high-pages",
+   "claim": "Pages >= $E0 in slots 2-7: writes vanish and reads are undefined; in slots 0/1 they read ROM.",
+   "sources": [
+    "book ch 3 (report D-N14)"
+   ],
+   "values": {
+    "book": "as stated"
+   },
+   "measure": "Map page $E0 in slot 6, write $5A, read back; record value; compare a bank-0 sentinel to prove nothing else changed.",
+   "result_type": "number",
+   "unit": "-",
+   "tolerance": "exact (recorded)",
+   "auto": true,
+   "risk": "none (book: never RAM)",
+   "matters_for": "reference only",
+   "priority": 3
+  },
+  {
+   "id": "mem-fetch-wrap-ffff",
+   "claim": "An instruction fetched across $FFFF continues at $0000 in slot 0 (an IM 2 JR at $FFFF takes its offset from $0000).",
+   "sources": [
+    "lesson.im2-ffff-vector"
+   ],
+   "values": {
+    "repo": "analysis"
+   },
+   "measure": "Put $18 (JR) at $FFFF with slot 0 = a suite RAM page holding offset $05 at $0000 and a marker at $0006 (interrupts off); run; marker reached.",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none",
+   "matters_for": "IM 2 vectors at FFFF (Head over Heels, Inferno)",
+   "priority": 3
+  },
+  {
+   "id": "div-automap-off-0a",
+   "claim": "With NextReg $0A bit 4 = 0 no DivMMC automap happens on fetches at $3Dxx, $0008 or $0038 (core 3.01.10+; $06 bit 4 no longer controls it).",
+   "sources": [
+    "docs/BRIEFING.md:108",
+    "docs/NEXT_REGISTERS.md:33",
+    "docs/NEXT_REGISTERS.md:34",
+    "docs/LEARNINGS.md:198"
+   ],
+   "values": {
+    "repo": "official nextreg.txt; automap ON confirmed on a Tang board"
+   },
+   "measure": "Alt ROM test image with markers at $0038 (LD A,$38 ; RET) and $3D00 (LD A,$3D ; RET); $0A bit 4 cleared; CALL $3D00 and RST $38 under DI; A returns the marker; restore $0A; DivMMC not mapped afterwards (bytes at 0x0000 = image).",
+   "result_type": "pass-fail",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "none (automap off is what every build does)",
+   "matters_for": "z80tonex.automap_off",
+   "priority": 1
+  },
+  {
+   "id": "div-3dxx-instant-automap",
+   "claim": "With automap on ($0A bit 4, $BB bit 7) and ROM3 selected, an instruction fetch at $3Dxx maps DivMMC at once (code there does not run from the ROM image).",
+   "sources": [
+    "lesson.divmmc-3dxx-paging-suspect",
+    "docs/LEARNINGS.md:196",
+    "docs/BRIEFING.md:158"
+   ],
+   "values": {
+    "repo": "probable cause of the Commando crash; not confirmed"
+   },
+   "measure": "OPT-IN: the alt ROM image as div-automap-off-0a; $0A bit 4 on; CALL $3D00 under DI; result A = $3D (no automap) / other value or no return (automap); recovery attempted via the DivMMC exit; owner resets if hung.",
+   "result_type": "choice",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "could hang (runs DivMMC memory at $3D00); no SD write",
+   "matters_for": "rule 'no code at 0x3D00-0x3DFF', Commando 0x3D00 build",
+   "priority": 2
+  },
+  {
+   "id": "div-rst38-trap-hidden-rom",
+   "claim": "A DivMMC delayed RST $38 trap still fires when an alt ROM image replaces the ROM (only the enabling bit removes it).",
+   "sources": [
+    "lesson.divmmc-hidden-rom-keeps-trap",
+    "lesson.divmmc-rst38-trap"
+   ],
+   "values": {
+    "repo": "observed (Underwurlde, Jetpac, Match Day), JNext"
+   },
+   "measure": "OPT-IN: alt ROM image with $0038 = SCF, $0039 = LD A,$5A ; RET; automap on as at launch; RST $38 under DI with IY = $5C3A; A = $5A = no trap; anything else = trap (NextZXOS's own $0039 path ran).",
+   "result_type": "choice",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "could hang (runs NextZXOS DivMMC IM 1 code)",
+   "matters_for": "IM 1 games with alt-ROM hooks at 0x386E",
+   "priority": 2
+  },
+  {
+   "id": "div-bb-bit6",
+   "claim": "NextReg $BB bit 6 = 1 enables (book, varmfskii) or disables (nextreg.txt) the DivMMC automap exit on a fetch from $1FF8-$1FFF.",
+   "sources": [
+    "docs/NEXT_REGISTERS.md:35",
+    "book ch 3 (report D-C4)"
+   ],
+   "values": {
+    "repo": "official nextreg.txt: 1 disables; varmfskii: enables",
+    "book": "set = exit enabled"
+   },
+   "measure": "Safe part (auto): record $BB as NextZXOS leaves it (NextZXOS needs the exit, so its value is evidence). OPT-IN part: flip bit 6, make one read-only esxDOS call (F_OPEN $9A, mode $01, of a file that does not exist: returns an error, writes nothing), then read $0000-$0007 and compare with the ROM image: DivMMC still mapped = exit disabled; restore $BB.",
+   "result_type": "choice",
+   "unit": "-",
+   "tolerance": "exact",
+   "auto": true,
+   "risk": "could hang or leave DivMMC mapped until reset; no SD write",
+   "matters_for": "z80tonex.automap_off assumptions, DivMMC traps",
+   "priority": 2
+  }
+ ]
+}

@@ -27,6 +27,9 @@ def main(argv=None):
     exe = sjasm.find()
     with tempfile.TemporaryDirectory() as tmp:
         shutil.copy(src, tmp)
+        inc = os.path.join(HERE, a.name)
+        if os.path.isdir(inc):                  # a test split into include files (nxsuite/*.asm)
+            shutil.copytree(inc, os.path.join(tmp, a.name))
         gen = os.path.join(HERE, a.name + '_gen.py')
         if os.path.exists(gen):                 # a test whose cases are generated (z80ntest)
             subprocess.run([sys.executable, gen, tmp], check=True, stdout=subprocess.DEVNULL)

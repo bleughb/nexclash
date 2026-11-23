@@ -701,6 +701,15 @@ def tools_check(src):
     print('%-4s tools: z80n - every Z80N instruction against worked results (core 3.02.05 / guide r3)%s' % (
         'OK' if not zbad else 'FAIL', '' if not zbad else ' (%s)' % zbad[:3]))
     cbad += len(zbad)
+    import importlib.util                       # nxsuite result intake (tools/hwtests/intake.py): made-up files
+    in_spec = importlib.util.spec_from_file_location('nxsuite_intake', os.path.join(HERE, 'tools', 'hwtests', 'intake.py'))
+    intake = importlib.util.module_from_spec(in_spec)
+    in_spec.loader.exec_module(intake)
+    ibad = intake.selfcheck()
+    print('%-4s tools: nxsuite intake - good file, truncated / no END / unknown test id / unknown status / CR / damaged '
+          'byte refused, a FAIL disproved, one file per board + core, --compare; control: CRC off accepts the damage%s' % (
+              'OK' if not ibad else 'FAIL', '' if not ibad else ' (%s)' % str(ibad)[:200]))
+    cbad += len(ibad)
     from nexclash import jnext                  # play checks: soak / pace / flicker / looksheet (docs/CHECKS.md)
     for name, jbad in jnext.selfcheck():
         print('%-4s tools: %s%s' % ('OK' if not jbad else 'FAIL', name, '' if not jbad else ' (%s)' % str(jbad)[:200]))
