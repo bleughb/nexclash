@@ -270,6 +270,7 @@ Intake (on the PC):
                                           # emulator -> docs/kb/hardware/emulator/<platform>-<core>.json
     python tools/hwtests/intake.py --dry-run NXSUITE.TXT         # report only
     python tools/hwtests/intake.py --compare A.json B.json
+    python tools/hwtests/intake.py --runs RUN1/NXSUITE.TXT RUN2/NXSUITE.TXT   # stability across runs
     python tools/hwtests/intake.py --selfcheck                   # also run by selftest.py --tools
 
 It refuses a file that is cut short, damaged (CRC), not ASCII / LF, or names an unknown test or status,
@@ -281,6 +282,17 @@ results (`--platform` other than `board`) are stored apart and never count as ha
 says when it compares a board with an emulator. Z01's cases decide their own claims (LDIX / LDPIRX / JP (C) /
 TEST cases; func-suite = every case but LDPIRX); an LDPIRX case that differs from the model only in F bits
 5 / 3 (documented as unsure) counts as right, with a note.
+
+`--runs` takes two or more result files from one board and core (it refuses a mix) and lists every test
+whose status differs, or whose value or a numeric key differs by more than its tolerance: the larger
+within-run min-max, a method resolution (`RUN_TOL`, I10 12 T), +-1 for counts, 0.5 % or 0.05 for the x100
+fixed-point values. SKIP and HANG-GUARD records are left out, and so are keys that are memory contents
+(S03 crc0 / crc96). A test it lists is not repeatable on that board: treat its value as unstable.
+
+Claims parts that cannot be answered on the board configuration in use are listed in
+`claims_not_tested` of nxsuite_claims.json with the reason (the HDMI frame geometry: the board gives a
+VGA-timed frame with an HDMI cable and no source says how to get an HDMI-timed one at boot); the report
+prints them with the run's `geom=`, `video=` and the operator's cable answer.
 
 Checklist for the owner:
 

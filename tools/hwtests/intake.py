@@ -44,6 +44,7 @@ own cases (SUBCLAIMS), not by the parent test's overall status.
 import argparse
 import datetime
 import hashlib
+import io
 import json
 import os
 import re
@@ -401,6 +402,8 @@ def write_json(res, table, path_in, data, board=None, outdir=OUTDIR, dry=False, 
                    'nextregs': res['nextregs'], 'tests': res['tests'], 'subtests': res['subtests'],
                    'comments': res['comments'], 'passes': res['passes'],
                    'parts': res.get('parts', []), 'truncated': res['truncated'],
+                   'cable': next((r['extra']['cable'] for r in res['tests'].values() if 'cable' in r['extra']),
+                                 None),
                    'passes_disagree': [{'id': t, 'records': [{'pass': p_, 'result': x} for p_, x in rs]}
                                        for t, rs in passes_disagree(res)]},
            'claims': v}
@@ -458,6 +461,14 @@ def report(doc, table, out=sys.stdout):
     for x in v.values():
         n[x['verdict']] = n.get(x['verdict'], 0) + 1
     print('summary: ' + ', '.join('%s %d' % kv_ for kv_ in sorted(n.items())), file=out)
+    na = table.get('claims_not_tested', [])
+    if na:
+        b = doc['board']
+        print('not answerable on this board configuration (frame measured: geom=%s video=%s cable=%s):' % (
+            b.get('geom') or '?', b.get('video') or '?', doc['run'].get('cable') or 'not asked'), file=out)
+        for x in na:
+            print('  %-32s %s - %s' % (x['claim'], x['part'], x['status']), file=out)
+        print('  reason: %s' % na[0]['reason'], file=out)
     dis = doc['run'].get('passes_disagree', [])
     if dis:
         print('passes disagree (%d tests; the verdict used the latest pass):' % len(dis), file=out)
@@ -488,6 +499,80 @@ def compare(a, b, out=sys.stdout):
     if A.get('platform', {}).get('kind', 'board') != B.get('platform', {}).get('kind', 'board'):
         print('board vs emulator: the emulator side is what that emulator does, not hardware evidence', file=out)
     return diff
+
+
+# tests whose method has a known resolution wider than its within-run spread (value units)
+RUN_TOL = {'I10': 12}
+# extras that are memory contents, not measurements (S03: CRCs of page 96 and the suite's own slot-6 page,
+# whatever the RAM held), left out of --runs
+RUN_IGNORE = {'S03': ('crc0', 'crc96')}
+
+
+def runs_compare(paths, table=None, out=sys.stdout):
+    """several NXSUITE.TXT files from one board + core -> the tests whose status differs, or whose v= or a
+    numeric extra differs by more than the tolerance (the larger within-run max-min of the records, or
+    RUN_TOL); returns the number of such tests. Refuses files from different cores or boards."""
+    table = table or load_table()
+    runs = []
+    for p in paths:
+        lines, _ = load_chain(p)
+        res = parse(make_file(lines), table)
+        h = {}
+        for se in res['sessions']:
+            h.update(se['header'])
+        runs.append((p, h, res))
+    for key in ('core', 'board', 'machine'):
+        vals = {h.get(key) for _, h, _ in runs}
+        if len(vals) > 1:
+            raise Refused('the files differ in %s (%s): compare runs of one board and core only'
+                          % (key, ', '.join(sorted(str(v) for v in vals))))
+    bad = 0
+    ids = sorted(set().union(*(set(r['tests']) for _, _, r in runs)))
+    for tid in ids:
+        recs = [r['tests'].get(tid) for _, _, r in runs]
+        have = [x for x in recs if x and x['status'] not in ('SKIP', 'HANG-GUARD')]
+        if len(have) < 2:
+            continue
+        why = []
+        if len({x['status'] for x in have}) > 1:
+            why.append('status ' + '/'.join(x['status'] for x in have))
+        keys = ['v'] + sorted(set().union(*(set(x['extra']) for x in have)))
+        for k in keys:
+            if k in RUN_IGNORE.get(tid, ()):
+                continue
+            vals = [num(x.get(k) if k == 'v' else x['extra'].get(k)) for x in have]
+            if any(v is None for v in vals):
+                raw = {str(x.get(k) if k == 'v' else x['extra'].get(k)) for x in have}
+                if len(raw) > 1:
+                    why.append('%s %s' % (k, '/'.join(str(x.get(k) if k == 'v' else x['extra'].get(k))
+                                                      for x in have)))
+                continue
+            tol = RUN_TOL.get(tid, 0)
+            raw = [str(x.get(k) if k == 'v' else x['extra'].get(k)) for x in have]
+            if any('.' in r_ for r_ in raw):
+                tol = max(tol, 0.05, 0.005 * max(abs(v) for v in vals))     # x100 fixed values: last digit
+            else:
+                tol = max(tol, 1)                                           # counts: +-1 is quantisation
+            if k == 'v':
+                for x in have:
+                    lo, hi = num(x.get('min')), num(x.get('max'))
+                    if lo is not None and hi is not None:
+                        tol = max(tol, hi - lo)
+            if max(vals) - min(vals) > tol:
+                why.append('%s %s (tol %g)' % (k, '/'.join('%g' % v for v in vals), tol))
+        if why:
+            bad += 1
+            print('%-8s differs between runs: %s' % (tid, '; '.join(why)), file=out)
+    h = runs[0][1]
+    print('(tolerance: the larger within-run min-max, a method resolution in RUN_TOL, +-1 for counts, '
+          '0.5% or 0.05 for fixed-point values; SKIP and HANG-GUARD records left out)', file=out)
+    srcs = [h.get('src') for _, h, _ in runs]
+    if len(set(srcs)) > 1:
+        print('builds differ (src %s): a test changed between builds can differ for that reason'
+              % ' / '.join(str(x) for x in srcs), file=out)
+    print('%d tests differ beyond tolerance across %d runs (core %s, board %s)' % (
+        bad, len(runs), h.get('core'), h.get('board')), file=out)
+    return bad
 
 
 def intake(path, board=None, outdir=OUTDIR, dry=False, out=sys.stdout, table=None, platform=None):
@@ -633,6 +718,18 @@ def selfcheck():
             bad.append('X truncated not reported: %s' % r['truncated'])
     except Refused as e:
         bad.append('X truncated file refused: %s' % e)
+    # --runs: two runs of one board + core; F02 within tolerance, S05 status and F01 value differ -> 2
+    with tempfile.TemporaryDirectory() as d:
+        a_, b_ = os.path.join(d, 'a.txt'), os.path.join(d, 'b.txt')
+        open(a_, 'wb').write(make_file(whole))
+        alt = [l.replace('st=PASS c=sys-nextreg-keeps-select', 'st=FAIL c=sys-nextreg-keeps-select')
+               .replace('v=312 u=lines n=1 min=312 max=312', 'v=315 u=lines n=1 min=315 max=315')
+               .replace('v=216.1 u=T', 'v=216.12 u=T') for l in whole]
+        open(b_, 'wb').write(make_file(alt))
+        sink = io.StringIO()
+        n_ = runs_compare([a_, b_], table, out=sink)
+        if n_ != 2:
+            bad.append('--runs: %d tests flagged, expected 2 (%s)' % (n_, sink.getvalue().strip()))
     return bad
 
 
@@ -645,6 +742,9 @@ def main(argv=None):
     ap.add_argument('--out', default=OUTDIR, help='output folder (default docs/kb/hardware)')
     ap.add_argument('--dry-run', action='store_true', help='report only, write nothing')
     ap.add_argument('--compare', nargs=2, metavar=('A', 'B'))
+    ap.add_argument('--runs', nargs='+', metavar='TXT',
+                    help='two or more NXSUITE.TXT files of one board + core: list the tests whose values differ '
+                         'beyond tolerance (unstable)')
     ap.add_argument('--selfcheck', action='store_true')
     a = ap.parse_args(argv)
     if a.selfcheck:
@@ -654,6 +754,14 @@ def main(argv=None):
     if a.compare:
         compare(*a.compare)
         return 0
+    if a.runs:
+        if len(a.runs) < 2:
+            ap.error('--runs needs two or more files')
+        try:
+            return 1 if runs_compare(a.runs) else 0
+        except Refused as e:
+            print('REFUSED: %s' % e)
+            return 2
     if not a.file:
         ap.error('give NXSUITE.TXT, --compare A B or --selfcheck')
     try:

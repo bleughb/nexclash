@@ -1869,7 +1869,53 @@
    "stage": 2
   }
  ],
- "claims_not_tested": [],
+ "claims_not_tested": [
+  {
+   "claim": "frame-lines-50",
+   "part": "HDMI 312 lines whatever the machine timing",
+   "sources": [
+    "docs/TECHNIQUES.md:282"
+   ],
+   "status": "NOT ANSWERABLE on this board configuration",
+   "reason": "the board under test gives a VGA-timed frame with an HDMI cable and \"Digital\" selected (KS1, core 3.03.00: NextReg $11 = $00, 311 lines, 114 CTC ticks per line, ULA interrupt at line 248), and no source in the repository or the book says how to select a frame with HDMI geometry at boot; the header geom= field and the operator cable answer say which frame a run measured"
+  },
+  {
+   "claim": "frame-lines-60",
+   "part": "HDMI 262 lines at 60 Hz",
+   "sources": [
+    "docs/TECHNIQUES.md:283"
+   ],
+   "status": "NOT ANSWERABLE on this board configuration",
+   "reason": "the board under test gives a VGA-timed frame with an HDMI cable and \"Digital\" selected (KS1, core 3.03.00: NextReg $11 = $00, 311 lines, 114 CTC ticks per line, ULA interrupt at line 248), and no source in the repository or the book says how to select a frame with HDMI geometry at boot; the header geom= field and the operator cable answer say which frame a run measured"
+  },
+  {
+   "claim": "frame-line-length",
+   "part": "HDMI 864 (50 Hz) / 858 (60 Hz) clocks per line",
+   "sources": [
+    "docs/TECHNIQUES.md:283"
+   ],
+   "status": "NOT ANSWERABLE on this board configuration",
+   "reason": "the board under test gives a VGA-timed frame with an HDMI cable and \"Digital\" selected (KS1, core 3.03.00: NextReg $11 = $00, 311 lines, 114 CTC ticks per line, ULA interrupt at line 248), and no source in the repository or the book says how to select a frame with HDMI geometry at boot; the header geom= field and the operator cable answer say which frame a run measured"
+  },
+  {
+   "claim": "irq-ula-int-line",
+   "part": "ULA interrupt at line 256 on HDMI 50 Hz",
+   "sources": [
+    "docs/TECHNIQUES.md:284"
+   ],
+   "status": "NOT ANSWERABLE on this board configuration",
+   "reason": "the board under test gives a VGA-timed frame with an HDMI cable and \"Digital\" selected (KS1, core 3.03.00: NextReg $11 = $00, 311 lines, 114 CTC ticks per line, ULA interrupt at line 248), and no source in the repository or the book says how to select a frame with HDMI geometry at boot; the header geom= field and the operator cable answer say which frame a run measured"
+  },
+  {
+   "claim": "frame-ula-int-per-timing",
+   "part": "HDMI interrupt line 256",
+   "sources": [
+    "docs/TECHNIQUES.md:284"
+   ],
+   "status": "NOT ANSWERABLE on this board configuration",
+   "reason": "the board under test gives a VGA-timed frame with an HDMI cable and \"Digital\" selected (KS1, core 3.03.00: NextReg $11 = $00, 311 lines, 114 CTC ticks per line, ULA interrupt at line 248), and no source in the repository or the book says how to select a frame with HDMI geometry at boot; the header geom= field and the operator cable answer say which frame a run measured"
+  }
+ ],
  "claims": [
   {
    "id": "sys-sd-write-rst8",
