@@ -9,15 +9,16 @@
 ; record) is written before every test that could hang, so the next start resumes and marks it
 ; HANG-GUARD. Format: tools/hwtests/README.md "nxsuite" and the intake tool tools/hwtests/intake.py.
 ;
-; Memory (1 MB board safe; nothing at or above page 96 is written):
+; Memory (1 MB board safe; nothing at or above page 96 is written, except M05's one probe of page $E0):
 ;   bank 5  $4000 screen; $5B00 printer-buffer pattern (test S00); $5C00 48K system variables image;
 ;           $5D00 line buffer; $5E00 extras buffer; $5F00 variables; $6000 z80ntest window (G2);
 ;           $6400 NextReg snapshot; $6500 progress record; $6600 work; $6800 bank-5 timing code (C02);
 ;           $7000 results table "NXS1"; $7800 G2 records; $7E00 "NXHT" (G2 / G3); $7FFF done flag $A5
-;   bank 2  $8000 code that must not move with slots 6/7 (timing core, file I/O, G1, G2);
+;   bank 2  $8000 code that must not move with slots 6/7 (timing core, file I/O, G1, G2, G9);
 ;           $B000 timing blocks; $B800 CRC table; $BC00-$BFFF stacks (SP $BE00; G2 timing $BFE0)
 ;   bank 0  $C000-$DFFF harness, menu, G0, test table; $F000-$F7FF scratch (page 1)
-;   pages 36-47 slot 7 overlays (one per group: G2 extras, G3, G4, ...), $F800-$FFFF their own area
+;   pages 40-43 + 63 slot 7 overlays (40 G2 extras + G4, 41-42 G3, ...), $F800-$FFFF their own area;
+;           36-39 DMA / G9 scratch, 44-53 Layer 2, 54 sprites, 55 alt ROM image
 ;   pages 32-35 + 58-61 result text (64 KB), 56-57 G1 data / G2 slot 6-7 sandbox, 62 strings
 
         DEVICE ZXSPECTRUMNEXT
@@ -45,6 +46,7 @@ wrongpc: ld a,$FF : jp (ix)
         INCLUDE "nxsuite/core.asm"
         INCLUDE "nxsuite/g1.asm"
         INCLUDE "nxsuite/g2.asm"
+        INCLUDE "nxsuite/g9.asm"
 code2_end:
         ASSERT code2_end <= TBUF
 
