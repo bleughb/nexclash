@@ -1,12 +1,12 @@
-# Elite (Braben / Bell, Firebird 1985; standard 48K releases) - engine: elite_std (in progress, stage 2)
+# Elite (Braben / Bell, Firebird 1985; standard 48K releases) - engine: elite_std (stage 2: record done, hardware untested)
 
-Techniques: none yet (the original plus the IM 2 fix and the 50 fps title ship)
+Techniques: `patch.inbetween-views`, `patch.whole-altrom-image`
 
 ## Next session
-Stage: 2 (build)   State: M5 smooth title ship done 2026-11-23 (50 fps title ship, three versions; NXCs remade, rebuild exactly; not committed)
+Stage: 2 (build)   State: M6 record done 2026-11-24 (docs/records/elite_std.json: a + reworks jcv / e128, selftest --verify PASSED and stamped; not committed)
 Inputs: C:\1NEXT\elite_work\tapes\t1.tap ([a]), ejcv.tap (= t8, Joystick), e128.tap (original); work folder C:\1NEXT\elite_work\std    Branch: add-elite
 Checks: verify (full scenario set) a / jcv / e128 all cases PASS + title renders ok + negative controls caught; CSpect: title (frames) -> launch -> flight, all three
-Pending user answers: none (2026-11-23: skip Lenslok; go on to M3; support all three versions)
+Pending user answers: none
 Start with: `python -m nexclash.elite_std start TAPE start.z80` then `python nexclash.py auto start.z80 [--quick 1]`
 Read: this file, games/elite.md (the hack engine: Build plan / Lessons), games/elite_hack.md, C:\1NEXT\elite_work\STD_NOTES.md
 Open: ## Smooth title ship (M5, 2026-11-23; asm/elite_std_hooks.asm, elite_std.py VERSIONS[v]['ttl'], elite_std_verify title cases)
@@ -58,9 +58,8 @@ Open: ## Smooth title ship (M5, 2026-11-23; asm/elite_std_hooks.asm, elite_std.p
   pace). Per frame the turn is under a pixel at the edges of small models, so neighbouring frames differ in some
   lines only. Not tried on hardware (the DMA in continuous mode and the 28 MHz copy timing are CSpect's).
 
-## Open; M5 record
-
-Owner decisions (2026-11-23): rebuild for the standard releases so the game looks and starts as the original; the
+## Owner decisions
+(2026-11-23) rebuild for the standard releases so the game looks and starts as the original; the
 Russian 128K hack (engine `elite`, games/elite.md) becomes an NXC option (games/elite_hack.md). Colour / 50 fps
 renders are enhancements, options, not the default. Lenslok skipped (the build starts after the check). Three versions
 supported: "[a]", the Joystick / cursor tape and the original Firebird tape.
@@ -109,8 +108,15 @@ Encounter dispatcher (layout A 0xB867, B 0xF2CA; A = event, high nibble a count)
   (vector from the game's non-uniform table), e128's own table byte (vector, not the RAM compare).
 - Coverage [observed: coverage.py / kills.py, version a]: sun fills, planet, launch rings, stars, ship lines, 8 ship
   blueprints (station, title ship, types 1, 2, 3, 4, 5, 15), one kill (0xB703 SET 4 in combat_e9), a type-1 spawn in
-  the missile case. Not shown: an explosion seen on screen, a hit by our missile, docking, escape pod, energy bomb,
-  galactic hyperdrive, a game over, the in-system jump.
+  the missile case (combat_missile never hits: the four event-1 ships ECM it).
+- Gap cases (2026-11-24, GAPS in elite_std_verify.py; recipes proven by free runs in C:\1NEXT\elite_work\std\gaps\A|B):
+  flight state + equipment pokes (A 0xD082-0xD08D, B 0xA844-0xA84F) or events, then docking computer, escape pod, energy
+  bomb, galactic hyperdrive (G+H), in-system jump, game over (A: planet poked onto us; B: event 2, shields 0), explosion,
+  missile hit (B pokes 0xA871 / 0xA872 past the target's ECM test 0xF81B: not natural play). A case that does not execute
+  its proof routine fails (negative caught). a 25 cases, jcv 24, e128 25 PASSED, builds unchanged. C with the docking
+  computer gives no Game Over (flag + station near suffice).
+- e128 writers (gaps\B\writers.json): main four as layout A, plus screen-direct circles, the explosion disc 0x8572 (PUSH
+  spans), attribute fill 92A8, LDIR 8F50, E173; none hooked by the plain build, all needed by a layout B renderer.
 - Equivalence note: on the Next the build's R runs one ahead per interrupt (the JP); the standard code reads R only in
   the Lenslok code (0xC297 / 0xC29A, layout A; none in layout B), so no consumer.
 
@@ -126,8 +132,10 @@ I = 0x39 and PC caught at 0x3A3A once (jcv). Hardware: not tried.
   byte for byte; e128 from its 0x716B start too (47,489 bytes from the tape, 462 carried). a: 45,296 / 477; jcv 42,963 / 4,170.
 - Loading screen: Elite.scr is on no tape. [a]'s main block starts with nearly the same picture (offset 222; 73 hidden
   bytes differ), jcv has none, e128's SCREEN$ (offset 172) says "128K VERSION". So the patch carries it: the build .nex
-  has Elite.scr as its header screen (byte 10 = 2, atom_ant.loading_nex) and INF1 `build_screen=nex` (nxc repo
-  tools/nxc.py; the vendored nexclash/nxc.py has no build_screen). Shown at ENTER after the keyed check; no hold.
+  has Elite.scr as its header screen (byte 10 = 2, atom_ant.loading_nex) and INF1 `build_screen=nex` (C:\1NEXT
+xc	ools
+xc.py
+  in the nxc repo; the vendored nexclash/nxc.py has no build_screen). Shown at ENTER after the keyed check; no hold.
   Z80 harness of the real loader (harness_screen.py): .nex = the build, display = Elite.scr but the Patching line, all three.
   CSpect closes on any NEX header screen (games/castle_master.md), so CSpect runs use the plain .nex.
 - Toggle map (HACK_FUNCTIONS.md): the hack is a rewrite. Its gameplay code (NPC-vs-NPC engine 7A9E-7EDD and F92D-FAC9,
@@ -163,7 +171,7 @@ I = 0x39 and PC caught at 0x3A3A once (jcv). Hardware: not tried.
   only, the swap is the hack's own code. Simulator: status, launch, flight, encounters 1-9; the NPC loop (7C60) runs
   every pass. CSpect [a]: status, launch, flight, pirates + event 2 injected, ships fly and attack. Not seen: an
   NPC-vs-NPC laser (7D25) or kill (7BF5), in our variant or in the hack's own snapshots over 2,500 frames after launch;
-  docking (not reached in std either).
+  docking (std: reached since 2026-11-24 by the gap case; the toggled build not tried).
 - M5 rebuild (2026-11-23, the smooth title ship; C:\1NEXT\elite_work\std\m5\mk5.py, mknxc.sh; M4 files in nxc\old\m4,
   out\m4, tg\m4): NXCs a 32,000 bytes, jcv 34,581, e128 17,993; `--bare` MD5s = the builds byte for byte:
   a plain 3853cf919f95d28660f381e812597086, packs 8080110641c7a9025317a0ba825f9dfe, hack 4391d41dd0ae8d7bc7f8a24594c555f9;
@@ -177,24 +185,26 @@ I = 0x39 and PC caught at 0x3A3A once (jcv). Hardware: not tried.
   blueprints (about 3.6K plus about 15 readers) would fit. The hack gets its space by rewriting the display code.
 
 ## Open
-- Coverage gaps listed under Verify (explosion on screen, docking, galactic hyperdrive ...): scripted states to add.
-- e128's own layout: no survey of its writers beyond the main ones; hack toggles would need relocation for it.
+- Verify coverage: the gap cases (2026-11-24) cover docking, escape pod, energy bomb, galactic hyperdrive, in-system jump,
+  game over, an explosion, a missile hit; still no natural (unpoked) missile hit or death in layout B.
+- e128's own layout: writers surveyed (Verify); hack toggles would need relocation for it.
 - Converter: 0xC000+ tails refused on 48K too; tails here from access scans (lesson 2).
 - Hack gameplay toggle: NPC-vs-NPC fight not yet provoked; docking not reached; disk save/load off with it on.
 - Option (b) bundles: no proven free space (## NXC); would need relocating the display rewrites too.
 - Smooth title ship: not tried on hardware (DMA continuous mode, 28 MHz copy inside the top border are CSpect's); the
   draw-segment-under-a-frame assumption is measured for the 8 + 1 models only.
 
-## Plan (M1-M5 done: M4 NXCs, screen, toggles; M5 the 50 fps title ship)
-- M4: NXC per version (`nxc.py make BASE.nex TAPE --start start.z80`), build_screen / SCR1 from C:\1NEXT\elite_work\Elite.scr,
-  hack toggles as same-length byte variants (games/elite_hack.md section 2), each verified.
-- M6: record docs/records/elite_std.json (inputs: the three tapes), selftest, Lessons.
+## Plan (M1-M7 done)
+- M6 (2026-11-24): record docs/records/elite_std.json (order 277): the "[a]" start state, reworks jcv / e128 on their own
+  (Lode Runner 128K pattern), the tapes as inputs (each start state rebuilds byte for byte from its tape); stamped.
+- M7 (2026-11-24): the 8 gap cases (## Verify); NXCs to the nxc repo, branch elite-patch, patches/Elite (1985)(Firebird).
 
 ## Stage log
 2026-11-23  stage 2 M1 survey + M2 skeleton (standard release)  ~2.5 h  ~90 calls  0 user rounds
 2026-11-23  stage 2 M3 three versions + lockstep verifier  ~2 h  ~80 calls  1 user round (decisions via the coordinator)
 2026-11-23  stage 2 M4 NXCs, loading screen, toggles (pirate packs, hack gameplay), option (b) scan  ~4 h  ~170 calls  3 user rounds
 2026-11-23  stage 2 M5 smooth title ship (hooks, renders, verifier title cases, NXC remake)  ~3 h  ~150 calls  0 user rounds
+2026-11-24  stage 2 M6 record + M7 gap cases, e128 writers, NXCs to the nxc repo  ~2 h  ~120 calls  3 user rounds
 
 ## Lessons
 - [local: Elite [a] tape] the "[a]" release carries Lenslok; the expected code sits in RAM (0xC799) once the prompt is up,

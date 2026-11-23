@@ -249,6 +249,13 @@
     "sprites": "93c35409631f7682e8e505dcd0284139"
    }
   },
+  "8d08854de249de00f32819cf7afd07c4": {
+   "game": "Elite (standard Firebird release)",
+   "doc": "elite_std.md",
+   "nex": {
+    "plain": "fdf902724678c8bf6cd9ad00ca1fa687"
+   }
+  },
   "a9eeb555a327e5794b0ba19bc80dccf0": {
    "game": "Everyone's a Wally",
    "doc": "everyones_a_wally.md",

@@ -35,6 +35,35 @@ _REG = ['A', 'F', 'B', 'C', 'D', 'E', 'H', 'L', 'IXh', 'IXl', 'IYh', 'IYl', 'SP'
         "A'", "F'", "B'", "C'", "D'", "E'", "H'", "L'", 'PC', 'T', 'IFF', 'IM', 'HALT']
 
 
+# Gap cases (games/elite_std.md "## Verify", coverage): from the flight state, RAM pokes (commander equipment at layout A
+# 0xD082-0xD08D / B 0xA844-0xA84F, and the like), an optional dispatcher event, keys, frames. Each proven by a free run
+# hitting the named routine (C:/1NEXT/elite_work/std/gaps/A|B/recipes.json, final.py); verify() fails a case whose
+# lockstep never executes that routine (proof). -> (name, pokes, event, keys, run, proof)
+GAPS = {
+    'A': (
+        ('gap_docking_computer', {0xD08C: 0xFF}, None, '10-30:C', 300, 0x71AE),          # engage 0x71AE, docked status page
+        ('gap_escape_pod', {0xD089: 0xFF}, None, '10-30:Q', 400, 0x9C39),                # launch 0x9C39
+        ('gap_energy_bomb', {0xD08A: 0xFF}, 1, '60-70:W', 200, 0x9D72),                  # 0x7095, ships killed 0x9D72
+        ('gap_galactic_hyperdrive', {0xD08D: 0xFF}, None, '10-30:G+H', 500, 0xDC4E),     # 0xDBC5, galaxy change 0xDC4E
+        ('gap_in_system_jump', {}, None, '0-5:O;15-30:S;50-55:1;80-85:H;300-310:J', 600, 0x7EFF),   # jump 0x7EFF
+        ('gap_game_over', {0x7107: 0, 0x7108: 0, 0x7109: 0, 0x710A: 0, 0x710B: 0, 0x710C: 0, 0x710D: 0, 0x710E: 16,
+                           0x710F: 0}, None, '', 330, 0x7552),                           # planet on us: 0x7519, Game Over 0x7552
+        ('gap_explosion', {}, 9, FIGHT, 50, 0xA8AC),                                     # kill 0xB703, explosion 0xA8AC
+        ('gap_missile_hit', {}, 9, '0-3:T;20-25:F', 150, 0xA527),                        # hit 0xA527
+    ),
+    'B': (
+        ('gap_docking_computer', {0xA84E: 1}, None, '0-20:C', 300, 0xD16F),              # 0x70F6, status page 0xD16F
+        ('gap_escape_pod', {0xA84B: 1}, None, '0-20:Q', 600, 0xA798),                    # 0xA798, docked 0x7AF8
+        ('gap_energy_bomb', {0xA84C: 1}, 1, '60-70:W', 300, 0x926C),                     # 0x926C
+        ('gap_galactic_hyperdrive', {0xA84F: 1}, None, '0-20:G+H', 600, 0xD62B),         # 0xD62B
+        ('gap_in_system_jump', {}, None, '0-5:O;15-30:S;50-55:1;80-85:H;850-870:J', 1200, 0x9987),  # 0x9987
+        ('gap_game_over', {0x7046: 0, 0x7048: 0, 0x7054: 1, 0x7056: 1, 0x7058: 1, 0x705A: 1}, 2, '', 700, 0x7335),  # 0x7335
+        ('gap_explosion', {}, 9, FIGHT, 300, 0x8572),                                    # explosion disc 0x8572
+        ('gap_missile_hit', {0xA871: 4, 0xA872: 0x80}, 9, '0-5:T;10-14:F', 300, 0xF99A),  # ECM test skipped (0xF81B); hit 0xF99A
+    ),
+}
+
+
 def _launch_frame(version):
     return max(int(p.split(':')[0].split('-')[0]) for p in E.VERSIONS[version]['keys'].split(';'))
 
@@ -68,6 +97,9 @@ def scenarios(version, quick=False):
                                                                '300-330:X;400-405:T;420-425:F'))
         out.append(('combat_long', 'flight', 0, '', 1, 1200, '0-1200:A;30-80:S;100-130:M;150-200:X;400-430:S;600-640:M;'
                                                              '800-830:X;900-1000:SPACE'))
+    if not quick:
+        for name, pokes, event, keys, run, proof in GAPS[v['layout']]:
+            out.append((name, 'flight', 0, '', dict(pokes=pokes, event=event), run, keys))
     if quick:
         out = [c for c in out if c[0] in ('title', 'title_space', 'launch', 'flight', 'hyperspace', 'combat_e1', 'combat_e5')]
     return out
@@ -98,6 +130,10 @@ def make_states(z80, version, folder, quick=False, progress=None):
         else:
             import shutil
             shutil.copy(src, path)
+        if isinstance(inject, dict):                # a gap case: RAM pokes (equipment, position), then an event or none
+            if inject.get('pokes'):
+                path = _poke(path, inject['pokes'], path)
+            inject = inject.get('event')
         if inject is not None:
             path = _inject(path, version, inject, path)
         paths[name] = path
@@ -105,6 +141,15 @@ def make_states(z80, version, folder, quick=False, progress=None):
         if progress:
             progress('state %s' % name)
     return out
+
+
+def _poke(src, pokes, out):
+    """The state with RAM bytes set ({address: byte}): commander equipment and the like, before a gap case runs."""
+    from . import simrun
+    f, sim = simrun.free_run(src, 0, None)
+    for a, b in pokes.items():
+        sim.memory[int(a, 0) if isinstance(a, str) else a] = b
+    return _save(sim, out)
 
 
 def _inject(src, version, event, out):
@@ -291,6 +336,9 @@ def verify(patch, z80, progress=None, quick=False, folder=None, cases=None):
             continue
         c, ex, seen = run_case(path, patch, run, keys, version)
         cov |= seen
+        proof = {g[0]: g[5] for g in GAPS[E.VERSIONS[version]['layout']]}.get(name)
+        if proof is not None:                       # a gap case must reach its routine, or it covers nothing
+            c['gap reached' if proof in seen else '%s not reached!' % name] += 1
         bad = sum(v for k, v in c.items() if k.endswith('!'))
         total['case ok' if not bad else 'case failed!'] += 1
         for k, v in c.items():
