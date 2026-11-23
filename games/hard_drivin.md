@@ -1,25 +1,24 @@
 # Hard Drivin' (Domark / Binary Design, 1989; 128K tape)
 
 ## Next session
-Stage: route 2a moved into the engine (stage 2-3 for it)    State: both routes stamped verified; hardware: route 1 plays like the original, route 2a (hard_drivin_steps.nex) "plays much better" (user)
+Stage: route 2a phase 1 (exact speedups, gear fix, heading blend)    State: both routes stamped verified; hardware: route 1 plays like the original, route 2a (hard_drivin_steps.nex) "plays much better" (user); phase 1 build untested on hardware
 Techniques: `patch.substep-updates`, `patch.inbetween-views`, `detect.pacing-structure`, `patch.pace-limiter`, `patch.restore-speed`, `patch.whole-altrom-image`, `verify.update-locked-pace`
 Inputs: C:\1NEXT\harddrivin_work (and C:\1NEXT\hd_reference\hard_drivin, same MD5s): hard_drivin.z80 (MD5 18809405, snapshot 0 of hard_drivin.rzx), hard_drivin.rzx (MD5 c649e04c, 22,116 frames), in\hd.tap (MD5 02e1f96c), in\hd.tzx (61f7d04c), in\hd.dsk ([a], 43a6bc4c). Game data: never in this repo; not yet in specnext/reference (a maintainer push: ask first).
-Branch: add-hard-drivin (worktree C:\1NEXT\nexclash-hd), main merged 2026-11-23 (83cd68b)    Commit: see git log
+Branch: hd-phase1 (worktree C:\1NEXT\nexclash-hd, from main 7aa9961)    Commit: phase 1 uncommitted (main session reviews)
 Engine: nexclash/hard_drivin.py: route 1 (HDPatch, Next, verify, unit_tests, negative_patches), route 2a (StepsPatch,
   Spec, NextSteps, verify_steps, unit_tests_steps, steps_negatives), auto, boot_problems; asm/hard_drivin_hooks.asm +
   hard_drivin_wset.inc -> docs/profiles/hard_drivin.json; asm/hard_drivin_steps.asm -> hard_drivin_steps.json.
-  Builds: hard_drivin.nex (plain, tail 0x6C00) d74f75e6, hard_drivin_smooth.nex 9fb23f8e, hard_drivin_steps.nex
-  (default) a2709f99 = the prototype's hd4_na (46e06774) byte for byte + auto's automap_off entry; with the
-  loading screen hard_drivin_steps_loading.nex 2fede36f, hard_drivin_smooth_loading.nex f789a1c7; the .nxc = steps +
+  Builds: hard_drivin.nex (plain, tail 0x6C00) d74f75e6, hard_drivin_smooth.nex 9fb23f8e (both unchanged by phase
+  1), hard_drivin_steps.nex (default) 9cc6f829 (phase 1; before: a2709f99 = hd4_na + automap_off); with the loading
+  screen hard_drivin_steps_loading.nex 9d1a130d, hard_drivin_smooth_loading.nex f789a1c7; the .nxc = steps +
   screen, toggle "Original time steps" = smooth + screen, 5 trainers (sections "Loading screen" and "Trainers").
-Checks: 2026-11-23 .nxc work: `auto --quick 3000` PASSED, stamped selftest PASSED (31 min, 5 outputs).
-  Before: `auto --quick 2000` PASSED (3 builds boot; smooth 146 checks; steps 288 cases, unit tests, 20 / 20
-  negatives; rom_paths COMPLETE). Stamp (whole RZX): selftest --verify --stamp PASSED 2026-11-23 (21 min): steps 6,220 cases (1,555 updates x
-  adaptive / N=1 / 2 / 4) = the Spec, 0 mismatches, 2 escapes per variant (u554 A3F2, u1064 9E12), 2 guard drops (207 s);
-  unit tests + 20 / 20 negatives (24 s); model pace 10.00 / 10.19 / 10.76 frames; smooth 3,112 checks (898 s).
+Checks: 2026-11-24 phase 1: `auto --quick 2000` PASSED (steps 288 cases, 0 mismatches; unit tests incl. exhaustive
+  multiplies, DMA copy, gears, blend; 27 / 27 negatives); stamped selftest PASSED (whole RZX: steps 6,220 cases = the
+  Spec, 0 mismatches (202 s); 27 / 27 negatives; model pace 10.00 / 10.15 / 10.71 frames; smooth 3,112 checks).
+  2026-11-23: stamped selftest PASSED (whole RZX: steps 6,220 cases = the Spec; smooth 3,112 checks).
 Pending user answers: none
-Start with: hardware test 2's open items on hard_drivin_steps.nex (stopwatch vs race clock, crash / replay / time-out
-  / race end / menus, objects, 10-minute soak). Then, if wanted: route 2b (own renderer on the sub-stepped state).
+Start with: hardware test 3 (C:\1NEXT\harddrivin_work\hardware3\checklist.txt): phase 1 build, gears, heading
+  blend look, pace. Then, if wanted: zxnDDMA for the sky / copy, route 2b (own renderer on the sub-stepped state).
 Open: route 1: the first calibration interrupt's extra ~574 T (0.06 %), sub-unit angle interpolation. Both: R not
   preserved (patch.preserve-r: the verify excludes R; no consumer found, not proven). Route 2a: the model's 28 MHz
   ratio (f28 1.2) is route 1's JNext figure; the time-out path is the recorded u554 + synthetic states only.
@@ -74,6 +73,7 @@ Open: route 1: the first calibration interrupt's extra ~574 T (0.06 %), sub-unit
   "Move-in" under Route 2.
 - 2026-11-23: loading screen (the user's .scr), five trainers, the .nxc with the smooth toggle (subagent;
   step\nxc_results.md): see "Loading screen, trainers, .nxc" and "Trainers".
+- 2026-11-24: route 2a phase 1 (subagent; harddrivin_work\opt\phase1_results.md): see "Phase 1" under Route 2.
 
 ## Technique use
 - detect.pacing-structure: helped: no frame wait, 7-21 frame updates, the lap clock counts updates (not time)
@@ -84,7 +84,8 @@ Open: route 1: the first calibration interrupt's extra ~574 T (0.06 %), sub-unit
 - verify.update-locked-pace: used: JNext pace log vs the plain build, 178 updates
 - patch.preserve-r: no help: not applied; the verify excludes R (no consumer found, not proven)
 - patch.loader-screen-from-game-file: no help: not applicable (the .nxc's target is the .z80, which holds no screen; the screen is staged and carried as SCR1)
-- patch.substep-updates: helped: written from this game's route 2a (candidate card, 2026-11-23); the move-in checked its contract against the engine's own verify
+- patch.substep-updates: helped: written from this game's route 2a (candidate card, 2026-11-23); the move-in checked its contract against the engine's own verify; phase 1 amended it (held keys, heading blend)
+- optimise.layer2-renderer-speed: no help: its DMA / MUL advice applied by hand to the ULA render (exact hooks)
 
 ## Lessons
 - [kb lesson.jnext-28mhz-ratio-varies: K 6.17-6.28 by scene in JNext] observed: the render's 3.5 MHz : 28 MHz ratio moves with the scene's contention share; a fixed K lagged, the latest calibration sample tracks it.
@@ -100,6 +101,11 @@ Open: route 1: the first calibration interrupt's extra ~574 T (0.06 %), sub-unit
 - [card patch.substep-updates §Failure lookup] demonstrated: the steering-clamp mutant passed every recorded state because a later sub-step's overflow path resets the value to exactly 120.0; caught only with the clamp reached on the last sub-step (mods steerpl / steerml).
 - [card patch.substep-updates §Verification] demonstrated: the prototype's spec.py, host model and 20 mutants moved into the engine; mutants as page-byte patches at asm labels (no reassembly), fixed N by the page's n_force byte; whole RZX: 1,555 updates x 4 variants in minutes with a process pool.
 
+- [kb lesson.mul-replaces-shift-add-exactly: C541 / D030 by Z80N MUL] demonstrated: exhaustive over the reachable inputs (4,227,201 + 65,536 cases), every register but R equal; the 8 x 8 path 216 -> ~46 T.
+- [kb lesson.dma-copy-then-original-last-row: view copy by zxnDMA] demonstrated: DMA all rows, then the original's last row from DE07 with its pointers set: registers, 128K and self-modified bytes = the original.
+- [card patch.substep-updates §Failure lookup] demonstrated: a held gear key shifted N times an update (N = 4: 1 -> 3 at once); gate (first) found by a synthetic held key, not by the recording (no manual gears in it).
+- [card patch.substep-updates §Failure lookup] demonstrated: heading in byte steps: the render's matrix blended by the fraction, the game's put back; logic state checked apart from the view (VIEW_ONLY, COPY_REGS).
+- [kb lesson.blitter-tiny-copies-cpu] observed: the 32-byte PUSH clear rows and <= 32-byte sky LDIRs gave no DMA gain in the model (18.5k vs 19k T); not done.
 - [doc docs/NXC_PATCHES.md §4. Cheats] observed: the snapshot is saved with bank 3 at 0xC000 but the POKEs at 0xE901 / 0xE97B / 0xF5DD are in bank 0, the code page in play; a .pok bank field 8 is refused there (or wrong with the snapshot's bank), so the engine's .pok names bank 0. NXC_PATCHES sharpened.
 - [doc docs/NXC_PATCHES.md §3. The loading screen at ENTER] observed: no SCREEN$ block on the tape and a .z80 target, so build_screen cannot apply; the user's screen file is staged as a record input and the _loading variants built, as Chase H.Q. Added to NXC_PATCHES.
 - [doc docs/NXC_PATCHES.md §1. Build options as menu toggles] demonstrated: the smooth route's whole build (other sites, other hook page) packaged as a toggle over the steps default: the same banks and length; nxc make accepted it and read it back byte for byte. Added to NXC_PATCHES.
@@ -108,9 +114,9 @@ Open: route 1: the first calibration interrupt's extra ~574 T (0.06 %), sub-unit
 ## Friction
 - reuse: [local: verify_steps' capture (state + port reads at each update entry) and warm start are this engine's; the general pattern is card patch.substep-updates]
 - retries: [card patch.substep-updates §Failure lookup] the steering-clamp control missed until the clamp acted on the last sub-step
-- environment: [none: git, harness and network had no workaround this stage]
+- environment: [local: phase 1: editing the profile while auto ran invalidated the run (pool workers reload it); rerun]
 - hand-rolled: [local: the prototype's two-pass ROMSIDE assembly became one source with the ROM side at 0x4000 under DISP, route 1's way, because asm2profile assembles once]
-- scratch: [local: the move-in transform and timing scripts (strip_if.py, mk2.py, tver.py, tunit.py) stayed in the session scratchpad: one-off]
+- scratch: [local: phase 1 probes and measures (opt\p1: mult.py, copyt.py, gear.py, blend_dep.py, measure.py, jlog5.py) stay outside the repo: one-off]
 
 ## Route 2: finer time steps (proposed 2026-11-23, after hardware test 1)
 Hardware test 1: the smooth build plays "just as unplayable as the original": the game still reads the controls and
@@ -134,21 +140,31 @@ moves the car once an update (~4 a second). Route 2a (user: "a good idea"): ever
   <= 1350). JNext 154 s: 120 clock s in 120.12 s, N = 4 on 534 and 2 on 229 of 763 updates.
 - On the Next a 7FFD write resets MMU slots 0-1 to ROM: site 0x9E88 maps the page again (found on JNext).
 ### Move-in (2026-11-23; step\movein_results.md)
-- asm/hard_drivin_steps.asm = hd4.asm (release: adaptive N, no mutants), one pass (ROM side at 0x4000 under DISP),
-  labels for the negative controls; profile IDENTICAL; the steps build = hd4_na byte for byte before automap_off.
-- verify_steps: the RZX played once; at each update entry the 128K state and the update's port reads; each update
-  run by the build (NextSteps: route 1's model + the line clock, 7FFD -> ROM in slots 0-1, recorded port reads) and
-  by Spec from the same warm state (update u-1 at N = 1 first), compared: all 128K (site bytes as built), registers
-  but R, hook state, NR 7, slot 1, in_drv; escapes at A3F2 / 9E12. Adaptive (preset (c_sub, n_cur) per update: every
-  branch of the rule) + fixed N = 1 / 2 / 4 on every update; N = 1 also against the recording. Process pool
-  (NEXCLASH_WORKERS, default min(16, CPUs)).
-- unit_tests_steps: runs of 20 (adaptive: pace, 0 views early, median 10.00 frames), synthetic states (skid, steering
-  near / at the clamps, relaxation gap, heading carry, push-out, no warm-up, time-out), the render guards' edges in
-  and out of the driver, 20 negative controls as page-byte patches at labels (prototype mutants 1-12, 15-20, 22,
-  C4ST 661; 13 / 14 equivalent).
-- Results: full RZX 22,116 frames: 6,220 cases (counter "N used" 1 / 2 / 4:
-  1,940 / 2,232 / 2,040), 0 mismatches, 207 s on 16 workers; unit tests 24 s, 20 / 20 negatives caught; model pace update 10.00 /
-  10.19 / 10.76 frames median / p95 / max (10 = real time), 0 views early. Repo build not yet timed in JNext / on hardware.
+- asm/hard_drivin_steps.asm = hd4.asm (adaptive N), one pass (ROM side at 0x4000 under DISP), labels for the
+  negatives. verify_steps: the RZX played once; at each update entry the 128K state and its port reads; each update
+  run by the build (NextSteps: route 1's model + line clock, 7FFD -> ROM in slots 0-1) and by Spec from the same warm
+  state, compared: all 128K, registers but R, hook state, NR 7, slot 1; adaptive + fixed N = 1 / 2 / 4 on every
+  update, N = 1 also against the recording; process pool. unit_tests_steps: runs of 20, synthetic states, guard
+  edges, negatives as page-byte patches at labels. Whole RZX: 6,220 cases, 0 mismatches, 207 s on 16 workers.
+### Phase 1 (2026-11-24; harddrivin_work\opt\phase1_results.md, scripts in opt\p1)
+- Exact speedups (hooks at sites, the original's bytes checked): C541 (object multiply, 156 calls an update) ->
+  h_mul8: 2 x MUL D,E, then the original's own last ADD HL,HL / ADC A,A (~205 vs 235 T); D030 (clip 8 x 8 path, 73
+  calls) -> h_mul88 (~46 vs 216 T); unit tests exhaustive over the reachable inputs. View copy DC37 -> h_copy: a
+  1,031-byte zxnDMA program (OTIR), then the original's last row from DE07 (HL 8FE0, H'L' 4FEF, DE49 = 1, DE4F = SP,
+  DC41 at SP - 2) so registers and self-modified bytes are the original's; NextSteps models port 0x6B (5 T a byte).
+  Not done: 91BA (54 T a call; a hook costs more), DBBE clear / sky (32-byte rows: no DMA gain).
+- Gears: a held gear key shifted once a sub-step (N = 4: 1 -> 3 in one update; down: 3 -> 0); gate 0xA658 RET Z ->
+  RET on all but the first sub-step (asm g_gear, Spec STEP_GATES): 1, 2, 3, 3 as the original.
+- Heading blend (display only, StepsPatch(blend=), page byte bl_on, default on): h_blend at 9EE3: d = A9A5 - 80h,
+  M2 = D1A5 at heading +- 1, the render's A96B-A973 := M + sign x ((|M2 - M| x |d| + 80h) >> 8); h_rpost puts the
+  game's matrix back. Spec.h_blend is the Python reference; the build = the Spec byte for byte incl. the view. Logic
+  check: blend vs no blend over 20 updates, all 128K but VIEW_ONLY (render-written, never read by the logic: all
+  1,552 updates probed) + registers but COPY_REGS equal (90 runs, 3,676 blends, 0 fails).
+- Cost (model, busy lines a sub-step, mean / median / p95; N 4 / 2 of 1,552 updates): f28 1.2: 620 / 594 / 964,
+  865 / 687 -> 593 / 570 / 932, 944 / 608; f28 1.0: 516 / 495 / 803 -> 496 / 476 / 779. JNext (9,000 frames, 763
+  updates): c_sub median 477 -> 448 (p95 851 -> 813), N 4 / 2: 534 / 229 -> 580 / 183, 0 views early.
+- Look (JNext, a slow on-road turn, jn\p1_turn_compare.png): objects and road edges sit a pixel or two apart from
+  the unblended view between heading steps; the mountain backdrop (drawn from the heading byte) still steps.
 
 ## Loading screen, trainers, .nxc (2026-11-23; step\nxc_results.md)
 - Screen: the tape has no SCREEN$ block (.tzx: BASIC, code 100 @ 30000, 5,000 @ 32960, 200 @ 43616, BASIC, 41,400 @
@@ -183,6 +199,7 @@ cases each, 0 fail. Recorded arrivals: 0xA356 1,501, 0xA3D7 309, 0xA5ED 90; 0xF5
 not reached by the RZX (9 replays and No crashes: synthetic states only; not played).
 
 ## Hardware checklist
+Test 3 (phase 1; hardware3: hard_drivin_steps.nex 9cc6f829, _loading 9d1a130d): see hardware3\checklist.txt.
 Test 3 (the .nxc, not yet run): ENTER shows the loading screen, the game starts on the steps build; toggle "Original
 time steps" gives the smooth build; each trainer on its own (clock stops, off-road ignored, no crash count, 9
 replays, Hard pilot float after a crash) and all together.

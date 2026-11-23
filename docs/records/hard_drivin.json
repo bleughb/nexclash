@@ -78,11 +78,11 @@
   },
   "steps": {
    "file": "hard_drivin_steps.nex",
-   "md5": "a2709f99f2234475bf225b8016d6189c"
+   "md5": "9cc6f829055ca1f17c491609de22b016"
   },
   "loading": {
    "file": "hard_drivin_steps_loading.nex",
-   "md5": "2fede36fa5ff4bda119656145df090c7"
+   "md5": "9d1a130d7e723c9395cca8266181da4b"
   },
   "smooth_loading": {
    "file": "hard_drivin_smooth_loading.nex",
@@ -197,7 +197,7 @@
  "status": {
   "title": "Hard Drivin'",
   "engine_col": "hard_drivin (hard_drivin.md)",
-  "build": "move-in; default hard_drivin_steps.nex a2709f99 (finer time steps: each update as N = 1 / 2 / 4 sub-steps at 28 MHz, paced to real time, asm/hard_drivin_steps.asm); hard_drivin_smooth.nex 9fb23f8e (render + copy at 28 MHz, in-between views) and plain hard_drivin.nex d74f75e6 (tail 0x6C00); loading variants hard_drivin_steps_loading.nex 2fede36f / hard_drivin_smooth_loading.nex f789a1c7 (the user's screen file, a local input); five trainers off by default (hard_drivin_verified.pok, .nxc cheats); the .nxc: steps + screen, toggle \"Original time steps\" = smooth + screen; automap_off entry (nxc patch) as auto applies it",
+  "build": "move-in; default hard_drivin_steps.nex 9cc6f829 (finer time steps: each update as N = 1 / 2 / 4 sub-steps at 28 MHz, paced to real time; phase 1: exact Z80N MUL multiplies, view copy by zxnDMA, manual gears gated, render matrix blended by the heading fraction; asm/hard_drivin_steps.asm); hard_drivin_smooth.nex 9fb23f8e (render + copy at 28 MHz, in-between views) and plain hard_drivin.nex d74f75e6 (tail 0x6C00); loading variants hard_drivin_steps_loading.nex 9d1a130d / hard_drivin_smooth_loading.nex f789a1c7 (the user's screen file, a local input); five trainers off by default (hard_drivin_verified.pok, .nxc cheats); the .nxc: steps + screen, toggle \"Original time steps\" = smooth + screen; automap_off entry (nxc patch) as auto applies it",
   "software": "selftest --verify --stamp (whole RZX, 22,116 frames, 21 min): steps 6,220 cases (1,555 updates x adaptive / N=1 / 2 / 4) = the Spec byte for byte, unit tests + 20 / 20 negative controls, model pace 10.00 frames median; smooth 1,556 renders, 3,112 checks, 3,281 in-between views = the original render, calibration within 0.43 %, 4 / 4 negative controls; boot with and without NEXLOAD; rom_paths complete",
   "hardware": "steps prototype (hd4) played on hardware by the user (\"plays much better\"); the repo build untested on hardware",
   "next": "hardware checklist for hard_drivin_steps.nex (tearing, pace); JNext pace of the repo steps build; R preservation (patch.preserve-r)"
@@ -255,23 +255,23 @@
    "application": "hard_drivin.steps",
    "check": "state.rzx-differential",
    "status": "pass",
-   "build": "a2709f99",
-   "scope": "selftest --verify, whole RZX 22,116 frames: 1,555 updates x (adaptive, N=1, 2, 4) = 6,220 cases byte-exact vs the Spec from warm states (all RAM, registers but R, hook state), 2 escapes per variant, 2 guard drops; runs of 20 updates, synthetic skid / steering / tilt / heading carry / push-out / time-out states, guard edges; 20 / 20 negative controls; no hardware",
+   "build": "9cc6f829",
+   "scope": "selftest --verify, whole RZX 22,116 frames: 1,555 updates x (adaptive, N=1, 2, 4) = 6,220 cases byte-exact vs the Spec from warm states (all RAM, registers but R, hook state), 2 escapes per variant, 2 guard drops; runs of 20 updates, synthetic skid / steering / tilt / heading carry / push-out / time-out / held gear key states, guard edges; phase 1: Z80N multiplies exhaustive vs the original, DMA view copy vs the original, heading blend display only (logic state = no blend); 27 / 27 negative controls; no hardware",
    "evidence": "games/hard_drivin.md \"Next session\""
   },
   {
    "application": "hard_drivin.steps-pace",
    "check": "time.pace",
    "status": "partial",
-   "build": "a2709f99",
-   "scope": "host model only (runs of 20 updates): update 10.00 / 10.19 / 10.76 frames median / p95 / max (10 = real time), 0 views early; JNext and hardware not measured for the repo build",
+   "build": "9cc6f829",
+   "scope": "host model (runs of 20 updates): update 10.00 / 10.15 / 10.71 frames median / p95 / max (10 = real time), 0 views early; JNext 9,000 frames: 120 clock s in 120.12 s, update 10.00 frames median, 0 views early; hardware not measured for the phase 1 build",
    "evidence": "games/hard_drivin.md \"Next session\""
   },
   {
    "application": "hard_drivin.steps-altrom",
    "check": "boot",
    "status": "pass",
-   "build": "a2709f99",
+   "build": "9cc6f829",
    "scope": "boot check of the steps build in auto (with and without NEXLOAD); rom_paths COMPLETE over 2,000 frames",
    "evidence": "games/hard_drivin.md \"Next session\""
   }
@@ -279,12 +279,12 @@
  "checked": {
   "deps": {
    "asm/hard_drivin_hooks.asm": "fcf860f1fd2a073f",
-   "asm/hard_drivin_steps.asm": "c7f268a12ce8fdd5",
+   "asm/hard_drivin_steps.asm": "80fd66689a4160fc",
    "asm/hard_drivin_wset.inc": "c5acb659ce276388",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
    "docs/profiles/hard_drivin.json": "4ed3e4b8fe925c11",
-   "docs/profiles/hard_drivin_steps.json": "85dfeaedec2c8d0f",
+   "docs/profiles/hard_drivin_steps.json": "09c5daea3d1df913",
    "nexclash.py": "d9b430cef7478a38",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "dfc6f6d6e095185c",
@@ -292,7 +292,7 @@
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
    "nexclash/engines.py": "7ce4a95aeb51d4c8",
-   "nexclash/hard_drivin.py": "b7d1e9790d7b4798",
+   "nexclash/hard_drivin.py": "699ff2a4d39eb23c",
    "nexclash/hooklib.py": "258714a3676ee71b",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
@@ -307,20 +307,20 @@
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "e7aa8e43fbe1ecdb",
+   "recipe": "94c98eb9973ffedf",
    "rom": "sinclair"
   },
-  "date": "2026-11-23"
+  "date": "2026-11-24"
  },
  "verified": {
   "deps": {
    "asm/hard_drivin_hooks.asm": "fcf860f1fd2a073f",
-   "asm/hard_drivin_steps.asm": "c7f268a12ce8fdd5",
+   "asm/hard_drivin_steps.asm": "80fd66689a4160fc",
    "asm/hard_drivin_wset.inc": "c5acb659ce276388",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
    "docs/profiles/hard_drivin.json": "4ed3e4b8fe925c11",
-   "docs/profiles/hard_drivin_steps.json": "85dfeaedec2c8d0f",
+   "docs/profiles/hard_drivin_steps.json": "09c5daea3d1df913",
    "nexclash.py": "d9b430cef7478a38",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "dfc6f6d6e095185c",
@@ -328,7 +328,7 @@
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
    "nexclash/engines.py": "7ce4a95aeb51d4c8",
-   "nexclash/hard_drivin.py": "b7d1e9790d7b4798",
+   "nexclash/hard_drivin.py": "699ff2a4d39eb23c",
    "nexclash/hooklib.py": "258714a3676ee71b",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
@@ -343,9 +343,9 @@
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "e7aa8e43fbe1ecdb",
+   "recipe": "94c98eb9973ffedf",
    "rom": "sinclair"
   },
-  "date": "2026-11-23"
+  "date": "2026-11-24"
  }
 }
