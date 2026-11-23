@@ -1,18 +1,19 @@
 # Hard Drivin' (Domark / Binary Design, 1989; 128K tape)
 
 ## Next session
-Stage: 2 (build)             State: M2 prototype (hd2) passes unit tests; pace in JNext within 0.16 % of the original
+Stage: 2 (build)             State: hd2 passes the whole-RZX verify (3,112 checks) and 18 / 18 mutants; JNext pace +3 frames / 178 updates
 Inputs: C:\1NEXT\harddrivin_work: hard_drivin.z80 (snapshot 0 of hard_drivin.rzx), hard_drivin.rzx (MD5 c649e04c, 22,116 frames), in\hd.tap (MD5 02e1f96c), in\hd.tzx (61f7d04c), in\hd.dsk ([a], 43a6bc4c). Game data: never in this repo.
 Branch: add-hard-drivin (worktree C:\1NEXT\nexclash-hd)    Commit: see git log
 Prototype (local, not in the repo yet): C:\1NEXT\harddrivin_work: hd2.asm (hooks), hd_build.py (128K patch over
   nexclash.z80tonex), hd_next.py + simram.py (host Next model), hd_unit.py (differential unit test), jlog.py (JNext
   pace log vs jn\jl_plain), jrun.py (screenshots)
-Checks: `py -3 hd_unit.py --prefix hd2 [--cal]` PASS 0 (11 states, both paths); jlog 4,000 frames: 178 updates,
-  start-time drift -4 frames vs plain, 182 in-between views
+Checks: `py -3 hd_unit.py --prefix hd2 [--cal]` PASS 0; `py -3 hd_verify.py` (whole RZX, both paths) PASS: 1,556
+  renders, 3,112 checks, 3,281 in-between views; `py -3 hd_mutants.py 12000` 17 / 17 + R over 22116 frames: 18 / 18;
+  jlog 4,000 frames: 178 updates, drift +3 frames vs plain (median update -0.001 frames), 191 in-between views
 Pending user answers: none
-Start with: verify over the RZX (game RAM + registers per update), mutants for the scratch-page / camera restore,
-  then move the prototype into an engine module + tests, then a hardware build for the user (K differs on hardware:
-  calibrated at run time)
+Start with: move the prototype (hd2.asm, hd_build.py, hd_next.py, simram.py, hd_verify.py, hd_mutants.py,
+  hd_wset.inc) into an engine module + tests, then a hardware build for the user (K and the copy time are measured
+  at run time; JNext's ratio 6.2 vs TECHNIQUES' hardware 6.6-7.0)
 Open: the first calibration interrupt's extra ~574 T (not subtracted, 0.06 %); sub-unit angle interpolation; copy K
   calibrated separately (uses the render's K now); the CALL at 0xA402 (time-out path, not in the recording)
 
@@ -105,3 +106,9 @@ Open: the first calibration interrupt's extra ~574 T (not subtracted, 0.06 %); s
   frames over 178 updates (0.08 %), 190 in-between views. Full verify: 3,112 checks, 3 FAIL, all calibration path:
   u605 runaway (push 7 of that render; all pushes kept = PASS; address not yet read: scratchpad push605.py), u963 /
   u964 short renders (2-3 frames) +0.53 / +0.69 % (plan: drop samples under ~1,000 lines).
+- 2026-11-23 (3): the three open calibration fails fixed. u605: a push in the write set (0x9C39) was flagged but
+  still repaired with a stale byte; the render followed it and ran away. Now the handler abandons a hit render at
+  once (SP from cal_sp, JP cal_r1; all scratch). u963-964: renders under 1,000 lines (CAL_MIN) give no sample.
+  ISR_T 1136 (whole-RZX mean 1138). Verify rules added: a hit push must be the render's last; no sample from a short
+  render. Mutants Q (no abandon) and R (no CAL_MIN) caught. Full verify PASS; kept samples -0.14 .. +0.43 % of the
+  original render's time (median +0.06 %), 196 of 1,556 dropped.
