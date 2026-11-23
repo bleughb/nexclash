@@ -14,8 +14,8 @@ Pending user answers: none
 Start with: move the prototype (hd2.asm, hd_build.py, hd_next.py, simram.py, hd_verify.py, hd_mutants.py,
   hd_wset.inc) into an engine module + tests, then a hardware build for the user (K and the copy time are measured
   at run time; JNext's ratio 6.2 vs TECHNIQUES' hardware 6.6-7.0)
-Open: the first calibration interrupt's extra ~574 T (not subtracted, 0.06 %); sub-unit angle interpolation; copy K
-  calibrated separately (uses the render's K now); the CALL at 0xA402 (time-out path, not in the recording)
+Open: the first calibration interrupt's extra ~574 T (not subtracted, 0.06 %); sub-unit angle interpolation;
+  the CALL at 0xA402 (time-out path, not in the recording)
 
 ## Facts
 - Tape (.tap = .tzx data): BASIC `HD 128K`, code 100 bytes at 30000, 5,000 at 32960, 200 at 43616, BASIC `-`, then one 41,400-byte block at 24000. Single load, no multiload.
