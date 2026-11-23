@@ -50,7 +50,8 @@ free runs (diff of option screens and gameplay snapshots). High Scores display w
   and I, IM, IFF agree. Unit tests call the hook directly: 12 headers (6 events x 2 destinations), 6 data blocks (bytes, IX advanced, ROM back),
   and a negative control (pages shifted by one: all 6 data cases fail).
 - JNext 1.2.0 (headless): menu -> option screen -> keys -> S: Downhill, Ice Hockey, Ski Jumping, Bobsled, Biathlon, Speed Skating reach play;
-  event A -> Exit -> event B works. The rebuilt .nex is byte-identical to the delivered one (md5 8dc688fa980454c63f98bc0e802d5f88).
+  event A -> Exit -> event B works. The rebuilt .nex is byte-identical to the delivered one (md5 8dc688fa980454c63f98bc0e802d5f88; `auto`'s plain
+  output adds the DivMMC automap-off start: 518144ff82bc534b5fa33a7df8d49176, the record's).
 - Hardware: the .nex loads and Downhill ran (user, 2026-11-22).
 
 ## Downhill stage 1 (survey and design, 2026-11-22; Downhill = event 0 = Downhill / Slalom / Giant Slalom)

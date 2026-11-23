@@ -508,7 +508,9 @@ def auto(a, z80, name, out, say):
                                             'default': name + '_origpace.nex',
                                             'colours': {'Enhanced': {'default': name + '_enhanced_origpace.nex'}}}}},
               open(os.path.join(out, name + '_outputs.json'), 'w'), indent=1)
-    if ok:
+    if ok and getattr(a, 'no_nxc', False):
+        say('.nxc      : not made (--no-nxc)')    # selftest's builds: no patch, no read of the user's config (patch_by)
+    elif ok:
         try:
             say('.nxc      : %s' % make_nxc(a, z80, tapes, out, name, say))
         except Exception as e:               # the patch is an extra: say why it is not there
