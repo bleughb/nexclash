@@ -184,3 +184,18 @@ t_s07:  call txt_flush : ld a,0 : jr nc,.w1
         ld hl,0 : jp res_int
 .h:     db 0
 .wf:    db 0
+
+; ---------------------------------------------------------------- a group end whose results did not reach the card
+txt_flush_g:
+        call txt_flush : ret nc
+        call cls
+        ld a,2 : out ($FE),a
+        ld hl,m_sfail : ld a,2 : call plines
+        call keys_up
+.k:     call getkey : or a : jr z,.k
+        call keys_up
+        jp gscreen
+m_sfail: db "RESULTS NOT SAVED (file write",0
+        db "failed). Photograph this. Then",0
+        db "power off/on, start again, run",0
+        db "this group again. Any key.",0,0

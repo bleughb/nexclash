@@ -251,7 +251,41 @@ def parse(data, table, check_crc=True):
             raise Refused('line %d: unknown record %r' % (n, rec))
     if not res['sessions']:
         raise Refused('no "H suite=" header')
+    pick_records(res)
     return res
+
+
+FINAL = ('PASS', 'FAIL', 'INFO', 'OPERATOR', 'HANG-GUARD')
+
+
+def invalid_why(r, res):
+    """a final-looking record that a fact from the same pass shows to be no answer -> reason, else None"""
+    if r['id'] == 'XH1' and r['status'] == 'FAIL':
+        # the DMA was already deaf in that pass (XH2 of the same pass could not copy one byte before its
+        # own lock): auto-restart was never started, so the FAIL says nothing about it
+        x2 = [q for q in res['history'].get('XH2', []) if q['pass'] == r['pass']]
+        if x2 and x2[0].get('extra', {}).get('before') == '$00':
+            return 'the DMA was deaf in that pass (XH2 before=$00: no reset since an earlier XH2 lock)'
+    return None
+
+
+def pick_records(res):
+    """per test the record the verdict uses: the latest pass with a final status (PASS / FAIL / INFO /
+    OPERATOR / HANG-GUARD) that no fact of its own pass makes void; a later SKIP / PENDING-OPERATOR /
+    not-selected line never replaces it. With no final record: the latest line."""
+    res['voided'] = []
+    for tid, hist in res['history'].items():
+        if tid not in res['tests']:
+            continue
+        best = None
+        for r in hist:
+            why = invalid_why(r, res)
+            if why:
+                res['voided'].append((tid, r['pass'], why))
+                continue
+            if r['status'] in FINAL:
+                best = r
+        res['tests'][tid] = best or hist[-1]
 
 
 def num(v):
@@ -322,8 +356,22 @@ def verdicts(res, table):
             if why and r['status'] in ('PASS', 'FAIL', 'INFO'):
                 r = dict(r, status='SKIP', why='test-fault')
                 v['notes'].append('%s: test fault in build %s, not a finding - %s' % (r['id'], src, why))
+            if r['status'] in ('PASS', 'FAIL', 'INFO', 'OPERATOR') and (r['id'], cid) in DERIVE:
+                got = DERIVE[(r['id'], cid)](r.get('extra', {}), r, src)
+                if got:
+                    if got[0]:
+                        r = dict(r, status=got[0])
+                    v['notes'].append('%s: %s' % (r['id'], got[1]))
             fixed.append(r)
         recs = fixed
+        for r in recs:
+            ans = [(q['pass'], q.get('v')) for q in res['history'].get(r['id'], []) if q['status'] == 'OPERATOR']
+            if len({a for _, a in ans}) > 1:
+                v['notes'].append('%s: the answers differ between passes (%s); the verdict uses the latest' % (
+                    r['id'], ', '.join('pass %d %s' % a for a in ans)))
+            for tid, pas, why in res.get('voided', []):
+                if tid == r['id']:
+                    v['notes'].append('%s: pass %d not used - %s' % (tid, pas, why))
         st = [r['status'] for r in recs]
         if 'HANG-GUARD' in st:
             v['verdict'], v['why'] = 'hung', 'the machine stopped in %s' % ','.join(
@@ -377,6 +425,166 @@ def verdicts(res, table):
                     len(res['subtests'].get(r0['id'], {})), pre, r0['id']))
         out[cid] = v
     return out
+
+
+# ---------------------------------------------------------------- results stated from a test's keys
+# (test, claim) -> f(extra, record, src) -> (status or None, note): the rule the sources give, applied to
+# the numbers on the line; the note says what the board showed in words. A status here replaces the
+# test's own PASS / FAIL / INFO for that claim only.
+def _k(e, key):
+    return num(e.get(key))
+
+
+def _within(x, want, tol):
+    return x is not None and abs(x - want) <= tol
+
+
+# builds whose D02 key '3' was the timing byte %11 (4 clocks a cycle, book ch 5: 00 4, 01 3, 10 2, 11 4)
+D02_OLD = ('32af2e0', '562b0db', 'd99fbf8', '8906baa', 'a937cdd', 'dc8521e', '7bf9a73', 'd2a3863', 'a39e286',
+           '8d8f182', '57d7b56')
+
+
+def _d02_rows(e, src):
+    """D02 -> {kind + t: (T at 3.5 MHz, clocks at 28 MHz)}; t = a (no timing byte), 3 (%01), 4 (%11), 2 (%10).
+    The 3.5 MHz values on the line are 28 MHz clocks: / 8 = T."""
+    rows = {}
+    for kind in 'mp':
+        for t in 'a234':
+            a35, a28 = _k(e, '%s%s35' % (kind, t)), _k(e, '%s%s28' % (kind, t))
+            rows[kind + t] = (None if a35 is None else round(a35 / 8, 2), a28)
+        if src in D02_OLD:
+            rows[kind + '4'], rows[kind + '3'] = rows[kind + '3'], (None, None)
+    return rows
+
+
+def _d02_words(r):
+    parts = []
+    for t, name in (('a', 'no timing byte'), ('3', 'byte %01 (3)'), ('4', 'byte %11 (4)'), ('2', 'byte %10 (2)')):
+        m = r['m' + t]
+        if m[0] is not None or m[1] is not None:
+            parts.append('%s %s T at 3.5 MHz / %s clocks at 28 MHz' % (name, m[0], m[1]))
+    return '; '.join(parts) + ' (memory to memory; to port $5B with no byte: %s / %s)' % r['pa']
+
+
+def _d02_default(e, rec, src):
+    r = _d02_rows(e, src)
+    a35, a28 = r['ma']
+    ok = _within(a35, 6, 0.1) and _within(a28, 6, 0.1)
+    if r['m3'][0] is not None:          # new builds: also equal to the explicit 3-cycle byte
+        ok = ok and _within(r['m3'][0], a35, 0.1) and _within(r['m3'][1], a28, 0.1)
+    note = 'board: %s. No timing byte = %s.' % (
+        _d02_words(r), 'two 3-clock cycles (6 a byte): the default is 3, not the Z80 standard 4' if ok
+        else 'not two 3-clock cycles')
+    if src in D02_OLD:
+        note += (" (The line printed FAIL because this build compared it with the byte %11, which the book's "
+                 "table makes 4 clocks; that comparison was the test's fault, not the DMA's.)")
+    return ('PASS' if ok else 'FAIL'), note
+
+
+def _d02_cost(e, rec, src):
+    r = _d02_rows(e, src)
+    bad = []
+    for t, want in (('a', 6), ('2', 4)):
+        for i, spd in ((0, '3.5 MHz'), (1, '28 MHz')):
+            for kind in 'mp':
+                x = r[kind + t][i]
+                if x is not None and not _within(x, want, 0.1):
+                    bad.append('%s, %s, %s: %s, not %s' % ('memory' if kind == 'm' else 'port',
+                               'no byte' if t == 'a' else 'cycle length 2', spd, x, want))
+    note = 'board: %s.' % _d02_words(r)
+    note += (' Holds: 6 with no timing byte and 4 with cycle length 2, at both speeds.' if not bad else
+             ' Differs: %s.' % '; '.join(sorted(set(bad))))
+    return ('PASS' if not bad else 'FAIL'), note
+
+
+def _d04(e, rec, src):
+    out35, out28 = [], []
+    for p in (12, 55, 100, 144):
+        a, b = _k(e, 'p%d_35' % p), _k(e, 'p%d_28' % p)
+        if a is not None:
+            out35.append('P=%d %.1f T (4P+3 = %d, %+.1f %%)' % (p, a / 8, 4 * p + 3, (a / 8 / (4 * p + 3) - 1) * 100))
+        if b is not None:
+            out28.append('P=%d %.1f (32P = %d: %+.1f %%; 32P+3: %+.1f %%)' % (
+                p, b, 32 * p, (b / (32 * p) - 1) * 100, (b / (32 * p + 3) - 1) * 100))
+    p0, p1 = _k(e, 'p0_35'), _k(e, 'p1_35')
+    one = '' if p0 is None or p1 is None else (
+        ' P=1 at 3.5 MHz: %.1f T against %.1f T with P=0, so P=1 %s.' % (
+            p1 / 8, p0 / 8, 'has no effect' if abs(p1 - p0) <= 0.05 * p0 else
+            'does slow the transfer (the claim says it has no effect)'))
+    return None, 'board, clocks per byte at 28 MHz: %s; at 3.5 MHz: %s.%s' % (
+        '; '.join(out28), '; '.join(out35), one)
+
+
+def _d05(e, rec, src):
+    v, c = num(rec.get('v')), _k(e, 'cont')
+    ok = v is not None and v >= 95 and c == 0
+    return ('PASS' if ok else 'FAIL'), (
+        'board: during a P = 100 burst transfer the CPU loop ran at %s %% of its speed without DMA (claim: more '
+        'than 95 %%); during a continuous transfer it made %s passes (0 = frozen for the whole block).' % (
+            rec.get('v'), e.get('cont')))
+
+
+def _d13(e, rec, src):
+    op, tr, fi, fx = (_k(e, x) for x in ('op', 'tr', 'fi', 'fx'))
+    if None in (op, tr, fi, fx) or not fx:
+        return None
+    return None, ('board at 28 MHz, clocks per byte: opaque %s, transparent (half the bytes skipped) %s - the '
+                  'skipped bytes still cost their write cycle; fill %s against a fixed-source copy %s = %.2f x '
+                  '(no read cycle).' % (op, tr, fi, fx, fi / fx))
+
+
+def _sp10(e, rec, src):
+    got = [num(rec.get('v'))] + [_k(e, k) for k in ('s2', 's4', 's8')]
+    mv = _k(e, 'moved')
+    # 1,824 clocks a line; a drawn sprite 1 + 16 x scale, each of the other 128 (hidden or off the line) 1:
+    # the first k with k x 16s + 128 >= 1824 is dropped
+    want = [-(-1696 // (16 * s)) for s in (1, 2, 4, 8)]
+    ok = got == want and (mv is None or mv == 128 - (want[0] - 1))
+    fit = ['%d x %d + %d = %d' % (k - 1, 1 + 16 * s, 129 - k, (k - 1) * (1 + 16 * s) + 129 - k)
+           for k, s in zip(want, (1, 2, 4, 8))]
+    return ('PASS' if ok else 'FAIL'), (
+        'board: the overflow flag sets at k = %s for scale 1 / 2 / 4 / 8 (sprites moved off the line before it '
+        'clears: %s). The model "1,824 clocks a line; a drawn sprite costs 1 + 16 x scale, every other of the 128 '
+        '(hidden ones too) 1; the sprite that brings the total to 1,824 is dropped" predicts %s; the largest '
+        'sets that fit cost %s clocks. %s' % (
+            ' / '.join(str(int(x)) if x is not None else '?' for x in got), e.get('moved'),
+            ' / '.join(map(str, want)), ', '.join(fit), 'The board agrees.' if ok else 'The board does not agree.'))
+
+
+def _f06_60(e, rec, src):
+    l60, i60, l50, i50 = (_k(e, x) for x in ('l60', 'i60', 'l50', 'i50'))
+    if None in (l60, i60) or not i60:
+        return None
+    gap = int(l60 - i60)
+    return ('PASS' if gap == 40 else 'FAIL'), (
+        'board: at 60 Hz the ULA interrupt comes at line %d of %d, %d lines before the display starts (line 0); '
+        'at 50 Hz at line %s of %s, %s lines before.' % (
+            i60, l60, gap, e.get('i50'), e.get('l50'), '?' if None in (l50, i50) else int(l50 - i50)))
+
+
+def _v19(e, rec, src):
+    fr, se, te = _k(e, 'frames'), _k(e, 'secs'), _k(e, 'tenths')
+    if not fr or not se:
+        return None
+    if te is None:      # whole seconds off the watch: the true time is in [s, s + 1), plus reaction
+        secs = se
+        lo, hi = fr / (se + 1.2), fr / (se - 0.2)
+        how = 'whole seconds: the true time was %d-%d s (the watch shows whole seconds) +-0.2 s reaction' % (
+            se, se + 1)
+    else:
+        secs = se + te / 10
+        lo, hi = fr / (secs + 0.3), fr / (secs - 0.3)
+        how = 'tenths typed: +-0.3 s (reading and reaction)'
+    return None, ('board: %d frames in %s s = %s Hz (cable %s); %s, so %.2f-%.2f Hz. %s' % (
+        fr, secs, rec.get('v'), e.get('cable', '?'), how, lo, hi,
+        '50.00 Hz lies inside that range.' if lo <= 50 <= hi else
+        '50.00 Hz lies outside that range: time it again with tenths to be sure.'))
+
+
+DERIVE = {('D02', 'dma-default-cycle-length'): _d02_default, ('D02', 'dma-cost-per-byte'): _d02_cost,
+          ('D04', 'dma-prescaler-rate'): _d04, ('D05', 'dma-burst-cpu-share'): _d05,
+          ('D13', 'dma-blitter-transparent-fill'): _d13, ('SP10', 'spr-line-limit'): _sp10,
+          ('F06', 'frame-60hz-display-start'): _f06_60, ('V19', 'sys-video-timing-frame-rate'): _v19}
 
 
 # test faults found after a build went to a board: that build's PASS / FAIL of the test is not evidence
@@ -530,7 +738,7 @@ def report(doc, table, out=sys.stdout):
             print('       %s' % x['reason'], file=out)
     dis = doc['run'].get('passes_disagree', [])
     if dis:
-        print('passes disagree (%d tests; the verdict used the latest pass):' % len(dis), file=out)
+        print('passes disagree (%d tests; the verdict used the latest pass with a final answer):' % len(dis), file=out)
         for d in dis:
             print('  %s' % d['id'], file=out)
             for r in d['records']:

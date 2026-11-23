@@ -304,7 +304,14 @@ txtfull: db 0
 
 ; write the text + an END line to NXSUITE.TXT (the END line is not kept in the buffer) -> carry = error
 txt_flush:
+        ld hl,txtname : call txt_wr : jr nc,.ok
+        ld a,(bounce) : or a : scf : ret nz
+        ; a direct write from slot 6 failed (board run 7: after group XD nothing more reached the card while
+        ; NXSUITE.PRG, written from bank 5, still did): say so in the file and write through bank 5 from now on
+        ld a,1 : ld (bounce),a
+        call w_lb : ld hl,s_bounce : call wstr : call w_len : call txt_append
         ld hl,txtname : call txt_wr : ret c
+.ok:
         ld hl,(txt_wr.flen) : ld (PRGB+PRG_FLEN),hl ; the file's length (END included), for txt_load
         call prg_write
         or a : ret
@@ -330,7 +337,7 @@ txt_wr: ld (.nm),hl
         push de : push bc
         ex de,hl : call txt_map                     ; slot 6 = the page of this offset
         push hl : pop ix
-        ld a,(.h) : call f_write
+        ld a,(.h) : call f_write_b
         nextreg $56,HOMEP6
         pop de : pop hl                             ; DE = asked, HL = offset
         jr c,.err

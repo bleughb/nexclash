@@ -18,8 +18,9 @@ m_look: db "Look, then press any key.",0
 ; ---------------------------------------------------------------- V19 frame rate (stopwatch) and cable
 ; First: which cable carries the picture (1 HDMI, 2 VGA, 3 other / RGB) -> cable=. Then a stopwatch: SPACE
 ; starts the count and the watch together, SPACE stops both after 60 s or more; frames counted from the
-; raster line (frame_sync); the seconds typed in. v = frames / seconds (Hz); keys frames, secs, r05
-; (NextReg $05: bit 2 = 60 Hz), r11 (VGA timing). Operator-timed: +-0.2 s of reaction is +-0.3 % at 60 s.
+; raster line (frame_sync); the seconds and tenths typed in (board run 6 had whole seconds only: +-1.6 %).
+; v = frames / seconds (Hz); keys frames, secs, tenths, tol (+-0.3 s of reading and reaction as % of the
+; time: 0.25 % at 2 minutes), r05 (NextReg $05: bit 2 = 60 Hz), r11 (VGA timing).
 @t_v19: ld hl,q_cable : call ask : ret c
         ld hl,(askp) : push hl
         ld hl,EXB : ld (wp),hl                      ; the cable answer as cable= only
@@ -43,18 +44,29 @@ m_look: db "Look, then press any key.",0
         ld a,14 : ld (crow),a : xor a : ld (ccol),a : ld hl,m_secs : call puts
         call readnum : ld (.s),hl
         ld a,h : or l : jp z,.pend
-        ld bc,(.n) : ld de,100 : call mul16
-        ld bc,(.s) : call div32
+        ld a,16 : ld (crow),a : xor a : ld (ccol),a : ld hl,m_tenth : call puts
+        call readnum : ld a,l : cp 10 : jr c,.t9
+        ld l,9
+.t9:    ld (.d),a
+        ld hl,(.s) : add hl,hl : push hl : add hl,hl : add hl,hl : pop bc : add hl,bc   ; x 10
+        ld a,(.d) : add hl,a : ld (.ts),hl
+        ld bc,(.n) : ld de,1000 : call mul16          ; frames x 1000 / tenths = Hz x 100
+        ld bc,(.ts) : call div32
         call res_num : ld hl,u_hz : call res_unit
         ld a,ST_OPER : ld (R_st),a
         ld de,(.n) : ld hl,k_frames : call ex_kd
         ld de,(.s) : ld hl,k_secs : call ex_kd
+        ld a,(.d) : ld e,a : ld d,0 : ld hl,k_tenths : call ex_kd
+        ld hl,k_tol : call ex_k
+        ld hl,30000 : ld de,0 : ld bc,(.ts) : call div32 : call wfix         ; +-0.3 s as % (x 100)
         ld a,$05 : call rdreg : ld hl,k_r05 : call ex_kh
         ld a,$11 : call rdreg : ld hl,k_r11 : call ex_kh
         jp gscreen
 .pend:  ld a,ST_PENDOP : ld (R_st),a : call keys_up : jp gscreen
 .n:     dw 0
 .s:     dw 0
+.d:     db 0
+.ts:    dw 0
 q_cable: db 1
         db "V19 FRAME RATE - first:",0
         db " ",0
@@ -67,18 +79,21 @@ q_cable: db 1
 k_cable: db "cable",0
 k_frames: db "frames",0
 k_secs: db "secs",0
+k_tenths: db "tenths",0
+k_tol:  db "tol",0
+m_tenth: db "Tenths on the watch (0-9): ",0
 k_r05:  db "r05",0
 k_r11:  db "r11",0
 u_hz:   db "Hz",0
-m_sw:   db "STOPWATCH: have a watch that",0
-        db "shows seconds.",0
+m_sw:   db "STOPWATCH: a watch showing tenths",0
+        db "of a second (a phone stopwatch).",0
         db "Press SPACE and start the watch",0
         db "at the same moment. The border",0
         db "turns green and frames count.",0
-        db "After 60 s or more press SPACE",0
+        db "After 2 minutes or more: SPACE",0
         db "and stop the watch together.",0
-        db "Then type the seconds (whole),",0
-        db "ENTER. (C clears.)",0,0
+        db "Then type the whole seconds,",0
+        db "ENTER, then the tenths, ENTER.",0,0
 m_sw2:  db "SPACE = start    S = ask later",0
 m_secs: db "Seconds on the watch: ",0
 

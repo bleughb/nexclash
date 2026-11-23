@@ -319,7 +319,7 @@ run_group:
         ld e,GS_PENDOP
 .st2:   ld hl,PRGB+PRG_GST : ld a,(curg) : add a,l : ld l,a : ld (hl),e
         ld hl,$FFFF : call prg_mark
-        call txt_flush
+        call txt_flush_g                            ; a failed write is shown (board run 7: XD left nothing)
         ; border: green no FAIL, yellow INFO only, red a FAIL
         ld a,4 : ld e,a : ld a,(ginfo) : or a : jr z,.b1
         ld e,6
@@ -648,6 +648,7 @@ sess_header:
         call w_lb : ld hl,s_unread : call wstr : ld hl,keptname : call wstr
         ld a,10 : call wchr : call w_len : call txt_append
 .h:     ; H suite
+        call txt_rot_hdr
         call w_lb : ld hl,h_suite : call wstr
         ld hl,srcstr : call wstr : ld hl,h_built : call wstr : ld hl,datestr : call wstr
         ld hl,h_run : call wstr : ld hl,(runno) : call wdec

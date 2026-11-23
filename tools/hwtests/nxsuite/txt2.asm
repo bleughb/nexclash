@@ -14,7 +14,7 @@ ROTAT   equ $A000               ; 40 KB: a part is written when the buffer has t
 ; called by txt_append with HL = the pending bytes, BC = their count; returns with HL / BC unchanged
 txt_rot:
         ld a,(txtlen+1) : cp ROTAT>>8 : ret c
-        ld a,(rotbusy) : or a : ret nz
+.f:     ld a,(rotbusy) : or a : ret nz
         ld a,(rotfail) : or a : ret nz
         inc a : ld (rotbusy),a
         ld (.src),hl : ld (.n),bc

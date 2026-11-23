@@ -76,3 +76,40 @@ xt_rom: ld a,$56 : call rdreg : ld (xt_pg.s6),a : ld a,$57 : call rdreg : ld (xt
         ld a,(xt_pg.s6) : nextreg $56,a : ld a,(xt_pg.s7) : nextreg $57,a
         ret
 xtrc:   ds 8
+
+; ---------------------------------------------------------------- a session header stays in one part
+; before a session's H lines: when the text is within 1 KB of ROTAT the part is written now, so the whole
+; header goes into the continuation (board run 7: the first H line ended the earlier part)
+txt_rot_hdr:
+        ld hl,(txtlen) : ld de,1024 : add hl,de : ld a,h : cp ROTAT>>8 : ret c
+        ld hl,WORK+256 : ld bc,1 : jp txt_rot.f
+
+; ---------------------------------------------------------------- writing the result file through bank 5
+; f_write, or with (bounce) <> 0 the same bytes copied 512 at a time to BOUNCE (bank 5, G2's window, free
+; outside G2) and written from there. -> BC written, carry = error (as f_write)
+BOUNCE  equ $6000
+bounce: db 0
+s_bounce: db "# a write of NXSUITE.TXT from slot 6 failed; written through bank 5 from here on",10,0
+f_write_b:
+        push af : ld a,(bounce) : or a : jr nz,.b
+        pop af : jp f_write
+.b:     pop af : ld (.h),a : ld (.left),bc : ld (.src),ix
+        ld hl,0 : ld (.done),hl
+.l:     ld bc,(.left) : ld a,b : or c : jr z,.e
+        ld a,b : cp 2 : jr c,.c
+        ld bc,512
+.c:     ld (.n),bc
+        ld hl,(.src) : ld de,BOUNCE : ldir
+        ld ix,BOUNCE : ld bc,(.n) : ld a,(.h) : call f_write : ret c
+        ld hl,(.done) : add hl,bc : ld (.done),hl
+        ld hl,(.n) : or a : sbc hl,bc : scf : ret nz
+        ld hl,(.src) : add hl,bc : ld (.src),hl
+        ld hl,(.left) : or a : sbc hl,bc : ld (.left),hl
+        jr .l
+.e:     ld bc,(.done) : or a : ret
+.h:     db 0
+.left:  dw 0
+.src:   dw 0
+.done:  dw 0
+.n:     dw 0
+

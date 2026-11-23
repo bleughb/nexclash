@@ -208,9 +208,11 @@ t_d01:  call g6_map
 
 ; ---------------------------------------------------------------- D02 clocks per byte, timing byte
 ; mem $0000 -> mem $2000 and mem $0000 -> port $5B (pattern upload from $303B = 63), continuous, timing
-; byte absent / 3 / 2 (WR1 and WR2 bit 6 + that byte), 256 and 2048 bytes, at 3.5 and 28 MHz: clocks
-; per byte = the slope (t2048 - t256) / 1792. Keys: m / p (memory / port), a / 3 / 2, 35 / 28.
-; PASS if "absent" is the 3-cycle setting within 0.10 clocks everywhere (dma-default-cycle-length);
+; byte absent / %01 / %11 / %10 (WR1 and WR2 bit 6 + that byte; the book's table: 00 4, 01 3, 10 2, 11 4
+; clocks a cycle), 256 and 2048 bytes, at 3.5 and 28 MHz: 28 MHz clocks per byte = the slope (t2048 - t256)
+; / 1792. Keys: m / p (memory / port), a / 3 / 4 / 2 (cycle length), 35 / 28. Builds up to 57d7b56 keyed
+; the byte %11 as "3" and compared it with "absent": a test fault (board run 6: 8 against 6).
+; PASS if "absent" is the 3-cycle byte %01 within 0.10 clocks everywhere (dma-default-cycle-length);
 ; v = m a 28. A slope outside 0.5-100 clocks is a timing fault (method=fault, INFO, never FAIL). The
 ; transfers are continuous: the CPU is frozen, g6_run rebuilds the time (board run 5 of d99fbf8 lost
 ; the CTC3 wraps: 0 / 584 clocks).
@@ -234,9 +236,8 @@ t_d02:  call g6_map
 .sn:
         ; key "<kind><tim><spd>"
         ld a,(.kind) : ld (.kb),a
-        ld a,(.tim) : or a : ld a,'a' : jr z,.ka
-        ld a,(.tim) : add a,'0'
-.ka:    ld (.kb+1),a
+        ld a,(.tim) : ld hl,.kc : add hl,a : ld a,(hl)
+        ld (.kb+1),a
         ld a,(.spd) : or a : ld hl,"5"*256+"3" : jr z,.ks
         ld hl,"8"*256+"2"
 .ks:    ld (.kb+2),hl
@@ -248,7 +249,7 @@ t_d02:  call g6_map
         ld a,(.spd) : or a : jr z,.c
         ld hl,(.v) : ld de,(.v+2) : call res_num : ld hl,u_clocks : call res_unit
         jr .c
-.n3:    cp 3 : jr nz,.c
+.n3:    cp 1 : jr nz,.c
         ld hl,(.v) : ld de,(.va) : or a : sbc hl,de : jr nc,.ab
         ex de,hl : ld hl,0 : or a : sbc hl,de
 .ab:    ld de,11 : or a : sbc hl,de : jr c,.c           ; |absent - 3| <= 0.10
@@ -269,8 +270,10 @@ t_d02:  call g6_map
 .mm:    call g6_mk : call g6_send
         ld hl,0 : call g6_run
         ret
-.tab:   db 'm',0,0, 'm',3,0, 'm',2,0, 'p',0,0, 'p',3,0, 'p',2,0
-        db 'm',0,3, 'm',3,3, 'm',2,3, 'p',0,3, 'p',3,3, 'p',2,3, $FF
+.tab:   db 'm',0,0, 'm',1,0, 'm',3,0, 'm',2,0, 'p',0,0, 'p',1,0, 'p',3,0, 'p',2,0
+        db 'm',0,3, 'm',1,3, 'm',3,3, 'm',2,3, 'p',0,3, 'p',1,3, 'p',3,3, 'p',2,3, $FF
+; the key letter per timing byte: none, %01 = 3 clocks, %10 = 2, %11 = 4 (book ch 5: 00 4, 01 3, 10 2, 11 4)
+.kc:    db 'a','3','2','4'
 .p:     dw 0
 .kind:  db 0
 .tim:   db 0

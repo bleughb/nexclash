@@ -867,7 +867,6 @@
    "group": "G4",
    "claims": [
     "frame-lines-60",
-    "frame-60hz-display-start",
     "sys-60hz-switch-timing"
    ],
    "risk": "monitor",
@@ -906,7 +905,9 @@
   {
    "id": "F06",
    "group": "G4",
-   "claims": [],
+   "claims": [
+    "frame-60hz-display-start"
+   ],
    "risk": "none",
    "title": "50 / 60 Hz table",
    "auto": true,
