@@ -7558,6 +7558,8 @@ sd_code:
         jp sd_save
         jp sd_load
         jp sd_auto
+sd_cheat:                       ; 1 = on: infinite fuel, ammo (an .nxc logic toggle sets these bytes,
+        db 0,0                  ; page 123 1C09-1C0A; sd_auto applies them at each play start)
 sd_file:
         db "INFERNO.SAV",0
 sd_state:
@@ -7626,6 +7628,7 @@ sd_auto:                        ; play start: the live record under the pilot's 
         push de
         push hl
         push ix
+        call sd_cheats
         ld hl,0x82DD            ; the pilot name opens the record, CR-terminated
         ld de,sd_name
         ld b,8
@@ -7671,6 +7674,57 @@ sd_auto:                        ; play start: the live record under the pilot's 
         pop bc
         pop af
         ret
+
+sd_cheats:                      ; Tipshop POKEs (Viktor Drozd), each a DEC made NOP in the unpacked code (its energy
+                                ; POKE 44492,0 is left out: it is no DEC, it moves a test to read ROM at 0049),
+        ld a,0x54               ; applied only where the game's own byte is there; slots 4-5 = bank 2 meanwhile
+        call sd_nr
+        push af
+        ld a,0x55
+        call sd_nr
+        push af
+        nextreg 0x54,4
+        nextreg 0x55,5
+        ld hl,.tab
+.next:  ld a,(hl)
+        cp 0xFF
+        jr z,.done
+        inc hl
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        inc hl
+        ld c,(hl)
+        inc hl
+        push hl
+        ld hl,sd_cheat
+        add a,l
+        ld l,a
+        ld a,(hl)
+        pop hl
+        or a
+        jr z,.next
+        ld a,(de)
+        cp c
+        jr nz,.next
+        xor a
+        ld (de),a
+        jr .next
+.done:  pop af
+        nextreg 0x55,a
+        pop af
+        nextreg 0x54,a
+        ret
+.tab:   db 0
+        dw 44519                ; fuel: DEC (HL) of 44119
+        db 0x35
+        db 0
+        dw 37103                ; fuel: DEC A of 44119
+        db 0x3D
+        db 1
+        dw 44919                ; ammo: DEC (HL) of the weapon's count
+        db 0x35
+        db 0xFF
 
 sd_put:                         ; copy B bytes HL -> DE, C += number that differed
         ld a,(de)

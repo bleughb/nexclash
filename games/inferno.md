@@ -1,7 +1,7 @@
 # Inferno
 
 ## Next session
-Stage: 2 (.nxc v1.1 2026-11-23, not yet on hardware)    Branch: claude/inferno-release
+Stage: 2 (.nxc v1.2 2026-11-24: v1.1 loads on the Next)    Branch: claude/inferno-release
 State: full game from the tape on the Next: tilemap scenery + hardware sprites committed by Copper at line 224,
   copier write-out replaced, G3 masks, English option (--cw-english: text, briefing titles, attract credits),
   Kempston default at play start, SAVE/LOAD + autosave at each play start in INFERNO.SAV on the SD card
@@ -9,7 +9,7 @@ State: full game from the tape on the Next: tilemap scenery + hardware sprites c
 Inputs: specnext/reference/inferno/ (Inferno_masked.nex, Inferno_english_masked.nex)
 Start: specnext build/hybrid.md (current handover); CONTINUE_copier_window.md is history.
 Read: asm wk_select, wo_go, modal_exit, wi_stub; inferno.py copier_window_build (--cw-driver --cw-full).
-Next: hardware round for v1.1 (Kempston; SAVE, power-off, LOAD; INFERNO.SAV beside the game; the shop on L4);
+Next: hardware round (Kempston; SAVE, power-off, LOAD; INFERNO.SAV; the shop on L4; cheats; loading screen);
   freshness readout on hardware. No automap-off step for Inferno (Lessons).
 Gate: copier-window gate 0 failures (OUT/9907 within tolerance) + boot checks; replay game RAM with supplied
   LD A,R values (equivalence: PLAYBOOK 6); pace, sound and freshness on hardware.
@@ -59,10 +59,7 @@ Workflow: failed states, 1/10 sample, ONE gate (--jobs 6); JNext headless before
 - No test cheat or game patch; level snapshots do not prove continuous TZX loads.
 
 ## Hardware checklist
-- Plain level-1 Inferno.nex: try CSpect first, then the Next; check title/text to gameplay,
-  controls, scrolling, sound, death/restart and the shop. Boot is software-checked only.
-- Plain conversion: no later tape loads.
-- Sprite build (Inferno_masked.nex; still to confirm): check intro beeper speed; title/start; all six continuous loads with
+- Release (.nxc v1.2; v1.1 loads on the Next 2026-11-24): check intro beeper speed; title/start; all six continuous loads with
   score, equipment and health retained; scrolling/depth, bullets, explosions, pickups, death;
   shop/pause/messages with no stale layers; ending scroll/text/medals; no slowdown or tearing.
 
@@ -259,6 +256,8 @@ Workflow: failed states, 1/10 sample, ONE gate (--jobs 6); JNext headless before
 - [local: Inferno startup] L1 map is write-first, permitting plain tail 9A80. Later lifetime is separate.
 - [local: Inferno SD saves] INFERNO.SAV saves call esxDOS (RST 8), so the build must keep DivMMC automap
   on (no automap-off step); JNext only, hardware to confirm.
+- [local: Inferno cheats] Its Tipshop POKEs hit code packed on the tape: --cw-cheats has sd_auto NOP
+  the DECs at play start (logic toggles); energy 44492 is no DEC (moves a test to ROM 0049), left out.
 
 ## Friction
 - retries: [local: Inferno timing reconciliation] Require one timing row per completed hook and
