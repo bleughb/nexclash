@@ -37,6 +37,7 @@ HOOK_SITES = (
     (0x8080, 'f3011e00', 'h_clear', 0xC3),     # DI / LD BC,30 (JP h_clear + one dead byte)
     (0x7FBE, '2100c0', 'h_flip', 0xC3),        # LD HL,0xC000
     (0x759E, 'cdd086', 'h_sun', 0xCD),         # CALL 0x86D0: the filled body (sun) in its own colour
+    (0x99D7, '21285a722372' '21485a722372', 'h_light', 0xCD),   # condition light attrs -> sprite 0 (+ 9 NOPs)
     (0x8BCD, '31b68f', 'pf_8BCD', 0xC3),       # LD SP,0x8FB6: the fills' stack blit
     (0x8CCD, '31b68f', 'pf_8CCD', 0xC3),
     (0x8DC3, '31b68f', 'pf_8DC3', 0xC3),
@@ -100,7 +101,7 @@ class ElitePatch:
         self.prof = prof or load_profile()
         h = self.prof['hooks']
         self.syms = {k: int(v, 16) for k, v in h['syms'].items()}
-        self.rom_code = bytes.fromhex(h['rom'])
+        self.rom_code, self.colour_info = _coloured_rom(bytes.fromhex(h['rom']), self.syms, _build_map())
         self.low_code = bytes.fromhex(h['low'])
         self.stub_extra = bytes.fromhex(h['setup'])
         self.setup_call = self.syms['setup']
@@ -127,7 +128,7 @@ class ElitePatch:
             if isinstance(control, str):        # diagnostic subsets: 'rst', 'cat', 'ship', 'clear', 'flip' (+-joined)
                 g = {'rst': set(WRITERS_A) | set(WRITERS_B) | set(WRITERS_FF) | set(WRITERS_LDDR),
                      'cat': {0x74EE, 0x74F1, 0x74F4, 0x74F7}, 'ship': {0x9E44, 0xF8D4},
-                     'clear': {0x8080}, 'flip': {0x7FBE}, 'fill': {0x8BCD, 0x8CCD, 0x8DC3}}
+                     'clear': {0x8080}, 'flip': {0x7FBE}, 'light': {0x99D7}, 'fill': {0x8BCD, 0x8CCD, 0x8DC3}}
                 for k in control.split('+'):
                     if k.startswith('w'):       # w<hex>: one writer site
                         keep.add(int(k[1:], 16))
@@ -156,6 +157,70 @@ class ElitePatch:
             b = bytearray(snap.banks[k])
             b[(a & 0x3FFF):(a & 0x3FFF) + len(new)] = new
             snap.banks[k] = bytes(b)
+
+
+COLOURS = 'docs/profiles/elite_colours.json'
+RECOLOUR = {'game': 'elite', 'output': 'sprites', 'colours': COLOURS, 'clear': False,
+            'note': 'One colour per ship model and per category (sun, planet, stars, messages, lasers, sights): '
+                    'painting any pixel of a figure colours all of it. Colours from the 15 on the sheet.'}
+
+
+def _build_map():
+    from . import recolour as RC, coloursheet as cs
+    p = RC.build_colours_path(os.path.join(_HERE, '..', COLOURS))
+    return cs.load(p) if os.path.exists(p) else {}
+
+
+def _coloured_rom(code, syms, cmap):
+    """The assembled alt ROM code (from ROM_ORG) with cmap's colours -> (bytes, info)."""
+    from . import elite_colours as EC
+    img = bytearray(code)
+    used, ignored = EC.apply(img, ROM_ORG, cmap, syms, EC.defaults_of(code, ROM_ORG, syms))
+    return bytes(img), {'map entries used': used, 'map entries ignored': ignored}
+
+
+def recolour(nex, cmap):
+    """Rewrite the colour bytes of the alt ROM image (bank 12) only; refuses a .nex that is not this engine's build."""
+    from . import recolour as RC, elite_colours as EC
+    prof = load_profile()
+    syms = {k: int(v, 16) for k, v in prof['hooks']['syms'].items()}
+    code = bytes.fromhex(prof['hooks']['rom'])
+    banks = RC.banks(nex)
+    if 12 not in banks or 2 not in banks:
+        raise ValueError('not an Elite build (no alt ROM bank 12)')
+    if bytes(banks[2][0x9E44 - 0x8000:0x9E47 - 0x8000]) != bytes([0xC3]) + syms['h_ship'].to_bytes(2, 'little'):
+        raise ValueError('Elite hook at 0x9E44 differs (another build or engine version)')
+    b12 = bytearray(banks[12])
+    off = ROM_ORG - 0x2000
+    have = b12[off:off + len(code)]
+    col = {a - ROM_ORG for addrs in EC.sites(syms).values() for a in addrs}
+    if any(have[i] != code[i] for i in range(len(code)) if i not in col):
+        raise ValueError('Elite alt ROM code differs from this engine version; rebuild first')
+    img, info = _coloured_rom(code, syms, cmap)
+    b12[off:off + len(code)] = img
+    out, changed = RC.splice(nex, {12: bytes(b12)})
+    info['banks changed'] = changed
+    return out, info
+
+
+def colour_identity(peek):
+    from . import elite_colours as EC
+    return EC.colour_identity(peek)
+
+
+def sheets(source, out, name='ELITE', colours=None):
+    """New colour sheets for the build's colours (never over an existing painting)."""
+    from . import z80tonex as zt, elite_colours as EC
+    png = os.path.join(out, name + '_PAINTING_SPRITES.png')
+    if os.path.exists(png):
+        raise FileExistsError('painting exists; keep it and use recolour: ' + png)
+    snap = zt.Z80Snapshot(str(source))
+    ram = bytes(16384) + snap.banks[5] + snap.banks[2] + snap.banks[0]
+    prof = load_profile()
+    syms = {k: int(v, 16) for k, v in prof['hooks']['syms'].items()}
+    code = bytes.fromhex(prof['hooks']['rom'])
+    return EC.write_sheets(out, name, EC.defaults_of(code, ROM_ORG, syms), _build_map() if colours is None else colours,
+                           EC.colour_identity(lambda a: ram[a]))
 
 
 def build(z80, nex, quiet=False, control=False):

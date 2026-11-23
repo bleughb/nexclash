@@ -187,9 +187,9 @@ fill2n: push hl
 ; stack). 0x86D0's inputs are memory only (0xFB31 loads A, EX AF,AF'); the caller reads A from 0x861D after.
 h_sun:  call nomirror
         jp z,0x86D0
-        nextreg 0x7F,C_SUN
+cs_sun: nextreg 0x7F,C_SUN
         call 0x86D0
-        nextreg 0x7F,C_PLANET           ; scenery's colour for 0x7584 (h_sun runs only there while mirroring)
+cs_pla1: nextreg 0x7F,C_PLANET           ; scenery's colour for 0x7584 (h_sun runs only there while mirroring)
         ret
 
 ; rowfix: repaint ULA row y = 56 (0x40E0-0x40FF), just below the game's 32-byte stack 0x4100-0x411F, as the blank
@@ -368,12 +368,12 @@ stsave: push af
         ret
 h_msg:  call poll
         SETMIR 0
-        nextreg 0x7F,C_WHITE
+cs_msg: nextreg 0x7F,C_WHITE
         jp 0xD03C
 h_combat:
         call pollf
         SETMIR 0
-        nextreg 0x7F,C_RED
+cs_las: nextreg 0x7F,C_RED
         jp 0x9C80
 ; h_ship (0x9E44, JP 0xF8B4 = the hack's draw wrapper): record this ship as the original draws it (slot, blueprint,
 ; the draw's varying inputs) into list S_W, for the renderer; the logic pass's own draw goes to the buffer only.
@@ -440,7 +440,7 @@ h_ship: di
 h_shipend:
         call poll
         SETMIR 0
-        nextreg 0x7F,C_RED
+cs_sig: nextreg 0x7F,C_RED
         jp 0x9E47
 
 ; poll (interrupts on or off, main stack): fcount from the logic pass - its DI stretches (the hack's ship draws,
@@ -820,6 +820,7 @@ h_isr:  push af
         cp 4
         jr c,.npg
 .pg:    nextreg 0x12,BLANK_BK
+        nextreg 0x15,0                  ; and the condition light sprite (h_light) off
 .npg:
         ld hl,S_OWE
         ld a,(hl)
@@ -842,6 +843,47 @@ h_isr:  push af
 .off:   pop af                          ; as the original RET at 0xFEFE: interrupts stay off
         ret
 
+; h_light (0x99D7: LD HL,0x5A28 + the four LD (HL),D of the condition light's attributes, now CALL + 9 NOPs):
+; the light drawn by sprite 0 in its colour (D = attribute: ink 2 red / 4 green / 6 yellow, 0 = off while it
+; blinks), its two right-hand cells (r17-18 c09, which the scanner also draws into) white instead, so scanner sticks
+; there show white, not in the light's colour (HUD clash survey, games/elite.md). The left cells keep D. No sprite
+; when docked (0x7104 = 0: a page). Exit as the original: HL = 0x5A49, AF and flags kept.
+h_light:
+        push af
+        ld hl,0x5A28
+        ld (hl),d
+        ld a,d
+        or a
+        jr z,.z
+        ld a,7
+.z:     inc hl
+        ld (hl),a
+        ld hl,0x5A49
+        ld (hl),a
+        dec hl
+        ld (hl),d
+        ld a,(0x7104)
+        or a
+        jr z,.off
+        ld a,d
+        or a
+        jr z,.off
+        nextreg 0x34,0
+        nextreg 0x35,96                 ; x 64 + 32
+        nextreg 0x36,168                ; y 136 + 32
+        add a,a
+        add a,a
+        add a,a
+        and 0xF0                        ; palette offset D / 2: pixel 1 -> sprite palette 0x11 / 0x21 / 0x31
+        nextreg 0x37,a
+        nextreg 0x38,0x80               ; visible, pattern 0
+        nextreg 0x15,1                  ; sprites on, S L U
+        jr .x
+.off:   nextreg 0x15,0
+.x:     ld hl,0x5A49
+        pop af
+        ret
+
 
         ASSERT $ <= 0x3AE0
         ds 0x3AE0 - $, 0xFF
@@ -851,8 +893,8 @@ pattab:                                 ; 16 ones in 25, spread evenly
         ds 0x3B00 - $, 0xFF
 ; ship colour per blueprint (index = low byte of IY); other values white. RRRGGGBB, never TRANS. Blueprints are
 ; 23-byte records from 0x61E3 (0x61E3 + 23 n, n = 0-22; low bytes all distinct); IY = the record while a ship's lines
-; are drawn. Model names not yet identified; the station seen in Docking is 0x63C6 (n = 21). Provisional colours,
-; repaintable later (design detail 1).
+; are drawn. Model names not yet identified; the station seen in Docking is 0x63C6 (n = 21). Defaults from the colour
+; sheet palette (nexclash/elite_colours.py PAL8); recolour / the build's colour map rewrite these bytes.
 shipcol:
         ds 256, C_SHIPDEF
 BP      MACRO lo, col
@@ -860,28 +902,28 @@ BP      MACRO lo, col
         db col
         ENDM
         BP 0xE3, 0x1F           ; n 0   cyan
-        BP 0xFA, 0xF4           ; n 1   orange-pink
+        BP 0xFA, 0xF0           ; n 1   orange
         BP 0x11, 0xFC           ; n 2   yellow
         BP 0x28, 0x1C           ; n 3   green
-        BP 0x3F, 0xE3 ^ 0x40    ; n 4   (0xA3) purple
+        BP 0x3F, 0xA3           ; n 4   purple
         BP 0x56, 0x5F           ; n 5   sky blue
         BP 0x6D, 0xE7           ; n 6   magenta
-        BP 0x84, 0xD8           ; n 7   olive-yellow
-        BP 0x9B, 0x7C           ; n 8   lime
-        BP 0xB2, 0xEC           ; n 9   salmon
-        BP 0xC9, 0xF0           ; n 10  orange
-        BP 0xE0, 0x9B           ; n 11  sea green
-        BP 0xF7, 0xCF           ; n 12  pink
-        BP 0x0E, 0x3B           ; n 13  teal
-        BP 0x25, 0x9F           ; n 14  mint
-        BP 0x3C, 0x6F           ; n 15  lavender
-        BP 0x53, 0xFE           ; n 16  pale yellow
-        BP 0x6A, 0x3F           ; n 17  aqua
-        BP 0x81, 0xEA           ; n 18  rose
-        BP 0x98, 0x93           ; n 19  steel
-        BP 0xAF, 0xB7           ; n 20  lilac
-        BP 0xC6, 0xDB           ; n 21  station: light grey-blue
-        BP 0xDD, 0xF8           ; n 22  amber
+        BP 0x84, 0x7C           ; n 7   lime
+        BP 0x9B, 0xEF           ; n 8   pink
+        BP 0xB2, 0x3B           ; n 9   teal
+        BP 0xC9, 0xB6           ; n 10  grey
+        BP 0xE0, 0x4B           ; n 11  blue
+        BP 0xF7, 0xE0           ; n 12  red
+        BP 0x0E, 0xFF           ; n 13  white
+        BP 0x25, 0xF0           ; n 14  orange
+        BP 0x3C, 0x1C           ; n 15  green
+        BP 0x53, 0xFC           ; n 16  yellow
+        BP 0x6A, 0x5F           ; n 17  sky blue
+        BP 0x81, 0xA3           ; n 18  purple
+        BP 0x98, 0x7C           ; n 19  lime
+        BP 0xAF, 0xEF           ; n 20  pink
+        BP 0xC6, 0xDB           ; n 21  pale blue  (station)
+        BP 0xDD, 0x3B           ; n 22  teal
         ORG shipcol + 256
 rom_end:
         SAVEBIN "elite_rom.bin", rom_start, rom_end - rom_start
@@ -911,6 +953,33 @@ setup:  nextreg 0x07,3                  ; 28 MHz (the tail leaves NR $07 alone)
         inc a
         dec e
         jr nz,.pg
+        nextreg 0x43,0x20               ; sprite palette 1: the light's colours (the ULA's red / green / yellow)
+        ld hl,s_lpal
+        ld b,3
+.lp:    ld a,(hl)
+        inc hl
+        nextreg 0x40,a
+        ld a,(hl)
+        inc hl
+        nextreg 0x41,a
+        djnz .lp
+        nextreg 0x43,0
+        xor a                           ; sprite pattern 0 (8-bit): the light's disc, pixel 1, else TRANS (0xE3)
+        ld bc,0x303B
+        out (c),a
+        ld hl,s_light
+        ld e,32
+.lb:    ld d,(hl)
+        inc hl
+        ld b,8
+.lt:    sla d
+        ld a,0xE3
+        jr nc,.lo
+        ld a,1
+.lo:    out (0x5B),a
+        djnz .lt
+        dec e
+        jr nz,.lb
         nextreg 0x57,21                 ; z80tonex.STUB_PAGE_HI
         ld bc,0x123B
         ld a,P_SHOW
@@ -925,5 +994,9 @@ s_dma:  db 0x83, 0x7D
 s_dma_len EQU $ - s_dma
 s_trans:
         db TRANS
+s_lpal: db 0x11, 0xA0, 0x21, 0x14, 0x31, 0xB4
+s_light:                                ; the light as the game draws it (Docking / Witch snapshots, r17-18 c08-09)
+        db 0x00,0x00, 0x03,0xC0, 0x0F,0xF3, 0x1F,0xFC, 0x3F,0xFF, 0x3F,0xFF, 0x7F,0xFF, 0x7F,0xFF
+        db 0x7F,0xFE, 0x7F,0xFE, 0x7F,0xFE, 0x3F,0xFC, 0x3F,0xFC, 0x1F,0xF8, 0x0F,0xF0, 0x03,0xC0
 setup_end:
         SAVEBIN "elite_setup.bin", setup, setup_end - setup

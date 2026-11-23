@@ -1,11 +1,11 @@
 # Elite (Braben / Bell, Firebird 1985; Russian 128K hack) - engine: elite (in progress, stage 2)
 
 ## Next session
-Stage: 2 (build)   State: M3b done; M4 part 1 (pages, stacks) run in CSpect 2026-11-23 (## M2 progress); M4 HUD / colour next
+Stage: 2 (build)   State: M4 done 2026-11-23 (HUD light sprite, colour sheet + recolour; ## M2 progress); M5 next
 Inputs: specnext/reference/elite/ (tape, 5 RZX, 5 extracted .z80)    Branch: add-elite    Commit: see git log
 Checks: full surveys of all five RZX (7.5k-68.6k frames); tape not run in an emulator
 Pending user answers: none (design closed 2026-11-23: C coloured ships, details 1-5, pacing (i) interpolate)
-Start with: `python -m nexclash.elite C:\1NEXT\elite_work\Witch.z80 m2.nex` in CSpect (m4 build), then M4: HUD clash cells, colour sheet
+Start with: `python -m nexclash.elite C:\1NEXT\elite_work\Witch.z80 m2.nex` in CSpect (m4 build), then M5: record docs/records/elite.json (registers recolour), quick runs
 Read: PLAYBOOK stage 1, 3d (unknown engine: feasibility first); ## Findings below
 Open: see Findings
 
@@ -52,9 +52,7 @@ So the names match SARD's notes. Frames: Docking 7501, Havoc 54517, PoliceAnarch
 - Not measured: T per frame in the line plotters (cost --at 32739 / 41450), the scanner and HUD writers, a safe tail place.
 
 ## Probe: erase method and ship identity (stage 1, 2026-11-22)
-Scripts (local, not kept): C:\1NEXT\elite_work\probe\line_callers.py (buffer writers + CALL return addresses on the stack),
-ship_regs.py (IX / IY at each ship-line write). Replays: Docking 0-2500, Havoc 9000-11000, Witch 15500-17000 and 20000-26000,
-PoliceAnarchy 42000-47000.
+Probes: C:\1NEXT\elite_work\probe (line_callers.py, ship_regs.py; partial replays of four recordings).
 - Erase [observed]: no XOR erase. 0x8080-0x80B3 clears the whole buffer every frame (LDDR, ~4000 bytes + the frame edge
   bytes 255 / 1 / 128), one clear per buffer copy (2,904,000 LDDR writes = 726 clears = 726 copies, Docking). Lines are then
   ORed in (0x9117 / 0x911C, 0xB1B7, 0xB233 / 0xB253). Consequence: a coloured renderer needs no pixel-owner model; each
@@ -65,10 +63,12 @@ PoliceAnarchy 42000-47000.
   0x9C80 (0x74F7, a JP table) lasers and crosshair: 0xB7B4-0xB7F1 -> line 0xB044 -> 0xB1B8 / 0xB233;
   ships: 0xF8C0 switches SP to 0x4020 (a private stack in screen memory) and CALLs 0xA6DF -> 0xA878 -> 0x61DD -> 0x6FD5 -> 0xB1B8.
 - Ship identity [observed]: while a ship's lines are written, IY = that model's blueprint (pointer table at ~0x61BD-0x61D1;
-  0x6211, 0x6325, 0x636A, 0x6381 in Witch; 0x61E3, 0x6228, 0x626D, 0x62C9, 0x633C, 0x6353, 0x63AF in PoliceAnarchy; 11 models).
+  11 models seen then; 21 of 23 over the five whole recordings, M4 sheet probe).
   Several models in one frame (e.g. 0x62C9 + 0x6353 + 0x633C). IX is the object slot (0x6132 - 39 n: 0x606F-0x6132 seen) or the
   model's edge list (0x6Dxx, 0x6Axx). So colour per model, and per slot, is available at line time with no extra bookkeeping.
-- Not checked: the scanner / HUD writers (outside the viewport buffer), sound, whether lines from the HUD routines run in the ISR.
+- HUD clash [observed: probe hud_cells.py, Docking + Havoc whole]: bars switch whole cell rows (7/0, 7/2); only clash:
+  scanner sticks (direct 9809 / 982D / 9856, buffer copy 991F at c09-21 r18-23) in the light's r17-18 c09 and the S cell
+  r22 c21 (9B07: 0/0 hides). Fixed for the light (sprite, ## M2 progress); the S cell left as the original.
 
 ## Decisions
 - 2026-11-22 (user): "for elite, you can totally re-write the engine to utilise all the memory of the spectrum next, free
@@ -84,13 +84,9 @@ PoliceAnarchy 42000-47000.
   So the original's game speed falls with load (~5.5 updates a second, slower with many ships), and running the
   original loop faster makes the GAME faster - not allowed (equivalence rule).
 - Smoothness therefore means decoupling the picture from the logic. Options (asked 2026-11-22):
-  (i) logic untouched at a fixed tick (the original's typical ~9 frames per pass), the renderer interpolates ships between
-  the last two logic states at up to 50 fps, and applies the player's own roll / pitch every frame (no lag on your own
-  turning; other ships lag one tick, ~0.18 s); recommended: the original logic runs unchanged, so the RZX verification
-  still applies to it.
-  (ii) extrapolate instead of interpolate: no lag, small overshoots when a ship turns suddenly.
-  (iii) smaller logic steps (movement, rotation, timers, AI divided by k, k times as many passes): no lag, but every
-  constant in the game changes and the RZX can no longer verify the logic.
+  (i) logic untouched at a fixed tick, renderer interpolates ships between the last two states at 50 fps, own roll /
+  pitch every frame (other ships lag one tick, ~0.18 s; the RZX still verifies the logic).
+  (ii) extrapolate (overshoots); (iii) smaller logic steps (every constant changes, RZX no longer verifies).
 - ANSWERED 2026-11-23: (i) interpolate. Logic unchanged at a fixed tick; renderer interpolates other ships between the
   last two logic states, own roll / pitch applied every frame.
 
@@ -146,10 +142,8 @@ interrupts are full-screen pages / hyperspace, not flight). Choice: T = 10 frame
 the original's mean), the game ISR body on ~0.64 of frames (16 of every 25, spread evenly) - turn rate and timers per
 second as the original's flight average. Tunable constants in the engine, revisited at the first hardware test.
 Main loop map [observed: probe pass_calls.py, Havoc 9000-9100, 11 passes; credit = outermost main-loop CALL on the stack]:
-one pass = 0x7505 0x84D9, 0x7509 0x7222, 0x750C 0x9A40, 0x750F 0x81A9, 0x7477 0x713C, 0x747A 0x80D3, 0x747D 0x72A3,
-0x748C 0xD042, 0x74B0 0x717B, 0x74B3 0x5DC8, 0x74B6 0x7EDE, 0x74B9 0x7853, 0x74E4 0x8042, 0x74E7 0x8080 (buffer clear),
-0x74EE 0x7584 (planet / sun), 0x74F1 0x7898 (stars), 0x74F4 0xD03C (messages), 0x74F7 0x9C80, 0x74FA 0x9296,
-0x7502 0xED60 (-> 0x7FBE buffer copy).
+one pass = 0x7477 0x713C ... 0x74B9 0x7853, 0x74E7 0x8080 (clear), 0x74EE 0x7584 (planet / sun), 0x74F1 0x7898 (stars),
+0x74F4 0xD03C (messages), 0x74F7 0x9C80, 0x7502 0xED60 (-> 0x7FBE copy); full list: probe pass_calls.py output.
 - ALL object-slot writes come from 0x9C80 (3453 of 3480; the rest from the ship-draw path 0xF8C0, its stack in screen memory):
   0x9C80 is the per-ship loop - move each ship and draw it, interleaved (as the BBC original's main flight loop), plus
   lasers, crosshair and the scanner (screen writes 0xA0FD, 0xAB0B, 0xAB34). Stars move and draw together too (0x7898
@@ -178,10 +172,9 @@ Code: asm/elite_hooks.asm, nexclash/elite.py, docs/profiles/elite.json (not yet 
 - Layer 2: banks 16 / 19, cleared by DMA with the game's clear (0x8080), flipped with its copy (0x7FBE). ULA copy kept.
 - Start-up: tail at 0x4800 (viewport rows: the copy writes them first; scan_low.log). IM 2 vector table moved to the
   alt ROM (I = 0x39, 257 x 0xFE) - see the bugs below.
-Bugs found on the way (each a CSpect round): CSpect's IM 2 bus byte is not 0xFF (vector table moved to the alt ROM,
-I = 0x39); the ship wrapper's stack floor 0x400E (h_plot at most 10 bytes, no CALL); 0x8080 keeps A (h_clear
-pushes it); CSpect -mmc traps RST 08h as esxDOS and skips a byte (RST 18h used; found by hook-subset bisect).
-Stars plot into columns 0 / 31 outside the frame (the game's copy leaves them out; h_plot skips them since M3b).
+Bugs found (each a CSpect round): CSpect's IM 2 bus byte is not 0xFF (table in the alt ROM); 0x8080 keeps A;
+CSpect -mmc traps RST 08h as esxDOS (RST 18h used; found by hook-subset bisect).
+Stars plot into columns 0 / 31 outside the frame (copy leaves them out; h_plot skips them).
 Missed writers (found 2026-11-23 from the user's CSpect report: black bar through the sun, dashes at the right;
 probe buf_pcs.py, Witch / Havoc / PoliceAnarchy whole): planet / sun fills 0x8C19 0x8CBB 0x8D1B 0x8DB1 0x90D0 (A),
 0x8C22 0x8CC4 0x8D24 0x8DBA 0x8A78 (0xFF), LDDR 0x5E4B 0x8A81 (RST 28h, h_lddr), stack blits 0x8BCD 0x8CCD 0x8DC3
@@ -192,9 +185,8 @@ after the planet and in h_flip. Sun (0x7107 via 0x86D0, h_sun) yellow; planet (0
 Not yet checked: the differential verify (step 6); hardware.
 
 ## M2 progress (2026-11-23)
-M2 RUNS in CSpect (Docking and Witch, 700 frames each of rolling / pitching / speed-up; chart page entered and left).
-Code: asm/elite_render.inc (h_flip, render, interp), asm/elite_hooks.asm (h_ship, frame counting), probes
-draw_deps.py / draw_io.py in C:NEXT\elite_work\probe.
+M2 RUNS in CSpect (Docking, Witch: 700 frames each, flying; chart page and back). Code: asm/elite_render.inc,
+asm/elite_hooks.asm; probes draw_deps.py / draw_io.py.
 - Ship draw facts [observed: draw_deps.py, all five recordings whole, 1.1k-11.5k calls each]: 0xA6DF reads the slot's
   bytes 0-8 (x, y, z: lo, hi, sign), 10-20 even (orientation high bytes), 32, 33, 38; slots are 39 bytes at
   0x6048 + 39 n, n = 0-7 (8 slots; IY = slot bytes 35-36). Varying inputs outside the slot: 0x6F42, 0x70E3,
@@ -211,12 +203,11 @@ draw_deps.py / draw_io.py in C:NEXT\elite_work\probe.
   of the same slot and blueprint (weight frames-since-tick / 10; a jump of 0x8000+ keeps cur), 0xA6DF called as the
   wrapper does (0xFEFE = RET, SP 0x4020), outputs restored, flip. Only after a flight pass (h_combat sets
   S_FLIGHT): status / chart pages keep the original copy.
-- Frame counting (3 rounds; lesson in ## Lessons): h_isr counts each interrupt, raster polls in DI stretches add
-  lost ones; 506 counted over ~505 frames. The game ISR body runs from an owed count (16 per 25 frames).
+- Frame counting (lesson in ## Lessons): interrupts + raster polls in DI stretches; 506 counted over ~505 frames. The game ISR body runs from an owed count (16 per 25 frames).
 - M3 (ships): ownrot, after interp, turns each ship by one pass of the current roll / pitch (0xFF09 / 0xFF0B) with
   the game's own code - 0xA173 position (speed byte 0xFF: no z move, never its overflow exit 0x5FD5), 0xA0AB x 3
-  orientation (as 0x9FA8). Cancels the tick of lag for own turning. Checked: pitch forced to 0x0FFF moved the
-  station's y 0x0418 -> 0x088A in the next render (one pass of y += pitch * z). Docking / Witch 600-700 frames.
+  orientation (as 0x9FA8). Cancels the tick of lag for own turning. Checked (forced pitch moved the station
+  one pass in the next render); Docking / Witch 600-700 frames.
   Player rates: 0xFF08 roll, 0xFF0A pitch (16-bit sign | magnitude, controls 0xFE01 in the ISR, steps 255 / 102,
   max 0x0FFF), 0xFF0C speed; 0x713C copies the high bytes to 0x70E4-0x70E6 once per pass.
 Not yet checked / open: one render sample (Docking, after ~600 frames) showed a station z of 0xB2E1 negative (not
@@ -231,6 +222,13 @@ reproduced in 8 later samples; to watch with a render assert); Havoc.z80 crashes
   state page (the game's 32-byte one overflowed into ULA row 56: dashes). h_plot is DI while write-over is on (an
   interrupt there wrote h_isr's stack to Layer 2: Docking hang). Checked: Docking 1800, Witch sun, pages.
   stars_x: stars moved on by w along their last move (0x7898 on scaled speed wobbled).
+- M4 part 2: ulaclr clears the snapshot's ULA viewport inside its frame once (first h_flip). h_light (0x99D7):
+  condition light = sprite 0 (the game's shape; palette 0x11/0x21/0x31 = ULA red/green/yellow), its c09 cells white
+  so scanner sticks show white; sprites off on pages and docked. Checked: Witch yellow/green/forced red, page and back.
+  Colour: nexclash/elite_colours.py, one key per figure (S<IY lo> = shipcol; C<cat> = `nextreg 0x7F,n` sites cs_*),
+  15-colour PAL8, nibble 0 = asm default; recolour() rewrites bank 12 only (empty map = build, tested). Figures: 21
+  models from the recordings (ship_shapes6.py + pick_ships.py; 61E3 6211 62F7 6325 by eye: tunnel rings come under a
+  stale IY) in docs/profiles/elite_shapes.json.gz. The CLI finds it once the M5 record exists.
 
 ## Hardware checklist
 None yet (no build).

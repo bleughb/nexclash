@@ -332,7 +332,7 @@ scenery:
         ld a,(0x7103)
         or a
         jr nz,.nopl
-        nextreg 0x7F,C_PLANET
+.cpla:  nextreg 0x7F,C_PLANET
         call 0x7584
         di
         call .poll
@@ -669,3 +669,7 @@ WK = 0
         db (WK * 256) / TICK
 WK = WK + 1
         EDUP
+
+; colour sites in scenery for recolour (nexclash/elite_colours.py CATS: the byte at +3)
+cs_pla2 EQU scenery.cpla
+cs_sta  EQU scenery.nopl
