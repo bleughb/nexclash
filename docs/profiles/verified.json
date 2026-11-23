@@ -361,6 +361,14 @@
     "enhanced_loading": "f509de2eb7fff67cbd12d1afb91ec3fe"
    }
   },
+  "18809405ae5fdacbf254c4ed5029b76c": {
+   "game": "Hard Drivin'",
+   "doc": "hard_drivin.md",
+   "nex": {
+    "plain": "5b37afa483196f964384c152c5fb4a7a",
+    "smooth": "9fc24d7cf3f11ef68ce1651058acb2b0"
+   }
+  },
   "07bfa8f74d60a53ab64e5b092ffd6cca": {
    "game": "Heartland",
    "doc": "heartland.md",

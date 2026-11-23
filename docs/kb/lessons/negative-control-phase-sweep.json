@@ -1,0 +1,30 @@
+{
+ "id": "lesson.negative-control-phase-sweep",
+ "kind": "method",
+ "claim": "A negative control for an interrupt-timed fault must sweep where the interrupt lands (the start line over a frame); one phase per state can miss the broken build.",
+ "evidence": [
+  {
+   "game": "games/hard_drivin.md",
+   "text": "the no-repair control passed on 6 states at their own start line and was caught once the start line swept the frame every 13 lines",
+   "quote": "the push-repair control was missed on 6 states",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "facts": {
+  "interrupts": "on"
+ },
+ "next_check": "Count how many of the swept phases catch each control.",
+ "words": [
+  "negative",
+  "control",
+  "interrupt",
+  "phase",
+  "line",
+  "sweep",
+  "unit"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

@@ -1,21 +1,25 @@
 # Hard Drivin' (Domark / Binary Design, 1989; 128K tape)
 
 ## Next session
-Stage: 2 (build)             State: hd2 passes the whole-RZX verify (3,112 checks) and 18 / 18 mutants; JNext pace +3 frames / 178 updates
-Inputs: C:\1NEXT\harddrivin_work: hard_drivin.z80 (snapshot 0 of hard_drivin.rzx), hard_drivin.rzx (MD5 c649e04c, 22,116 frames), in\hd.tap (MD5 02e1f96c), in\hd.tzx (61f7d04c), in\hd.dsk ([a], 43a6bc4c). Game data: never in this repo.
-Branch: add-hard-drivin (worktree C:\1NEXT\nexclash-hd)    Commit: see git log
-Prototype (local, not in the repo yet): C:\1NEXT\harddrivin_work: hd2.asm (hooks), hd_build.py (128K patch over
-  nexclash.z80tonex), hd_next.py + simram.py (host Next model), hd_unit.py (differential unit test), jlog.py (JNext
-  pace log vs jn\jl_plain), jrun.py (screenshots)
-Checks: `py -3 hd_unit.py --prefix hd2 [--cal]` PASS 0; `py -3 hd_verify.py` (whole RZX, both paths) PASS: 1,556
-  renders, 3,112 checks, 3,281 in-between views; `py -3 hd_mutants.py 12000` 17 / 17 + R over 22116 frames: 18 / 18;
-  jlog 4,000 frames: 178 updates, drift +3 frames vs plain (median update -0.001 frames), 191 in-between views
+Stage: 2 (build) -> 3 (prove + deliver)    State: engine in the repo (nexclash/hard_drivin.py); `auto --quick 2000` PASSED
+Techniques: `patch.inbetween-views`, `detect.pacing-structure`, `patch.pace-limiter`, `patch.restore-speed`, `patch.whole-altrom-image`, `verify.update-locked-pace`
+Inputs: C:\1NEXT\harddrivin_work: hard_drivin.z80 (MD5 18809405, snapshot 0 of hard_drivin.rzx), hard_drivin.rzx (MD5 c649e04c, 22,116 frames), in\hd.tap (MD5 02e1f96c), in\hd.tzx (61f7d04c), in\hd.dsk ([a], 43a6bc4c). Game data: never in this repo; not yet in specnext/reference (a maintainer push: ask first).
+Branch: add-hard-drivin (worktree C:\1NEXT\nexclash-hd), main merged 2026-11-23 (83cd68b)    Commit: see git log
+Engine: nexclash/hard_drivin.py (HDPatch from the profile, Next host model, verify, unit_tests, negative_patches,
+  auto, boot_problems), asm/hard_drivin_hooks.asm + asm/hard_drivin_wset.inc, docs/profiles/hard_drivin.json.
+  Builds: hard_drivin.nex (plain, tail 0x6C00) 5b37afa4, hard_drivin_smooth.nex (default) 9fc24d7c = the prototype's
+  hd2 build byte for byte.
+Checks: `python nexclash.py auto hard_drivin.z80 --rzx hard_drivin.rzx --quick 2000`: boot PASS (both builds, with
+  and without NEXLOAD), 146 checks, 168 in-between views, unit tests and 4 / 4 negative controls PASS, rom_paths
+  COMPLETE. Prototype evidence (C:\1NEXT\harddrivin_work): whole-RZX verify PASS (3,112 checks), 18 / 18 mutants,
+  JNext pace +3 frames / 178 updates.
 Pending user answers: none
-Start with: move the prototype (hd2.asm, hd_build.py, hd_next.py, simram.py, hd_verify.py, hd_mutants.py,
-  hd_wset.inc) into an engine module + tests, then a hardware build for the user (K and the copy time are measured
-  at run time; JNext's ratio 6.2 vs TECHNIQUES' hardware 6.6-7.0)
+Start with: stage 3: stage the inputs for selftest (NEXCLASH_REFERENCE or specnext/reference/hard_drivin, ask
+  before any push), `selftest.py --game hard_drivin --verify --stamp`; then the hardware build + checklist (K and the
+  copy time are measured at run time; JNext's ratio 6.2 vs TECHNIQUES' hardware 6.6-7.0)
 Open: the first calibration interrupt's extra ~574 T (not subtracted, 0.06 %); sub-unit angle interpolation;
-  the CALL at 0xA402 (time-out path, not in the recording)
+  the CALL at 0xA402 (time-out path, not in the recording); R not preserved (patch.preserve-r: the verify excludes
+  R; no consumer of R found, not proven)
 
 ## Facts
 - Tape (.tap = .tzx data): BASIC `HD 128K`, code 100 bytes at 30000, 5,000 at 32960, 200 at 43616, BASIC `-`, then one 41,400-byte block at 24000. Single load, no multiload.
@@ -32,6 +36,7 @@ Open: the first calibration interrupt's extra ~574 T (not subtracted, 0.06 %); s
   Rejected: plain only. Not now: coloured scenery (a later switchable extra).
 
 ## Feasibility (PLAYBOOK 3d; probes in C:\1NEXT\harddrivin_work\tools, first 3,000-6,000 frames)
+### Pacing measurement
 - Pacing (card detect.pacing-structure, observed): no frame wait; DI for most of play. Main loop 0x9E34
   (body to 0x9E88, JR back at 0x9E32): one update = logic + render 0x9EA9 (from 0x9E54) + clock 0xA38A (from
   0x9E5E) + view copy 0xDC37 (from 0x9E6B). Update time 7-21 frames (median 13, mean 13.6): busy scenes run
@@ -47,6 +52,7 @@ Open: the first calibration interrupt's extra ~574 T (not subtracted, 0.06 %); s
 - Camera (camlog.py at each 0x9EA9): x, y, z = 16-bit at 43400, 43402, 43404; orientation 3 bytes at
   43407-43409 (copied to 43339-43341 by 0x9EA9); per-update matrix / view block 43362-43399 (0x9EA9 copies
   43362-43370 to 43371-43379). Which routine builds the matrix: open (stage 2).
+### Dependency investigation
 - Render consumers (consumers.py, 2,500 frames; window 0x9EA9 .. 0x9E57, screen and back buffer excluded):
   23 addresses read later by logic: 43373-43379 (camera copy, read by 0xA6FF-0xA8AB), 0x918E (read 0xA47E /
   0xA4FB, written 0xEA48), 0x91CC-0x91CD, 0x951E (0xA353, 0xF4A9, 0xA71B), list 0xF02C-0xF03B (0xA48D-0xA496,
@@ -112,3 +118,35 @@ Open: the first calibration interrupt's extra ~574 T (not subtracted, 0.06 %); s
   ISR_T 1136 (whole-RZX mean 1138). Verify rules added: a hit push must be the render's last; no sample from a short
   render. Mutants Q (no abandon) and R (no CAL_MIN) caught. Full verify PASS; kept samples -0.14 .. +0.43 % of the
   original render's time (median +0.06 %), 196 of 1,556 dropped.
+- 2026-11-23 (4): moved into the repo as an engine (nexclash/hard_drivin.py from hd_build / hd_next / hd_unit /
+  hd_verify; hooks asm and the write-set bitmap in asm/; profile via asm2profile, IDENTICAL). The repo's smooth build
+  equals the prototype's (MD5 9fc24d7c). Negative controls as page-byte patches at labels (sco_map, sc_angix, isr_fix,
+  isr_taint); the push-repair control was missed on 6 states at their own start line and caught once the start line
+  sweeps the frame (every 13 lines). Boot check credits the tail 0x6C00 and NEXLOAD's printer buffer (rom_paths:
+  never read before written). Main merged (shared lessons as data, docs/kb); kb entry docs/kb/games/hard_drivin.json.
+
+## Technique use
+- detect.pacing-structure: helped: no frame wait, 7-21 frame updates, the lap clock counts updates (not time)
+- patch.inbetween-views: helped: the route itself; corrected: K is measured at run time by a calibration render (the card's fixed K from JNext would be 6-10 % off on hardware), and in-between views run on scratch copies of the game's pages instead of Layer 2 banks
+- patch.pace-limiter: used: ORIGINAL target per update (window = K x the render's 28 MHz lines, signed debt)
+- patch.restore-speed: used: hlib_speed in every hook
+- patch.whole-altrom-image: used: Sinclair's ROM 1 + trampolines at 0x3870 (bank 12)
+- verify.update-locked-pace: used: JNext pace log vs the plain build, 178 updates
+- patch.preserve-r: no help: not applied; the verify excludes R (no consumer found, not proven)
+
+## Lessons
+- [kb lesson.jnext-28mhz-ratio-varies: K 6.17-6.28 by scene in JNext] observed: the render's 3.5 MHz : 28 MHz ratio moves with the scene's contention share; a fixed K lagged, the latest calibration sample tracks it.
+- [kb lesson.runtime-k-calibration: a 3.5 MHz re-render on scratch pages measures K] demonstrated: calibration render with IM 2 through the hook page, kept samples within -0.14 .. +0.43 % of the original render's time over the whole RZX.
+- [kb lesson.sp-as-data-pointer: an interrupt push lands in the render's SP-walked data] demonstrated: the render POPs object lists and ROM bytes, so the calibration handler must put the 2 pushed bytes back from genuine memory.
+- [kb lesson.interrupt-push-in-write-set-abandon: a hit push cannot be repaired] demonstrated: a push into bytes the render writes (tables 0x9C00-0x9DFB) was repaired with a stale byte and the render ran away (u605); abandon the render and drop the sample.
+- [kb lesson.negative-control-phase-sweep: sweep the start line for interrupt-timed faults] demonstrated: the no-repair control passed on 6 states at their own start line and was caught once the start line swept the frame.
+- [kb lesson.skoolkit-write-guards-below-4000: the reference re-render ran away] observed: stock SkoolKit dropped the hook page's writes below 0x4000; dizzy6._rw_simulator keeps them.
+- [kb lesson.nexload-printer-buffer: 256 bytes differ when booted as NEXLOAD] observed: both builds differ only in 0x5B00-0x5BFF and the tail; rom_paths shows neither is read before written.
+- [kb lesson.asm2profile-key-prefix: profile keys from SAVEBIN names] observed: asm2profile takes the key from the SAVEBIN name up to the first underscore, so hard_drivin_page.bin gave "drivin_page"; named hdrivin_page.bin / hdrivin_rom.bin.
+
+## Friction
+- reuse: [kb lesson.negative-control-phase-sweep] the start-line sweep in unit_tests is generic for any interrupt-timed control
+- retries: [kb lesson.skoolkit-write-guards-below-4000] the verify reference ran away three times before the low writes were kept
+- environment: [none: git, harness and network had no workaround this stage]
+- hand-rolled: [local: the host Next model (MMU, line clock, zxnDMA, IM 2) is per engine; hooklib.NextModel has no MMU or interrupts]
+- scratch: [local: push605.py, hd_repo_quick.py dropped: one-off reproductions, the engine's verify covers them]
