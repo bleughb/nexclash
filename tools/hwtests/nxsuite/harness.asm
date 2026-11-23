@@ -25,7 +25,7 @@ entry:  ld sp,MSTACK
         ld a,2 : ld (crow),a : xor a : ld (ccol),a : ld hl,m_start : call puts
         call preamble
         ; progress record and the text file of earlier runs
-        call prg_read : jr nc,.prgok
+        call prg_read2 : jr nc,.prgok
         call prg_new
 .prgok: ld hl,(PRGB+4) : inc hl : ld (PRGB+4),hl : ld (runno),hl
         ld hl,srcstr : ld de,src2 : ld bc,8 : ldir : xor a : ld (de),a

@@ -221,7 +221,15 @@ writes `NXSUITE.TXT` (results), `NXSUITE.PRG` (progress record, 64 bytes) and, w
 R = resume, U = retry the tests that hung, V = the visual pass (the person at the machine answers: Y / N or
 1 / 2 / 3, S = ask later; in RUN ALL these tests are PENDING-OPERATOR), T / D / H = the opt-in groups (timing,
 DivMMC, DMA hang: each test shows what it risks and what to do if the machine does not come back, Y runs it,
-N skips it; never in RUN ALL). The NEXT STEP line under the group list
+N skips it; never in RUN ALL). Opt-in details: X-T (T) writes NextReg $03 (machine timing, survives a soft
+reset) only after saving the start value in `NXSUITE.PRG` (offset 50, flag bit 1); each test puts it back, and
+a start after a hang puts it back from the record and measures the preamble again before anything else.
+XT4 never writes $3FFD when NextReg $D8 bit 0 (the +3 disk-port trap) was set at launch. X-D (D) writes only
+$BB bit 6, $0A bit 4 and a few alt-ROM bytes (saved, written back); its one esxDOS call is F_OPEN (read) of
+`NXNOFILE.XXX`, which does not exist. X-H (H): XH1 can freeze the machine if the interrupt escape fails
+(reset, start again: HANG-GUARD); XH2 leaves the DMA deaf on purpose - let the group finish, soft-reset,
+start the suite again and press H (N to XH1, Y to XH2): XH2 then reports `reset-frees` or `still-locked`
+from the one DMA byte the start tried (`NXSUITE.PRG` offset 51, flag bit 0). The NEXT STEP line under the group list
 says in plain words what to do next. Border during a group: blue running, then green (no FAIL), yellow
 (INFO only) or red (a FAIL).
 

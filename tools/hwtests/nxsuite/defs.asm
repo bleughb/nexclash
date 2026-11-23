@@ -56,6 +56,8 @@ PRG_GROUP   equ 17
 PRG_FLAGS   equ 18
 PRG_MODE    equ 19              ; 0 RUN ALL, 1 + group = one group
 PRG_HUNG    equ 20              ; 6 words, $FFFF = free
+PRG_T03     equ 50              ; NextReg $03 at the start of the X-T test (PRG_FLAGS bit 1)
+PRG_XH2     equ 51              ; XH2 after a reset: 1 the DMA byte arrived, 2 it did not (PRG_FLAGS bit 0)
 PRG_FLEN    equ 48              ; word: NXSUITE.TXT's length at its last good write (read back exactly that)
 PRG_GST     equ 32              ; 16 bytes: per group 0 not run, 1 done, 2 done with a FAIL, 3 operator
                                 ; questions pending, 4 hung, 5 running

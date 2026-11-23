@@ -50,7 +50,10 @@ m_hzd:  db "It maps the DivMMC memory and",0
         db "$BB). A wrong step can lock up",0
         db "the machine.",0,0
 m_hzh:  db "It starts a DMA that may keep",0
-        db "the bus: the machine can freeze.",0,0
+        db "the bus (the machine can freeze)",0
+        db "or leave the DMA deaf until a",0
+        db "reset (XH2: the screen after it",0
+        db "says what to do).",0,0
 m_hzc:  db "Nothing is saved to the machine.",0
         db "If the picture or the border does",0
         db "not come back within 10 seconds:",0
