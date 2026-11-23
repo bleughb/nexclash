@@ -153,8 +153,8 @@ m_file3: db "  file: other build kept, new",0
 m_nokeep: db "NXSUITE.TXT could not be kept:",0
 m_nokeep2: db "copy it off the card, restart",0
 m_next: db "NEXT STEP:",0
-m_keys: db "A all 0-9 group V visual R resume",0
-m_keys2: db "T D H opt-in  U retry hung",0
+m_keys: db "A all  0-9 group  V visual pass",0
+m_keys2: db "R resume  U hung  T D H opt-in",0
 
 ; A = group -> IX = its gtab entry (8 bytes)
 gent:   ld l,a : ld h,0 : add hl,hl : add hl,hl : add hl,hl
@@ -302,7 +302,7 @@ run_group:
         ld a,(mode) : bit 7,a : jr z,.nr
         ld hl,s_resumed : call wstr
 .nr:    ld a,10 : call wchr : call w_len : call txt_append
-        xor a : ld (gfails),a : ld (ginfo),a
+        xor a : ld (gfails),a : ld (ginfo),a : ld (gpend),a
         ld a,(gcount) : ld b,a : ld a,(gfirst) : ld c,a
 .t:     push bc
         ld a,c : call run_test_marked
@@ -315,8 +315,7 @@ run_group:
         ; state
         ld e,GS_DONE : ld a,(gfails) : or a : jr z,.st
         ld e,GS_FAILS
-.st:    ld a,(unatt) : or a : jr z,.st2
-        push de : ld a,(curg) : call gent : pop de : ld a,(ix+2) : or a : jr z,.st2
+.st:    ld a,(gpend) : or a : jr z,.st2              ; a question left open (S, or RUN ALL)
         ld e,GS_PENDOP
 .st2:   ld hl,PRGB+PRG_GST : ld a,(curg) : add a,l : ld l,a : ld (hl),e
         ld hl,$FFFF : call prg_mark
@@ -333,6 +332,7 @@ gfirst: db 0
 gcount: db 0
 gfails: db 0
 ginfo:  db 0
+gpend:  db 0
 unatt:  db 0
 s_gid:  db "G id=",0
 s_gname: db " name=",0
@@ -438,6 +438,9 @@ run_test_marked:
         ld hl,(wp) : ld (hl),0                      ; extras end
         call emit_t
         call stab_put
+        ld a,(R_st) : cp ST_PENDOP : jr nz,.np
+        ld (gpend),a
+.np:
         call scr_status
         ld a,(R_st) : cp ST_FAIL : jr nz,.i
         ld hl,gfails : inc (hl)

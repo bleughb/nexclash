@@ -263,6 +263,7 @@ f05l:   dw 0
 ; i50 l60 t60 i60 whatever the start rate; v = l60. The intake prints them side by side. A line on the
 ; screen warns that the picture may blink.
 t_f06:  ld a,22 : ld (crow),a : xor a : ld (ccol),a : ld hl,m_f06 : call puts
+        ld a,23 : ld (crow),a : xor a : ld (ccol),a : ld hl,m_f06b : call puts
         ld a,$05 : call rdreg : ld (.r5),a
         call .m : ld hl,.a : call .st
         ld a,(.r5) : xor 4 : nextreg $05,a
@@ -315,3 +316,4 @@ t_f06:  ld a,22 : ld (crow),a : xor a : ld (ccol),a : ld hl,m_f06 : call puts
 k_l50:  db "l50",0,"t50",0,"i50",0
 k_l60:  db "l60",0,"t60",0,"i60",0
 m_f06:  db "F06: 60/50 Hz - picture may blink",0
+m_f06b: db "No picture in 10 s: reset, start",0

@@ -18,7 +18,8 @@
 ;           $B000 timing blocks; $B800 result file parts code (txt2); $BC00-$BFFF stacks (SP $BE00; G2 timing $BFE0)
 ;   bank 0  $C000-$DFFF harness, menu, G0, test table; $F000-$F7FF scratch (page 1)
 ;   pages 40-43 + 60 + 63 slot 7 overlays (40 G2 extras + G4, 41-42 G3, 43 G5 + G8, 60 G1 below $F000 -
-;           C15 copies to $F000 -, 61 G7, 63 G6), $F800-$FFFF their own area;
+;           C15 copies to $F000 -, 61 G7, 63 G6; X-T after G7, X-D after G1, X-H after G6, V after G3),
+;           $F800-$FFFF their own area;
 ;           36-39 DMA / G9 scratch, 44-53 Layer 2, 54 sprites, 55 alt ROM image
 ;   pages 32-35 + 58-59 result text (48 KB), 56-57 G1 data / G2 slot 6-7 sandbox, 62 strings
 

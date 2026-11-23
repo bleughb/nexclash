@@ -155,12 +155,31 @@ next_step:
         cp GS_RUN : jr z,.auto
 .nx:    inc b : jr .l
 .auto:  ld hl,ns_all1 : ld (ns1),hl : ld hl,ns_all2 : ld (ns2),hl : ret
-.n2:    ld hl,ns_done1 : ld (ns1),hl : ld hl,ns_done2 : ld (ns2),hl : ret
+.n2:    ld hl,PRGB+PRG_HUNG : ld b,6                 ; a hung test listed: U
+.h:     ld a,(hl) : inc hl : and (hl) : inc hl : inc a : jr nz,.hu
+        djnz .h
+        ld a,(PRGB+PRG_GST+10) : cp GS_DONE : jr z,.v  ; the visual pass answered
+        cp GS_FAILS : jr z,.v
+        ld hl,ns_v1 : ld de,ns_v2 : jr .set
+.v:     ld b,11                                     ; opt-in groups not run: optional
+.o:     ld hl,PRGB+PRG_GST : ld a,l : add a,b : ld l,a
+        ld a,(hl) : or a : jr z,.opt
+        inc b : ld a,b : cp 14 : jr c,.o
+        ld hl,ns_done1 : ld de,ns_done2 : jr .set
+.opt:   ld hl,ns_opt1 : ld de,ns_opt2 : jr .set
+.hu:    ld hl,ns_hu1 : ld de,ns_hu2
+.set:   ld (ns1),hl : ld (ns2),de : ret
 ns1:    dw 0
 ns2:    dw 0
 ns_res1: db "Last run stopped. R or wait 5 s:",0
 ns_res2: db "resume, the test is marked hung",0
 ns_all1: db "Press A: all automatic tests,",0
 ns_all2: db "about 5 min. Leave it alone.",0
-ns_done1: db "ALL DONE (this version). Copy",0
+ns_done1: db "NOTHING OUTSTANDING. Copy",0
 ns_done2: db "NXSUITE.TXT to the PC.",0
+ns_v1:  db "Press V: the visual pass (you",0
+ns_v2:  db "answer what you see), ~5 min.",0
+ns_hu1: db "A test hung: U retries it, or",0
+ns_hu2: db "copy NXSUITE.TXT to the PC.",0
+ns_opt1: db "NOTHING OUTSTANDING (T D H are",0
+ns_opt2: db "optional). Copy NXSUITE.TXT.",0

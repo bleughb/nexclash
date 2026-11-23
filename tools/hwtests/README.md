@@ -206,10 +206,31 @@ speed change) every CPU-only row at 3.5 MHz matches its T-state count within 0.7
 
 Sources: `nxsuite.asm` + `nxsuite/*.asm` (harness, timing core, one file per group), the test table and
 claims inventory `nxsuite_claims.json` (read by `nxsuite_gen.py` and by `intake.py`), `intake.py`.
-Built: G0 SYS (S00-S07), G1 CPU (C01-C15), G2 Z80N (Z01-Z07), G3 IRQ (I01-I24), G4 FRAME (F01-F05).
-Every other test of the table is written to the file as `SKIP why=not-built`, so the intake always knows
-the full list. Group code that does not fit bank 0 runs from a slot-7 overlay page (40-42; a group may
-have a second page, flag 8 in the test table).
+Groups: G0 SYS, G1 CPU, G2 Z80N, G3 IRQ, G4 FRAME, G5 COPPER, G6 DMA, G7 BENCH, G8 SPRITES, G9 MEM
+(automatic, RUN ALL), V VISUAL (the person at the machine answers), XT TIMING, XD DIVMMC, XH DMA-HAZARD
+(opt-in, never in RUN ALL). Every test of the table is built, or left out on purpose with a reason in
+`nxsuite_claims.json` (`left_out`; the file says `SKIP why=left-out`, the intake prints the reason);
+`nxsuite_gen.py` refuses a test that is neither, so no `why=not-built` line can appear. Group code that does
+not fit bank 0 runs from a slot-7 overlay page (40-43, 60, 61, 63; a group may have a second page, flag 8
+in the test table).
+
+### Owner checklist (one board, one core)
+
+1. Copy `nxsuite.nex` into a new folder of its own on the SD card; start it from the Browser.
+2. Press A (RUN ALL): about 6 minutes, leave the machine alone. The border is blue while a group runs,
+   then green / yellow / red. F03 and F06 switch to the other refresh rate for a moment (the picture may
+   blink; if it does not come back within 10 s: reset, start the suite again - it resumes). DONE: any key.
+3. Press V (the visual pass, about 5 minutes): answer each screen with Y / N or 1 / 2 / 3 (S = ask later).
+   V19 first asks which cable carries the picture, then needs a watch showing seconds (SPACE starts,
+   SPACE after 60 s or more stops, type the seconds, ENTER).
+4. Optional, only if you agree to the risk shown before each test (Y runs it, N skips it):
+   T (timing; the machine timing is put back after each test and at the next start after a hang),
+   D (DivMMC; no SD write), H (DMA hazards; XH1 can freeze the machine; XH2 leaves the DMA deaf: let the
+   group finish, soft-reset, start the suite again, press H, N to XH1, Y to XH2 - it then reports what
+   the reset did). After a freeze: reset (or power off and on), start the suite from the same folder:
+   the test is marked HANG-GUARD and the run goes on.
+5. When the NEXT STEP line says NOTHING OUTSTANDING: copy `NXSUITE.TXT` (and any `NXSUITE.0nn` parts) and
+   `NXSUITE.PRG` to the PC; run `python tools/hwtests/intake.py NXSUITE.TXT --board <name>`.
 
 Build (keep the .nex out of the repository):
 

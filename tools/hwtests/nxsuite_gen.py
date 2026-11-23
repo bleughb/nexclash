@@ -121,6 +121,8 @@ def tests_inc(out):
         flags = (FLAG_RISK if x['risk'] != 'none' else 0) | (FLAG_OPER if x['operator'] else 0) | \
                 (FLAG_OPTIN if x['opt_in'] else 0) | (FLAG_OVL2 if lab in p2 else 0) |                 (FLAG_LEFT if 'left_out' in x else 0)
         assert not ('left_out' in x and lab in labels), x['id'] + ': left out and built'
+        # the final suite: every test is built or left out with a reason - no SKIP why=not-built line
+        assert 'left_out' in x or lab in labels, x['id'] + ': neither built nor left out (give it a left_out reason)'
         lines.append('        db "%-4s",%d,%d : dw %s,cl_%s,ti_%s' % (
             x['id'], gidx[x['group']], flags, lab if lab in labels else '0', x['id'], x['id']))
     lines.append('ttab_end:')
