@@ -52,6 +52,14 @@ code2_end:
         INCLUDE "nxsuite_tests.inc"
         ; (the include ends in the string page: MMU 6,STRPAGE / ORG $C000)
 
+        ; bank 7 (pages 14 / 15) in the .nex, so tests C03 / C04 time code in pages the suite owns
+        MMU 3,14
+        ORG $6000
+        db "NXS7"
+        MMU 3,15
+        ORG $6000
+        db "NXS7"
+        MMU 3,11
         MMU 6,0
 
         SAVENEX OPEN "nxsuite.nex", start, MSTACK
