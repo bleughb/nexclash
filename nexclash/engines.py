@@ -127,6 +127,7 @@ ENGINES = [
     ('arkanoid', 'is_arkanoid', None),                                    # Arkanoid (48K)
     ('cybernoid', 'is_cybernoid', None),                                  # Cybernoid (48K)
     ('pentagram', 'is_pentagram', None),                                 # Pentagram (48K), original presentation + optional Enhanced
+    ('elite', 'is_elite', None),                                          # Elite (128K, the Russian hack): viewport on Layer 2 in colour, 50 fps
 ]
 
 

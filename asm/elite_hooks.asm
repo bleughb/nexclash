@@ -50,7 +50,8 @@ S_OWE     EQU 0x0017        ; byte: game ISR bodies owed (pattab per counted fra
 S_INTL    EQU 0x0015        ; byte: raster line / 2 of the interrupt (0 in the zeroed page: setup sets 0xFF)
 S_ISRF    EQU 0x0024        ; byte: an interrupt was counted since the last poll
 S_PC      EQU 0x0025        ; byte: the last poll counted a frame
-S_FLIGHT  EQU 0x0026        ; byte: the flight loop (0x9C80) ran since the last h_flip
+S_FLIGHT  EQU 0x0026        ; byte: the flight loop (0x9C80) ran since the last h_flip (and no clear since)
+S_FLIP2   EQU 0x0027        ; byte: a flight h_flip since the last clear: a later copy is the same picture, drawn on
 S_RSP    EQU 0x0028        ; word: SP at render entry (render runs on RSTK)
 S_RA     EQU 0x002A        ; byte: render's A argument across the stack switch
 S_ISP    EQU 0x0032        ; word: SP at h_isr (it runs on HSTK)
@@ -59,6 +60,7 @@ S_ULAC   EQU 0x0036        ; byte: the ULA viewport was cleared once (ulaclr)
 ISTK     EQU 0x00C0        ; h_isr's stack top (0x00A0-0x00BF), apart from HSTK: an interrupt can come inside one
 HSTK     EQU 0x0100        ; hooks' stack top in the state page (0x00A0-0x00FF): the game's own stack 0x4100
                            ; has 32 bytes with a screen row below it (M4: dashes on the pages)
+S_HYP    EQU 0x002B        ; byte: 0x7EDD at h_stars (1: a streak pass, its stars are mirrored into the base)
 S_CTL    EQU 0x002C        ; 6 bytes: the controls 0xFF08-0xFF0D across scenery (it scales them in place)
 RSAVE    EQU 0x0040        ; 0x60 bytes: game RAM under RSTK, saved around a render
 RSTK     EQU 0x7470        ; render stack top: 0x7410-0x746F, inside 0x7366-0x7470, untouched in all five
@@ -73,17 +75,21 @@ LIST0     EQU 0x0100        ; ship records (REC bytes each, MAXREC per list)
 LIST1     EQU 0x0B00
 SAVE      EQU 0x1600        ; game RAM the ship draw writes (outtab), saved around a render
 S_STP     EQU 0x1F00        ; 32 bytes: the star table 0x7A39 before this pass's move (stsave), for stars_x
+S_REGS    EQU 0x1F20        ; 12 bytes: IX, IY, AF', BC', DE', HL' around a render (render_regs)
 REC       EQU 160
 MAXREC    EQU 16
 R_IX      EQU 0             ; word: slot
 R_IY      EQU 2             ; word: blueprint
 R_A       EQU 4             ; byte: the wrapper's 0xA79D value - A of the AF the ship loop pushed at 0x9D38
 R_IN      EQU 5             ; NIN bytes: the draw's varying inputs (intab), as at the original draw
-NIN       EQU 100
+IN_B4END  EQU 0xB4A7        ; intab's 0xB452 range end (to 0xB4A6: 0x7898 via 0xF9A8): NIN and the table share it
+NIN       EQU 1 + 1 + 12 + 1 + 1 + (IN_B4END - 0xB452) + 2     ; 103. It said 100 after the range grew: the slot copy
+                                ; landed 3 bytes past R_SLOT, every render drew a shifted slot (verifier, 2026-11-23)
 R_SLOT    EQU R_IN + NIN    ; 39 bytes: the slot as at the original draw
 SLOTLEN   EQU 39
 BASE_BK   EQU 14            ; Layer 2 16K banks 14-15: everything but ships, drawn by the logic pass (h_plot)
-MIRF      EQU 0x581E        ; 0x40: the logic pass's draws go to the buffer only (NR $7F = C_NOMIRROR), 0: mirror.
+MIRF      EQU 0x581E        ; 0x40: the logic pass's draws go to the buffer only (NR $7F = C_NOMIRROR), 0: mirror;
+                            ; 0x80 (flash, black on black): a render mirrors into the back buffer over the base.
                             ; Attribute row 0 col 30: untouched in all five recordings, 0 (black on black) in every
                             ; snapshot - 0x40 is bright black on black. Read with no stack (nomirror needed 6 bytes
                             ; through the port: page text at SP ~0x4104 reached the screen row below, M4).
@@ -166,23 +172,6 @@ pf_8BCD: PFILL 0x8BCD, 0x8BD3, 0x8BE4
 pf_8CCD: PFILL 0x8CCD, 0x8CD3, 0x8CE4
 pf_8DC3: PFILL 0x8DC3, 0x8DC9, 0x8DDA
 
-; fill2n: A = the patched JR offset (16 - n): (HL - 1) .. (HL - 2n) = 0xFF through h_plot. Keeps HL, BC, DE.
-fill2n: push hl
-        push bc
-        ld b,a
-        ld a,16
-        sub b
-        add a,a
-        jr z,.done
-        ld b,a
-.byte:  dec hl
-        ld a,0xFF
-        call h_plot
-        djnz .byte
-.done:  pop bc
-        pop hl
-        ret
-
 ; h_sun (0x759E, CALL 0x86D0 in 0x7584): the filled body (0x7107, the sun: yellow scanner icon) in C_SUN, then the
 ; colour as it was (the outlined planet 0x7110 follows via 0x86DE). Logic pass: the original call (tail jump, same
 ; stack). 0x86D0's inputs are memory only (0xFB31 loads A, EX AF,AF'); the caller reads A from 0x861D after.
@@ -193,43 +182,17 @@ cs_sun: nextreg 0x7F,C_SUN
 cs_pla1: nextreg 0x7F,C_PLANET           ; scenery's colour for 0x7584 (h_sun runs only there while mirroring)
         ret
 
-; rowfix: repaint ULA row y = 56 (0x40E0-0x40FF), just below the game's 32-byte stack 0x4100-0x411F, as the blank
-; viewport row the copy shows (frame bits 0x80 at 0x40E1, 0x01 at 0x40FE), and the hack's save of it (0xFFD0-0xFFDF,
-; taken at 0xF8EC, put back at 0xF907). Deep calls (the planet circle most) leave stack bytes there; the original's
-; copy repaints the row soon after, here the copy waits for the tick - white dashes, at times the whole row
-; (2026-11-23, user report). Only when SP is above the row. Keeps all registers.
-rowfix: push af
-        push hl
-        push bc
-        ld hl,0x40E0
-        ld b,32
-        xor a
-.r1:    ld (hl),a
-        inc l
-        djnz .r1
-        ld hl,0xFFD0
-        ld b,16
-.r2:    ld (hl),a
-        inc l
-        djnz .r2
-        ld a,0x80
-        ld (0x40E1),a
-        ld a,0x01
-        ld (0x40FE),a
-        ld (0xFFDE),a
-        pop bc
-        pop hl
-        pop af
-        ret
-
-; h_plot: (HL) = A, as the original LD (HL),A, and mirror the changed bits on the Layer 2 back buffer.
+; h_plot: (HL) = A, as the original LD (HL),A, and mirror the changed bits on the Layer 2 back buffer: a bit set
+; takes the current colour; a bit cleared goes transparent in the logic pass (it draws the base itself) and back to
+; the base's pixel in a render - two XOR lines of a ship or the planet crossing on a sight / text pixel left a hole
+; in it (the verifier: Havoc 74575 / 74725, PoliceAnarchy 95725; 2026-11-23).
 ; Keeps every register and flag. Interrupts may be on. Stack: 12 bytes with the RST (5 pushes, no CALL) - the ship
 ; draw wrapper runs on a 32-byte stack at 0x4000-0x401F and reaches the writers with SP down to 0x400E (site_ctx probe):
 ; one byte more than 14 would push into the ROM and lose a return address (M1 first boot crashed that way).
 h_plot: push af
         ld a,(MIRF)
-        or a
-        jr z,.mir
+        cp 0x40
+        jr nz,.mir
         pop af
         ld (hl),a                       ; the logic pass's planet / stars / ships: the write only (stack: 4 bytes)
         ret
@@ -247,7 +210,7 @@ h_plot: push af
         ld a,h                          ; the buffer is in screen layout at 0xC000: line k from HL as from a screen
         sub 0xC0                        ; address; the copy shows line k at screen y = k + 8 for k = 0-119 (it walks
         cp 0x10                         ; both pointers line by line, so there is no fixed address offset)
-        jr nc,.skip                     ; not the buffer (the same writers also write game data above 0xCFE0)
+        jp nc,.skip                     ; not the buffer (the same writers also write game data above 0xCFE0)
         ld a,l                          ; k = (H & 7) | ((L >> 2) & 0x38) | ((H << 3) & 0xC0)
         rrca
         rrca
@@ -264,7 +227,7 @@ h_plot: push af
         and 0xC0
         or b
         cp 120
-        jr nc,.skip                     ; lines 120-127: never shown
+        jp nc,.skip                     ; lines 120-127: never shown
         add a,8
         ld d,a                          ; D = y
         ld a,l
@@ -302,18 +265,36 @@ h_plot: push af
         ld c,h                          ; C = new byte
         ld a,d
         and 63
-        ld h,a                          ; HL = pixel address in the third
-        ld d,8
+        ld h,a                          ; HL = pixel address in the third; D = y
 .bit:   sla e                           ; carry = this pixel changed
         jr nc,.next
         bit 7,c
         ld (hl),b
         jr nz,.next
-        ld (hl),TRANS
+        ld a,(MIRF)
+        or a
+        ld a,TRANS
+        jr z,.put                       ; the logic pass
+        ld a,d
+        rlca
+        rlca
+        and 3
+        add a,a
+        add a,BASE_BK * 2
+        nextreg 0x54,a                  ; the base's third at 0x8000 (DI, no stack use, this code is in the ROM)
+        inc a
+        nextreg 0x55,a
+        set 7,h
+        ld a,(hl)
+        res 7,h
+        nextreg 0x54,4
+        nextreg 0x55,5
+.put:   ld (hl),a
 .next:  sla c
         inc l
-        dec d
-        jr nz,.bit
+        inc e
+        dec e
+        jr nz,.bit                      ; until no changed bit is left
 .woff:  ld bc,0x123B
         ld a,P_SHOW
         out (c),a                       ; write-over off
@@ -342,30 +323,20 @@ h_stars:
         call poll
         call rowfix                     ; the planet draw just before goes deepest on the game's stack
         call stsave
-        SETMIR 0x40
+        push af
+        ld a,(0x7EDD)
+        dec a
+        jr z,.hyp
+        ld a,0x40
+        ld (MIRF),a
+        pop af
         nextreg 0x7F,C_NOMIRROR
         jp 0x7898
-; stsave: the star table as the last pass left it -> S_STP (stars_x extrapolates from it). Keeps all registers.
-stsave: push af
-        push bc
-        push de
-        push hl
-        HLIB_IFF_DI                     ; P/V = IFF; h_isr unmaps the state page on its way out
-        push af
-        nextreg 0x50,STATE_PG
-        ld hl,0x7A39
-        ld de,S_STP
-        ld bc,32
-        ldir
-        nextreg 0x50,0xFF
-        pop af
-        jp po,.n
-        ei
-.n:     pop hl
-        pop de
-        pop bc
-        pop af
-        ret
+.hyp:   ld (MIRF),a                     ; 0x7EDD = 1 (launch, hyperspace): 0x7898 clears it and draws every star three
+        ld a,(cs_sta + 3)               ; times (streaks). Only this pass has them: mirrored into the base in the
+        nextreg 0x7F,a                  ; stars' colour, and scenery leaves the stars out (S_HYP). The render drew
+        pop af                          ; one dot per star (the verifier: Havoc 73425, Reidquat 145050; 2026-11-23)
+        jp 0x7898
 h_msg:  call poll
         SETMIR 0
 cs_msg: nextreg 0x7F,C_WHITE
@@ -481,6 +452,11 @@ h_clear:
         call poll
         di
         push af                         ; the original keeps A (callers rely on it); pushed before the remap
+        nextreg 0x50,STATE_PG           ; the picture starts again: a second clear after the flight loop (launch
+        xor a                           ; tunnel, hyperspace: 0x74F7 then 0x8080 again, then the copy) is not a
+        ld (S_FLIGHT),a                 ; flight view - the render showed the stars on the original's blank frame
+        ld (S_FLIP2),a                  ; (verifier, Witch pass 1300, 2026-11-23)
+        nextreg 0x50,0xFF
         xor a
         ld (MIRF),a
         nextreg 0x7F,C_WHITE
@@ -551,10 +527,10 @@ intab:  dw 1, 0x6F42
         dw 12, 0xA8FA
         dw 1, 0xA9C8
         dw 1, 0xAA0F
-        dw 0xB4A7 - 0xB452, 0xB452      ; (to 0xB4A6: 0x7898 via 0xF9A8)
+        dw IN_B4END - 0xB452, 0xB452
         dw 2, 0xB7AA
         dw 0
-        ASSERT 1 + 1 + 12 + 1 + 1 + (0xB4A4 - 0xB452) + 2 == NIN
+        ASSERT $ - intab == 7 * 4 + 2           ; seven ranges + the end mark (NIN above sums their lengths)
         ASSERT R_SLOT + SLOTLEN <= REC
         ASSERT LIST0 + MAXREC * REC <= LIST1 && LIST1 + MAXREC * REC <= SAVE
 
@@ -807,11 +783,17 @@ h_isr:  push af
         ld a,(0xFEFE)
         cp 0xC9
         jr z,.off
+        push bc                         ; the interrupted code may have the state page mapped (a render takes an
+        ld bc,0x243B                    ; interrupt in its EI stretches): slot 0's page is kept, not assumed ROM
+        ld a,0x50                       ; (the verifier: Reidquat 145425, 2026-11-23)
+        out (c),a
+        inc b
+        in a,(c)                        ; A = slot 0's page (0xFF ROM, or STATE_PG)
         nextreg 0x50,STATE_PG
-        ld (S_ISP),sp                   ; on ISTK (the interrupted stack keeps only PC + AF, as the original's)
+        ld (S_ISP),sp                   ; on ISTK (the interrupted stack keeps only PC, AF, BC)
         ld sp,ISTK
-        push bc
         push hl
+        push af
         call isrcount
         ld a,(0x7104)                   ; M4: a full-screen page (docked: 0x7104 = 0; view 0x70E3 >= 4: charts,
         or a                            ; status, inventory in flight) - Layer 2 off (the blank buffer); the
@@ -821,22 +803,27 @@ h_isr:  push af
         jr c,.npg
 .pg:    nextreg 0x12,BLANK_BK
         nextreg 0x15,0                  ; and the condition light sprite (h_light) off
-.npg:
+.npg:   pop af
+        push af
+        cp 0xFF
+        jr nz,.no                       ; state page was mapped: no body now (it stays owed, waitpt runs it)
         ld hl,S_OWE
         ld a,(hl)
         or a
         jr z,.no
         dec (hl)
+        pop af
         pop hl
-        pop bc
         ld sp,(S_ISP)
-        nextreg 0x50,0xFF
+        nextreg 0x50,a
+        pop bc
         pop af
         jp 0xFF25                       ; the game's ISR (ends EI / RET)
-.no:    pop hl
-        pop bc
+.no:    pop af
+        pop hl
         ld sp,(S_ISP)
-        nextreg 0x50,0xFF
+        nextreg 0x50,a                  ; slot 0 as the interrupted code had it
+        pop bc
         pop af
         ei
         ret
@@ -885,12 +872,12 @@ h_light:
         ret
 
 
-        ASSERT $ <= 0x3AE0
-        ds 0x3AE0 - $, 0xFF
+        ASSERT $ <= 0x3AE7                  ; pattab (25 bytes) ends at shipcol
+        ds 0x3AE7 - $, 0xFF
 pattab:                                 ; 16 ones in 25, spread evenly
         db 1,0,1,1,0,1,0,1,1,0,1,1,0,1,0,1,1,0,1,1,0,1,0,1,0
         ASSERT $ - pattab == 25
-        ds 0x3B00 - $, 0xFF
+        ASSERT $ == 0x3B00
 ; ship colour per blueprint (index = low byte of IY); other values white. RRRGGGBB, never TRANS. Blueprints are
 ; 23-byte records from 0x61E3 (0x61E3 + 23 n, n = 0-22; low bytes all distinct); IY = the record while a ship's lines
 ; are drawn. Model names not yet identified; the station seen in Docking is 0x63C6 (n = 21). Defaults from the colour
@@ -925,6 +912,133 @@ BP      MACRO lo, col
         BP 0xC6, 0xDB           ; n 21  pale blue  (station)
         BP 0xDD, 0x3B           ; n 22  teal
         ORG shipcol + 256
+
+; waitpt (h_flip's tick wait, state page mapped, DI): the wait's interrupt point. A render holds DI for most of a
+; frame and the INT pulse lasts 32 T at 3.5 MHz (~256 T at 28 MHz), so an interrupt rarely lands in the EI window
+; (the verifier: 9 of 9 lost in a pass, bodies not run; CSpect holds INT until accepted). An owed game ISR body
+; runs here as at an interrupt (CALL = its push; it ends EI / RET); else the window opens. Back to the wait.
+waitpt: ld a,(S_OWE)
+        or a
+        jr z,.win
+        ld a,(0xFEFE)
+        cp 0xC9
+        jr z,.win                       ; the hack's switch: no body (as h_isr)
+        ld hl,S_OWE
+        dec (hl)
+        nextreg 0x50,0xFF
+        call 0xFF25
+        di
+        nextreg 0x50,STATE_PG
+        jp h_flip.w
+.win:   nextreg 0x50,0xFF               ; not HALT: polls only at the interrupt's own line never see the raster
+        ei                              ; go round, so the wait never ended (2026-11-23); poll at every line
+        nop                             ; instead, letting the interrupt in between
+        nop
+        di
+        nextreg 0x50,STATE_PG
+        jp h_flip.w
+
+; render_regs / render_back (state page mapped, RSTK): IX, IY and the alternate set kept across a render - the
+; ship draw changes them, the original copy (0x7FBE) does not (the verifier: IY, AF'..HL' differed after a pass).
+; Clobbers HL (render does anyway).
+render_regs:
+        ld (S_REGS),ix
+        ld (S_REGS + 2),iy
+        ex af,af'
+        push af
+        pop hl
+        ld (S_REGS + 4),hl
+        ex af,af'
+        exx
+        ld (S_REGS + 6),bc
+        ld (S_REGS + 8),de
+        ld (S_REGS + 10),hl
+        exx
+        ret
+render_back:
+        ld ix,(S_REGS)
+        ld iy,(S_REGS + 2)
+        ld hl,(S_REGS + 4)
+        push hl
+        ex af,af'
+        pop af
+        ex af,af'
+        exx
+        ld bc,(S_REGS + 6)
+        ld de,(S_REGS + 8)
+        ld hl,(S_REGS + 10)
+        exx
+        ret
+; (moved here from the main block: alt ROM space, 2026-11-23)
+; rowfix: repaint ULA row y = 56 (0x40E0-0x40FF), just below the game's 32-byte stack 0x4100-0x411F, as the blank
+; viewport row the copy shows (frame bits 0x80 at 0x40E1, 0x01 at 0x40FE), and the hack's save of it (0xFFD0-0xFFDF,
+; taken at 0xF8EC, put back at 0xF907). Deep calls (the planet circle most) leave stack bytes there; the original's
+; copy repaints the row soon after, here the copy waits for the tick - white dashes, at times the whole row
+; (2026-11-23, user report). Only when SP is above the row. Keeps all registers.
+rowfix: push af
+        push hl
+        push bc
+        ld hl,0x40E0
+        ld b,32
+        xor a
+.r1:    ld (hl),a
+        inc l
+        djnz .r1
+        ld hl,0xFFD0
+        ld b,16
+.r2:    ld (hl),a
+        inc l
+        djnz .r2
+        ld a,0x80
+        ld (0x40E1),a
+        ld a,0x01
+        ld (0x40FE),a
+        ld (0xFFDE),a
+        pop bc
+        pop hl
+        pop af
+        ret
+; (moved here from the main block: alt ROM space, 2026-11-23)
+; stsave: the star table as the last pass left it -> S_STP (stars_x extrapolates from it). Keeps all registers.
+stsave: push af
+        push bc
+        push de
+        push hl
+        HLIB_IFF_DI                     ; P/V = IFF; h_isr unmaps the state page on its way out
+        push af
+        nextreg 0x50,STATE_PG
+        ld hl,0x7A39
+        ld de,S_STP
+        ld bc,32
+        ldir
+        ld a,(0x7EDD)
+        ld (S_HYP),a
+        nextreg 0x50,0xFF
+        pop af
+        jp po,.n
+        ei
+.n:     pop hl
+        pop de
+        pop bc
+        pop af
+        ret
+; (moved here from the main block: alt ROM space, 2026-11-23)
+; fill2n: A = the patched JR offset (16 - n): (HL - 1) .. (HL - 2n) = 0xFF through h_plot. Keeps HL, BC, DE.
+fill2n: push hl
+        push bc
+        ld b,a
+        ld a,16
+        sub b
+        add a,a
+        jr z,.done
+        ld b,a
+.byte:  dec hl
+        ld a,0xFF
+        call h_plot
+        djnz .byte
+.done:  pop bc
+        pop hl
+        ret
 rom_end:
         SAVEBIN "elite_rom.bin", rom_start, rom_end - rom_start
 

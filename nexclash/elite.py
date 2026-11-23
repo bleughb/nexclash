@@ -11,9 +11,16 @@ Game facts (probes in C:\\1NEXT\\elite_work\\probe, games/elite.md ## Probe / ##
   Snapshot: 128K, 7FFD 0x30 (ROM 1, bank 0 at 0xC000, paging locked), IM 2 (I = 0xFD).
 Start-up tail at 0x4800: ULA viewport rows, written (by the copy) before any read in every recording scanned.
 """
+import copy
+import hashlib
 import json
 import os
+from pathlib import Path
 
+from . import hooklib
+
+PUBLISHER = 'Firebird, 1985'
+CMP = [i for i in hooklib.CMP_R if i not in (14, 15)]   # not I (the IM 2 table moved) nor R (supplied: elite_verify)
 ROM_ORG = 0x3000
 ALT_PAGE = 24               # 8K page: alt ROM image of 0x2000-0x3FFF (bank 12 lower half)
 LOW_PAGE = 25               # 8K page: alt ROM image of 0x0000-0x1FFF (bank 12 upper half)
@@ -21,7 +28,9 @@ TAIL_ADDR = 0x4800
 
 WRITERS_A = (0x5E44, 0x8B15, 0x8B1A, 0x8BB6, 0x8BBB, 0x9083, 0x9119, 0x911E, 0x917D, 0x9182, 0x91BD, 0x91E2,
              0x9215, 0x9261, 0xA84B, 0xB1B8, 0xB233, 0xB245, 0xB253, 0xD549,
-             0x8C19, 0x8CBB, 0x8D1B, 0x8DB1, 0x90D0)        # planet / sun fills (buf_pcs.py, 2026-11-23)
+             0x8C19, 0x8CBB, 0x8D1B, 0x8DB1, 0x90D0,        # planet / sun fills (buf_pcs.py, 2026-11-23)
+             0xFB01)    # the hack's small disc (0xFB40 -> 0xFB00: OR (HL) / LD (HL),A / RET; a linear disassembly
+                        # hid it in a table's last operand): small sun / planet, explosion flash (verifier, Witch 625)
 WRITERS_B = (0x91CD, 0x91F1)
 WRITERS_FF = (0x8B23, 0x8BC4, 0x8C22, 0x8CC4, 0x8D24, 0x8DBA, 0x8A78)
 WRITERS_LDDR = (0x5E4B, 0x8A81)    # row fills (sun; 0x8A78 + LDDR)
@@ -46,6 +55,7 @@ IM2_I = 0x39                # alt ROM 0x3900-0x3A00 all 0x3A: vector 0x3A3A = h_
 DATA_SITES = ((0xFF4C, '3efd', '3e39'),)      # the game's "IM 2 on": LD A,0xFD / LD I,A -> I = IM2_I
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
+_CACHE = {}
 
 
 def _profile_path():
@@ -59,13 +69,31 @@ def load_profile():
     return json.load(open(_profile_path()))
 
 
+def _sig():
+    if 'sig' not in _CACHE:
+        _CACHE['sig'] = {int(a, 16): bytes.fromhex(v) for a, v in load_profile()['signature'].items()}
+    return _CACHE['sig']
+
+
+def _read(banks, port7ffd, a):
+    bank = 5 if 0x4000 <= a < 0x8000 else 2 if 0x8000 <= a < 0xC000 else port7ffd & 7
+    return banks[bank][a & 0x3FFF]
+
+
 def is_elite(snap):
-    """The Russian 128K hack: 128K snapshot with the ship draw wrapper's JP at 0x9E44 and its body at 0xF8B4."""
-    if not snap.is128:
+    """The Russian 128K hack: 128K and the profile's signature bytes - the ship draw wrapper's JP at 0x9E44 and its
+    body at 0xF8B4 (bank 0 at 0xC000). snap: zt.Z80Snapshot or skoolkit's Snapshot (engines.find)."""
+    banks = getattr(snap, 'banks', None)
+    try:
+        if banks is not None and hasattr(snap, 'is128'):
+            if not snap.is128:
+                return False
+            return all(bytes(_read(banks, snap.port7ffd, a + i) for i in range(len(v))) == v for a, v in _sig().items())
+        if getattr(snap, 'machine', '48K') == '48K':
+            return False
+        return all(bytes(snap.memory[a:a + len(v)]) == v for a, v in _sig().items())
+    except (KeyError, TypeError, IndexError, AttributeError):
         return False
-    b2, b0 = snap.banks[2], snap.banks[0]
-    return bytes(b2[0x9E44 - 0x8000:0x9E47 - 0x8000]) == bytes.fromhex('c3b4f8') and \
-        bytes(b0[0xF8B4 - 0xC000:0xF8BB - 0xC000]) == bytes.fromhex('f347f1f5329da7')
 
 
 def sites(syms):
@@ -107,6 +135,7 @@ class ElitePatch:
         self.setup_call = self.syms['setup']
         self.hook_page_data = b''
         self.uses_printer_buffer = True        # the game's own data lives at 0x5B00
+        self.keep_printer_buffer = True        # so the stub puts 0x5B00-0x5BFF back after NEXLOAD (boot_check: lost)
         self.tail_addr = TAIL_ADDR
         self.max_tail = 256
         self.regblock = ROM_ORG + len(self.rom_code)
@@ -226,6 +255,109 @@ def sheets(source, out, name='ELITE', colours=None):
 def build(z80, nex, quiet=False, control=False):
     from . import z80tonex
     return z80tonex.convert(z80, nex, patch=ElitePatch(control=control), quiet=quiet)
+
+
+# ---------------------------------------------------------------------------------------------- contract
+
+def verify(patch, rzx_path, stop=None, collect=0, progress=None):
+    """The differential test per main-loop pass (nexclash/elite_verify.py: its docstring is the method)."""
+    from . import elite_verify as V
+    return V.verify(patch, rzx_path, stop=stop, collect=collect, progress=progress)
+
+
+def unit_tests(patch, states, neg=True):
+    """Recolour, hook coverage and the negative controls (elite_verify.unit_tests). neg: True, or the broken
+    build's alt ROM bytes (negative_patch)."""
+    from . import elite_verify as V
+    return V.unit_tests(patch, states, neg)
+
+
+def negative_patch(patch):
+    """The broken build of the h_clear negative control, as alt ROM bytes {address: byte}: the buffer clear's count
+    31 for 30 (one byte more cleared)."""
+    from . import elite_verify as V
+    return V.negative_rom(patch)
+
+
+def boot_check(nex, z80, patch):
+    """The converter's loader, with and without NEXLOAD, to the snapshot's PC: registers (R included), the mapped
+    48K against the patched snapshot (the tail at TAIL_ADDR excepted: viewport rows the copy rewrites), the banks
+    not mapped, the engine's banks and the alt ROM image with the stub's register block. -> [problem]."""
+    from . import nextboot, z80tonex as zt
+    s = zt.Z80Snapshot(str(z80))
+    tail, _, _, block = zt.build_tail(s, TAIL_ADDR, patch.slot1, True)
+    copy.copy(patch).apply(s)
+    want = {0: s.a, 1: s.f, 2: s.bc >> 8, 3: s.bc & 255, 4: s.de >> 8, 5: s.de & 255, 6: s.hl >> 8, 7: s.hl & 255,
+            8: s.ix >> 8, 9: s.ix & 255, 10: s.iy >> 8, 11: s.iy & 255, 12: s.sp, 14: s.i, 15: s.r, 16: s.a_, 17: s.f_,
+            18: s.bc_ >> 8, 19: s.bc_ & 255, 20: s.de_ >> 8, 21: s.de_ & 255, 22: s.hl_ >> 8, 23: s.hl_ & 255,
+            26: s.iff1, 27: s.im}
+    bad = []
+    banks, _, _ = nextboot.load_nex(str(nex))
+    for b in (1, 3, 4, 6, 7):
+        if b != s.port7ffd & 7 and bytes(banks[b]) != bytes(s.banks[b]):
+            bad.append(('unmapped bank', b))
+    for b, data in patch.extra_banks.items():
+        if bytes(banks[b]) != bytes(data):
+            bad.append(('extra bank', b))
+    rp = copy.copy(patch)
+    page = bytearray(patch.page)
+    page[patch.regblock - 0x2000:patch.regblock - 0x2000 + len(block)] = block
+    rp.page = bytes(page)
+    image = bytes(nextboot.alt_image(rp))
+    for nexload in (False, True):
+        st = nextboot.boot(str(nex), s.pc, nexload=nexload)
+        bad += [('loader', nexload) + tuple(x) for x in st['bad']]
+        bad += [('register', nexload, i, v, st['R'][i]) for i, v in want.items()
+                if (bool(st['R'][i]) != bool(v) if i == 26 else st['R'][i] != v)]
+        for a in range(0x4000, 0x10000):
+            if TAIL_ADDR <= a < TAIL_ADDR + len(tail):
+                continue
+            v = _read(s.banks, s.port7ffd, a)
+            if st['mem'][a] != v:
+                bad.append(('RAM', nexload, hex(a), v, st['mem'][a]))
+                if len(bad) > 20:
+                    return bad
+        if bytes(st['alt'][1]) != image:
+            bad.append(('alt ROM image', nexload))
+    return bad
+
+
+def auto(a, z80, name, out, say):
+    """Plain build (the IM 2 fix only: `--control`) and the colour build, boot checks, the differential verify on
+    each `a.rzx` (`a.quick` = frames), unit tests with the negative controls. -> True on PASS."""
+    from . import z80tonex as zt
+    out = Path(out)
+    out.mkdir(parents=True, exist_ok=True)
+    for key, value in dict(publisher=PUBLISHER, title='Elite', fix_label='Colour, smooth').items():
+        if not getattr(a, key, None):
+            setattr(a, key, value)
+    say('Game      : %s' % name)
+    say('Engine    : elite (viewport on Layer 2 in colour, 50 fps renders between the passes of the game)')
+    ok = True
+    patch = None
+    for label, suffix, control in (('Plain', '', True), ('Sprites', '_sprites', False)):
+        nex = out / (name + suffix + '.nex')
+        patch = ElitePatch(control=control)
+        zt.convert(str(z80), str(nex), quiet=True, patch=patch)
+        bad = boot_check(nex, z80, patch)
+        ok &= not bad
+        say('%-10s: %s %s boot %s' % (label, nex.name, hashlib.md5(nex.read_bytes()).hexdigest(),
+                                      'OK' if not bad else str(bad[:3])))
+    states = []
+    for rec in list(getattr(a, 'rzx', None) or []):
+        c, ex, st = verify(patch, rec, stop=getattr(a, 'quick', None), collect=3,
+                           progress=lambda s: say('Progress  : ' + s))
+        states += st
+        ok &= not any(v for k, v in c.items() if k.endswith('!'))
+        say('Verify    : %s %s' % (Path(rec).name, dict(c)))
+        (out / (name + '_' + Path(rec).stem + '_verification.json')).write_text(
+            json.dumps(dict(counts=c, examples=ex), indent=1, default=str) + chr(10))
+    if states:
+        u = unit_tests(patch, states, neg=negative_patch(patch))
+        ok &= not any(v for k, v in u.items() if k.endswith('!'))
+        say('Unit      : %s; hook sites not reached: %s' % (dict(u), ', '.join(patch.unreached) or 'none'))
+    say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
+    return bool(ok)
 
 
 if __name__ == '__main__':

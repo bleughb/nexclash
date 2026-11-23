@@ -18,6 +18,8 @@ h_flip: HLIB_IFF_DI                     ; P/V = IFF
         or a
         jp z,.plain                     ; not after a flight pass (status, charts, equipment: the game draws the
                                         ; page into the buffer and this copy shows it): the original copy only
+        ld a,1
+        ld (S_FLIP2),a
         call rowfix                     ; ULA row 56 below the game's stack: see rowfix
         ld a,(S_ULAC)
         or a
@@ -50,13 +52,7 @@ h_flip: HLIB_IFF_DI                     ; P/V = IFF
         jr z,.halt
         ld (hl),a
         call render
-.halt:  nextreg 0x50,0xFF               ; not HALT: polls only at the interrupt's own line never see the raster
-        ei                              ; go round, so the wait never ended (2026-11-23); poll at every line
-        nop                             ; instead, letting the interrupt in between
-        nop
-        di
-        nextreg 0x50,STATE_PG
-        jr .w
+.halt:  jp waitpt                       ; (alt ROM space after shipcol)
 .tick:  ld a,(S_RD)
         inc a
         jr nz,.t2
@@ -76,7 +72,13 @@ h_flip: HLIB_IFF_DI                     ; P/V = IFF
         ei
 .nei:   ld hl,0xC000
         jp 0x7FC1
-.plain: nextreg 0x12,BLANK_BK              ; M4: the original's screen only (launch, hyperspace, pages)
+.plain: ld a,(S_FLIP2)                  ; a copy after this pass's flight copy with no clear between: the game drew
+        or a                            ; on the same picture (explosion flash 0x8F0D: a growing disc, 0x86D0 and a
+        jr z,.page                      ; copy four times per ship). Cur again with the base as it is now, no wait.
+        ld a,TICK                       ; (Before: Layer 2 off and the discs alone on the ULA: the scene blinked.)
+        call render
+        jr .done
+.page:  nextreg 0x12,BLANK_BK              ; M4: the original's screen only (launch, hyperspace, pages)
         ld a,(S_IFF)
         nextreg 0x50,0xFF
         or a
@@ -99,8 +101,10 @@ render: ld (S_RA),a
         ld bc,RSTKLEN
         ldir
         ld sp,RSTK
+        call render_regs
         ld a,(S_RA)
         call render_b
+        call render_back
         ld sp,(S_RSP)
         ld hl,RSAVE
         ld de,RSTK - RSTKLEN
@@ -111,8 +115,8 @@ render: ld (S_RA),a
 
 render_b:
         ld b,a
-        xor a
-        ld (MIRF),a                     ; the render mirrors everything it draws
+        ld a,0x80
+        ld (MIRF),a                     ; the render mirrors everything it draws, over the base (h_plot)
         ld a,b
         cp TICK
         ld b,0
@@ -225,7 +229,9 @@ render_b:
         add hl,bc
         ld (S_RP),hl
         jp .rec
-.rdone: ld hl,outtab
+.rdone: xor a
+        ld (MIRF),a                     ; the logic pass's later draws mirror into the base
+        ld hl,outtab
         ld de,SAVE
         call tab_load
         nextreg 0x7F,C_WHITE
@@ -336,12 +342,12 @@ scenery:
         di
         call .poll
 .nopl:  nextreg 0x7F,C_WHITE
-        ld a,(0x7EDD)
+        nextreg 0x50,STATE_PG
+        ld a,(S_HYP)
+        nextreg 0x50,0xFF
         dec a
-        jr nz,.stx
-        call 0x7898                     ; hyperspace: the game's own (its streaks draw the stars several times)
-        jr .std
-.stx:   call stars_x                    ; not 0x7898 on the scaled controls: its step is speed / 2 + 1 whole
+        jr z,.std                       ; a streak pass: its stars are in the base (h_stars)
+        call stars_x                    ; not 0x7898 on the scaled controls: its step is speed / 2 + 1 whole
 .std:   di                              ; pixels (0xFF on a small weight: stars ran ahead, then back: wobble)
         ld a,0x18
         ld (0xFEFE),a
@@ -417,7 +423,8 @@ stars_x:
 .ret:   ret
 
 ; exco: A = now, E = before (sign | magnitude), C = w: A = now + (now - before) * w / 256 as sign | magnitude
-; (magnitude at most 127); carry: |now - before| > STJMP. Keeps BC.
+; (magnitude at most 127); carry: |now - before| > STJMP. Keeps BC. The sum is taken on the screen-linear value
+; (sm2s), so w = 0 gives back now bit for bit, -0 included.
 exco:   call sm2s
         ld d,a                          ; D = now
         ld a,e
@@ -448,25 +455,24 @@ exco:   call sm2s
         rlca
         ld a,127
         jr nc,.ok
-        ld a,-127
-.ok:    cp 0x80
-        jr nz,.ok2
-        ld a,-127
-.ok2:   pop bc
+        ld a,-128
+.ok:    pop bc
         or a                            ; carry clear, S = sign
         ret p
-        neg
+        cpl                             ; -m - 1 -> m
         or 0x80
         ret                             ; or clears carry
 .big2:  pop bc
 .big:   scf
         ret
 
-; sm2s: A sign | magnitude -> two's complement.
+; sm2s: A sign | magnitude -> the screen-linear value: +m -> m, -m -> -m - 1. The draw 0x79CC puts +m at 0x3F - m
+; (x: 0x77 - m) and -m at 0x40 + m (0x78 + m): two zeros a pixel apart. As plain two's complement (-0 -> 0) a star at
+; -0 was drawn one pixel off in every render (the verifier, Docking passes 350 / 425, 2026-11-23).
 sm2s:   bit 7,a
         ret z
         and 0x7F
-        neg
+        cpl
         ret
 
 ; scale_sm: (HL) = sign | magnitude byte, magnitude * E / 256. Keeps E, HL.
