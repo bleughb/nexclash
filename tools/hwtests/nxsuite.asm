@@ -16,7 +16,8 @@
 ;           $7000 results table "NXS1"; $7800 G2 records; $7E00 "NXHT" (G2 / G3); $7FFF done flag $A5
 ;   bank 2  $8000 code that must not move with slots 6/7 (timing core, file I/O, G1, G2);
 ;           $B000 timing blocks; $B800 CRC table; $BC00-$BFFF stacks (SP $BE00; G2 timing $BFE0)
-;   bank 0  $C000-$EFFF harness, menu, G0 / G3 / G4; $F000-$F7FF scratch; $F800-$FFFF interrupt tables
+;   bank 0  $C000-$DFFF harness, menu, G0, test table; $F000-$F7FF scratch (page 1)
+;   pages 36-47 slot 7 overlays (one per group: G2 extras, G3, G4, ...), $F800-$FFFF their own area
 ;   pages 32-35 + 58-61 result text (64 KB), 56-57 G1 data / G2 slot 6-7 sandbox, 62 strings
 
         DEVICE ZXSPECTRUMNEXT
@@ -51,10 +52,29 @@ code2_end:
         ORG $C000
         INCLUDE "nxsuite/harness.asm"
         INCLUDE "nxsuite/g0.asm"
-        INCLUDE "nxsuite/g3.asm"
-        INCLUDE "nxsuite/g4.asm"
         INCLUDE "nxsuite_tests.inc"
         ; (the include ends in the string page: MMU 6,STRPAGE / ORG $C000)
+
+; ---------------------------------------------------------------- slot 7 overlays, one page per group
+; The harness maps a group's page into slot 7 ($E000-$FFFF) around each of its tests (gtab byte 7,
+; from OVL_<group> below) and the home page (HOMEP7) again before writing the line. Code $E000-$F7FF;
+; $F800-$FFFF of the page is that group's interrupt / scratch area. Pages 36-47 (banks 18-23).
+OVL_G2  equ 36
+OVL_G3  equ 37
+OVL_G4  equ 38
+        MMU 7,OVL_G2
+        ORG $E000
+        INCLUDE "nxsuite/g2b.asm"
+        ASSERT $ <= $F800
+        MMU 7,OVL_G3
+        ORG $E000
+        INCLUDE "nxsuite/g3.asm"
+        ASSERT $ <= $F800
+        MMU 7,OVL_G4
+        ORG $E000
+        INCLUDE "nxsuite/g4.asm"
+        ASSERT $ <= $F800
+        MMU 7,HOMEP7
 
         ; bank 7 (pages 14 / 15) in the .nex, so tests C03 / C04 time code in pages the suite owns
         MMU 3,14

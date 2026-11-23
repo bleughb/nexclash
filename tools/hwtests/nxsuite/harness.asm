@@ -407,7 +407,11 @@ run_test_marked:
         ld a,(unatt) : or a : jr z,.go
         ld a,ST_PENDOP : ld (R_st),a : jr .emit
 .skip:  ld (R_why),hl : ld a,ST_SKIP : ld (R_st),a : jr .emit
-.go:    ld ix,(cure) : bit 0,(ix+5) : jr z,.nm
+.go:    ld ix,(cure) : ld a,(ix+4) : call gent       ; slot 7 = the group's overlay page
+        ld a,(ix+7) : or a : jr nz,.ov
+        ld a,HOMEP7
+.ov:    ld (ovlpage),a : nextreg $57,a
+        ld ix,(cure) : bit 0,(ix+5) : jr z,.nm
         ld a,(curt) : ld l,a : ld h,0 : call prg_mark
 .nm:    ld (tsp),sp
         ld ix,(cure) : ld l,(ix+6) : ld h,(ix+7)
@@ -419,7 +423,8 @@ run_test_marked:
         ld a,(spd0) : nextreg $07,a
         ld ix,(cure) : bit 0,(ix+5) : jr z,.emit
         ld hl,$FFFF : call prg_mark                 ; between tests again
-.emit:  ld hl,(wp) : ld (hl),0                      ; extras end
+.emit:  ld a,HOMEP7 : ld (ovlpage),a : nextreg $57,a ; home page in slot 7 again
+        ld hl,(wp) : ld (hl),0                      ; extras end
         call emit_t
         call stab_put
         call scr_status
@@ -467,7 +472,16 @@ res_hex16:
         ld (R_v),hl : ld a,VK_HEX16 : ld (R_vk),a : ret
 ; HL = choice word
 res_word:
+        push de : push bc : ld de,R_wbuf : call .cp : pop bc : pop de : ld hl,R_wbuf
         ld (R_v),hl : ld a,VK_WORD : ld (R_vk),a : ret
+; copy a zero-ended string (at most 15 characters) HL -> DE: a test in a slot-7 overlay names its word /
+; unit there, and the line is written after the home page is back in slot 7
+.cp:    ld b,15
+.c:     ld a,(hl) : ld (de),a : or a : ret z
+        inc hl : inc de : djnz .c
+        xor a : ld (de),a : ret
+R_wbuf: ds 16
+R_ubuf: ds 16
 ; the five-run result of trow -> v = mean, min, max, n = 5
 res_trow:
         ld hl,tr_mean : ld de,R_v : ld bc,4 : ldir
@@ -478,7 +492,8 @@ res_trow:
         ret
 ; HL = unit string
 res_unit:
-        ld (R_unit),hl : ret
+        push de : push bc : ld de,R_ubuf : call res_word.cp : pop bc : pop de
+        ld hl,R_ubuf : ld (R_unit),hl : ret
 ; HL = key -> " key=" into the extras
 ex_k:   ld a,' ' : call wchr : call wstr : ld a,'=' : jp wchr
 ; HL = key, A = byte -> " key=$hh"

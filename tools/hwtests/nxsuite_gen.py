@@ -42,6 +42,16 @@ def built_labels():
     return labels
 
 
+def overlays():
+    """group id -> overlay page symbol, for groups whose code sits in a slot-7 overlay (OVL_<id> equ ...)."""
+    out = {}
+    for line in open(os.path.join(HERE, 'nxsuite.asm')):
+        m = re.match(r'(OVL_(\w+))\s+equ', line)
+        if m:
+            out[m.group(2)] = m.group(1)
+    return out
+
+
 def asm_str(s):
     assert '"' not in s and all(32 <= ord(c) < 127 for c in s), s
     return '"%s",0' % s
@@ -60,7 +70,9 @@ def tests_inc(out):
         src = 'unknown'
     lines.append('srcstr: db ' + asm_str(src))
     lines.append('datestr: db ' + asm_str(datetime.date.today().isoformat()))
-    # group table, 8 bytes: first test, count, built count, key, kind (0 auto, 1 operator, 2 opt-in), name ptr
+    # group table, 8 bytes: first test, count, built count, key, kind (0 auto, 1 operator, 2 opt-in), name ptr,
+    # overlay page (0 = none: slot 7 keeps the home page)
+    ovl = overlays()
     lines.append('gtab:')
     first = 0
     nbuilt_all = 0
@@ -69,8 +81,8 @@ def tests_inc(out):
         nb = sum(1 for x in rows if 't_' + x['id'].lower() in labels)
         nbuilt_all += nb
         kind = {'auto': 0, 'operator': 1, 'opt-in': 2}[g['kind']]
-        lines.append('        db %d,%d,%d,"%s",%d : dw gname_%s : db 0   ; %s' % (
-            first, len(rows), nb, g['key'], kind, g['id'], g['id']))
+        lines.append('        db %d,%d,%d,"%s",%d : dw gname_%s : db %s   ; %s' % (
+            first, len(rows), nb, g['key'], kind, g['id'], ovl.get(g['id'], '0'), g['id']))
         first += len(rows)
     lines.append('NBUILT  equ %d' % nbuilt_all)
     # test table, 12 bytes: id (4 chars), group index, flags, routine, claims ptr, title ptr (strings: STRPAGE)
@@ -84,7 +96,7 @@ def tests_inc(out):
         lines.append('        db "%-4s",%d,%d : dw %s,cl_%s,ti_%s' % (
             x['id'], gidx[x['group']], flags, lab if lab in labels else '0', x['id'], x['id']))
     lines.append('ttab_end:')
-    lines.append('        ASSERT ttab_end <= SCRATCH')
+    lines.append('        ASSERT ttab_end <= $E000      ; slot 6 only: slot 7 holds the group overlays')
     # strings, in the string page (mapped into slot 6 by far_copy)
     lines.append('        MMU 6,STRPAGE')
     lines.append('        ORG $C000')

@@ -82,7 +82,7 @@ g2_sbx: di
         nextreg $56,SBX6 : nextreg $57,SBX7
         ret
 g2_home:
-        nextreg $56,HOMEP6 : nextreg $57,HOMEP7
+        nextreg $56,HOMEP6 : ld a,(ovlpage) : nextreg $57,a
         ret
 
 ; ---------------------------------------------------------------- Z01 FUNC cases
