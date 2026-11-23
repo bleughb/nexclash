@@ -521,6 +521,13 @@ def report(doc, table, out=sys.stdout):
         for t in lo:
             print('  %-4s %s [%s]' % (t['id'], t['title'], ','.join(t['claims']) or '-'), file=out)
             print('       %s' % t['left_out'], file=out)
+    lp = table.get('lessons_placed', [])
+    if lp:
+        print('platform / emulator lessons named nowhere else (%d): where each is answered, or why not:' % len(lp),
+              file=out)
+        for x in lp:
+            print('  %-44s %s' % (x['lesson'], ('tests ' + x['placed']) if x['placed'] else 'left out'), file=out)
+            print('       %s' % x['reason'], file=out)
     dis = doc['run'].get('passes_disagree', [])
     if dis:
         print('passes disagree (%d tests; the verdict used the latest pass):' % len(dis), file=out)

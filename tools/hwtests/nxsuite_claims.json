@@ -2069,7 +2069,8 @@
    "claim": "At .nex launch 7FFD paging is unlocked (NextReg $08 bit 7 reads 1).",
    "sources": [
     "docs/BRIEFING.md:117",
-    "docs/LEARNINGS.md:882"
+    "docs/LEARNINGS.md:882",
+    "lesson.launch-state-unlocked-paging"
    ],
    "values": {
     "repo": "unlocked (all hardware-tested builds page with legacy writes)"
@@ -2145,7 +2146,8 @@
    "claim": "A new 50/60 Hz rate written to NextReg $05 bit 2 takes effect at the next frame and $05 reads back the old rate until then.",
    "sources": [
     "docs/NEXT_REGISTERS.md:32",
-    "book ch 10 (report A, AGREES note)"
+    "book ch 10 (report A, AGREES note)",
+    "lesson.next-60hz-blank"
    ],
    "values": {
     "repo": "NextMasterSystem notes",
@@ -3905,7 +3907,9 @@
    "sources": [
     "docs/DDMA.md:25",
     "docs/NEXT_REGISTERS.md:80",
-    "book ch 5 (report B-N27, D1-D4)"
+    "book ch 5 (report B-N27, D1-D4)",
+    "lesson.zxn-dma-blitter-commands",
+    "lesson.jnext-no-blitter"
    ],
    "values": {
     "book": "on all boards in 3.03",
@@ -3927,7 +3931,9 @@
     "lesson.blitter-sram-aperture-offset",
     "lesson.jnext-ram-dump-offset",
     "book ch 5 (report B-N21)",
-    "book ch 3 (report D-N15)"
+    "book ch 3 (report D-N15)",
+    "lesson.zxn-dma-blitter-commands",
+    "lesson.jnext-no-blitter"
    ],
    "values": {
     "repo": "040000 aperture offset (Inferno)",
@@ -3948,7 +3954,9 @@
    "sources": [
     "docs/DDMA.md:54",
     "book ch 5 (report B-N22)",
-    "book ch 3 (report D-N16)"
+    "book ch 3 (report D-N16)",
+    "lesson.zxn-dma-blitter-commands",
+    "lesson.jnext-no-blitter"
    ],
    "values": {
     "repo": "physical mode does not reach BRAM banks 5/7",
@@ -3968,7 +3976,9 @@
    "claim": "2D mode moves row length x rows bytes with strides measured start-of-row to start-of-row; row length or rows of 0 still moves one byte.",
    "sources": [
     "docs/DDMA.md:52",
-    "book ch 5 (report B-N23)"
+    "book ch 5 (report B-N23)",
+    "lesson.zxn-dma-blitter-commands",
+    "lesson.jnext-no-blitter"
    ],
    "values": {
     "repo": "as stated",
@@ -3989,7 +3999,9 @@
    "sources": [
     "docs/DDMA.md:90",
     "book ch 5 (report B-N20)",
-    "lesson.blitter-hardware-benchmark"
+    "lesson.blitter-hardware-benchmark",
+    "lesson.zxn-dma-blitter-commands",
+    "lesson.jnext-no-blitter"
    ],
    "values": {
     "repo": "fill 2x (guide); CSpect fill 0.07 us/byte",
@@ -4009,7 +4021,9 @@
    "claim": "Layer 2 X,Y mode writes row-major in 256x192 (only X's low byte counts) and column-major in 320x256 / 640x256, bank from $12 (or $13 with the hidden-screen flag), stride forced to 256.",
    "sources": [
     "docs/DDMA.md:57",
-    "book ch 5 (report B-N24)"
+    "book ch 5 (report B-N24)",
+    "lesson.zxn-dma-blitter-commands",
+    "lesson.jnext-no-blitter"
    ],
    "values": {
     "repo": "layouts",
@@ -4030,7 +4044,9 @@
    "sources": [
     "docs/DDMA.md:68",
     "docs/DDMA.md:92",
-    "book ch 5 (report B-C2)"
+    "book ch 5 (report B-C2)",
+    "lesson.zxn-dma-blitter-commands",
+    "lesson.jnext-no-blitter"
    ],
    "values": {
     "repo": "core 3.02.21",
@@ -4902,6 +4918,78 @@
    "risk": "could hang or leave DivMMC mapped until reset; no SD write",
    "matters_for": "z80tonex.automap_off assumptions, DivMMC traps",
    "priority": 2
+  }
+ ],
+ "lessons_placed": [
+  {
+   "lesson": "lesson.launch-state-unlocked-paging",
+   "placed": "S01",
+   "reason": "S01 p7ffd (paging unlocked at launch) answers it; M01 / M02 the remap and the lock."
+  },
+  {
+   "lesson": "lesson.zxn-dma-blitter-commands",
+   "placed": "D10,D11,D12,D13,D14",
+   "reason": "Partly: D10-D13 send $D7 / $DB / $DF / $E3-$EF / $F3 / $F7 after $C3 and before the program (D14 puts $DF inside it, before LOAD $CF); a PASS on the board shows that order works. The lesson's order (after LOAD, before ENABLE) is not tried separately."
+  },
+  {
+   "lesson": "lesson.jnext-no-blitter",
+   "placed": "D10,D11,D12,D13,D14",
+   "reason": "JNext writes SKIP why=no-blitter (core 3.03 check); the board and CSpect answer the tests."
+  },
+  {
+   "lesson": "lesson.next-60hz-blank",
+   "placed": "F03,F06",
+   "reason": "F03 measures the frames around a 50 / 60 switch (f1, f2 = the short frame, j2); F06 both rates. Whether the monitor shows black is the screen, not the Next: V19 / the owner sees it."
+  },
+  {
+   "lesson": "lesson.pace-clock-race",
+   "placed": "",
+   "reason": "A rule for game code reading a pace clock (interrupts off around the read); the machine side (one interrupt outstanding, CTC status) is I20 / I13."
+  },
+  {
+   "lesson": "lesson.pace-control-rom-beep",
+   "placed": "",
+   "reason": "Needs Sinclair's ROM as the reference beside NextZXOS's ROM 3; the suite runs only the ROM the machine has (S04 records its CRC and the $0038 / $386E bytes)."
+  },
+  {
+   "lesson": "lesson.pace-input-timing",
+   "placed": "",
+   "reason": "Emulator or tool behaviour (how a script or probe talks to the emulator), not a property of the machine; the suite runs on the machine."
+  },
+  {
+   "lesson": "lesson.pace-timing-model",
+   "placed": "",
+   "reason": "About RZX files written by Fuse, not the Next."
+  },
+  {
+   "lesson": "lesson.jnext-execute-probe-fires-twice",
+   "placed": "",
+   "reason": "Emulator or tool behaviour (how a script or probe talks to the emulator), not a property of the machine; the suite runs on the machine."
+  },
+  {
+   "lesson": "lesson.jnext-jns-save-at-frame-boundary",
+   "placed": "",
+   "reason": "Emulator or tool behaviour (how a script or probe talks to the emulator), not a property of the machine; the suite runs on the machine."
+  },
+  {
+   "lesson": "lesson.jnext-keys-after-load",
+   "placed": "",
+   "reason": "Emulator or tool behaviour (how a script or probe talks to the emulator), not a property of the machine; the suite runs on the machine. (the emulator runs of the suite already press keys after the load)."
+  },
+  {
+   "lesson": "lesson.jnext-tape-trap-056b",
+   "placed": "",
+   "reason": "Emulator or tool behaviour (how a script or probe talks to the emulator), not a property of the machine; the suite runs on the machine."
+  },
+  {
+   "lesson": "lesson.overspec-scripting",
+   "placed": "",
+   "reason": "Emulator or tool behaviour (how a script or probe talks to the emulator), not a property of the machine; the suite runs on the machine."
+  },
+  {
+   "lesson": "lesson.z80n-opcodes-in-skoolkit",
+   "placed": "",
+   "reason": "About the SkoolKit simulator; the machine side of every Z80N opcode is G2 (Z01-Z07)."
   }
  ]
 }
