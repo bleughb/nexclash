@@ -551,7 +551,8 @@ i19h:   push af : push hl
 
 ; ---------------------------------------------------------------- I20 one outstanding CTC interrupt
 ; CTC0 timer /16, tc 175 (~10 kHz at 28 MHz). Periods over one frame: $C9 bit 0 polled (interrupt off).
-; Runs over one frame: hardware IM2, CTC0 only; the handler stays busy for 3 CTC0 wraps. v = runs / periods
+; Runs over one frame: hardware IM2, CTC0 only; the handler stays busy for 3 CTC0 wraps and itself counts the
+; frame (line MSB falls), switching CTC0's interrupt off after one whole frame. v = runs / periods
 ; (1/3 if extra requests fold into one, more if they queue).
 @t_i20:  nextreg $07,3
         di : nextreg $C5,0
@@ -568,10 +569,15 @@ i19h:   push af : push hl
 .a:     in a,(c) : rra : jr nc,.a
 .b:     in a,(c) : rra : jr c,.b
         ld hl,0 : ld (g3cnt),hl
+        xor a : ld (i20m),a : ld (i20fall),a : ld (i20done),a
+        ld e,0                                  ; frame starts the main loop saw (if the handler never runs)
         ei
-.c:     in a,(c) : rra : jr nc,.c
-.d:     in a,(c) : rra : jr c,.d
-        di
+.c:     ld a,(i20done) : or a : jr nz,.e        ; the handler ends the frame itself: after its RETI a
+        in a,(c) : rra : jr nc,.c               ; request that came meanwhile is taken at once, so this
+.d:     ld a,(i20done) : or a : jr nz,.e        ; loop may never run again while CTC0 is on
+        in a,(c) : rra : jr c,.d
+        inc e : ld a,e : cp 3 : jr c,.c
+.e:     di
         nextreg $C5,0
         ld bc,$183B : ld a,$03 : out (c),a
         call g3_hwoff
@@ -602,13 +608,22 @@ i19h:   push af : push hl
 k_per:  db "periods",0
 u_ratio: db "ratio",0
 i20h:   push af : push bc : push de : push hl
-        ld bc,$183B : in d,(c) : ld e,3 : ld hl,0
-.l:     dec hl : ld a,h : or l : jr z,.x
+        ld bc,$183B : in d,(c) : ld e,3 : ld hl,2048   ; guard: 3 periods are ~150 reads; a CTC that
+.l:     dec hl : ld a,h : or l : jr z,.x                ; never counts (CSpect 4.5.9) must not hold the frame
         in a,(c) : cp d : ld d,a : jr c,.l : jr z,.l
         dec e : jr nz,.l
 .x:     ld a,1 : ld (g3int),a
+        ld a,(i20fall) : cp 1 : jr nz,.nc               ; count the runs between the 1st and 2nd frame start
         ld hl,(g3cnt) : inc hl : ld (g3cnt),hl
-        pop hl : pop de : pop bc : pop af : ei : reti
+.nc:    ld b,$25 : in a,(c) : and 1                     ; $1E (the main loop's select): line MSB
+        ld hl,i20m : cp (hl) : ld (hl),a : jr z,.k
+        or a : jr nz,.k
+        ld hl,i20fall : inc (hl) : ld a,(hl) : cp 2 : jr c,.k
+        nextreg $C5,0 : ld a,1 : ld (i20done),a         ; one whole frame counted: CTC0 interrupt off
+.k:     pop hl : pop de : pop bc : pop af : ei : reti
+i20m:   db 0
+i20fall: db 0
+i20done: db 0
 
 ; ---------------------------------------------------------------- I22 continuous DMA and the pulse
 ; pulse IM 2 counting handler, EI; continuous 16K $4000 -> $0000 (pages 36 / 37) started 20 lines before
