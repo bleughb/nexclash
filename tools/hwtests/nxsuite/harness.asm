@@ -410,7 +410,9 @@ run_test_marked:
 .go:    ld ix,(cure) : ld a,(ix+4) : call gent       ; slot 7 = the group's overlay page
         ld a,(ix+7) : or a : jr nz,.ov
         ld a,HOMEP7
-.ov:    ld (ovlpage),a : nextreg $57,a
+.ov:    ld ix,(cure) : bit 3,(ix+5) : jr z,.o1       ; flag 8: the group's second page
+        inc a
+.o1:    ld (ovlpage),a : nextreg $57,a
         ld ix,(cure) : bit 0,(ix+5) : jr z,.nm
         ld a,(curt) : ld l,a : ld h,0 : call prg_mark
 .nm:    ld (tsp),sp

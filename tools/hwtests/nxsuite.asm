@@ -55,24 +55,28 @@ code2_end:
         INCLUDE "nxsuite_tests.inc"
         ; (the include ends in the string page: MMU 6,STRPAGE / ORG $C000)
 
-; ---------------------------------------------------------------- slot 7 overlays, one page per group
+; ---------------------------------------------------------------- slot 7 overlays
 ; The harness maps a group's page into slot 7 ($E000-$FFFF) around each of its tests (gtab byte 7,
-; from OVL_<group> below) and the home page (HOMEP7) again before writing the line. Code $E000-$F7FF;
-; $F800-$FFFF of the page is that group's interrupt / scratch area. Pages 36-47 (banks 18-23).
-OVL_G2  equ 36
-OVL_G3  equ 37
-OVL_G4  equ 38
+; from OVL_<group> below) and the home page (HOMEP7) again before writing the line. Code from $E000;
+; the top of the page is that group's interrupt / scratch area. Overlay pages are 40-43 and 63 (spec 1.2
+; gives the suite pages 32-63: text 32-35 + 58-61, DMA scratch 36-39, Layer 2 44-53, sprites 54,
+; alt ROM 55, data / sandbox 56-57, strings 62). Two groups may share a page.
+OVL_G2  equ 40                  ; G2 extras and G4 share page 40 (Z04 uses $F000-$F1FF of it)
+OVL_G4  equ 40
+OVL_G3  equ 41                  ; G3: tables at $F800-$FFFF
+OVL2_G3 equ 42                  ; G3 tests in g3b.asm (flag 8 in the test table: group page + 1)
         MMU 7,OVL_G2
         ORG $E000
         INCLUDE "nxsuite/g2b.asm"
-        ASSERT $ <= $F800
+        INCLUDE "nxsuite/g4.asm"
+        ASSERT $ <= $F000
         MMU 7,OVL_G3
         ORG $E000
         INCLUDE "nxsuite/g3.asm"
         ASSERT $ <= $F800
-        MMU 7,OVL_G4
+        MMU 7,OVL2_G3
         ORG $E000
-        INCLUDE "nxsuite/g4.asm"
+        INCLUDE "nxsuite/g3b.asm"
         ASSERT $ <= $F800
         MMU 7,HOMEP7
 

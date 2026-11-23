@@ -483,7 +483,7 @@ rtab:   db $07,$03,$00, $05,$04,$FB, $08,$40,$3F, $0A,$10,$EF, $64,$FF,$00, $8C,
         db $43,$FF,$00, $12,$FF,$00, $13,$FF,$00, $70,$FF,$00, $16,$FF,$00, $17,$FF,$00, $71,$FF,$00
         db $68,$FF,$00, $69,$FF,$00, $6B,$FF,$00, $6C,$FF,$00, $6E,$FF,$00, $6F,$FF,$00, $09,$FF,$00
         db $2F,$FF,$00, $30,$FF,$00, $31,$FF,$00, $7F,$FF,$00
-        db $52,$FF,$00, $53,$FF,$00, $54,$FF,$00, $55,$FF,$00
+        db $50,$FF,$00, $51,$FF,$00, $52,$FF,$00, $53,$FF,$00, $54,$FF,$00, $55,$FF,$00
         db $FF
 restore_all:
         di
@@ -506,6 +506,8 @@ restore_all:
         nextreg $CA,$FF
         ld bc,$183B : ld a,$03 : out (c),a          ; CTC channels 0 and 3 reset (control $03)
         ld bc,$1B3B : out (c),a
+        ld a,$83 : out ($6B),a : ld a,$C3 : out ($6B),a : in a,($6B)   ; DMA off, reset, zxnDMA mode
+        nextreg $62,0                               ; copper stopped
         ld bc,$123B : xor a : out (c),a             ; Layer 2 port 0
         nextreg $56,HOMEP6                          ; our pages in slots 6 / 7 (7: the group's overlay)
         ld a,(ovlpage) : nextreg $57,a

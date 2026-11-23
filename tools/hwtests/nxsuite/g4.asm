@@ -152,8 +152,9 @@ k_lim:  db "maxline",0
 
 ; ---------------------------------------------------------------- F05 $64 line offset
 ; at line 100 write $64 = 32 and read the line straight after; the largest line of that frame and of the
-; next; then $64 back to its start value and two frames waited. (The line-interrupt and copper parts of the
-; spec procedure are later-stage: G3 / G6 machinery.)
+; next; then $64 back to its start value and two frames waited. Then with $64 = 0 and = 32 (f05x): the line
+; read in a line-interrupt-32 handler (li0 / li32) and the line where a copper WAIT 32 + MOVE was first seen
+; (cp0 / cp32); $64 restored and two frames waited again.
 t_f05:  ld a,$64 : call rdreg : ld (.r),a
         call frame_sync : ld a,100 : call sync_lsb
         nextreg $64,32
@@ -167,11 +168,75 @@ t_f05:  ld a,$64 : call rdreg : ld (.r),a
         ld de,100 : ld hl,k_before : call ex_kd
         ld de,(.f1) : ld hl,k_f1 : call ex_klen
         ld de,(.f2) : ld hl,k_f2 : call ex_klen
-        ld hl,k_parts : call ex_k : ld hl,w_rawonly : jp wstr
+        xor a : call f05x : ld (.x),hl : ld (.x+2),de
+        ld a,32 : call f05x : ld (.x+4),hl : ld (.x+6),de
+        ld a,(.r) : nextreg $64,a
+        call fwrapmax : call fwrapmax
+        ld de,(.x) : ld hl,k_li0 : call ex_kd
+        ld de,(.x+4) : ld hl,k_li32 : call ex_kd
+        ld de,(.x+2) : ld hl,k_cp0 : call ex_kd
+        ld de,(.x+6) : ld hl,k_cp32 : call ex_kd
+        ld hl,k_parts : call ex_k : ld hl,w_parts : jp wstr
+.x:     ds 8
 .r:     db 0
 .a:     dw 0
 .f1:    dw 0
 .f2:    dw 0
 k_before: db "before",0
 k_parts: db "parts",0
-w_rawonly: db "raster-only",0
+w_parts: db "raster,line-int,copper",0
+k_li0:  db "li0",0
+k_li32: db "li32",0
+k_cp0:  db "cp0",0
+k_cp32: db "cp32",0
+
+; A = $64 value -> HL = the raster line read in a line-interrupt-32 handler (pulse IM 2, ULA off; $FFFF
+; = never ran), DE = the line where a copper WAIT 32 + MOVE $7F,$5A was first seen by the CPU (28 MHz,
+; mode 11, $7F cleared at line 200; $FFFF = never). Uses $FD00-$FF00 of this page as its IM 2 table.
+F5T     equ $FD00
+f05x:   di
+        nextreg $64,a
+        call fwrapmax
+        nextreg $07,3
+        ld hl,F5T : ld de,F5T+1 : ld bc,256 : ld (hl),$FE : ldir
+        ld a,$C3 : ld ($FEFE),a : ld hl,f05h : ld ($FEFF),hl
+        ld a,(NRSNAP+$C0) : and $08 : nextreg $C0,a
+        nextreg $C5,0 : nextreg $C6,0
+        nextreg $23,32
+        ld a,(NRSNAP+$22) : and $F8 : or 6 : nextreg $22,a
+        nextreg $C4,2
+        nextreg $C8,$FF : nextreg $C9,$FF : nextreg $CA,$FF
+        ld hl,$FFFF : ld (f05l),hl
+        ld a,F5T>>8 : ld i,a : im 2
+        ld de,0 : ld b,8
+        ei
+.w:     ld hl,(f05l) : inc hl : ld a,h : or l : jr nz,.g
+        dec de : ld a,d : or e : jr nz,.w
+        djnz .w
+.g:     di
+        ld a,(NRSNAP+$22) : nextreg $22,a : ld a,(NRSNAP+$23) : nextreg $23,a
+        nextreg $C4,1 : nextreg $C8,$FF
+        im 1 : ld a,(launch_i) : ld i,a
+        ld hl,(f05l) : push hl
+        ; copper: WAIT 32,0 ; MOVE $7F,$5A ; HALT
+        nextreg $62,0 : nextreg $61,0
+        ld hl,.cl : ld b,6
+.c:     ld a,(hl) : nextreg $60,a : inc hl : djnz .c
+        nextreg $61,0
+        call frame_sync : ld a,200 : call sync_lsb
+        nextreg $7F,0
+        nextreg $62,$C0
+        ld de,$FFFF : ld bc,0
+.p:     ld a,$7F : call rdreg : cp $5A : jr z,.s
+        dec bc : ld a,b : or c : jr nz,.p
+        jr .e
+.s:     call line : ex de,hl
+.e:     nextreg $62,0
+        ld a,(NRSNAP+$7F) : nextreg $7F,a
+        pop hl
+        ret
+.cl:    db $80,$20, $7F,$5A, $FF,$FF
+f05h:   push af : push hl
+        call line : ld (f05l),hl
+        pop hl : pop af : ei : reti
+f05l:   dw 0
