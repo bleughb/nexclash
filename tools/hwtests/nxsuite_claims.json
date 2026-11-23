@@ -1779,7 +1779,7 @@
    "operator": false,
    "opt_in": true,
    "stage": 2,
-   "fields": "Per timing t = 1 48K, 2 128K, 3 +3, 4 Pentagon: l<t> = lines per frame, i<t> = the raster line at which NextReg $C8 bit 0 (ULA interrupt status) was first seen (polled at 28 MHz, no interrupt taken), r<t> = $03 read back; v = how many l<t> are the claims' frame lengths (VGA 312 / 311 / 311 / 320, HDMI by $11 = 7: 312); out = vga / hdmi by $11. JNext: 312/311/311/320, i 248/248/248/239."
+   "fields": "Per timing t = 1 48K, 2 128K, 3 +3, 4 Pentagon: l<t> = lines per frame, i<t> = the raster line at which NextReg $C8 bit 0 (ULA interrupt status) was first seen (polled at 28 MHz, no interrupt taken), r<t> = $03 read back; v = how many l<t> are the claims' frame lengths (VGA 312 / 311 / 311 / 320). Builds up to e8cc11b also wrote out=vga/hdmi from $11: no source says $11 shows the output (board run 7: HDMI cable, $11 = $00); ignore it - the header geom= and the V19 cable answer say which frame was measured. JNext: 312/311/311/320, i 248/248/248/239."
   },
   {
    "id": "XT2",
@@ -1821,7 +1821,7 @@
    "operator": false,
    "opt_in": true,
    "stage": 2,
-   "fields": "48K timing: a6 / a7 = MMU 6 / 7 after OUT $7FFD,$13, b6 / b7 after OUT $3FFD,$13 ($FF $FF: not written, NextReg $D8 bit 0 set at launch = the +3 disk ports trapped); nrd8 = $D8 at launch. PASS if both gave 6 / 7."
+   "fields": "48K timing: a6 / a7 = MMU 6 / 7 after OUT $7FFD,$13, b6 / b7 after OUT $3FFD,$13 ($FF $FF: not written, NextReg $D8 bit 0 set at launch = the +3 disk ports trapped); nrd8 = $D8 at launch. PASS if both gave 6 / 7. p3ffd=skipped: NextReg $D8 bit 0 was set at launch (the +3 disk ports trapped), so $3FFD was not written and b6 / b7 = $FF mean nothing (board run 7: nrd8=$01)."
   },
   {
    "id": "XT5",

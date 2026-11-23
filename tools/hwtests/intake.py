@@ -595,6 +595,29 @@ def _v19(e, rec, src):
         '50.00 Hz lies outside that range: time it again with tenths to be sure.'))
 
 
+def _xt2(e, rec, src):
+    f1, f2, f3, j1, e0, e1 = (num(rec.get('v')),) + tuple(_k(e, k) for k in ('f2', 'f3', 'j1', 'exp0', 'exp1'))
+    if None in (f1, f2, e0, e1):
+        return None
+    if f1 == e0 and f2 == e1:
+        how = 'the frame being drawn kept the old length and the next one had the new: held to the frame end'
+    elif f1 == e1:
+        how = ('the frame being drawn ran on to the NEW length at once (not held to the frame end)%s' % (
+            '' if f2 == e1 else ', then a %d-line frame, then %d' % (f2, f3 or 0)))
+    else:
+        how = 'neither the old nor the new length (f1 %s, f2 %s, f3 %s)' % (f1, f2, f3)
+    return None, 'board: $03 written at line 100 of a %d-line frame (old %d, new %d lines): that frame was %d lines; %s.' % (
+        e0, e0, e1, f1, how)
+
+
+def _xt4(e, rec, src):
+    d8 = e.get('nrd8') or ''
+    if e.get('p3ffd') == 'skipped' or (d8.startswith('$') and int(d8[1:], 16) & 1):
+        return None, ('board: $7FFD paged MMU 6 / 7 = %s / %s; the $3FFD half was SKIPPED (NextReg $D8 bit 0 set at '
+                      'launch: the +3 disk ports are trapped), so b6 / b7 = $FF are not an answer.' % (e.get('a6'), e.get('a7')))
+    return None
+
+
 RESETS = {'soft': 'an F4 soft reset', 'hard': 'a hard reset', 'power': 'power off and on'}
 
 
@@ -619,7 +642,8 @@ def _xh2(e, rec, src):
     return st, 'board: %s.' % '; '.join(parts)
 
 
-DERIVE = {('XH2', 'dma-wr4-interrupt-lock'): _xh2, ('D02', 'dma-default-cycle-length'): _d02_default, ('D02', 'dma-cost-per-byte'): _d02_cost,
+DERIVE = {('XH2', 'dma-wr4-interrupt-lock'): _xh2, ('XT2', 'frame-timing-change-frame-end'): _xt2,
+          ('XT4', 'mem-48k-timing-7ffd'): _xt4, ('D02', 'dma-default-cycle-length'): _d02_default, ('D02', 'dma-cost-per-byte'): _d02_cost,
           ('D04', 'dma-prescaler-rate'): _d04, ('D05', 'dma-burst-cpu-share'): _d05,
           ('D13', 'dma-blitter-transparent-fill'): _d13, ('SP10', 'spr-line-limit'): _sp10,
           ('F06', 'frame-60hz-display-start'): _f06_60, ('V19', 'sys-video-timing-frame-rate'): _v19}

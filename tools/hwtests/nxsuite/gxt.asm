@@ -26,10 +26,10 @@ xt_arm: ld a,(NRSNAP+$03) : ld (PRGB+PRG_T03),a
         jp prg_write
 ; bit 1 cleared (the harness writes the record after the test)
 xt_dis: ld hl,PRGB+PRG_FLAGS : res 1,(hl) : ret
-; A = timing 1-4 -> HL = the 50 Hz frame length the claims give (VGA: 312 / 311 / 311 / 320; HDMI 312)
-xt_exp: ld hl,312 : ld c,a
-        ld a,(NRSNAP+$11) : and 7 : cp 7 : ret z
-        ld a,c : cp 1 : ret z
+; A = timing 1-4 -> HL = the 50 Hz frame length the claims give (VGA: 312 / 311 / 311 / 320). No HDMI case:
+; nothing the program can read says which frame the board sends (board run 7: HDMI cable, $11 = $00, VGA
+; lengths measured); the header geom= and the V19 cable answer say which frame a run measured.
+xt_exp: ld hl,312 : cp 1 : ret z
         ld hl,320 : cp 4 : ret z
         ld hl,311 : ret
 ; -> HL = lines per frame (largest line over 4 frames + 1; 0 = no wrap seen)
@@ -66,20 +66,11 @@ xt_wmax:
 .w:     add hl,bc : ld (xt_jl),hl : ld hl,(.m) : ret
 .p:     dw 0
 .m:     dw 0
-xk_out:  db "out",0
-w_hdmi: db "hdmi",0
-w_vga:  db "vga",0
-; " out=hdmi|vga" ($11 bits 2:0 = 7: HDMI)
-xt_kout:
-        ld hl,xk_out : call ex_k
-        ld a,(NRSNAP+$11) : and 7 : cp 7 : ld hl,w_hdmi : jr z,.h
-        ld hl,w_vga
-.h:     jp wstr
 
 ; ---------------------------------------------------------------- XT1 frame length and ULA interrupt per timing
 ; For timings 1-4 (48K, 128K, +3, Pentagon): $03 written, 3 frames, lines per frame (4 frames) and the line
 ; of the ULA interrupt ($C8 polled); $03 read back. Keys l<t> / i<t> / r<t> (t = 1-4). v = how many of the
-; four frame lengths are the claims' (VGA 312 / 311 / 311 / 320, HDMI 312 for all); PASS if all four.
+; four frame lengths are the claims' (VGA 312 / 311 / 311 / 320); PASS if all four.
 t_xt1:  call xt_arm
         ld a,1 : ld (.t),a : xor a : ld (.ok),a
 .l:     ld a,(.t) : call xt_set
@@ -93,7 +84,6 @@ t_xt1:  call xt_arm
         ld a,'r' : call .key : ld a,(.r) : call wdhex2
         ld a,(.t) : inc a : ld (.t),a : cp 5 : jr c,.l
         call xt_back : call xt_dis
-        call xt_kout
         ld a,(.ok) : ld l,a : ld h,0 : call res_int
         ld hl,u_count : call res_unit
         ld a,(.ok) : cp 4 : ld a,ST_PASS : jr z,.s
@@ -114,7 +104,9 @@ wdec1:  ex de,hl : jp wdec
 ; From the start timing s to Pentagon (or to 48K when s is Pentagon): $03 written at line 100, then the
 ; lengths of that frame (v = f1, from line 100 to its wrap; j1 = the line read just after that fall), and
 ; of the next two (f2, f3); timing put back.
-; PASS if f1 = the start length and f2 = the new one (VGA; on HDMI both are 312: INFO, nothing to see).
+; PASS if f1 = the start length and f2 = the new one. Board run 7 (KS1 3.03.00, 311 -> 320): f1 = 320,
+; j1 = 0, f2 = 7, f3 = 320 - the frame being drawn ran on to the new length at once, then a 7-line frame:
+; not held to the frame end (FAIL).
 t_xt2:  call xt_arm
         ld a,(NRSNAP+$03) : rrca : rrca : rrca : rrca : and 7 : ld (.s),a
         ld b,4 : cp 4 : jr nz,.g
@@ -137,8 +129,6 @@ t_xt2:  call xt_arm
         ld de,(.e0) : ld hl,xk_e0 : call ex_kd
         ld de,(.e1) : ld hl,xk_e1 : call ex_kd
         ld a,(.d) : ld l,a : ld h,0 : ex de,hl : ld hl,xk_to : call ex_kd
-        call xt_kout
-        ld hl,(.e0) : ld de,(.e1) : or a : sbc hl,de : ret z       ; same lengths (HDMI): INFO
         ld hl,(.f1) : ld de,(.e0) : or a : sbc hl,de : jr nz,.f
         ld hl,(.f2) : ld de,(.e1) : or a : sbc hl,de : jr nz,.f
         ld a,ST_PASS : ld (R_st),a : ret
@@ -196,8 +186,7 @@ t_xt3:  call xt_arm
         ld a,(.bk) : or a : ld hl,w_book : jr nz,.w
         ld hl,w_other2
 .w:     call res_word
-        ld hl,xk_lim : call ex_k : ld a,'3' : call wchr
-        jp xt_kout
+        ld hl,xk_lim : call ex_k : ld a,'3' : jp wchr
 ; A = page -> HL = lines for 1024 reads of $C000 (slot 6 = that page) at 3.5 MHz from line 8
 .one:   nextreg $56,a
         nextreg $07,0
@@ -222,7 +211,8 @@ w_other2: db "other",0
 ; ---------------------------------------------------------------- XT4 48K timing: $7FFD and $3FFD page
 ; 48K timing; OUT $7FFD,$13 -> MMU 6 / 7 read; back; OUT $3FFD,$13 (bit 14 = 0: decoded too in 48K / 128K
 ; timing, book ch 3) -> MMU 6 / 7 read; back (xt_pg in bank 2). $3FFD is not written when NextReg $D8 bit 0
-; was set at launch (the +3 disk ports are then trapped: a Multiface NMI, book ch 4): keys b6/b7 = $FF.
+; was set at launch (the +3 disk ports are then trapped: a Multiface NMI, book ch 4): keys b6/b7 = $FF and
+; p3ffd=skipped (board run 7: nrd8=$01, so the $3FFD half is not answered).
 ; v = MMU 6 after $7FFD; PASS if both writes gave 6 / 7.
 t_xt4:  call xt_arm
         ld a,1 : call xt_set
@@ -234,6 +224,9 @@ t_xt4:  call xt_arm
         ld a,(xtpg+2) : ld hl,.k2 : call ex_kh
         ld a,(xtpg+3) : ld hl,.k3 : call ex_kh
         ld a,(NRSNAP+$D8) : ld hl,xk_d8 : call ex_kh
+        ld a,(NRSNAP+$D8) : rra : jr nc,.w3
+        ld hl,xk_3f : call ex_k : ld hl,w_skip : call wstr  ; " p3ffd=skipped": not written, b6 / b7 not read
+.w3:
         ld hl,xtpg : ld de,.e : ld b,4
 .c:     ld a,(de) : cp (hl) : ret nz
         inc hl : inc de : djnz .c
@@ -290,3 +283,5 @@ t_xt6:  call xt_back : call xt_dis
 xk_exp6: db "exp",0
 xk_nr03x: db "nr03",0
 xk_st03: db "start03",0
+xk_3f:   db "p3ffd",0
+w_skip:  db "skipped",0
