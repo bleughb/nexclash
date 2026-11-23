@@ -8,6 +8,13 @@
    "text": "The ISR pages by port 7FFD; on a Next (JNext at least) that resets slot 1 to the ROM and the ISR calls the ROM's IM 1, so a hook in slot 1 with interrupts on is unsafe unless the ISR puts slot 1 back.",
    "quote": "On a Next (JNext at least) that resets slot 1 to the ROM, and the ISR calls the ROM's IM 1.",
    "shown_on": "jnext"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/next-issue2-3.03.00.json",
+   "test": "M01",
+   "text": "KS1 Issue 2, core 3.03.00 (nxsuite M01): an unlocked 7FFD write set MMU 0 / 1 = $FF (ROM) and MMU 6 / 7 to the bank's pages; slots 2-5 kept.",
+   "shown_on": "hardware"
   }
  ],
  "level": "observed",

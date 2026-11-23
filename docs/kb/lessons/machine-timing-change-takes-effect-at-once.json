@@ -1,0 +1,28 @@
+{
+ "id": "lesson.machine-timing-change-takes-effect-at-once",
+ "kind": "pitfall",
+ "claim": "A machine-timing change (NextReg $03) is taken by the video counters at once, not at the frame end: the frame being drawn runs on to the new length, then one short frame follows.",
+ "limit": "One board and core (KS1 Issue 2, 3.03.00), 128K to Pentagon timing at line 100. The book says the change waits for the frame end.",
+ "evidence": [
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/next-issue2-3.03.00.json",
+   "test": "XT2",
+   "text": "KS1 Issue 2, core 3.03.00 (nxsuite XT2): $03 written at line 100 of a 311-line frame (128K to Pentagon): that frame ran to 320 lines, then a 7-line frame, then 320-line frames.",
+   "shown_on": "hardware"
+  }
+ ],
+ "level": "observed",
+ "area": "platform",
+ "words": [
+  "machine timing",
+  "NextReg 03",
+  "frame",
+  "lines",
+  "raster",
+  "video",
+  "Pentagon"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

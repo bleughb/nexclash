@@ -8,6 +8,13 @@
    "text": "CTC ch 3 polled with 32 T ticks places OUTs at the original T and 9907 at the original time; model OUT -24..+56 T, 9907 -25..+43 T.",
    "quote": "(CTC ch 3 polled, 32 T ticks), 9907 at the original time; model OUT -24..+56 T, 9907 -25..+43 T.",
    "shown_on": "unknown"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/next-issue2-3.03.00.json",
+   "test": "I12",
+   "text": "KS1 Issue 2, core 3.03.00 (nxsuite I12): the CTC counted the same over a fixed interval at 7, 14 and 28 MHz (2216 ticks): its rate does not follow the CPU speed.",
+   "shown_on": "hardware"
   }
  ],
  "level": "observed",

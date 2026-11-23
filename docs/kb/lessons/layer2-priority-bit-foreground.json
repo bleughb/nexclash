@@ -8,6 +8,13 @@
    "text": "In the sprites build a goblin passes behind a bush (Layer 2 priority), seen in MAME; the host's look was still to come.",
    "quote": "sprites, a goblin passes behind a bush (Layer 2 priority). Host's look still to come.",
    "shown_on": "mame"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/next-issue2-3.03.00.json",
+   "test": "V06",
+   "text": "KS1 Issue 2, core 3.03.00 (nxsuite V06): the priority colour drew over the sprites in order SLU and in blend mode 110, and not where it was the transparent colour (operator).",
+   "shown_on": "hardware"
   }
  ],
  "level": "inferred",
@@ -22,5 +29,5 @@
  ],
  "review": "source-checked",
  "as_of": "0.1.7",
- "limit": "Seen in MAME only; the look on the host was still to come in the notes."
+ "limit": "Seen in MAME, and by eye on a KS1 (core 3.03.00, nxsuite V06)."
 }

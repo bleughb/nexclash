@@ -14,6 +14,13 @@
    "text": "Menus run IM 1 into 0xFF bytes (RST 38 recursion) once DivMMC no longer traps 0x0038 (ROM3 of NextZXOS had hooks at 0x386E/0x387E, where the converted ROM has 0xFF); only NextZXOS's trap hid it.",
    "quote": "The menus run IM 1; only NextZXOS's DivMMC trap hid it.",
    "shown_on": "unknown"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/next-issue2-3.03.00.json",
+   "test": "XD3",
+   "text": "KS1 Issue 2, core 3.03.00 (nxsuite XD3): the delayed RST $38 trap still fired with an alt ROM image in place, so it masks the hook-space path.",
+   "shown_on": "hardware"
   }
  ],
  "level": "inferred",

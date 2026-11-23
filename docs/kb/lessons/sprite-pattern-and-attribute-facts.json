@@ -8,6 +8,13 @@
    "text": "Next sprites: 4-bit anchors, attr4 0x80/0xC0 = slot half 0-127/128-255; 0x303B + port 0x5B pattern upload; $34-$39 attributes; $4B=0; palette via $43/$40/$41; clip via $1C/$19.",
    "quote": "pattern upload; $34-$39 attributes; $4B=0; palette via $43/$40/$41; clip via $1C/$19.",
    "shown_on": "unknown"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/next-issue2-3.03.00.json",
+   "test": "SP06",
+   "text": "KS1 Issue 2, core 3.03.00 (nxsuite SP06): a 4-bit anchor with attr4 $80 showed bytes 0-127 of the slot and $C0 bytes 128-255.",
+   "shown_on": "hardware"
   }
  ],
  "level": "observed",

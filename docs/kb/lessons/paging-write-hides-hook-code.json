@@ -32,6 +32,13 @@
    "text": "A 7FFD write inside w_go (paging bank 1 for a W range) put ROM back into MMU slot 0: 51 characters printed for 18 and each update ran 3 frames long; the verifier's NextMem models the reset now.",
    "quote": "A 7FFD write inside w_go (paging bank 1 for a W range) put ROM back into MMU slot 0, so the save went to ROM and the restore read ROM",
    "shown_on": "simulator"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/next-issue2-3.03.00.json",
+   "test": "M01",
+   "text": "KS1 Issue 2, core 3.03.00 (nxsuite M01): an unlocked 7FFD write reset MMU 0 / 1 to ROM and MMU 6 / 7 to the bank; slots 2-5 kept.",
+   "shown_on": "hardware"
   }
  ],
  "level": "observed",

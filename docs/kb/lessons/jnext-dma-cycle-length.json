@@ -20,5 +20,6 @@
   "port"
  ],
  "review": "source-checked",
- "as_of": "0.1.7"
+ "as_of": "0.1.7",
+ "limit": "JNext only. A KS1 (core 3.03.00, nxsuite D02) takes 6 T a byte with the reset timing and 4 T with cycle length 2 at 3.5 MHz (5.92 / 4.96 clocks at 28 MHz): there the timing byte saves a third, not two thirds."
 }

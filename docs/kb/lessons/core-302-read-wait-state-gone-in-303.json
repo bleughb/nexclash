@@ -2,13 +2,27 @@
  "id": "lesson.core-302-read-wait-state-gone-in-303",
  "kind": "fact",
  "claim": "The wait state on every memory read at 28 MHz belongs to core 3.02; core 3.03 has none, so 28 MHz times and ratios measured on 3.02 are the slow case and the same code runs faster on 3.03.",
- "limit": "From the book, not measured here on core 3.03: re-measure a time budget on the core the build targets, and never tune a delay so that it only fits 3.02.",
+ "limit": "Measured on a KS1 with core 3.03.00 (nxsuite C01, C02: no wait); the 3.02 wait was measured on a 3.02.00 board (LEARNINGS 2.1f). Re-measure a time budget on the core the build targets; never tune a delay so it only fits 3.02.",
  "evidence": [
   {
    "game": "reference",
    "source": "I. Novak, Unraveling the ZX Spectrum Next, Vol 1 (2026; core 3.03.03), chapter 2 and 3",
    "text": "Core 3.02 holds /WAIT for one T on each memory read at 28 MHz (fetch, operand, data; SRAM and bank 5), not on writes, I/O or page 0x0E; core 3.03 (system release 26.11a) runs 28 MHz with no wait on every board.",
    "shown_on": "documentation"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/next-issue2-3.03.00.json",
+   "test": "C01",
+   "text": "KS1 Issue 2, core 3.03.00 (nxsuite C01): at 28 MHz a NOP took 4 clocks (LD A,(nn) 13, POP 10, LDIR 21 a byte): no read wait.",
+   "shown_on": "hardware"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/next-issue2-3.03.00.json",
+   "test": "C02",
+   "text": "KS1 Issue 2, core 3.03.00 (nxsuite C02): at 28 MHz reads from bank 5 took no wait either (LD A,(HL) 7 clocks).",
+   "shown_on": "hardware"
   }
  ],
  "level": "inferred",

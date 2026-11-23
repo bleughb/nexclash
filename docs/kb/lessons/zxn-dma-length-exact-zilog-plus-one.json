@@ -2,7 +2,7 @@
  "id": "lesson.zxn-dma-length-exact-zilog-plus-one",
  "kind": "pitfall",
  "claim": "Port 0x6B (zxnDMA mode) transfers exactly the programmed length; port 0x0B (Zilog mode, since core 3.1.2) transfers length + 1 bytes as the Z80 DMA chip does, so code ported from a Z80 DMA is one byte out on 0x6B.",
- "limit": "Documentation only, not measured here. Before core 3.1.2 the mode was chosen by NextREG 0x06 bit 6, since removed.",
+ "limit": "Measured on a KS1 (core 3.03.00, nxsuite D03): length 16 moved 16 bytes on $6B, 17 on $0B; length 0 moved 1 byte on both. Before core 3.1.2 the mode was chosen by NextREG 0x06 bit 6, since removed.",
  "evidence": [
   {
    "game": "reference",
@@ -10,6 +10,13 @@
    "text": "DMA page, read 2026-11-23: zxnDMA mode moves exactly the programmed byte count; Zilog mode moves length + 1; since core 3.1.2 the port number selects the mode.",
    "quote": "In zxn-DMA mode, the transfer length is exactly the number of bytes programmed.",
    "shown_on": "documentation"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/next-issue2-3.03.00.json",
+   "test": "D03",
+   "text": "KS1 Issue 2, core 3.03.00 (nxsuite D03): length 16 moved 16 bytes on port $6B and 17 on $0B; length 1 moved 1 / 2; length 0 moved 1 on both.",
+   "shown_on": "hardware"
   }
  ],
  "level": "inferred",

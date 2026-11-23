@@ -7,6 +7,13 @@
    "game": "notes",
    "text": "Reading of the paging behaviour in the maintainers' notes; not checked against a source file.",
    "shown_on": "unknown"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/next-issue2-3.03.00.json",
+   "test": "M01",
+   "text": "KS1 Issue 2, core 3.03.00 (nxsuite M01): an unlocked 7FFD write set MMU 0 / 1 = $FF and MMU 6 / 7 at once; slots 2-5 kept; a later MMU write won.",
+   "shown_on": "hardware"
   }
  ],
  "level": "inferred",

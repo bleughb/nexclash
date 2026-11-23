@@ -1,14 +1,28 @@
 {
  "id": "lesson.line-interrupt-fires-on-previous-line",
  "kind": "fact",
- "claim": "The line interrupt for line n is raised on line n - 1 at dot 243 of its display area, a little over 100 T at 3.5 MHz before line n starts, so a handler has that long to put a change in place.",
- "limit": "From the book, not measured here; at 28 MHz the same gap is about 800 T less the response time (up to 22 T, plus 13 T in IM 1 or 19 T in IM 2).",
+ "claim": "The line interrupt for line n is raised on line n - 1, about 150 T at 3.5 MHz before line n starts on a KS1 (core 3.03.00; the book: dot 243, a little over 100 T), so a handler has that long to put a change in place.",
+ "limit": "Measured at lines 100 and 191 (+-12 T); at line 0 the time varied (mean -22 T, spread 68 T; not explained). At 28 MHz the gap scales to about 1,200 T less the response time (up to 22 T, plus 13 T IM 1 / 19 T IM 2): not measured.",
  "evidence": [
   {
    "game": "reference",
    "source": "I. Novak, Unraveling the ZX Spectrum Next, Vol 1 (2026; core 3.03.03), chapter 10 and 4",
    "text": "Line numbers count from the first display line and run on through the bottom border to the frame end; a value one past the last frame line acts as line 0 and a higher one never fires. Read 0x1E, 0x1F, 0x1E and retry if the two differ.",
    "shown_on": "documentation"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/next-issue2-3.03.00.json",
+   "test": "I10",
+   "text": "KS1 Issue 2, core 3.03.00 (nxsuite I10): at 3.5 MHz the interrupt came 150 T before line 100 and 149 T before line 191 (+-12 T, 5 samples each, spread 0-2 T); before line 0: -22 T, spread 68 T.",
+   "shown_on": "hardware"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/next-issue2-3.03.00.json",
+   "test": "I11",
+   "text": "KS1 Issue 2, core 3.03.00 (nxsuite I11): line-interrupt numbers follow the raster count: a value one past the last line acted as line 0, higher values never fired.",
+   "shown_on": "hardware"
   }
  ],
  "level": "inferred",
