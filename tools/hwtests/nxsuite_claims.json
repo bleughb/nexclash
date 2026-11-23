@@ -1517,7 +1517,7 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
-   "left_out": "Each answer is a position to the dot or to the line (the sprite clip window in display or 2-dot units across the wide area; an attribute or $15 change showing one line later). A person at the screen cannot count dots or lines to that precision by eye, and the suite records key presses, not photographs: a photograph of a ruled test card settles it, not a question here."
+   "left_out": "A one-key answer can decide it: a column of sprites across the wide area with a white frame drawn at the clip edges (\"do the sprites stop at the frame: 1 yes / 2 stop short / 3 run past\"), and the one-line delay with the V18 method (a one-line white rule lit only on the line the change should reach: one line or two). Not built in this build only for room: the V group's two overlay pages are full (page 41: 281 bytes free, page 42: 21, bank 2: 39) and a picture test with its question takes 300-600 bytes; it needs a third V page (page 43 has about 3 KB free after G5 / G8, but the test table can only give a test its group's page or the next one - a harness change)."
   },
   {
    "id": "V02",
@@ -1544,7 +1544,7 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
-   "left_out": "Needs a composed picture of several layers (an arrow sprite in four rotate / mirror combinations at X scale 4, beside drawn references) judged against a printed key. The suite's pages 32-63 have no room left for those pictures and their code (the 1 MB layout, spec 1.2), and the claim is a picture judgement in every case - nothing the program could read back - so it belongs to a separate picture program, not this one."
+   "left_out": "A one-key answer can decide it: an arrow sprite at X scale 4 in the four rotate / mirror settings, each beside reference arrows drawn in the ULA (\"which reference does it match: 1 / 2 / 3\"). Not built in this build only for room: the V group's two overlay pages are full (page 41: 281 bytes free, page 42: 21, bank 2: 39) and a picture test with its question takes 300-600 bytes; it needs a third V page (page 43 has about 3 KB free after G5 / G8, but the test table can only give a test its group's page or the next one - a harness change)."
   },
   {
    "id": "V04",
@@ -1558,7 +1558,7 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
-   "left_out": "Needs a composed picture of several layers (ULA, Layer 2, tilemap and sprite panels over stripes, each with its transparency rule) judged against a printed key. The suite's pages 32-63 have no room left for those pictures and their code (the 1 MB layout, spec 1.2), and the claim is a picture judgement in every case - nothing the program could read back - so it belongs to a separate picture program, not this one."
+   "left_out": "A one-key answer can decide it: four panels (ULA, Layer 2, tilemap, sprite) over stripes, each set to its own transparency rule (\"how many panels show the stripes through them\"). Not built in this build only for room: the V group's two overlay pages are full (page 41: 281 bytes free, page 42: 21, bank 2: 39) and a picture test with its question takes 300-600 bytes; it needs a third V page (page 43 has about 3 KB free after G5 / G8, but the test table can only give a test its group's page or the next one - a harness change)."
   },
   {
    "id": "V05",
@@ -1586,7 +1586,7 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
-   "left_out": "Needs a composed picture of several layers (a sprite crossing a Layer 2 shape with and without the priority bit, in SLU and blend mode) judged against a printed key. The suite's pages 32-63 have no room left for those pictures and their code (the 1 MB layout, spec 1.2), and the claim is a picture judgement in every case - nothing the program could read back - so it belongs to a separate picture program, not this one."
+   "left_out": "A one-key answer can decide it: a sprite crossing a Layer 2 block whose colour has the priority bit, in SLU and in blend mode (\"is the block in front of the sprite: 1 both / 2 SLU only / 3 neither\"). Not built in this build only for room: the V group's two overlay pages are full (page 41: 281 bytes free, page 42: 21, bank 2: 39) and a picture test with its question takes 300-600 bytes; it needs a third V page (page 43 has about 3 KB free after G5 / G8, but the test table can only give a test its group's page or the next one - a harness change)."
   },
   {
    "id": "V07",
@@ -1614,7 +1614,7 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
-   "left_out": "Each answer is a position to the dot or to the line (a 640 x 256 scroll of one dot against two). A person at the screen cannot count dots or lines to that precision by eye, and the suite records key presses, not photographs: a photograph of a ruled test card settles it, not a question here."
+   "left_out": "No program read-back and no one-key answer decides it: the difference is one dot at 640 dots a line. A pattern that would show a one-dot shift (alternating one-dot columns, which a one-dot shift inverts and a two-dot shift leaves alone) looks like an even grey on a screen either way, and wider patterns hide the one-dot shift. A photograph of the screen settles it; the suite records key presses, not photographs."
   },
   {
    "id": "V09",
@@ -1628,7 +1628,7 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
-   "left_out": "Needs a composed picture of several layers (a numbered Layer 2 grid scrolled to each wrap edge in copper bands) judged against a printed key. The suite's pages 32-63 have no room left for those pictures and their code (the 1 MB layout, spec 1.2), and the claim is a picture judgement in every case - nothing the program could read back - so it belongs to a separate picture program, not this one."
+   "left_out": "A one-key answer can decide it: a Layer 2 picture with a coloured edge column, scrolled to each wrap edge in copper bands (\"does the edge column reappear at the left in every band\"). Not built in this build only for room: the V group's two overlay pages are full (page 41: 281 bytes free, page 42: 21, bank 2: 39) and a picture test with its question takes 300-600 bytes; it needs a third V page (page 43 has about 3 KB free after G5 / G8, but the test table can only give a test its group's page or the next one - a harness change)."
   },
   {
    "id": "V10",
@@ -1655,7 +1655,7 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
-   "left_out": "Needs a composed picture of several layers (tile definitions across the bank 7 8K boundary with marked page 14 / 15 patterns) judged against a printed key. The suite's pages 32-63 have no room left for those pictures and their code (the 1 MB layout, spec 1.2), and the claim is a picture judgement in every case - nothing the program could read back - so it belongs to a separate picture program, not this one."
+   "left_out": "A one-key answer can decide it: tile definitions at bank 7 offsets $1F00-$20FF with page 14 painted red and page 15 green (\"are the wrapped tiles red or green\"). Not built in this build only for room: the V group's two overlay pages are full (page 41: 281 bytes free, page 42: 21, bank 2: 39) and a picture test with its question takes 300-600 bytes; it needs a third V page (page 43 has about 3 KB free after G5 / G8, but the test table can only give a test its group's page or the next one - a harness change)."
   },
   {
    "id": "V12",
@@ -1669,7 +1669,7 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
-   "left_out": "Needs a composed picture of several layers (text-mode tiles over a ULA pattern and a $6B bit 0 band) judged against a printed key. The suite's pages 32-63 have no room left for those pictures and their code (the 1 MB layout, spec 1.2), and the claim is a picture judgement in every case - nothing the program could read back - so it belongs to a separate picture program, not this one."
+   "left_out": "A one-key answer can decide it: text-mode tiles over a ULA pattern, and a band with $6B bit 0 (\"is the ULA pattern visible through the tile background; is the band's tilemap in front\"). Not built in this build only for room: the V group's two overlay pages are full (page 41: 281 bytes free, page 42: 21, bank 2: 39) and a picture test with its question takes 300-600 bytes; it needs a third V page (page 43 has about 3 KB free after G5 / G8, but the test table can only give a test its group's page or the next one - a harness change)."
   },
   {
    "id": "V13",
@@ -1683,7 +1683,7 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
-   "left_out": "Needs a composed picture of several layers (tiles with attribute bit 0 set and clear, a sprite crossing both, Layer 2 under them) judged against a printed key. The suite's pages 32-63 have no room left for those pictures and their code (the 1 MB layout, spec 1.2), and the claim is a picture judgement in every case - nothing the program could read back - so it belongs to a separate picture program, not this one."
+   "left_out": "A one-key answer can decide it: tiles with attribute bit 0 clear and set, a sprite crossing both (\"is the sprite behind the first tile and in front of the second\"). Not built in this build only for room: the V group's two overlay pages are full (page 41: 281 bytes free, page 42: 21, bank 2: 39) and a picture test with its question takes 300-600 bytes; it needs a third V page (page 43 has about 3 KB free after G5 / G8, but the test table can only give a test its group's page or the next one - a harness change)."
   },
   {
    "id": "V14",
@@ -1697,7 +1697,7 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
-   "left_out": "Needs a composed picture of several layers (blend mode colour swatches and a stencil panel beside unblended references) judged against a printed key. The suite's pages 32-63 have no room left for those pictures and their code (the 1 MB layout, spec 1.2), and the claim is a picture judgement in every case - nothing the program could read back - so it belongs to a separate picture program, not this one."
+   "left_out": "A one-key answer can decide it: blend-mode swatches each beside its expected colour drawn in a non-blended layer (\"do all pairs match\"). Not built in this build only for room: the V group's two overlay pages are full (page 41: 281 bytes free, page 42: 21, bank 2: 39) and a picture test with its question takes 300-600 bytes; it needs a third V page (page 43 has about 3 KB free after G5 / G8, but the test table can only give a test its group's page or the next one - a harness change)."
   },
   {
    "id": "V15",
@@ -1737,7 +1737,7 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
-   "left_out": "Needs a composed picture of several layers (a sprite clip box with a copper write of $15 at line 100) judged against a printed key. The suite's pages 32-63 have no room left for those pictures and their code (the 1 MB layout, spec 1.2), and the claim is a picture judgement in every case - nothing the program could read back - so it belongs to a separate picture program, not this one."
+   "left_out": "A one-key answer can decide it: a sprite clip box with a white frame drawn round it, a copper MOVE of $15 at line 100 (\"below the line, do sprites appear outside the frame\"). Not built in this build only for room: the V group's two overlay pages are full (page 41: 281 bytes free, page 42: 21, bank 2: 39) and a picture test with its question takes 300-600 bytes; it needs a third V page (page 43 has about 3 KB free after G5 / G8, but the test table can only give a test its group's page or the next one - a harness change)."
   },
   {
    "id": "V18",
@@ -4945,52 +4945,52 @@
   {
    "lesson": "lesson.pace-clock-race",
    "placed": "",
-   "reason": "A rule for game code reading a pace clock (interrupts off around the read); the machine side (one interrupt outstanding, CTC status) is I20 / I13."
+   "reason": "A rule for game code reading a pace clock (interrupts off around the read); the machine side (one interrupt outstanding, CTC status) is I20 / I13. (Re-checked after board run 7: not a machine property, so neither a read-back nor a key answer applies.)"
   },
   {
    "lesson": "lesson.pace-control-rom-beep",
    "placed": "",
-   "reason": "Needs Sinclair's ROM as the reference beside NextZXOS's ROM 3; the suite runs only the ROM the machine has (S04 records its CRC and the $0038 / $386E bytes)."
+   "reason": "Re-checked after board run 7: the claim compares the CONTENT of NextZXOS's ROM 3 BEEP with Sinclair's ROM, not a hardware behaviour. The program could time the machine's own ROM BEEP, but the other side needs Sinclair's ROM (which may not ship in the repository) or its cycle count from a source the repository or the book holds - neither exists (the 12 % came from JNext). S04 records the ROM's CRC and its $0038 / $386E bytes."
   },
   {
    "lesson": "lesson.pace-input-timing",
    "placed": "",
-   "reason": "Emulator or tool behaviour (how a script or probe talks to the emulator), not a property of the machine; the suite runs on the machine."
+   "reason": "Emulator or tool behaviour (how a script or probe talks to the emulator), not a property of the machine; the suite runs on the machine. (Re-checked after board run 7: not a machine property, so neither a read-back nor a key answer applies.)"
   },
   {
    "lesson": "lesson.pace-timing-model",
    "placed": "",
-   "reason": "About RZX files written by Fuse, not the Next."
+   "reason": "About RZX files written by Fuse, not the Next. (Re-checked after board run 7: not a machine property, so neither a read-back nor a key answer applies.)"
   },
   {
    "lesson": "lesson.jnext-execute-probe-fires-twice",
    "placed": "",
-   "reason": "Emulator or tool behaviour (how a script or probe talks to the emulator), not a property of the machine; the suite runs on the machine."
+   "reason": "Emulator or tool behaviour (how a script or probe talks to the emulator), not a property of the machine; the suite runs on the machine. (Re-checked after board run 7: not a machine property, so neither a read-back nor a key answer applies.)"
   },
   {
    "lesson": "lesson.jnext-jns-save-at-frame-boundary",
    "placed": "",
-   "reason": "Emulator or tool behaviour (how a script or probe talks to the emulator), not a property of the machine; the suite runs on the machine."
+   "reason": "Emulator or tool behaviour (how a script or probe talks to the emulator), not a property of the machine; the suite runs on the machine. (Re-checked after board run 7: not a machine property, so neither a read-back nor a key answer applies.)"
   },
   {
    "lesson": "lesson.jnext-keys-after-load",
    "placed": "",
-   "reason": "Emulator or tool behaviour (how a script or probe talks to the emulator), not a property of the machine; the suite runs on the machine. (the emulator runs of the suite already press keys after the load)."
+   "reason": "Emulator or tool behaviour (how a script or probe talks to the emulator), not a property of the machine; the suite runs on the machine. (the emulator runs of the suite already press keys after the load). (Re-checked after board run 7: not a machine property, so neither a read-back nor a key answer applies.)"
   },
   {
    "lesson": "lesson.jnext-tape-trap-056b",
    "placed": "",
-   "reason": "Emulator or tool behaviour (how a script or probe talks to the emulator), not a property of the machine; the suite runs on the machine."
+   "reason": "Emulator or tool behaviour (how a script or probe talks to the emulator), not a property of the machine; the suite runs on the machine. (Re-checked after board run 7: not a machine property, so neither a read-back nor a key answer applies.)"
   },
   {
    "lesson": "lesson.overspec-scripting",
    "placed": "",
-   "reason": "Emulator or tool behaviour (how a script or probe talks to the emulator), not a property of the machine; the suite runs on the machine."
+   "reason": "Emulator or tool behaviour (how a script or probe talks to the emulator), not a property of the machine; the suite runs on the machine. (Re-checked after board run 7: not a machine property, so neither a read-back nor a key answer applies.)"
   },
   {
    "lesson": "lesson.z80n-opcodes-in-skoolkit",
    "placed": "",
-   "reason": "About the SkoolKit simulator; the machine side of every Z80N opcode is G2 (Z01-Z07)."
+   "reason": "About the SkoolKit simulator; the machine side of every Z80N opcode is G2 (Z01-Z07). (Re-checked after board run 7: not a machine property, so neither a read-back nor a key answer applies.)"
   }
  ]
 }
