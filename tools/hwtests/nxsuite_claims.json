@@ -1572,7 +1572,7 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
-   "left_out": "Needs a composed picture of several layers (320 x 256 Layer 2 stripes under a border whose colour is switched to the $14 colour by copper) judged against a printed key. The suite's pages 32-63 have no room left for those pictures and their code (the 1 MB layout, spec 1.2), and the claim is a picture judgement in every case - nothing the program could read back - so it belongs to a separate picture program, not this one."
+   "fields": "V05: v = lower (Layer 2 stripes show in the side borders of lines 96-191, where the copper made the border colour equal $14; plain elsewhere: the claim), none (plain or black there), or other. The claim's second part (the ULA clip window never clips the border) is not asked."
   },
   {
    "id": "V06",

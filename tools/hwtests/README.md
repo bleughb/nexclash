@@ -296,7 +296,7 @@ shows the digital test card.) `geom=` is what the measurements match: line lengt
 108 = hdmi, 112 / 312 = vga48, 112 / 320 = pentagon, 114 / 311 = vga128, else other.
 
 Statuses: PASS, FAIL (the claim's expectation is wrong on this machine), INFO (a number or a choice, no
-verdict), SKIP (`why=not-built`, `not-selected`, `hung-last-run`, `no-blitter` - core below 3.03 -, `left-out` -
+verdict), SKIP (`why=not-built`, `not-selected`, `hung-last-run`, `no-blitter` - core below 3.03 -, `dma-deaf` - XH: the DMA still locked by an earlier XH2 -, `left-out` -
 on purpose: the reason is in `nxsuite_claims.json` and the intake prints it), HANG-GUARD (the machine stopped in this
 test on the run before), OPERATOR (`key=` / `means=`, answered by the person at the machine),
 PENDING-OPERATOR (an operator question left for the U pass), VISUAL / VISUAL-SHOWN (later stages).

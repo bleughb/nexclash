@@ -198,6 +198,51 @@ q_v10:  db 1
         db "    two thirds, or other)",0,0
         db "split-clean",0,"split-jitter",0,"no-split",0
 
+; ---------------------------------------------------------------- V05 a border whose colour is $14 is transparent
+; 320 x 256 Layer 2 of red / yellow stripes (8 columns each) UNDER the ULA (order ULS); border colour 1, so
+; the border is ULA palette entry 17 (paper 1: border from paper, TECHNIQUES.md:369). The copper sets entry
+; 17 to $14's colour at line 96 and back at line 192: the side borders of lines 96-191 are transparent (book
+; ch 17, N2); the rest of the border, plain, is the reference. Answer: lower (stripes there) / none (plain or
+; black there) / other. Entry 17 put back.
+@t_v05: ld a,1 : out ($FE),a
+        nextreg $43,0 : nextreg $40,17 : ld a,$41 : call rdreg : ld (.c0+1),a : ld (.c2+1),a : ld (.org),a
+        ld a,(NRSNAP+$14) : ld (.c1+1),a
+        ld d,44 : ld e,0
+.p:     ld a,d : nextreg $53,a : ld hl,$6000
+.c:     ld a,e : and 8 : ld a,$E0 : jr z,.r
+        ld a,$FC
+.r:     ld b,0
+.f:     ld (hl),a : inc hl : djnz .f
+        inc e : ld a,h : cp $80 : jr nz,.c
+        inc d : ld a,d : cp 54 : jr nz,.p
+        nextreg $53,$0B
+        call l2w_on
+        ld a,(NRSNAP+$15) : and %11100011 : or %00010100 : nextreg $15,a     ; ULS: the ULA over Layer 2
+        ld hl,.cop : ld b,.cope-.cop : call cop_load
+        ld hl,q_v05 : call ask
+        nextreg $62,0
+        nextreg $43,0 : nextreg $40,17 : ld a,(.org) : nextreg $41,a
+        jp l2w_off
+.cop:   db $43,0, $40,17
+.c0:    db $41,0, $80,96, $40,17
+.c1:    db $41,0, $80,192, $40,17
+.c2:    db $41,0, $FF,$FF
+.cope:
+.org:   db 0
+q_v05:  db 1
+        db "V05 STRIPES IN THE BORDER",0
+        db " ",0
+        db "Look at the border around the",0
+        db "grey area.",0
+        db " ",0
+        db "1 = red / yellow stripes left",0
+        db "    and right of the LOWER half",0
+        db "    of the grey, plain elsewhere",0
+        db "2 = no stripes there (plain, or",0
+        db "    black)",0
+        db "3 = something else",0,0
+        db "lower",0,"none",0,"other",0
+
 ; ---------------------------------------------------------------- V02 sprite order ($15 bit 6)
 ; Sprite 1 red ($E0) at X 128 Y 112, sprite 2 green ($1C) at X 136 Y 120 (16 x 16, they overlap 8 x 8),
 ; patterns 0 / 1. Shown with $15 bit 6 = 0, then = 1; each time: which colour is on top. b0 / b1 = the

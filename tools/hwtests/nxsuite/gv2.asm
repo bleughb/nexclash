@@ -3,36 +3,7 @@
 ; one 1 / 2 / 3 question (ask, opr.asm). What the harness does not put back is put back here: the Layer 2
 ; and sprite clip windows (reset values 0-255 / 0-191) and the palette entries written.
 
-; ---------------------------------------------------------------- helpers
-; A = index -> 320 x 256 Layer 2 (pages 44-53) filled with it (slot 3, harness page $0B back after)
-l2w_fill:
-        ld c,a : ld b,44
-.p:     ld a,b : nextreg $53,a
-        ld hl,$6000 : ld (hl),c : ld de,$6001 : push bc : ld bc,$1FFF : ldir : pop bc
-        inc b : ld a,b : cp 54 : jr nz,.p
-        nextreg $53,$0B : ret
-; B = row, C = index -> that row of the 320 x 256 Layer 2 (column-major: byte x * 256 + y) set to it
-l2w_row:
-        ld d,44
-.p:     ld a,d : nextreg $53,a
-        ld h,$60 : ld l,b : ld e,32
-.c:     ld (hl),c : inc h : dec e : jr nz,.c
-        inc d : ld a,d : cp 54 : jr nz,.p
-        nextreg $53,$0B : ret
-; 320 x 256 Layer 2 on top (order LSU), pages 44-53, clip 0-159 / 0-255 (wide mode: X in 2-dot units)
-l2w_on: nextreg $70,%00010000 : nextreg $12,22
-        nextreg $1C,1 : nextreg $18,0 : nextreg $18,159 : nextreg $18,0 : nextreg $18,255
-        ld a,(NRSNAP+$15) : and %11100011 : or %00000100 : nextreg $15,a
-        ld bc,$123B : ld a,2 : out (c),a : ret
-; the Layer 2 clip window back to its reset value 0-255 / 0-191 (the harness does not restore it)
-l2w_off:
-        nextreg $1C,1 : nextreg $18,0 : nextreg $18,255 : nextreg $18,0 : nextreg $18,191
-        ld bc,$123B : xor a : out (c),a : ret
-; HL = copper program, B = its length -> loaded at index 0, run in mode %11 (from the start every frame)
-cop_load:
-        nextreg $62,0 : nextreg $61,0
-.l:     ld a,(hl) : nextreg $60,a : inc hl : djnz .l
-        nextreg $61,0 : nextreg $62,%11000000 : ret
+; helpers l2w_fill / l2w_row / l2w_on / l2w_off / cop_load: bank 2 (xtb2.asm), shared with gv.asm
 
 ; ---------------------------------------------------------------- V18 $64 = 33 / 32: copper line 0 and Layer 2 row 0
 ; 320 x 256 Layer 2, transparent ($14's index) except row 0 = index 1 and row 4 = index $FF (white, the

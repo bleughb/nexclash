@@ -649,6 +649,15 @@ def _v18(e, rec, src):
         'the reference): %s.' % (a, b, how)
 
 
+def _v05(e, rec, src):
+    say = {'lower': ('PASS', 'Layer 2 showed through the side borders of lines 96-191, where its colour was made equal to '
+                             '$14: a border in the $14 colour is transparent'),
+           'none': ('FAIL', 'no Layer 2 in the side borders of lines 96-191 (plain or black there): the layer below '
+                            'did not show through a border in the $14 colour'),
+           'other': (None, 'something else - see the operator\'s notes')}.get(rec.get('v'))
+    return (say[0], 'operator: %s.' % say[1]) if say else None
+
+
 RESETS = {'soft': 'an F4 soft reset', 'hard': 'a hard reset', 'power': 'power off and on'}
 
 
@@ -673,7 +682,7 @@ def _xh2(e, rec, src):
     return st, 'board: %s.' % '; '.join(parts)
 
 
-DERIVE = {('XH2', 'dma-wr4-interrupt-lock'): _xh2, ('V18', 'frame-64-33-l2-top'): _v18, ('V10', 'lay-l2-flip-not-synced'): _v10,
+DERIVE = {('XH2', 'dma-wr4-interrupt-lock'): _xh2, ('V05', 'lay-border-transparent'): _v05, ('V18', 'frame-64-33-l2-top'): _v18, ('V10', 'lay-l2-flip-not-synced'): _v10,
           ('XT2', 'frame-timing-change-frame-end'): _xt2,
           ('XT4', 'mem-48k-timing-7ffd'): _xt4, ('D02', 'dma-default-cycle-length'): _d02_default, ('D02', 'dma-cost-per-byte'): _d02_cost,
           ('D04', 'dma-prescaler-rate'): _d04, ('D05', 'dma-burst-cpu-share'): _d05,
