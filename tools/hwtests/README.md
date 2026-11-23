@@ -218,7 +218,10 @@ Build (keep the .nex out of the repository):
 Run: copy `nxsuite.nex` into a folder of its own on the SD card and start it from the Browser. The suite
 writes `NXSUITE.TXT` (results), `NXSUITE.PRG` (progress record, 64 bytes) and, when needed, parts
 `NXSUITE.001`, `NXSUITE.002`, ... into that folder and nothing anywhere else. Menu keys: A = all automatic tests (about 6 minutes - G7 BENCH alone is about 3 - leave it alone), 0-9 = one group,
-R = resume, U = answer the pending visual questions (later stages). The NEXT STEP line under the group list
+R = resume, U = retry the tests that hung, V = the visual pass (the person at the machine answers: Y / N or
+1 / 2 / 3, S = ask later; in RUN ALL these tests are PENDING-OPERATOR), T / D / H = the opt-in groups (timing,
+DivMMC, DMA hang: each test shows what it risks and what to do if the machine does not come back, Y runs it,
+N skips it; never in RUN ALL). The NEXT STEP line under the group list
 says in plain words what to do next. Border during a group: blue running, then green (no FAIL), yellow
 (INFO only) or red (a FAIL).
 

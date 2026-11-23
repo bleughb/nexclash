@@ -139,9 +139,7 @@ menu:   ld sp,MSTACK
         ld a,(resume_pending) : or a : jp nz,do_resume
         jr menu_again
 .k1:    cp 'U' : jp z,do_hung
-        cp '0' : jr c,menu_again
-        cp '9'+1 : jr nc,menu_again
-        sub '0' : jp do_group
+        jp menu_key                                 ; opr.asm: 0-9, V, T, D, H
 menu_again:
         xor a : ld (resume_pending),a
         jp menu
@@ -155,8 +153,8 @@ m_file3: db "  file: other build kept, new",0
 m_nokeep: db "NXSUITE.TXT could not be kept:",0
 m_nokeep2: db "copy it off the card, restart",0
 m_next: db "NEXT STEP:",0
-m_keys: db "A all  0-9 group  R resume",0
-m_keys2: db "U retry hung tests",0
+m_keys: db "A all 0-9 group V visual R resume",0
+m_keys2: db "T D H opt-in  U retry hung",0
 
 ; A = group -> IX = its gtab entry (8 bytes)
 gent:   ld l,a : ld h,0 : add hl,hl : add hl,hl : add hl,hl
@@ -432,9 +430,10 @@ run_test_marked:
 .nj:    ld a,(retrying) : or a : jr nz,.go
         ld a,(curt) : call hung_is : jr nc,.nh
         ld hl,why_hung : jr .skip
-.nh:    ld ix,(cure) : bit 2,(ix+5) : jr z,.ni      ; opt-in: never in RUN ALL
-        ld a,(mode) : and $7F : jr nz,.ni
-        ld hl,why_ns : jr .skip
+.nh:    ld ix,(cure) : bit 2,(ix+5) : jr z,.ni      ; opt-in: never in RUN ALL; else its hazard screen
+        ld a,(mode) : and $7F : ld hl,why_ns : jr z,.skip
+        call hazard : jr c,.skip
+        ld ix,(cure)
 .ni:    bit 1,(ix+5) : jr z,.go                     ; operator test, unattended: pending
         ld a,(unatt) : or a : jr z,.go
         ld a,ST_PENDOP : ld (R_st),a : jr .emit

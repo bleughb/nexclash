@@ -1484,24 +1484,25 @@
    "id": "V01",
    "group": "V",
    "claims": [
-    "spr-clip-units"
+    "spr-clip-units",
+    "spr-change-one-line-late"
    ],
    "risk": "none",
-   "title": "sprite clip units",
+   "title": "clip units / late",
    "auto": false,
    "operator": true,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "left_out": "Each answer is a position to the dot or to the line (the sprite clip window in display or 2-dot units across the wide area; an attribute or $15 change showing one line later). A person at the screen cannot count dots or lines to that precision by eye, and the suite records key presses, not photographs: a photograph of a ruled test card settles it, not a question here."
   },
   {
    "id": "V02",
    "group": "V",
    "claims": [
-    "spr-order-bit6",
-    "spr-change-one-line-late"
+    "spr-order-bit6"
    ],
    "risk": "none",
-   "title": "sprite order / late change",
+   "title": "sprite order bit 6",
    "auto": false,
    "operator": true,
    "opt_in": false,
@@ -1518,7 +1519,8 @@
    "auto": false,
    "operator": true,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "left_out": "Needs a composed picture of several layers (an arrow sprite in four rotate / mirror combinations at X scale 4, beside drawn references) judged against a printed key. The suite's pages 32-63 have no room left for those pictures and their code (the 1 MB layout, spec 1.2), and the claim is a picture judgement in every case - nothing the program could read back - so it belongs to a separate picture program, not this one."
   },
   {
    "id": "V04",
@@ -1531,7 +1533,8 @@
    "auto": false,
    "operator": true,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "left_out": "Needs a composed picture of several layers (ULA, Layer 2, tilemap and sprite panels over stripes, each with its transparency rule) judged against a printed key. The suite's pages 32-63 have no room left for those pictures and their code (the 1 MB layout, spec 1.2), and the claim is a picture judgement in every case - nothing the program could read back - so it belongs to a separate picture program, not this one."
   },
   {
    "id": "V05",
@@ -1544,7 +1547,8 @@
    "auto": false,
    "operator": true,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "left_out": "Needs a composed picture of several layers (320 x 256 Layer 2 stripes under a border whose colour is switched to the $14 colour by copper) judged against a printed key. The suite's pages 32-63 have no room left for those pictures and their code (the 1 MB layout, spec 1.2), and the claim is a picture judgement in every case - nothing the program could read back - so it belongs to a separate picture program, not this one."
   },
   {
    "id": "V06",
@@ -1557,7 +1561,8 @@
    "auto": false,
    "operator": true,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "left_out": "Needs a composed picture of several layers (a sprite crossing a Layer 2 shape with and without the priority bit, in SLU and blend mode) judged against a printed key. The suite's pages 32-63 have no room left for those pictures and their code (the 1 MB layout, spec 1.2), and the claim is a picture judgement in every case - nothing the program could read back - so it belongs to a separate picture program, not this one."
   },
   {
    "id": "V07",
@@ -1570,7 +1575,8 @@
    "auto": false,
    "operator": true,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "left_out": "Needs a composed picture of several layers (a 320 x 256 Layer 2 row ruler before and after the clip window is written) judged against a printed key. The suite's pages 32-63 have no room left for those pictures and their code (the 1 MB layout, spec 1.2), and the claim is a picture judgement in every case - nothing the program could read back - so it belongs to a separate picture program, not this one."
   },
   {
    "id": "V08",
@@ -1583,7 +1589,8 @@
    "auto": false,
    "operator": true,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "left_out": "Each answer is a position to the dot or to the line (a 640 x 256 scroll of one dot against two). A person at the screen cannot count dots or lines to that precision by eye, and the suite records key presses, not photographs: a photograph of a ruled test card settles it, not a question here."
   },
   {
    "id": "V09",
@@ -1596,7 +1603,8 @@
    "auto": false,
    "operator": true,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "left_out": "Needs a composed picture of several layers (a numbered Layer 2 grid scrolled to each wrap edge in copper bands) judged against a printed key. The suite's pages 32-63 have no room left for those pictures and their code (the 1 MB layout, spec 1.2), and the claim is a picture judgement in every case - nothing the program could read back - so it belongs to a separate picture program, not this one."
   },
   {
    "id": "V10",
@@ -1622,7 +1630,8 @@
    "auto": false,
    "operator": true,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "left_out": "Needs a composed picture of several layers (tile definitions across the bank 7 8K boundary with marked page 14 / 15 patterns) judged against a printed key. The suite's pages 32-63 have no room left for those pictures and their code (the 1 MB layout, spec 1.2), and the claim is a picture judgement in every case - nothing the program could read back - so it belongs to a separate picture program, not this one."
   },
   {
    "id": "V12",
@@ -1635,7 +1644,8 @@
    "auto": false,
    "operator": true,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "left_out": "Needs a composed picture of several layers (text-mode tiles over a ULA pattern and a $6B bit 0 band) judged against a printed key. The suite's pages 32-63 have no room left for those pictures and their code (the 1 MB layout, spec 1.2), and the claim is a picture judgement in every case - nothing the program could read back - so it belongs to a separate picture program, not this one."
   },
   {
    "id": "V13",
@@ -1648,7 +1658,8 @@
    "auto": false,
    "operator": true,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "left_out": "Needs a composed picture of several layers (tiles with attribute bit 0 set and clear, a sprite crossing both, Layer 2 under them) judged against a printed key. The suite's pages 32-63 have no room left for those pictures and their code (the 1 MB layout, spec 1.2), and the claim is a picture judgement in every case - nothing the program could read back - so it belongs to a separate picture program, not this one."
   },
   {
    "id": "V14",
@@ -1661,7 +1672,8 @@
    "auto": false,
    "operator": true,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "left_out": "Needs a composed picture of several layers (blend mode colour swatches and a stencil panel beside unblended references) judged against a printed key. The suite's pages 32-63 have no room left for those pictures and their code (the 1 MB layout, spec 1.2), and the claim is a picture judgement in every case - nothing the program could read back - so it belongs to a separate picture program, not this one."
   },
   {
    "id": "V15",
@@ -1700,7 +1712,8 @@
    "auto": false,
    "operator": true,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "left_out": "Needs a composed picture of several layers (a sprite clip box with a copper write of $15 at line 100) judged against a printed key. The suite's pages 32-63 have no room left for those pictures and their code (the 1 MB layout, spec 1.2), and the claim is a picture judgement in every case - nothing the program could read back - so it belongs to a separate picture program, not this one."
   },
   {
    "id": "V18",
@@ -1713,7 +1726,8 @@
    "auto": false,
    "operator": true,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "left_out": "Each answer is a position to the dot or to the line (which Layer 2 row a copper line-0 change lines up with, $64 = 32 or 33). A person at the screen cannot count dots or lines to that precision by eye, and the suite records key presses, not photographs: a photograph of a ruled test card settles it, not a question here."
   },
   {
    "id": "V19",

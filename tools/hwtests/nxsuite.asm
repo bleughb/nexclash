@@ -47,6 +47,7 @@ wrongpc: ld a,$FF : jp (ix)
         INCLUDE "nxsuite/core.asm"
         INCLUDE "nxsuite/g2.asm"
         INCLUDE "nxsuite/g9.asm"
+        INCLUDE "nxsuite/opr.asm"
 ; G7's two $7FFD rows (they page bank 0 into slots 6 / 7) and the way it measures them
         INCLUDE "nb_far.inc"
 g7far:  call measure
@@ -82,6 +83,7 @@ OVL_G8  equ 43                  ; G8 SPRITES shares page 43 with G5
 OVL_G6  equ 63                  ; G6 DMA (program buffer $F700)
 OVL_G1  equ 60                  ; G1 CPU (below SCRATCH: C15 copies 1 KB to $F000)
 OVL_G7  equ 61                  ; G7 BENCH (nextbench rows; slot 6 = page 38 during a row)
+OVL_V   equ 41                  ; V VISUAL shares page 41 with G3 (G3's tables: $F800-$FFFF)
         MMU 7,OVL_G2
         ORG $E000
         INCLUDE "nxsuite/g2b.asm"
@@ -90,6 +92,7 @@ OVL_G7  equ 61                  ; G7 BENCH (nextbench rows; slot 6 = page 38 dur
         MMU 7,OVL_G3
         ORG $E000
         INCLUDE "nxsuite/g3.asm"
+        INCLUDE "nxsuite/gv.asm"
         ASSERT $ <= $F800
         MMU 7,OVL2_G3
         ORG $E000
