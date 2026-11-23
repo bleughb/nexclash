@@ -14,9 +14,10 @@ Checks: `python nexclash.py auto hard_drivin.z80 --rzx hard_drivin.rzx --quick 2
   COMPLETE. Prototype evidence (C:\1NEXT\harddrivin_work): whole-RZX verify PASS (3,112 checks), 18 / 18 mutants,
   JNext pace +3 frames / 178 updates.
 Pending user answers: none
-Start with: route 2a stage 2 (hook asm hd3.asm verified byte-exact against spec.py) running in a subagent
-  (2026-11-23): brief C:\1NEXT\harddrivin_work\step\STAGE2_BRIEF.md, progress stage2_results.md; if incomplete, a subagent resumes from them. Then
-  stage 3: pace (10 frames per original update), adaptive N, JNext. Auto-resume after a reset is allowed (user).
+Start with: route 2a stage 3 (pace 10 frames per original update, adaptive N, logic at 28 MHz, push-out whole,
+  JNext) running in a subagent (2026-11-23): brief C:\1NEXT\harddrivin_work\step\STAGE3_BRIEF.md, progress stage3_results.md;
+  if incomplete, a subagent resumes from them. Then check its numbers and send the hardware build. Auto-resume after
+  a reset is allowed (user).
 Open: the first calibration interrupt's extra ~574 T (not subtracted, 0.06 %); sub-unit angle interpolation;
   the CALL at 0xA402 (time-out path, not in the recording); R not preserved (patch.preserve-r: the verify excludes
   R; no consumer of R found, not proven)
@@ -207,6 +208,18 @@ response) to consider on top: it needs the same sub-stepped game state, so this 
 - Risks: render overruns more likely with new camera positions: clip buffer 9E00-9E11 into 0x9E12 (guard at 0xCEB9),
   span fill C5E0-C665 over 9000-96E5 (stage 2); skid / push-out untested (not in the capture); input quirks: centre
   key + left / right gives 7.5 not 30, up + down nets one step.
+### Build 2a stage 2 (subagent, 2026-11-23; C:\1NEXT\harddrivin_work\step\stage2_results.md, hd3.asm / hd3_build.py / hd3_verify.py)
+- hd3.asm: driver at 0x9E2F / 0xFC4C + 14 scaling / guard hooks (1,793 bytes, page 36 in slot 1 for the whole
+  driver; alt-ROM trampolines hold the original instructions). Byte-exact vs spec.py (+ 2 guards) for 1,554 updates
+  x N = 1 / 2 / 4 / switching, the two escapes, 66 + 40 runs of 20 / 40 updates, 518 synthetic skid / steering
+  states; 17 / 17 negative controls caught (rerun 2026-11-23); the N = 4 .nex boots to the title in the host model
+  (rerun: PASS).
+- Second overrun: camera inside an object -> unclipped polygon path D9B4 -> C86C with behind-camera vertices (y >=
+  0x80) -> span fill past row 127 over 9000-96E5 (h_fill at C7C0 skips such polygons); behind it the shift stub at
+  91BA gets scale 0 (h_shift at A0E7 / D758 clamps 1..6). Latent in the original, never reached in the capture.
+- Cost (model): N = 4 with logic at 28 MHz 6.1 / 9.9 / 11.5 frames per original update (median / p95 / max) against
+  10; real 28 MHz ~1.2x slower: N must be chosen per update. Run 150 at N = 4: the car stays stuck in an object (the
+  push-out is scaled 1 / N): stage 3 makes it whole.
 
 ## Hardware checklist
 Test 1 (2026-11-23), sent to the user: C:\1NEXT\harddrivin_work\hardware1 (CHECKLIST.txt + both builds: hard_drivin_smooth.nex
