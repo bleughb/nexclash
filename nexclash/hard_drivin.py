@@ -38,6 +38,24 @@ RENDER, STOP, RET_R = 0x9EA9, 0x9E6E, 0x9E57
 CAM = list(range(43400, 43406)) + [43407, 43408, 43409]     # x, y, z words; orientation (43406: a flag)
 CAL_MIN_SPEC = 1000             # lines: a shorter calibration render must give no sample (the verify's own rule)
 DROP_MAX = 0.4                  # a share of dropped calibration samples above this: calibrations crowd out views
+LOAD_SCREEN = 'hard_drivin_loading.scr'     # the user's 6,912-byte screen file, a local input beside the snapshot
+LOAD_MD5 = '92c6cbc7cce166e16190a5971749905d'
+# Trainers (games/hard_drivin.md "Trainers"), off by default, menu options in the .nxc: name -> ((address, original,
+# value), ...); 0xC000 up is bank 0 (_where). Each outside every hook site, step gate and Spec hook (unit_trainers).
+TRAINERS = {
+    'Infinite time': ((0xA3D8, 0x01, 0x00),),                   # the lap clock's SUB 1 (0xA3D7) -> SUB 0
+    'Hard pilot': ((0xA5EE, 0x02, 0xFF),),                      # LD A,2 at 0xA5ED (to 965D) -> LD A,0xFF
+    '9 replays': ((0xF5DD, 0x02, 0x09),),                       # LD A,2 at 0xF5DC (to 950E) -> LD A,9
+    'Infinite off-road': ((0xA356, 0xA7, 0xAF),),               # AND A before JR NZ at 0xA357 -> XOR A
+    'No crashes': ((0xA8D1, 0x35, 0x00), (0xE901, 0x35, 0x00), (0xE97B, 0x35, 0x00))}   # DEC (HL) on 958B -> NOP
+# where each trainer's effect shows: (entry PC, stop PC(s)); unit_trainers runs both sides from recorded states there
+TRAINER_RUNS = {'Infinite time': ((0xA3D7, (0xA3EA,)), ), 'Hard pilot': ((0xA5ED, (0xA5F2,)),),
+                '9 replays': ((0xF5DC, (0xF5E1,)),), 'Infinite off-road': ((0xA356, (0xA359, 0xA35F)),),
+                'No crashes': ((0xA8D1, (0xA8D2,)), (0xE901, (0xE902,)), (0xE97B, (0xE97C,)))}
+TOGGLE_SMOOTH = 'Original time steps'     # the .nxc's toggle: the smooth build instead of the steps default
+TRAINER_PCS = {pc for runs in TRAINER_RUNS.values() for pc, _ in runs}
+_ORIG_AT = {pc: bytes.fromhex(h) for pc, h in ((0xA3D7, 'd601'), (0xA5ED, '3e02'), (0xF5DC, '3e02'), (0xA356, 'a720'),
+                                               (0xA8D1, '352a'), (0xE901, '352a'), (0xE97B, '352a'))}   # paged in
 
 
 # ----------------------------------------------------------------------------------------------------- profile
@@ -89,10 +107,11 @@ class HDPatch:
     bytes} makes a broken build (negative_patches)."""
     name = "Hard Drivin': render + copy at 28 MHz in original-time windows, in-between views"
 
-    def __init__(self, page_edits=None, label='smooth'):
+    def __init__(self, page_edits=None, label='smooth', trainers=()):
         h = load_profile()['hooks']
         self.S = S = syms()
         self.label = label
+        self.trainers = tuple(trainers)
         self.rom_code = bytes.fromhex(h['rom'])
         page = bytearray.fromhex(h['page'])
         for off, data in (page_edits or {}).items():
@@ -129,6 +148,13 @@ class HDPatch:
                 raise ValueError('unexpected code at 0x%04X (bank %d: %s, expected %s)' % (
                     a, b, banks[b][o:o + len(old)].hex(), old.hex()))
             banks[b][o:o + len(new)] = new
+        for name in self.trainers:                  # a trainer-on build (the .nxc applies the same bytes)
+            for a, old, new in TRAINERS[name]:
+                b, o = _where(a)
+                if banks[b][o] != old:
+                    raise ValueError('%s: unexpected byte at 0x%04X (bank %d: %02X, expected %02X)' % (
+                        name, a, b, banks[b][o], old))
+                banks[b][o] = new
         for b in range(8):
             snap.banks[b] = bytes(banks[b])
         self.entry = snap.pc
@@ -516,16 +542,19 @@ def check(patch, st, prevcam, cal, om, oregs, stop=STOP, stats=None, setup=None,
 
 
 # ------------------------------------------------------------------------------------------------- the verify
-def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=1, paths=('normal', 'cal')):
+def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=1, paths=('normal', 'cal'), trainers=(),
+           trainer_states=None):
     """Differential test over a recording (module docstring). -> (Counter, failures, states). Failure keys end in
     '!'; failures = [(key, update, reason)] (5 a key); collect=N keeps N render-entry states (+ the previous camera),
-    spread over the run, for unit_tests."""
+    spread over the run, for unit_tests. trainers: TRAINERS names whose bytes go into every render state, both sides
+    (a trainer-on check). trainer_states: a dict filled {PC: [(hit, mem, regs)]} at TRAINER_PCS (unit_trainers)."""
     from . import simrun
     c = collections.Counter()
     fails, per = [], collections.Counter()
     stats = {'kept': 0, 'dropped': 0, 'err': []}
     sim, upd = [None], [0]
     keep, prev = [], [None]
+    tp = collections.Counter()
 
     class H:
         def on_sim(s, x):
@@ -538,11 +567,20 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=1, paths=
         def before(s, pc):
             if pc == 0x9E34:
                 upd[0] += 1
+            elif pc in TRAINER_PCS and trainer_states is not None:
+                x = sim[0]
+                if bytes((x.memory[pc], x.memory[pc + 1])) == _ORIG_AT[pc]:     # paged in (0xC000 up: bank 0)
+                    tp[pc] += 1
+                    if tp[pc] in (1, 3, 9, 27, 81, 243) or tp[pc] % 500 == 0:
+                        trainer_states.setdefault(pc, []).append(
+                            (tp[pc], bytes(x.memory[i] for i in range(65536)), list(x.registers)))
             elif pc == RENDER:
                 x = sim[0]
                 m, sp = x.memory, x.registers[SP]
                 if m[sp] == RET_R & 255 and m[(sp + 1) & 0xFFFF] == RET_R >> 8:
                     mem = bytes(m[i] for i in range(65536))
+                    if trainers:
+                        mem = _poked(mem, trainers, getattr(m, 'o7ffd', 0) & 7 == 0)
                     st = {'u': upd[0], 'mem': mem, 'regs': list(x.registers)}
                     c['renders'] += 1
                     if c['renders'] % every == 0:
@@ -573,6 +611,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=1, paths=
             progress('verify    : u%d %d checks, %d fail' % (st['u'], c['checks'], sum(v for k, v in c.items()
                                                                                          if k.endswith('!'))))
     simrun.play_rzx(str(rzx_path), H(), stop=stop)
+    if trainer_states is not None:
+        trainer_states['hits'] = dict(tp)
     n = stats['kept'] + stats['dropped']
     c['calibration samples kept'] = stats['kept']
     c['calibration samples dropped'] = stats['dropped']
@@ -658,6 +698,162 @@ def unit_tests(patch, states, neg=None):
     return c
 
 
+# ----------------------------------------------------------------------------- trainers + the loading screen
+def _poked(mem, names, top_bank0=True):
+    """A 64K view with the trainers' bytes (0xC000 up only when bank 0 is paged there)."""
+    m = bytearray(mem)
+    for name in names:
+        for a, _old, v in TRAINERS[name]:
+            if a < 0xC000 or top_bank0:
+                m[a] = v
+    return bytes(m)
+
+
+def trainer_conflicts():
+    """Trainer bytes on a hook site (either build), a step gate, a throttle word, the NOPed push-out or a call site:
+    [(trainer, address, what)]; empty = every trainer outside them (the .nxc refuses a POKE on a patched byte too)."""
+    busy = {}
+    for P in (HDPatch(), StepsPatch()):
+        for a, old, new in P.sites:
+            for x in range(a, a + max(len(old), len(new))):
+                busy[x] = '%s site 0x%04X' % (P.label, a)
+    busy.update({a: 'step gate' for a in STEP_GATES})
+    busy.update({x: 'throttle word' for a in THROTTLE for x in (a, a + 1)})
+    busy.update({x: 'push-out NOP' for x in range(*BOUNCE_NOP)})
+    busy.update({x: 'call site' for a in CALL_SITES for x in range(a, a + 3)})
+    return [(n, a, busy[a]) for n, pokes in TRAINERS.items() for a, _o, _v in pokes if a in busy]
+
+
+def _trainer_effect(name, pc, mem, regs, pokes=None):
+    """Both sides from one state at `pc` (a 64K view with the code paged in) to its stop: (effect shown, detail).
+    pokes: the trainer's bytes (default TRAINERS[name]; the negative control passes the original bytes)."""
+    stops = dict(TRAINER_RUNS[name])[pc]
+    out = []
+    for poke in (False, True):
+        m = list(mem)
+        if poke:
+            for a, _old, v in (TRAINERS[name] if pokes is None else pokes):
+                m[a] = v
+        sim = _plain_sim(m, regs)
+        R, ops, n = sim.registers, sim.opcodes, 0
+        R[PC] = pc
+        while n == 0 or R[PC] not in stops:
+            ops[m[R[PC]]]()
+            n += 1
+            if n > 200:
+                return False, 'runaway from 0x%04X' % pc
+        out.append((m, list(R)))
+    (om, oregs), (tm, tregs) = out
+    if name == 'Infinite time':                 # BCD seconds 950C / 950D: the original counts down, the trainer not
+        start = (mem[0x950C], mem[0x950D])
+        ok = (tm[0x950C], tm[0x950D]) == start != (om[0x950C], om[0x950D])
+        return ok, 'clock %02X%02X: original %02X%02X, trainer %02X%02X' % (
+            start[1], start[0], om[0x950D], om[0x950C], tm[0x950D], tm[0x950C])
+    if name == 'Hard pilot':
+        return (om[0x965D], tm[0x965D]) == (2, 0xFF), '965D original %d, trainer %d' % (om[0x965D], tm[0x965D])
+    if name == '9 replays':
+        return (om[0x950E], tm[0x950E]) == (2, 9), 'replays 950E original %d, trainer %d' % (om[0x950E], tm[0x950E])
+    if name == 'Infinite off-road':             # A = 951E (off-road count): the trainer always takes the on-road path
+        want = 0xA35F if regs[0] else 0xA359
+        return (oregs[PC], tregs[PC]) == (want, 0xA359), '951E %d: original to 0x%04X, trainer to 0x%04X' % (
+            regs[0], oregs[PC], tregs[PC])
+    if name == 'No crashes':
+        c = mem[0x958B]
+        return (om[0x958B], tm[0x958B]) == ((c - 1) & 255, c), '958B %d: original %d, trainer %d' % (
+            c, om[0x958B], tm[0x958B])
+    raise KeyError(name)
+
+
+def _snapshot_view(z80):
+    """The snapshot's 64K with bank 0 at 0xC000 (the game's code page in play) + its registers (simulator order)."""
+    s = zt.Z80Snapshot(str(z80))
+    regs = [s.a, s.f, s.bc >> 8, s.bc & 255, s.de >> 8, s.de & 255, s.hl >> 8, s.hl & 255, s.ix >> 8, s.ix & 255,
+            s.iy >> 8, s.iy & 255, s.sp, 0, s.i, s.r, s.a_, s.f_, s.bc_ >> 8, s.bc_ & 255, s.de_ >> 8, s.de_ & 255,
+            s.hl_ >> 8, s.hl_ & 255, s.pc, 0, s.iff1, s.im]
+    return bytes(16384) + bytes(s.banks[5]) + bytes(s.banks[2]) + bytes(s.banks[0]), regs
+
+
+# synthetic states on the snapshot, per entry PC: memory edits (the clock at 01:30 and at 01:00 = a borrow, an
+# off-road count, crash counts); A / HL then as the instructions before the entry leave them
+TRAINER_SYNTH = {0xA3D7: ([(0x950C, 0x30), (0x950D, 0x01)], [(0x950C, 0x00), (0x950D, 0x01)]),
+                 0xA5ED: ([],), 0xF5DC: ([],), 0xA356: ([(0x951E, 3)], [(0x951E, 0)]),
+                 0xA8D1: ([(0x958B, 3)],), 0xE901: ([(0x958B, 1)],), 0xE97B: ([(0x958B, 2)],)}
+
+
+def _synthetic(mem, regs, pc, edits):
+    m = bytearray(mem)
+    for a, v in edits:
+        m[a] = v
+    r = list(regs)
+    if pc == 0xA3D7:
+        r[0] = m[0x950C]                        # LD A,(950C) just ran
+    elif pc == 0xA356:
+        r[0] = m[0x951E]                        # LD A,(951E) just ran
+    elif pc in (0xA8D1, 0xE901, 0xE97B):
+        r[6], r[7] = 0x95, 0x8B                 # LD HL,958B just ran
+    return bytes(m), r
+
+
+def unit_trainers(z80, states=None):
+    """Each trainer: its bytes outside every hook site (trainer_conflicts); its effect from recorded states at its
+    PCs (verify's trainer_states) and from synthetic ones on the snapshot (TRAINER_SYNTH); a negative control: the
+    same check with the original bytes in place of the trainer's must fail. -> Counter ('!' = fail)"""
+    c = collections.Counter()
+    for n, a, what in trainer_conflicts():
+        c['trainer %s on %s at 0x%04X!' % (n, what, a)] += 1
+    mem, regs = _snapshot_view(z80)
+    states = states or {}
+    for name, runs in TRAINER_RUNS.items():
+        for pc, _stops in runs:
+            cases = [('recorded', m, r) for _hit, m, r in states.get(pc, [])]
+            cases += [('synthetic',) + tuple(_synthetic(mem, regs, pc, e)) for e in TRAINER_SYNTH[pc]]
+            for kind, m, r in cases:
+                ok, why = _trainer_effect(name, pc, m, r)
+                c['trainer %s %s%s' % (name, kind, '' if ok else '!')] += 1
+                if not ok:
+                    c['trainer %s 0x%04X: %s!' % (name, pc, why)] += 1
+        pc = runs[0][0]                         # negative control: the original bytes, the check must fail
+        m, r = _synthetic(mem, regs, pc, TRAINER_SYNTH[pc][0])
+        ok, _ = _trainer_effect(name, pc, m, r, pokes=[(a, o, o) for a, o, _v in TRAINERS[name]])
+        c['negative: trainer %s %s' % (name, 'MISSED!' if ok else 'detected')] += 1
+    return c
+
+
+def trainer_pok(z80):
+    """The verified trainers as a .pok (nxc.py import-pok), the snapshot's bytes checked first: bank field 8 below
+    0xC000, 0 above (the code page in play; the snapshot is saved with bank 3 there)."""
+    s = zt.Z80Snapshot(str(z80))
+    text = ''
+    for name, pokes in TRAINERS.items():
+        text += 'N%s\n' % name
+        for i, (a, old, new) in enumerate(pokes):
+            b, o = _where(a)
+            if s.banks[b][o] != old:
+                raise ValueError('%s: 0x%04X holds %02X, expected %02X' % (name, a, s.banks[b][o], old))
+            text += '%s %d %d %d %d\n' % ('Z' if i == len(pokes) - 1 else 'M', 0 if a >= 0xC000 else 8, a, new, old)
+    return text + 'Y\n'
+
+
+def find_screen(z80):
+    """The loading screen beside the snapshot (LOAD_SCREEN): its bytes, None when absent; another file is refused."""
+    p = Path(z80).resolve().parent / LOAD_SCREEN
+    if not p.is_file():
+        return None
+    data = p.read_bytes()
+    if hashlib.md5(data).hexdigest() != LOAD_MD5:
+        raise ValueError('%s is not the expected file (MD5 %s)' % (p.name, LOAD_MD5))
+    return data
+
+
+def with_screen(src, dst, screen):
+    """dst = the .nex src with the loading screen in the file (header byte 10 = 2: a ULA screen after the header)."""
+    raw = bytearray(Path(src).read_bytes())
+    if raw[10] != 0 or len(screen) != 6912:
+        raise ValueError("Hard Drivin': expected a .nex without a screen and a 6,912-byte loading screen")
+    raw[10] = 2
+    Path(dst).write_bytes(bytes(raw[:512]) + screen + bytes(raw[512:]))
+
+
 # ================================================================== route 2a: steps (games/hard_drivin.md "Route 2")
 # Every original update (0x9E34 .. its RET) runs as N sub-steps (N = 1, 2, 4) at 28 MHz, paced to real time:
 # asm/hard_drivin_steps.asm (profile hard_drivin_steps.json). Its reference is Spec below (the prototype's spec.py
@@ -731,11 +927,12 @@ class StepsPatch(HDPatch):
     `page_edits` {page offset: bytes}: a broken build (STEPS_NEG)."""
     name = "Hard Drivin' steps: N sub-steps an update at 28 MHz, real-time pace"
 
-    def __init__(self, page_edits=None, label='steps'):
+    def __init__(self, page_edits=None, label='steps', trainers=()):
         prof = load_steps_profile()
         h = prof['hooks']
         self.S = S = steps_syms()
         self.label = label
+        self.trainers = tuple(trainers)
         self.page_edits = dict(page_edits or {})
         self.rom_code = bytes.fromhex(h['rom'])
         page = bytearray.fromhex(h['page'])
@@ -1395,6 +1592,12 @@ MODS = {                                        # synthetic states (cases the re
 
 
 def _apply_mod(g, mod):
+    if isinstance(mod, tuple):                  # TRAINERS names: their bytes in the game's own banks, both sides
+        for name in mod:
+            for a, _old, v in TRAINERS[name]:
+                b, o = _where(a)
+                g.mem.banks[b][o] = v
+        return
     for a, v in MODS[mod](g.mem) if mod in MODS else []:
         g.mem[a] = v
 
@@ -1605,12 +1808,14 @@ def capture_updates(rzx_path, on_update, stop=None):
     return len(ups), frames
 
 
-def verify_steps(patch, rzx_path, stop=None, collect=0, progress=None, workers=None, fixed=(1, 2, 4)):
+def verify_steps(patch, rzx_path, stop=None, collect=0, progress=None, workers=None, fixed=(1, 2, 4), trainers=()):
     """Differential test of the steps build over a recording (module section "route 2a"): at every update-loop entry
     the build's update (the hooked sub-steps, the model's line clock) and Spec's from the same warm state, compared
     byte for byte (steps_case): adaptive N (the rule's input preset per update: every branch) on every update, fixed
     N = `fixed` on every update too; N = 1 also against the recording's next entry. -> (Counter, failures, kept);
-    kept = states for unit_tests_steps (spread, by hook event, K-update runs)."""
+    kept = states for unit_tests_steps (spread, by hook event, K-update runs). trainers: TRAINERS names whose bytes go
+    into every case's game banks, the build's and Spec's alike (a trainer-on check; N = 1 is then not compared with
+    the recording, which ran without them)."""
     import concurrent.futures as cf
     workers = workers or _workers()
     c = collections.Counter()
@@ -1667,6 +1872,8 @@ def verify_steps(patch, rzx_path, stop=None, collect=0, progress=None, workers=N
         p, q = lite(prev), lite(cur)
         pair = (p, q)
         base = {'prev': p, 'cur': q, 'line0': (u * 37) % NL}
+        if trainers:
+            base['mod'] = tuple(trainers)
         submit(dict(base, n=0, preset=PRESETS[u % len(PRESETS)]), u, 'adaptive', pair)
         for N in fixed:
             submit(dict(base, n=N, nxt={'banks': nxt['banks'], 'regs': nxt['regs']}), u, 'N=%d' % N, pair)
@@ -1882,10 +2089,36 @@ def auto(a, z80, name, out, say):
         say('%-10s: %s %s' % (label.capitalize(), f.name, hashlib.md5(f.read_bytes()).hexdigest()))
         say('Boot      : %s' % (bad[:3] if bad else BOOT_OK))
     say('Sprites   : none (both routes keep the ULA picture; games/hard_drivin.md "Decision")')
-    states, skept = [], None
+    screen = find_screen(z80)
+    if screen is None:
+        say('Loading   : none (%s not beside the snapshot)' % LOAD_SCREEN)
+    for label in ('smooth', 'steps') if screen else ():
+        f = out / ('%s_%s_loading.nex' % (name, label))
+        with_screen(out / ('%s_%s.nex' % (name, label)), f, screen)
+        bad = boot_problems(f, z80, builds[label])
+        ok &= not bad
+        say('Loading   : %s %s boot %s' % (f.name, hashlib.md5(f.read_bytes()).hexdigest(), bad[:3] if bad else 'OK'))
+    pok = trainer_pok(z80)
+    pok_path = out / (name + '_verified.pok')
+    if getattr(a, 'pok', None) and Path(a.pok).read_text() != pok:
+        raise ValueError("Use the verified Hard Drivin' trainers generated by this engine")
+    pok_path.write_text(pok)
+    a.pok = str(pok_path)
+    import tempfile
+    tboot = collections.Counter()
+    with tempfile.TemporaryDirectory() as d:     # each trainer on: both hooked builds boot to the trainer's bytes
+        for tname in TRAINERS:
+            for label, cls, fn in (('smooth', HDPatch, build), ('steps', StepsPatch, build_steps)):
+                f = Path(d) / ('%s.nex' % label)
+                bad = boot_problems(f, z80, fn(z80, f, cls(trainers=(tname,))))
+                tboot['%s %s%s' % (tname, label, ' boot!' if bad else '')] += 1
+    ok &= not any(k.endswith('!') for k in tboot)
+    say('Trainers  : %s (%s); boot with each on: %s' % (', '.join(TRAINERS), pok_path.name, dict(tboot)))
+    states, skept, tstates = [], None, {}
     for rec in getattr(a, 'rzx', []) or []:
         t0 = time.time()
-        counts, fails, kept = verify(builds['smooth'], rec, stop=getattr(a, 'quick', None), collect=12, progress=say)
+        counts, fails, kept = verify(builds['smooth'], rec, stop=getattr(a, 'quick', None), collect=12, progress=say,
+                                     trainer_states=tstates)
         states += kept
         ok &= not any(v for k, v in counts.items() if k.endswith('!'))
         say('Verify    : smooth %s %s (%.0f s)' % (dict(counts), fails[:2], time.time() - t0))
@@ -1912,10 +2145,20 @@ def auto(a, z80, name, out, say):
             say('Pace      : steps model runs: update %.2f / %.2f / %.2f frames (median / p95 / max; 10 = real '
                 'time), %d views early, N used %s' % (d[len(d) // 2], d[int(0.95 * (len(d) - 1))], d[-1],
                                                     pace['early'], dict(sorted(pace['N'].items()))))
+        hits = tstates.pop('hits', {})
+        units = unit_trainers(z80, {k: v for k, v in tstates.items()})
+        ok &= not any(v for k, v in units.items() if k.endswith('!'))
+        say('Unit      : trainers %s; recorded arrivals %s' % (dict(units), {'0x%04X' % k: v for k, v in
+                                                                         sorted(hits.items())}))
     else:                                           # a rebuild (record recipe without recordings): builds + boot only
         say('Verify    : not run (no recording: rebuild)')
         say('Unit      : not run (no recording: rebuild)')
-    (out / (name + '_outputs.json')).write_text(json.dumps(
-        {'default': name + '_steps.nex', 'plain': name + '.nex', 'colours': {}}, indent=1) + '\n')
+    outputs = {'default': name + '_steps.nex', 'plain': name + '.nex', 'colours': {}}
+    if screen:
+        outputs['loading'] = name + '_steps_loading.nex'
+    outputs['toggles'] = {TOGGLE_SMOOTH: {
+        'logic': True, 'what': 'route 1 (hard_drivin_smooth.nex): the original update steps, render + copy at 28 MHz',
+        'default': name + '_smooth.nex', 'loading': name + '_smooth_loading.nex' if screen else None}}
+    (out / (name + '_outputs.json')).write_text(json.dumps(outputs, indent=1) + '\n')
     say('Result    : ' + ('PASSED' if ok else 'FAILED'))
     return bool(ok)

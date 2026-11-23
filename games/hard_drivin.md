@@ -9,8 +9,11 @@ Engine: nexclash/hard_drivin.py: route 1 (HDPatch, Next, verify, unit_tests, neg
   Spec, NextSteps, verify_steps, unit_tests_steps, steps_negatives), auto, boot_problems; asm/hard_drivin_hooks.asm +
   hard_drivin_wset.inc -> docs/profiles/hard_drivin.json; asm/hard_drivin_steps.asm -> hard_drivin_steps.json.
   Builds: hard_drivin.nex (plain, tail 0x6C00) d74f75e6, hard_drivin_smooth.nex 9fb23f8e, hard_drivin_steps.nex
-  (default) a2709f99 = the prototype's hd4_na (46e06774) byte for byte + auto's automap_off entry.
-Checks: `auto --quick 2000` PASSED (3 builds boot; smooth 146 checks; steps 288 cases, unit tests, 20 / 20
+  (default) a2709f99 = the prototype's hd4_na (46e06774) byte for byte + auto's automap_off entry; with the
+  loading screen hard_drivin_steps_loading.nex 2fede36f, hard_drivin_smooth_loading.nex f789a1c7; the .nxc = steps +
+  screen, toggle "Original time steps" = smooth + screen, 5 trainers (sections "Loading screen" and "Trainers").
+Checks: 2026-11-23 .nxc work: `auto --quick 3000` PASSED, stamped selftest PASSED (31 min, 5 outputs).
+  Before: `auto --quick 2000` PASSED (3 builds boot; smooth 146 checks; steps 288 cases, unit tests, 20 / 20
   negatives; rom_paths COMPLETE). Stamp (whole RZX): selftest --verify --stamp PASSED 2026-11-23 (21 min): steps 6,220 cases (1,555 updates x
   adaptive / N=1 / 2 / 4) = the Spec, 0 mismatches, 2 escapes per variant (u554 A3F2, u1064 9E12), 2 guard drops (207 s);
   unit tests + 20 / 20 negatives (24 s); model pace 10.00 / 10.19 / 10.76 frames; smooth 3,112 checks (898 s).
@@ -69,6 +72,8 @@ Open: route 1: the first calibration interrupt's extra ~574 T (0.06 %), sub-unit
   C:\1NEXT\harddrivin_work\step; hardware test 2: "plays much better".
 - 2026-11-23: route 2a moved into the engine (subagent; C:\1NEXT\harddrivin_work\step\movein_results.md): see
   "Move-in" under Route 2.
+- 2026-11-23: loading screen (the user's .scr), five trainers, the .nxc with the smooth toggle (subagent;
+  step\nxc_results.md): see "Loading screen, trainers, .nxc" and "Trainers".
 
 ## Technique use
 - detect.pacing-structure: helped: no frame wait, 7-21 frame updates, the lap clock counts updates (not time)
@@ -78,6 +83,7 @@ Open: route 1: the first calibration interrupt's extra ~574 T (0.06 %), sub-unit
 - patch.whole-altrom-image: used: Sinclair's ROM 1 + trampolines at 0x3870 (bank 12), both routes
 - verify.update-locked-pace: used: JNext pace log vs the plain build, 178 updates
 - patch.preserve-r: no help: not applied; the verify excludes R (no consumer found, not proven)
+- patch.loader-screen-from-game-file: no help: not applicable (the .nxc's target is the .z80, which holds no screen; the screen is staged and carried as SCR1)
 - patch.substep-updates: helped: written from this game's route 2a (candidate card, 2026-11-23); the move-in checked its contract against the engine's own verify
 
 ## Lessons
@@ -93,6 +99,11 @@ Open: route 1: the first calibration interrupt's extra ~574 T (0.06 %), sub-unit
 - [kb lesson.7ffd-write-maps-rom-over-slot-1: the update's own 7FFD writes unmapped the hook page] observed on JNext, now in the steps host model: a write to 7FFD sets MMU slots 0-1 back to ROM, so the sub-step hooks after 0x9E7C / 0x9E86 ran ROM bytes until site 0x9E88 mapped the page again.
 - [card patch.substep-updates §Failure lookup] demonstrated: the steering-clamp mutant passed every recorded state because a later sub-step's overflow path resets the value to exactly 120.0; caught only with the clamp reached on the last sub-step (mods steerpl / steerml).
 - [card patch.substep-updates §Verification] demonstrated: the prototype's spec.py, host model and 20 mutants moved into the engine; mutants as page-byte patches at asm labels (no reassembly), fixed N by the page's n_force byte; whole RZX: 1,555 updates x 4 variants in minutes with a process pool.
+
+- [doc docs/NXC_PATCHES.md §4. Cheats] observed: the snapshot is saved with bank 3 at 0xC000 but the POKEs at 0xE901 / 0xE97B / 0xF5DD are in bank 0, the code page in play; a .pok bank field 8 is refused there (or wrong with the snapshot's bank), so the engine's .pok names bank 0. NXC_PATCHES sharpened.
+- [doc docs/NXC_PATCHES.md §3. The loading screen at ENTER] observed: no SCREEN$ block on the tape and a .z80 target, so build_screen cannot apply; the user's screen file is staged as a record input and the _loading variants built, as Chase H.Q. Added to NXC_PATCHES.
+- [doc docs/NXC_PATCHES.md §1. Build options as menu toggles] demonstrated: the smooth route's whole build (other sites, other hook page) packaged as a toggle over the steps default: the same banks and length; nxc make accepted it and read it back byte for byte. Added to NXC_PATCHES.
+- [local: trainer-on verification = the trainers' bytes in both sides of the existing differential verifiers (a Spec mod on the steps side; N = 1 against the recording skipped) + nxc.apply(chosen) against the engine's trainer-on build; an RZX replay with a trainer on would desync]
 
 ## Friction
 - reuse: [local: verify_steps' capture (state + port reads at each update entry) and warm start are this engine's; the general pattern is card patch.substep-updates]
@@ -139,7 +150,42 @@ moves the car once an update (~4 a second). Route 2a (user: "a good idea"): ever
   1,940 / 2,232 / 2,040), 0 mismatches, 207 s on 16 workers; unit tests 24 s, 20 / 20 negatives caught; model pace update 10.00 /
   10.19 / 10.76 frames median / p95 / max (10 = real time), 0 views early. Repo build not yet timed in JNext / on hardware.
 
+## Loading screen, trainers, .nxc (2026-11-23; step\nxc_results.md)
+- Screen: the tape has no SCREEN$ block (.tzx: BASIC, code 100 @ 30000, 5,000 @ 32960, 200 @ 43616, BASIC, 41,400 @
+  24000); the user supplied HardDrivin.scr (6,912 bytes, MD5 92c6cbc7), staged as hard_drivin_loading.scr beside the
+  snapshot (record input, local only). auto builds hard_drivin_steps_loading.nex 2fede36f and
+  hard_drivin_smooth_loading.nex f789a1c7 (header byte 10 = 2, the screen after the header, as chase_hq); both boot.
+- .nxc (auto): main = steps + screen; toggle "Original time steps" (logic) = smooth + screen (the same banks and
+  length, 3 sites against 20); plain stays outside (fix off = the original). 5 cheats from hard_drivin_verified.pok.
+
+## Trainers
+Off by default; TRAINERS in the engine; trainer_pok writes the .pok after checking each original byte (bank field 0
+at 0xC000 up: the code page in play is bank 0, the snapshot is saved with bank 3 paged). Sources: Tipshop /
+Multiface POKEs (Gerard Sweeney, Hippy Smith), checked against this snapshot by the main session.
+
+| Trainer | Bytes | Effect checked |
+|---|---|---|
+| Infinite time | 0xA3D8 01 -> 00 (SUB 1 at 0xA3D7) | BCD clock 950C / 950D unchanged (also the borrow from :00) |
+| Hard pilot | 0xA5EE 02 -> FF (LD A,2 at 0xA5ED) | 965D = FF, original 2 (the car floats after the first crash) |
+| 9 replays | 0xF5DD 02 -> 09 (LD A,2 at 0xF5DC) | 950E = 9, original 2 |
+| Infinite off-road | 0xA356 A7 -> AF (AND A before JR NZ) | always the on-road path 0xA359; original 0xA35F when 951E > 0 |
+| No crashes | 0xA8D1, 0xE901, 0xE97B 35 -> 00 (DEC (HL) on 958B) | 958B not decremented |
+
+Left out: "easy steering" 62869-62872 (another version: would write ROM 0x32AC).
+Checks: trainer_conflicts() empty (no trainer byte on a site of either build, a step gate, a throttle word, the
+NOPed push-out, a call site; Spec's hooks are the steps sites); unit_trainers (auto, with recordings): each effect
+from recorded states at its PCs (verify's trainer_states) and synthetic ones on the snapshot, 5 / 5 negative controls
+(original bytes: the check fails); each trainer on: both hooked builds boot (10 / 10); nxc.apply(chosen=[T]) (each,
+all five, and with the toggle) = the engine's trainer-on build + screen + automap_off, 12 / 12; verifiers with the
+trainers' bytes in both sides (verify(trainers=), verify_steps(trainers=) = a Spec mod): all five on, whole RZX: smooth 3,112
+checks, 3,281 views, 0 fail; steps 6,220 cases, 0 mismatches; each alone, first 6,000 frames: 760 checks + 1,516
+cases each, 0 fail. Recorded arrivals: 0xA356 1,501, 0xA3D7 309, 0xA5ED 90; 0xF5DC, 0xA8D1, 0xE901, 0xE97B are
+not reached by the RZX (9 replays and No crashes: synthetic states only; not played).
+
 ## Hardware checklist
+Test 3 (the .nxc, not yet run): ENTER shows the loading screen, the game starts on the steps build; toggle "Original
+time steps" gives the smooth build; each trainer on its own (clock stops, off-road ignored, no crash count, 9
+replays, Hard pilot float after a crash) and all together.
 Test 1 (route 1; C:\1NEXT\harddrivin_work\hardware1: hard_drivin_smooth.nex 9fb23f8e, hard_drivin.nex d74f75e6):
 start-up, smoothness, no tearing, stopwatch vs race clock, crash replay, time-out, sounds, soak. Result (user): plays
 "just as unplayable as the original" (smooth picture, same control rate).
