@@ -180,7 +180,7 @@ hardware test of events 1,3,4,5 and of the new Downhill default. Events keep the
 - [local: an event load must not undo the menu's speed] SPD_OUT restored the latched speed at every event load, so an
   F8 in the menu was undone (Codex review). It restores only while a drawing was left unfinished: SPD_IN clears the
   ACT mark before the halt, the wrapper's exit sets it with LD (nn),SP (no register or flag touched). Wrapper slots
-  grew from 44 to 48 bytes; the mode bytes moved (Ice Hockey 0xF48A, Bobsled 0xC420, Biathlon 0xAD0E).
+  grew from 44 to 48 bytes (the mode bytes above moved with them).
 
 ## Technique use
 - patch.hybrid-display-replacement: helped: Downhill's left view (display-only, proven by read-back tracing) moved to Layer 2 with the game's own pole drawing left on the ULA (2026-11-22)
