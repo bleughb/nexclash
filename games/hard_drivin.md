@@ -1,7 +1,7 @@
 # Hard Drivin' (Domark / Binary Design, 1989; 128K tape)
 
 ## Next session
-Stage: 1 for route 2 (feasibility)    State: route 1 (smooth views) stamped verified, hardware: plays like the original; route 2a (hd4) built and verified, hardware test 2 sent
+Stage: 1 for route 2 (feasibility)    State: route 1 (smooth views) stamped verified, hardware: plays like the original; route 2a (hd4) plays much better on hardware (user)
 Techniques: `patch.inbetween-views`, `detect.pacing-structure`, `patch.pace-limiter`, `patch.restore-speed`, `patch.whole-altrom-image`, `verify.update-locked-pace`
 Inputs: C:\1NEXT\harddrivin_work: hard_drivin.z80 (MD5 18809405, snapshot 0 of hard_drivin.rzx), hard_drivin.rzx (MD5 c649e04c, 22,116 frames), in\hd.tap (MD5 02e1f96c), in\hd.tzx (61f7d04c), in\hd.dsk ([a], 43a6bc4c). Game data: never in this repo; not yet in specnext/reference (a maintainer push: ask first).
 Branch: add-hard-drivin (worktree C:\1NEXT\nexclash-hd), main merged 2026-11-23 (83cd68b)    Commit: see git log
@@ -230,9 +230,9 @@ Test 1 (2026-11-23), sent to the user: C:\1NEXT\harddrivin_work\hardware1 (CHECK
 smaller steps; smooth turns; none when stopped; no tearing); speed: stopwatch over 30 race-clock seconds (the clock
 counts updates) in both builds, a quiet and a busy stretch, expected within ~1 s (JNext: +3 frames / 178 updates);
 crash replay and key 0; the out-of-time path (0xA402, not in the recording); sounds; a 10-minute soak.
-Results: (pending)
+Results (user, 2026-11-23): plays "just as unplayable as the original" (smooth picture, same control rate).
 Test 2 (2026-11-23, route 2a), sent to the user: C:\1NEXT\harddrivin_work\hardware2 (CHECKLIST.txt, hard_drivin_steps.nex 46e06774 =
 hd4_na, hard_drivin.nex d74f75e6). Steps: start-up (a crash after the first view = the 7FFD paging fault JNext
 modelled), feel, tearing, stopwatch vs race clock 1:1, crash / replay / time-out / race end / menus, objects, sound,
 10-minute soak.
-Results: (pending)
+Results (user, 2026-11-23): "the steps one plays much better!"; stopwatch and event items not reported yet.
