@@ -327,6 +327,18 @@ Intake (on the PC):
     python tools/hwtests/intake.py --compare A.json B.json
     python tools/hwtests/intake.py --runs RUN1/NXSUITE.TXT RUN2/NXSUITE.TXT   # stability across runs
     python tools/hwtests/intake.py --selfcheck                   # also run by selftest.py --tools
+    python tools/hwtests/intake.py --describe [TEST]             # what a test does, without the assembly
+    python tools/hwtests/intake.py --reference A.json B.json ... --out DIR   # DIR/nxsuite-test-reference.md
+    python tools/hwtests/intake.py --conformance EMU.json --against BOARD.json
+
+Every built test carries a plain `purpose`, `method`, `expect`, `fields`, `needs` and `hazard` in
+`nxsuite_claims.json`; the build stops if a built test lacks purpose, method or fields (or has non-ASCII
+text). `--describe` prints them; `--reference` writes them, with every given record's result labelled by its
+board and core (or emulator), into one Markdown file generated on demand (not kept in docs/).
+`--conformance` sets one record (an emulator) against one board record per test: SAME, DIFFERENT (with both
+values and the reason, `--runs` tolerance) or NOT COMPARABLE (not run, SKIP, unanswered). The reference is
+that one board and core: "different" means different from it, and an emulator result is never hardware
+evidence.
 
 It refuses a file that is cut short, damaged (CRC), not ASCII / LF, or names an unknown test or status,
 and a continuation whose parts are not all beside it.

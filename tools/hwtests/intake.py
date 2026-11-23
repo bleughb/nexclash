@@ -42,6 +42,7 @@ Sub-case claims: where a test's sub-cases answer different claims (Z01: zf.*), e
 own cases (SUBCLAIMS), not by the parent test's overall status.
 """
 import argparse
+import collections
 import datetime
 import hashlib
 import io
@@ -88,7 +89,7 @@ def crc16(data):
 
 
 def load_table(path=TABLE):
-    t = json.load(open(path))
+    t = json.load(open(path, encoding='utf-8'))
     t['by_test'] = {x['id']: x for x in t['tests']}
     t['by_claim'] = {c['id']: c for c in t['claims']}
     t['prefixes'] = {x['sub_prefix']: x['id'] for x in t['tests'] if x.get('sub_prefix')}
@@ -1055,6 +1056,40 @@ RUN_TOL = {'I10': 12}
 RUN_IGNORE = {'S03': ('crc0', 'crc96')}
 
 
+def diff_records(tid, have):
+    """two or more result records of one test -> [why] they differ beyond tolerance: the status, a word value, or
+    a number (v or an extra) further apart than the larger within-run min-max, a method resolution (RUN_TOL),
+    +-1 for counts, 0.5 % or 0.05 for fixed-point values. Used by --runs and --conformance."""
+    why = []
+    if len({x['status'] for x in have}) > 1:
+        why.append('status ' + '/'.join(x['status'] for x in have))
+    keys = ['v'] + sorted(set().union(*(set(x.get('extra') or {}) for x in have)))
+    for k in keys:
+        if k in RUN_IGNORE.get(tid, ()):
+            continue
+        get = (lambda x: x.get('v')) if k == 'v' else (lambda x, k=k: (x.get('extra') or {}).get(k))
+        vals = [num(get(x)) for x in have]
+        if any(v is None for v in vals):
+            raw = {str(get(x)) for x in have}
+            if len(raw) > 1:
+                why.append('%s %s' % (k, '/'.join(str(get(x)) for x in have)))
+            continue
+        tol = RUN_TOL.get(tid, 0)
+        raw = [str(get(x)) for x in have]
+        if any('.' in r_ for r_ in raw):
+            tol = max(tol, 0.05, 0.005 * max(abs(v) for v in vals))     # x100 fixed values: last digit
+        else:
+            tol = max(tol, 1)                                           # counts: +-1 is quantisation
+        if k == 'v':
+            for x in have:
+                lo, hi = num(x.get('min')), num(x.get('max'))
+                if lo is not None and hi is not None:
+                    tol = max(tol, hi - lo)
+        if max(vals) - min(vals) > tol:
+            why.append('%s %s (tol %g)' % (k, '/'.join('%g' % v for v in vals), tol))
+    return why
+
+
 def runs_compare(paths, table=None, out=sys.stdout):
     """several NXSUITE.TXT files from one board + core -> the tests whose status differs, or whose v= or a
     numeric extra differs by more than the tolerance (the larger within-run max-min of the records, or
@@ -1080,33 +1115,7 @@ def runs_compare(paths, table=None, out=sys.stdout):
         have = [x for x in recs if x and x['status'] not in ('SKIP', 'HANG-GUARD')]
         if len(have) < 2:
             continue
-        why = []
-        if len({x['status'] for x in have}) > 1:
-            why.append('status ' + '/'.join(x['status'] for x in have))
-        keys = ['v'] + sorted(set().union(*(set(x['extra']) for x in have)))
-        for k in keys:
-            if k in RUN_IGNORE.get(tid, ()):
-                continue
-            vals = [num(x.get(k) if k == 'v' else x['extra'].get(k)) for x in have]
-            if any(v is None for v in vals):
-                raw = {str(x.get(k) if k == 'v' else x['extra'].get(k)) for x in have}
-                if len(raw) > 1:
-                    why.append('%s %s' % (k, '/'.join(str(x.get(k) if k == 'v' else x['extra'].get(k))
-                                                      for x in have)))
-                continue
-            tol = RUN_TOL.get(tid, 0)
-            raw = [str(x.get(k) if k == 'v' else x['extra'].get(k)) for x in have]
-            if any('.' in r_ for r_ in raw):
-                tol = max(tol, 0.05, 0.005 * max(abs(v) for v in vals))     # x100 fixed values: last digit
-            else:
-                tol = max(tol, 1)                                           # counts: +-1 is quantisation
-            if k == 'v':
-                for x in have:
-                    lo, hi = num(x.get('min')), num(x.get('max'))
-                    if lo is not None and hi is not None:
-                        tol = max(tol, hi - lo)
-            if max(vals) - min(vals) > tol:
-                why.append('%s %s (tol %g)' % (k, '/'.join('%g' % v for v in vals), tol))
+        why = diff_records(tid, have)
         if why:
             bad += 1
             print('%-8s differs between runs: %s' % (tid, '; '.join(why)), file=out)
@@ -1120,6 +1129,141 @@ def runs_compare(paths, table=None, out=sys.stdout):
     print('%d tests differ beyond tolerance across %d runs (core %s, board %s)' % (
         bad, len(runs), h.get('core'), h.get('board')), file=out)
     return bad
+
+
+NOT_FINAL = ('SKIP', 'HANG-GUARD', 'PENDING-OPERATOR', 'VISUAL', 'VISUAL-SHOWN')
+
+
+def _rec_name(D):
+    pf = D.get('platform', {'kind': 'board'})
+    if pf.get('kind', 'board') == 'board':
+        return 'board %s, core %s' % (D['board']['name'], D['core'])
+    return '%s (emulator; reports core %s)' % (pf['name'], D['core'])
+
+
+def _test_order(table):
+    gi = {g['id']: g['index'] for g in table['groups']}
+    return sorted(table['tests'], key=lambda x: gi[x['group']])
+
+
+def describe(tid=None, table=None, out=sys.stdout):
+    """the plain description of one test (or every test): what an emulator author needs without the assembly"""
+    table = table or load_table()
+    gname = {g['id']: g['name'] for g in table['groups']}
+    tests = [table['by_test'][tid.upper()]] if tid else _test_order(table)
+    for x in tests:
+        print('%s  %s  (group %s %s%s%s)' % (x['id'], x['title'], x['group'], gname[x['group']],
+                                            ', operator' if x['operator'] else '', ', opt-in' if x['opt_in'] else ''),
+              file=out)
+        for c in x['claims']:
+            cl = table['by_claim'].get(c, {})
+            print('  claim %s: %s' % (c, cl.get('claim', '?')), file=out)
+            print('    sources: %s' % ', '.join(cl.get('sources', [])), file=out)
+        if 'left_out' in x:
+            print('  LEFT OUT: %s' % x['left_out'], file=out)
+        for k in ('purpose', 'method', 'expect', 'fields', 'needs', 'hazard'):
+            if x.get(k):
+                print('  %s: %s' % (k, x[k]), file=out)
+        print('', file=out)
+    return len(tests)
+
+
+def _cell(x):
+    if not x:
+        return 'not run'
+    v = '%s %s' % (x.get('v'), x.get('u') if x.get('u') not in (None, '-') else '')
+    ex = ' '.join('%s=%s' % kv_ for kv_ in list((x.get('extra') or {}).items())[:6])
+    why = (x.get('extra') or {}).get('why')
+    return ('%s %s%s' % (x['status'], v.strip(), (' (' + ex + ')') if ex and not why else
+                         (' why=%s' % why if why else ''))).replace('|', '/')
+
+
+def reference(paths, outdir, table=None):
+    """the nxsuite test reference (Markdown) into OUTDIR: per group, per test, the description and every given
+    record's result. Generated on demand, not kept in docs/: it is ~250 KB and changes with every record."""
+    table = table or load_table()
+    recs = [(p, json.load(open(p, encoding='utf-8'))) for p in paths]
+    os.makedirs(outdir, exist_ok=True)
+    path = os.path.join(outdir, 'nxsuite-test-reference.md')
+    o = io.StringIO()
+    o.write('# nxsuite test reference\n\nGenerated by `python tools/hwtests/intake.py --reference` (GPL-3.0-or-later, '
+            'part of nexclash) from tools/hwtests/nxsuite_claims.json and the records below. "Expect" is what the '
+            'sources predict; a result is what one record measured, labelled with its board and core. An emulator '
+            'result is what that emulator does: never hardware evidence.\n\nRecords:\n\n')
+    for p, D in recs:
+        o.write('- %s: %s, suite build %s\n' % (os.path.basename(p), _rec_name(D), D['run'].get('src')))
+    gname = {g['id']: g['name'] for g in table['groups']}
+    last = None
+    for x in _test_order(table):
+        if x['group'] != last:
+            last = x['group']
+            o.write('\n## %s %s\n' % (x['group'], gname[x['group']]))
+        o.write('\n### %s %s\n\n' % (x['id'], x['title']))
+        for c in x['claims']:
+            o.write('- Claim `%s`: %s\n' % (c, table['by_claim'].get(c, {}).get('claim', '?')))
+        if 'left_out' in x:
+            o.write('- LEFT OUT: %s\n' % x['left_out'])
+        for k in ('purpose', 'method', 'expect', 'fields', 'needs', 'hazard'):
+            if x.get(k):
+                o.write('- %s: %s\n' % (k.capitalize(), x[k]))
+        if recs and 'left_out' not in x:
+            o.write('\n| Record | Result |\n|---|---|\n')
+            for p, D in recs:
+                o.write('| %s | %s |\n' % (_rec_name(D), _cell(D['run']['tests'].get(x['id']))))
+    with open(path, 'w', encoding='utf-8', newline='\n') as f:
+        f.write(o.getvalue())
+    return path
+
+
+def conformance(emu, ref, table=None, out=sys.stdout):
+    """one record (an emulator) against a reference record (a board): per test SAME / DIFFERENT / NOT COMPARABLE,
+    by group, with the test's purpose and the tolerance (the --runs logic). -> {verdict: count}"""
+    table = table or load_table()
+    E, B = json.load(open(emu, encoding='utf-8')), json.load(open(ref, encoding='utf-8'))
+    print('nxsuite conformance: %s against %s' % (_rec_name(E), _rec_name(B)), file=out)
+    print('The reference is one machine: a difference means "differs from that board and core", not "wrong" '
+          'everywhere; the emulator side is never hardware evidence.', file=out)
+    if E['run'].get('src') != B['run'].get('src'):
+        print('Builds differ (%s / %s): a test changed between builds can differ for that reason.'
+              % (E['run'].get('src'), B['run'].get('src')), file=out)
+    n = collections.Counter()
+    gname = {g['id']: g['name'] for g in table['groups']}
+    last = None
+    for x in _test_order(table):
+        if 'left_out' in x:
+            continue
+        if x['group'] != last:
+            last = x['group']
+            print('\n%s %s' % (x['group'], gname[x['group']]), file=out)
+        e, b = E['run']['tests'].get(x['id']), B['run']['tests'].get(x['id'])
+        purpose = (x.get('purpose') or x['title']).split('. ')[0].rstrip('.')
+        nc = None
+        for side, r in (('emulator', e), ('reference', b)):
+            if not r:
+                nc = '%s: not run%s' % (side, ' (opt-in group)' if x['opt_in'] else '')
+            elif r['status'] in NOT_FINAL:
+                w = (r.get('extra') or {}).get('why')
+                nc = '%s: %s%s' % (side, r['status'], ' why=' + w if w else '')
+            if nc:
+                break
+        if nc:
+            n['NOT COMPARABLE'] += 1
+            print('  %-5s NOT COMPARABLE  %s' % (x['id'], nc), file=out)
+            continue
+        why = diff_records(x['id'], [e, b])
+        if not why:
+            n['SAME'] += 1
+            print('  %-5s SAME            %s' % (x['id'], purpose), file=out)
+        else:
+            n['DIFFERENT'] += 1
+            print('  %-5s DIFFERENT       %s' % (x['id'], purpose), file=out)
+            print('        emulator %s | reference %s: %s' % (_cell(e), _cell(b), '; '.join(why)), file=out)
+    print('\n(tolerance as --runs: the larger within-run min-max, RUN_TOL, +-1 for counts, 0.5 % or 0.05 for '
+          'fixed-point values; operator (V) tests compare only when both answered)', file=out)
+    print('summary: %d SAME, %d DIFFERENT, %d NOT COMPARABLE' % (n['SAME'], n['DIFFERENT'], n['NOT COMPARABLE']),
+          file=out)
+    return n
+
 
 
 def intake(path, board=None, outdir=OUTDIR, dry=False, out=sys.stdout, table=None, platform=None):
@@ -1219,6 +1363,16 @@ def selfcheck():
             compare(p, pe, out=o)
             if 'board vs emulator' not in o.getvalue():
                 bad.append('--compare does not mark board vs emulator')
+            if conformance(p, p, table, out=io.StringIO())['DIFFERENT'] != 0:
+                bad.append('--conformance finds differences between a record and itself')
+            nc = conformance(pf, p, table, out=io.StringIO())
+            if nc['DIFFERENT'] != 1:
+                bad.append('--conformance does not find exactly the one changed test (%s)' % dict(nc))
+            if describe('S05', table, out=io.StringIO()) != 1:
+                bad.append('--describe')
+            rp = reference([p, pe], d, table)
+            if '### S05' not in open(rp, encoding='utf-8').read():
+                bad.append('--reference has no S05 section')
     except Refused as e:
         bad.append('good file refused: %s' % e)
     cases = {'truncated': good[:len(good) - 30],
@@ -1298,12 +1452,34 @@ def main(argv=None):
     ap.add_argument('--runs', nargs='+', metavar='TXT',
                     help='two or more NXSUITE.TXT files of one board + core: list the tests whose values differ '
                          'beyond tolerance (unstable)')
+    ap.add_argument('--describe', nargs='?', const='', metavar='TEST',
+                    help='print the plain description of TEST (or of every test)')
+    ap.add_argument('--reference', nargs='*', metavar='JSON',
+                    help='write nxsuite-test-reference.md into --out (default: the current folder) with the results '
+                         'of these records')
+    ap.add_argument('--conformance', metavar='EMU_JSON', help='a record against --against REF_JSON (a board)')
+    ap.add_argument('--against', metavar='REF_JSON')
     ap.add_argument('--selfcheck', action='store_true')
     a = ap.parse_args(argv)
     if a.selfcheck:
         b = selfcheck()
         print('intake selfcheck: %s' % ('OK' if not b else 'FAIL %s' % b))
         return 1 if b else 0
+    if a.describe is not None:
+        try:
+            describe(a.describe or None)
+        except KeyError:
+            print('no test %s' % a.describe)
+            return 2
+        return 0
+    if a.reference is not None:
+        print('wrote %s' % reference(a.reference, a.out if a.out != OUTDIR else '.'))
+        return 0
+    if a.conformance:
+        if not a.against:
+            ap.error('--conformance needs --against REF_JSON')
+        conformance(a.conformance, a.against)
+        return 0
     if a.compare:
         compare(*a.compare)
         return 0

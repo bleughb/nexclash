@@ -67,6 +67,26 @@ def page2_labels():
     return out
 
 
+DESCRIBE = ('purpose', 'method', 'fields')          # every built test must say these (emulator authors read them)
+DESCRIBE_MORE = ('expect', 'needs', 'hazard')
+
+
+def describe_problems(tests):
+    """[problem] for built tests (no left_out) that lack a plain description: purpose, method and fields are
+    required (`intake.py --describe` and the test reference print them); expect / needs / hazard are too."""
+    bad = []
+    for x in tests:
+        if 'left_out' in x:
+            continue
+        for k in DESCRIBE + DESCRIBE_MORE:
+            v = x.get(k)
+            if not isinstance(v, str) or len(v.strip()) < 3:
+                bad.append('%s: no %s' % (x['id'], k))
+            elif any(ord(c) > 126 for c in v):
+                bad.append('%s: %s is not plain ASCII' % (x['id'], k))
+    return bad
+
+
 def extra_pages():
     """[(k, OVLX_k symbol, set of test labels)] for files included under `MMU 7,OVLX_<k>` (k = 1-7): their tests
     run with slot 7 = page OVLX_k (test table flags bits 5-7 = k, harness xpage table)."""
@@ -143,6 +163,8 @@ def tests_inc(out):
     xk = {lab: k for k, _, labs in xp for lab in labs}
     lines.append('xpage:  db %s' % (','.join(sym for _, sym, _ in xp) or '0'))
     assert [k for k, _, _ in xp] == list(range(1, len(xp) + 1)), 'OVLX_ pages must be numbered 1, 2, ...'
+    why = describe_problems(tests)
+    assert not why, 'tests without a description (nxsuite_claims.json): ' + '; '.join(why[:8])
     lines.append('ttab:')
     gidx = {g['id']: g['index'] for g in groups}
     for x in tests:
