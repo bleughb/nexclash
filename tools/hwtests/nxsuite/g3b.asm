@@ -714,6 +714,11 @@ k_fr:   db "frames",0
 ; lines before the ULA line. The handler records the line and how far the copy had got (binary search for
 ; the first byte not yet copied: the read-back of the DMA's progress through memory). Then the DI variant
 ; (same transfer, interrupts off): it either completes (dbad) or the machine stops (HANG-GUARD next run).
+; Both wait 3 frames before the DMA is stopped: on the board (3.03.00, build 3803884) the CPU ran on at
+; once and the immediate stop cut both copies (bad=15138, dbad=16384) - so the DMA does yield the bus to
+; the CPU here, and the test now measures the copy after it had time to finish. JNext 1.3.0 gives the same
+; numbers as that board run (handler at the start line, 0 bytes copied by then; with interrupts off the
+; copy does not run at all): line= next to start= says whether a request was already waiting.
 ; v = bytes copied when the handler ran; ran / line / bad / dbad. PASS if the handler ran mid-transfer and
 ; the copy is right.
 @t_i24:  call g3_map
@@ -730,6 +735,7 @@ k_fr:   db "frames",0
         call g3_ack
         ei
         ld a,$87 : out ($6B),a
+        call .w3                                    ; a yielding DMA lets the CPU run: wait for the end
         di
         call g3_dmaoff
         ld hl,0 : ld de,$4000 : ld bc,$4000 : call g3_cmp : ld (.bad),hl
@@ -738,6 +744,7 @@ k_fr:   db "frames",0
         ld hl,(.st) : call g3_atline
         call g3_ack
         ld a,$87 : out ($6B),a
+        call .w3
         call g3_dmaoff
         ld hl,0 : ld de,$4000 : ld bc,$4000 : call g3_cmp : ld (.dbad),hl
         ld a,(NRSNAP+$CC) : nextreg $CC,a
@@ -758,6 +765,11 @@ k_fr:   db "frames",0
         ld hl,(i24p) : ld a,h : or l : ret z
         ld de,$4000 : or a : sbc hl,de : ret nc
         ld a,ST_PASS : ld (R_st),a : ret
+; three frames (a 16K copy at 28 MHz takes well under one; the CPU only gets here early if the DMA
+; yielded the bus)
+.w3:    ld b,3
+.w:     push bc : call frame_sync : pop bc : djnz .w
+        ret
 .st:    dw 0
 .bad:   dw 0
 .dbad:  dw 0
@@ -768,6 +780,7 @@ w_compl: db "completes",0
 w_nocopy: db "returned-not-copied",0
 k_start: db "start",0
 i24h:   push af : push bc : push de : push hl
+        ld a,(i24f) : or a : jr nz,.x               ; the first interrupt of the copy only
         call line : ld (i24l),hl
         ld hl,0 : ld de,$4000
 .b:     push hl : or a : sbc hl,de : pop hl : jr nc,.d
@@ -778,7 +791,7 @@ i24h:   push af : push bc : push de : push hl
 .ne:    ex de,hl : pop hl : jr .b
 .d:     ld (i24p),hl
         ld a,1 : ld (i24f),a : ld (g3int),a
-        pop hl : pop de : pop bc : pop af : ei : reti
+.x:     pop hl : pop de : pop bc : pop af : ei : reti
 i24f:   db 0
 i24p:   dw 0
 i24l:   dw 0

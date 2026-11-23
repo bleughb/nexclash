@@ -246,9 +246,12 @@ before END: the intake prints a WARNING and the JSON has `"truncated"`. The DONE
 lines written and any bytes lost. (Builds up to 3803884 lost everything past 64 KB silently while still
 writing a valid END line.)
 
-`video=`: `HDMI` only when NextReg $11 bits 2:0 = 7; otherwise `unknown` - $11 = 0-6 does not say which
-output the owner watches (the first board file, KS1 3.03.00, read $11 = 0 on a machine the owner runs on
-HDMI). `geom=` is what the measurements match: line length in CTC ticks (16 clocks) and lines per frame:
+`video=`: always `unknown` - no register the repository's sources cite says which output (HDMI, VGA, RGB)
+is in use. Board facts (KS1, core 3.03.00): NextReg $11 read $00 with an HDMI cable and with "Digital"
+selected in the settings, and the frame was 128K VGA timing (311 lines, INT line 248), so digital output
+does not imply a different frame. (The book report: $11 modes 0-6 are VGA master-clock steps, HDMI works
+in modes 0 and 1, $11 is set by the firmware from the display settings; the start-up screen's D key
+shows the digital test card.) `geom=` is what the measurements match: line length in CTC ticks (16 clocks) and lines per frame:
 108 = hdmi, 112 / 312 = vga48, 112 / 320 = pentagon, 114 / 311 = vga128, else other.
 
 Statuses: PASS, FAIL (the claim's expectation is wrong on this machine), INFO (a number or a choice, no

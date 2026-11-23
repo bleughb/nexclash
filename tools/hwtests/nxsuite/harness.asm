@@ -683,8 +683,7 @@ sess_header:
         call hend
         ; H video
         call w_lb : ld hl,h_video : call wstr
-        ld a,(NRSNAP+$11) : and 7 : cp 7 : ld hl,h_hdmi : jr z,.v
-        ld hl,h_vunk                                ; $11 = 0-6 does not tell which output the owner uses
+        ld hl,h_vunk                                ; no register the docs cite says which output is used
 .v:     call wstr
         ld hl,h_nr11 : call wstr : ld a,(NRSNAP+$11) : call wdhex2
         ld hl,h_timing : call wstr : ld a,(NRSNAP+$03) : call wdhex2
@@ -737,7 +736,6 @@ h_mach: db " machine=nr00:",0
 h_board: db " board=nr0f:",0
 h_ram:  db " ram=",0
 h_video: db "H video=",0
-h_hdmi: db "HDMI",0
 h_vunk: db "unknown",0
 h_geom: db " geom=",0
 ; -> HL = the frame geometry the measurements match (line length in CTC ticks of 16 clocks, rounded, and the
