@@ -50,3 +50,43 @@ q_v18:  db 1
         db "2 = ONE thin white line",0
         db "3 = no line, or something else",0,0
         db "two",0,"one",0,"other",0
+
+; ---------------------------------------------------------------- V07 320 x 256 Layer 2 under the reset clip window
+; 320 x 256 Layer 2, transparent except a green band at rows 0-15 (the reference, inside every window) and one
+; at rows 224-255 (the bottom border, below the question). Asked with the clip window at its reset value
+; 0-255 / 0-191 (book p114, N15), then at 0-159 / 0-255: both bands or the top one only. Keys c0 / c1;
+; means=<c0>-<c1>, the claim (the reset window hides the bottom 64 rows until 0-159 / 0-255 is written):
+; top-both. v = the second answer.
+@t_v07: ld a,(NRSNAP+$14) : call l2w_fill
+        ld b,0
+.t:     ld c,$1C : push bc : call l2w_row : pop bc : inc b : ld a,b : cp 16 : jr nz,.t
+        ld b,224
+.b:     ld c,$1C : push bc : call l2w_row : pop bc : inc b : jr nz,.b
+        call l2w_on
+        nextreg $1C,1 : nextreg $18,0 : nextreg $18,255 : nextreg $18,0 : nextreg $18,191
+        ld hl,(wp) : ld (.wp),hl
+        ld hl,q_v07 : call ask : jr c,.x
+        ld hl,(askp) : ld (.w0),hl
+        ld hl,(.wp) : ld (wp),hl : ld hl,k_vc0 : call ex_k : ld hl,(askp) : call wstr
+        ld hl,(wp) : ld (.wp),hl
+        nextreg $1C,1 : nextreg $18,0 : nextreg $18,159 : nextreg $18,0 : nextreg $18,255
+        ld hl,q_v07 : call ask : jr c,.x
+        ld hl,(.wp) : ld (wp),hl : ld hl,k_vc1 : call ex_k : ld hl,(askp) : call wstr
+        ld hl,k_means : call ex_k : ld hl,(.w0) : call wstr
+        ld a,'-' : call wchr : ld hl,(askp) : call wstr
+.x:     jp l2w_off
+.wp:    dw 0
+.w0:    dw 0
+k_vc0:   db "c0",0
+k_vc1:   db "c1",0
+q_v07:  db 1
+        db "V07 GREEN BANDS",0
+        db " ",0
+        db "Look at the whole picture, top",0
+        db "to bottom, border included.",0
+        db " ",0
+        db "1 = a green band at the TOP and",0
+        db "    one at the BOTTOM",0
+        db "2 = a green band at the top only",0
+        db "3 = something else",0,0
+        db "both",0,"top",0,"other",0

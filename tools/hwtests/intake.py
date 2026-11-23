@@ -658,6 +658,15 @@ def _v05(e, rec, src):
     return (say[0], 'operator: %s.' % say[1]) if say else None
 
 
+def _v07(e, rec, src):
+    a, b = e.get('c0'), e.get('c1')
+    if not a or not b:
+        return None
+    st = 'PASS' if (a, b) == ('top', 'both') else ('FAIL' if a == 'both' or b == 'top' else None)
+    return st, ('operator: clip 0-255 / 0-191 -> %s band(s), clip 0-159 / 0-255 -> %s (both = the bottom 32 rows of '
+                'the 320 x 256 Layer 2 shown too). The claim: top, then both.' % (a, b))
+
+
 RESETS = {'soft': 'an F4 soft reset', 'hard': 'a hard reset', 'power': 'power off and on'}
 
 
@@ -682,7 +691,7 @@ def _xh2(e, rec, src):
     return st, 'board: %s.' % '; '.join(parts)
 
 
-DERIVE = {('XH2', 'dma-wr4-interrupt-lock'): _xh2, ('V05', 'lay-border-transparent'): _v05, ('V18', 'frame-64-33-l2-top'): _v18, ('V10', 'lay-l2-flip-not-synced'): _v10,
+DERIVE = {('XH2', 'dma-wr4-interrupt-lock'): _xh2, ('V07', 'lay-l2-wide-clip-default'): _v07, ('V05', 'lay-border-transparent'): _v05, ('V18', 'frame-64-33-l2-top'): _v18, ('V10', 'lay-l2-flip-not-synced'): _v10,
           ('XT2', 'frame-timing-change-frame-end'): _xt2,
           ('XT4', 'mem-48k-timing-7ffd'): _xt4, ('D02', 'dma-default-cycle-length'): _d02_default, ('D02', 'dma-cost-per-byte'): _d02_cost,
           ('D04', 'dma-prescaler-rate'): _d04, ('D05', 'dma-burst-cpu-share'): _d05,
