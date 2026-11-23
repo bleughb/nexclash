@@ -62,16 +62,8 @@ Open: the first calibration interrupt's extra ~574 T (not subtracted, 0.06 %); s
 - Open: sound in play (engine / crash sound: OUT sites, AY from the ISR only?); interrupt windows in the loop
   (EI points) must stay at the original's times so the music tempo holds.
 
-## Design (proposed, stage 2)
-- Hooks: the render + copy block 0x9E54 .. 0x9E6E runs at 28 MHz inside a pace window (hlib_pace, as Castle
-  Master M3a); window target = the original's time for this update (K x 28 MHz time, measured).
-- In-between views: camera linear from the last shown view to the new one (positions; orientation by angle,
-  matrix rebuilt by the game's own routine), drawn while they fit before the target; the real view last, shown
-  at the original's time. Consumer bytes above saved / restored around each extra render.
-- Display: views double-buffered (Layer 2 or a second ULA bank, to decide; the original look kept: green
-  monochrome view, dashboard unchanged).
-- Verify: RZX replay, game RAM + registers (R excepted per patch.preserve-r decision) = original at every
-  update; pace per update vs the original (verify.update-locked-pace); mutants for the save / restore.
+## Design (stage 2)
+- Superseded by "Build" below (as built) and route 2 (finer time steps); details in git history.
 
 ## Build (stage 2, hd2 as built)
 - Sites (original bytes checked): 0x9E54 CALL render -> t_render, 0x9E6B CALL copy -> t_copy, 0xD6FE CALL 0xD77D
