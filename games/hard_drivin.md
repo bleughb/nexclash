@@ -175,8 +175,8 @@ response) to consider on top: it needs the same sub-stepped game state, so this 
   accumulations: position and angle += rate / N with fraction bytes, gravity 12 / N, speed change / N, clock 5 N,
   timers x N. Open: the other car and traffic (0xA47A walks the object list 0xF02C), the crash replay buffer (per
   update), per-update sound 0xEA60, collision tests that use one update's step.
-- Pace target to decide (user): the original's game speed varies with the scene (updates 7-21 frames); fixed
-  sub-steps give one speed: the original's median (1 clock second = ~1.3 s) or real time (1 s).
+- Pace target (user, 2026-11-23): REAL TIME: 1 clock second = 1 s (5 original updates = 50 frames, so N sub-steps
+  share 10 frames per original update; the original's own pace varies, 7-21 frames an update).
 - Next: probe 2: from a recorded state, run 1 original update vs N patched sub-updates with the same input and
   list the state bytes that differ beyond rounding: each is an accumulation still to scale.
 
