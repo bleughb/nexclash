@@ -1640,7 +1640,7 @@
    "expect": "docs/DDMA.md:62 / :88 (3.03.00 guide): after $C3 3 + 3 cycles = 6 a byte; fastest 2 + 2 = 4, about 12 % faster. docs/TECHNIQUES.md:232-233: ~4 cycles a byte at length 2 only with the timing byte sent for both ports; without it standard Z80 cycle timing. book ch 5 (B-N1, N2, N31, B-C1): 6 / 4 clocks, 7 at 28 MHz on 3.02; 3-clock cycles after reset; timing byte 00 = 4, 01 = 3, 10 = 2, 11 = 4 clocks a cycle (as quoted in g6.asm).",
    "needs": "nothing special",
    "hazard": "none (it writes sprite pattern memory from pattern 63 on; not restored, nothing displays it)",
-   "fields": "keys <m|p><a|3|4|2><35|28> = clocks of 28 MHz per byte (memory / port $5B; timing byte absent / 3 / 4 / 2; 3.5 / 28 MHz), slope (t2048 - t256) / 1792. Board run 5 (d99fbf8): 0 / 584 / 0.32 were a timing fault - in continuous mode the CPU is frozen and the CTC3 wraps were lost; the board's own nb.DMA rows predict about 4.99 clocks (28 MHz) and 32 (3.5 MHz) at timing byte 2. method=fault marks a slope outside 0.5-100 (INFO, never FAIL)."
+   "fields": "keys <m|p><a|3|4|2><35|28> = clocks of 28 MHz per byte (memory / port $5B; timing byte absent / 3 / 4 / 2; 3.5 / 28 MHz), slope (t2048 - t256) / 1792. Board run 5 (d99fbf8): 0 / 584 / 0.32 were a timing fault - in continuous mode the CPU is frozen and the CTC3 wraps were lost; the board's own nb.DMA rows predict about 4.99 clocks (28 MHz) and 32 (3.5 MHz) at timing byte 2. method=fault marks a slope outside 0.5-100 (INFO, never FAIL). PASS if absent = timing byte 3 within 0.10 at 28 MHz and 0.80 at 3.5 MHz (values 8 times larger there; one timing step is 0.16)."
   },
   {
    "id": "D03",

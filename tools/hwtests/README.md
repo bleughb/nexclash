@@ -365,9 +365,17 @@ and the folder are arguments (nothing machine-specific in the repository):
 
     python tools/hwtests/emurun.py jnext  --exe JNEXT_EXE  --sd DIR --nex nxsuite.nex [--card SD_IMAGE]
     python tools/hwtests/emurun.py cspect --exe CSPECT_EXE --sd DIR --nex nxsuite.nex [--hz60] [--port 8766]
+                                   [--sdspeed slowest]
     python tools/hwtests/intake.py DIR/NXSUITE.TXT --platform "JNext 1.3.0"
 
-Proven 2026-11-24: JNext 1.3.0 (49 s) and CSpect 4.5.9.0 (374 s). MAME 0.289 (driver tbblue) is not
+Results can depend on a local emulator settings file. CSpect 4.6 reads `cspect.ini` from its working
+folder, else from beside CSpect.exe, and saves menu changes into the working folder; emurun therefore runs
+CSpect with the SD folder as its working folder and passes every option on the command line, so it neither
+uses nor overwrites the owner's settings. A `cspect.ini` beside CSpect.exe is still read: name the CSpect
+version and say whether such a file exists when filing a record. Name each record for the exact emulator
+version that made it; a record from an older version stays as it was.
+
+Proven 2026-11-24: JNext 1.3.0 (49 s), CSpect 4.5.9.0 (374 s) and CSpect 4.6.0.0. MAME 0.289 (driver tbblue) is not
 supported: started with `-snapshot nxsuite.nex` the suite reaches its menu with an unreadable font (the
 ROM mapped there is not NextZXOS's ROM 3) and no key is taken; booted from a NextZXOS SD image it stays on
 the welcome screen (CPU at $0C90 from frame 200, keys not taken through Lua). An emulator author can still
