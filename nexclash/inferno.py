@@ -16,6 +16,7 @@ from pathlib import Path
 ROM_ORG, ALT_PAGE, STATE_PAGE = 0x386E, 24, 68
 SAVE_PAGE, LOAD_FRONT = 123, 0x0574
 SD_AUTO = 0xFC06                        # the autosave entry in page 123 (asm sd_code), called from the driver
+CHEATS = ('fuel', 'ammo')               # asm sd_cheat, page 123 1C09-1C0A: 1 = on (the .nxc's logic toggles)
 EN_LEVEL, EN_START, EN_MAIN, EN_INTRO, EN_LEVELS = 0x050E, 0x05C5, 118, 119, 124
 TAPE_FIRST, TAPE_LAST = 32, 55
 CMP = tuple(i for i in range(30) if i not in (15, 25, 29))
@@ -6904,8 +6905,16 @@ class CopierWindowSnapshotPatch(BootstrapPatch):
     name = 'Inferno copier-window diagnostic (no sprites; not a release)'
     tail_addr, max_tail = 0x9A80, 128
 
-    def __init__(self, blocks, window_only=True, work=False, driver=False, fullgame=False, english=None):
+    def __init__(self, blocks, window_only=True, work=False, driver=False, fullgame=False, english=None, cheats=()):
         super().__init__(blocks)
+        if cheats:                             # the Tipshop POKEs, applied by sd_auto at each play start
+            saves = bytearray(self.extra_banks[SAVE_PAGE // 2])
+            at = (SAVE_PAGE & 1) * 8192 + 0x1C09
+            if saves[at - 9] != 0xC3 or any(saves[at:at + len(CHEATS)]):
+                raise ValueError('sd_cheat is not at page 123 1C09')
+            for c in cheats:
+                saves[at + CHEATS.index(c)] = 1
+            self.extra_banks[SAVE_PAGE // 2] = bytes(saves)
         self.fullgame = fullgame
         if fullgame:
             self.tail_addr, self.max_tail = BootstrapPatch.tail_addr, BootstrapPatch.max_tail   # 9A80 holds compressed game data here
@@ -7026,7 +7035,7 @@ class CopierWindowSnapshotPatch(BootstrapPatch):
         snap.banks[5], snap.banks[2], snap.banks[0] = bytes(ram[:16384]), bytes(ram[16384:32768]), bytes(ram[32768:])
 
 
-def copier_window_build(reference, folder, hooks=False, work=False, driver=False, level=None, fullgame=False, name=None, english=None):
+def copier_window_build(reference, folder, hooks=False, work=False, driver=False, level=None, fullgame=False, name=None, english=None, cheats=()):
     """Inferno_copier_window_diagnostic.nex (window only), with hooks Inferno_copier_window_m3_
     diagnostic.nex (capture hooks + window), with work Inferno_copier_window_m3b_diagnostic.nex (+ the
     8F95 work in the window's waits) + boot checks (NEXLOAD and foreign ROM3) + page-80/69 bytes."""
@@ -7043,7 +7052,7 @@ def copier_window_build(reference, folder, hooks=False, work=False, driver=False
                         str(reference / 'Inferno.tzx'), '--start', '24200', str(snapshot)], check=True, capture_output=True)
     work = work or driver
     hooks = hooks or work
-    patch = CopierWindowSnapshotPatch(tape_blocks(reference / 'Inferno.tzx'), window_only=not hooks, work=work, driver=driver, fullgame=fullgame, english=english_pages(reference, english) if english else None)
+    patch = CopierWindowSnapshotPatch(tape_blocks(reference / 'Inferno.tzx'), window_only=not hooks, work=work, driver=driver, fullgame=fullgame, english=english_pages(reference, english) if english else None, cheats=cheats)
     nex = folder / ('Inferno_full_game.nex' if fullgame else ('%s.nex' % name if name.startswith('Inferno') else 'Inferno_%s.nex' % name) if name else 'Inferno_level%d.nex' % level if level else 'Inferno_driver_diagnostic.nex' if driver else 'Inferno_copier_window_m3b_diagnostic.nex' if work else
                     'Inferno_copier_window_m3_diagnostic.nex' if hooks else 'Inferno_copier_window_diagnostic.nex')
     _, tail, data, _ = z80tonex.convert(str(snapshot), str(nex), quiet=True, patch=patch)
@@ -7110,6 +7119,7 @@ def main():
     ap.add_argument('--cw-work', action='store_true', help='--copier-window-build with hooks + the 8F95 work in the window (3b)')
     ap.add_argument('--cw-english', type=Path, help='--copier-window-build --cw-full: translation JSON (kept with the reference files)')
     ap.add_argument('--cw-full', action='store_true', help='--copier-window-build: from the tape start (intro, all levels, ending)')
+    ap.add_argument('--cw-cheats', default='', help='--copier-window-build --cw-full: cheats on, comma-separated: %s' % ', '.join(CHEATS))
     ap.add_argument('--cw-name', help='--copier-window-build: start from Inferno_NAME.z80 (e.g. outro)')
     ap.add_argument('--cw-level', type=int, help='--copier-window-build: start from level N (its recording snapshot, for hardware tests)')
     ap.add_argument('--cw-driver', action='store_true', help='--copier-window-build with the 8EF9 driver and its pages too (no display)')
@@ -7342,7 +7352,7 @@ def main():
         print(json.dumps(result))
         return int(any(v for k, v in result['counts'].items() if k.endswith('!')))
     if a.copier_window_build:
-        result = copier_window_build(a.copier_window_build, a.out, hooks=a.cw_hooks, work=a.cw_work, driver=a.cw_driver, level=a.cw_level, fullgame=a.cw_full, name=a.cw_name, english=a.cw_english)
+        result = copier_window_build(a.copier_window_build, a.out, hooks=a.cw_hooks, work=a.cw_work, driver=a.cw_driver, level=a.cw_level, fullgame=a.cw_full, name=a.cw_name, english=a.cw_english, cheats=tuple(c for c in a.cw_cheats.split(',') if c))
         if a.json:
             a.json.write_text(json.dumps(result, indent=2) + '\n')
         print(json.dumps(result))
