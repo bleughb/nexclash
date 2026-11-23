@@ -1861,7 +1861,7 @@
    "operator": false,
    "opt_in": true,
    "stage": 2,
-   "fields": "nrbb = $BB at the start; mapped1 = DivMMC still over $0000 after one F_OPEN (read, no such file) with bit 6 flipped; mapped2 = after one more with $BB put back; opened = the file existed (1). v = set-enables / set-disables (which bit value stopped the exit) or no-change."
+   "fields": "Interrupts off throughout; nothing of NextZXOS runs. nrbb = $BB at the start. map = DivMMC mapped after an RST 8 with a one-byte RET at the alt ROM's $0008 (the entry is delayed: spec 1.1). dv = the 8 DivMMC ROM bytes at $1FF8-$1FFF. off = the RET found there (ra = its address; $C9 planted at all eight alt ROM addresses too) brought the ROM back with $BB as at launch. mapflip = DivMMC stayed mapped when the same RET ran with bit 6 flipped ($BB put back after). v = set-enables / set-disables (which value of bit 6 lets the exit run), no-change, no-entry (the RST 8 did not map DivMMC: nothing more tried), no-exit (no RET at $1FF8-$1FFF or it did not unmap: the flip not tried). INFO."
   },
   {
    "id": "XD2",
@@ -1875,7 +1875,7 @@
    "operator": false,
    "opt_in": true,
    "stage": 2,
-   "fields": "a = A after CALL $3D00 with LD A,$3D : RET in the alt ROM and automap on; $3D = the ROM image ran (no instant automap, FAIL), else DivMMC memory ran (PASS); mapped = DivMMC still over $0000 after one F_OPEN."
+   "fields": "Interrupts off throughout. DivMMC mapped as XD1; its RAM at $3D00-$3D01 saved and OR A : RET written there (ram = the write held); unmapped; alt ROM $3D00 = SCF : RET; CALL $3D00 with carry clear and $0A as at launch. Carry clear = DivMMC's OR A ran: the fetch at $3D00 came from DivMMC (instant, PASS); carry set and map = 1 = the alt ROM ran first and DivMMC mapped after (delayed, FAIL); neither = none (FAIL). The DivMMC bytes are put back. no-entry / no-exit / no-ram: the set-up was not possible (INFO, says why the rest is left out)."
   },
   {
    "id": "XD3",
@@ -1889,7 +1889,7 @@
    "operator": false,
    "opt_in": true,
    "stage": 2,
-   "fields": "v = A after RST $38 with SCF : LD A,$5A : RET in the alt ROM and automap on; cy = carry; $5A = no trap (FAIL), else the DivMMC trap took over after $0038 (PASS); mapped as XD2."
+   "fields": "Interrupts off throughout. Alt ROM $0038 = RET (one byte); RST $38 with the esx call state. map = DivMMC mapped after (the delayed trap fired after the fetch at $0038: trap, PASS); frames = the FRAMES counter ($5C78) moved (NextZXOS's own $0038 code ran: isr, PASS); neither = no-trap (FAIL). DivMMC then unmapped and the ROM bytes checked before interrupts come back."
   },
   {
    "id": "XH1",
@@ -4872,12 +4872,12 @@
    "values": {
     "repo": "probable cause of the Commando crash; not confirmed"
    },
-   "measure": "OPT-IN: the alt ROM image as div-automap-off-0a; $0A bit 4 on; CALL $3D00 under DI; result A = $3D (no automap) / other value or no return (automap); recovery attempted via the DivMMC exit; owner resets if hung.",
+   "measure": "OPT-IN, interrupts off throughout: DivMMC mapped by an RST 8 with RET at the alt ROM's $0008, OR A : RET written to DivMMC RAM at $3D00, unmapped by a RET at $1FF8-$1FFF; alt ROM $3D00 = SCF : RET; CALL $3D00: carry clear = DivMMC ran at once (instant), carry set = the alt ROM ran. DivMMC RAM put back, DivMMC unmapped and the ROM bytes checked before interrupts come back.",
    "result_type": "choice",
    "unit": "-",
    "tolerance": "exact",
    "auto": true,
-   "risk": "could hang (runs DivMMC memory at $3D00); no SD write",
+   "risk": "could stop the machine (only one-byte RETs and OR A run, interrupts off; the ROM checked before EI); no SD write",
    "matters_for": "rule 'no code at 0x3D00-0x3DFF', Commando 0x3D00 build",
    "priority": 2
   },
@@ -4891,12 +4891,12 @@
    "values": {
     "repo": "observed (Underwurlde, Jetpac, Match Day), JNext"
    },
-   "measure": "OPT-IN: alt ROM image with $0038 = SCF, $0039 = LD A,$5A ; RET; automap on as at launch; RST $38 under DI with IY = $5C3A; A = $5A = no trap; anything else = trap (NextZXOS's own $0039 path ran).",
+   "measure": "OPT-IN, interrupts off throughout: alt ROM $0038 = RET; RST $38 with automap as at launch; DivMMC mapped after = the delayed trap fired; FRAMES moved = NextZXOS's $0038 code ran; then unmapped by a RET at $1FF8-$1FFF and the ROM bytes checked.",
    "result_type": "choice",
    "unit": "-",
    "tolerance": "exact",
    "auto": true,
-   "risk": "could hang (runs NextZXOS DivMMC IM 1 code)",
+   "risk": "could stop the machine (one-byte RET only, interrupts off; the ROM checked before EI)",
    "matters_for": "IM 1 games with alt-ROM hooks at 0x386E",
    "priority": 2
   },
@@ -4911,12 +4911,12 @@
     "repo": "official nextreg.txt: 1 disables; varmfskii: enables",
     "book": "set = exit enabled"
    },
-   "measure": "Safe part (auto): record $BB as NextZXOS leaves it (NextZXOS needs the exit, so its value is evidence). OPT-IN part: flip bit 6, make one read-only esxDOS call (F_OPEN $9A, mode $01, of a file that does not exist: returns an error, writes nothing), then read $0000-$0007 and compare with the ROM image: DivMMC still mapped = exit disabled; restore $BB.",
+   "measure": "Safe part (auto): record $BB as NextZXOS leaves it (NextZXOS needs the exit, so its value is evidence). OPT-IN part, interrupts off throughout: DivMMC mapped by an RST 8 with RET at the alt ROM's $0008; a RET at $1FF8-$1FFF called with $BB as at launch and again with bit 6 flipped; DivMMC still mapped after = that value stops the exit; $BB put back, DivMMC unmapped and the ROM bytes checked.",
    "result_type": "choice",
    "unit": "-",
    "tolerance": "exact",
    "auto": true,
-   "risk": "could hang or leave DivMMC mapped until reset; no SD write",
+   "risk": "could leave DivMMC mapped until reset (then a stop screen, no file call); no SD write",
    "matters_for": "z80tonex.automap_off assumptions, DivMMC traps",
    "priority": 2
   }

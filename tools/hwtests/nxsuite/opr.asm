@@ -45,10 +45,9 @@ m_hzt:  db "It changes the machine timing",0
         db "(NextReg $03) and puts it back.",0
         db "The picture may roll or go blank",0
         db "for a moment.",0,0
-m_hzd:  db "It maps the DivMMC memory and",0
-        db "its traps (port $E3, NextReg",0
-        db "$BB). A wrong step can lock up",0
-        db "the machine.",0,0
+m_hzd:  db "It maps DivMMC memory (alt ROM,",0
+        db "NextReg $BB). If it locks up:",0
+        db "power off/on, start again.",0,0
 m_hzh:  db "It starts a DMA that may keep",0
         db "the bus (the machine can freeze)",0
         db "or leave the DMA deaf until a",0

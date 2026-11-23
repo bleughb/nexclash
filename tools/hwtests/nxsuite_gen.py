@@ -136,6 +136,8 @@ def tests_inc(out):
             first, len(rows), nb, g['key'], kind, g['id'], ovl.get(g['id'], '0'), g['id']))
         first += len(rows)
     lines.append('NBUILT  equ %d' % nbuilt_all)
+    lines += ['GI_%s equ %d' % (g['id'], i) for i, g in enumerate(groups)]   # group / test index by id
+    lines += ['TI_%s equ %d' % (x['id'], i) for i, x in enumerate(tests)]
     # test table, 12 bytes: id (4 chars), group index, flags, routine, claims ptr, title ptr (strings: STRPAGE)
     xp = extra_pages()
     xk = {lab: k for k, _, labs in xp for lab in labs}
@@ -166,7 +168,7 @@ def tests_inc(out):
         lines.append('cl_%s: db %s' % (x['id'], asm_str(','.join(x['claims']) or '-')))
         lines.append('ti_%s: db %s' % (x['id'], asm_str(x['title'][:20])))
     lines.append('strings_end:')
-    lines.append('        ASSERT strings_end <= $E000')
+    lines.append('        ASSERT strings_end <= $DCF0   ; page-62 offsets $1CF0-$1FFF hold ROM8C and FONTC')
     p = os.path.join(out, 'nxsuite_tests.inc')
     open(p, 'w').write('\n'.join(lines) + '\n')
     return p, labels

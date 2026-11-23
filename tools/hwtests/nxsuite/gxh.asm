@@ -79,7 +79,7 @@ xh_ml:  dw 0
 ; to power off and on. Else PRG_FLAGS bit 0 set and the record written; before=1; the WR4 byte $91 (bit 4:
 ; an interrupt control byte follows); dma_sane again: after=1 copied. v = "deaf" (after = 0, PASS: the
 ; claim's first half) or "copied" (FAIL). The screen then says: let the group finish, power off and on (or a
-; hard reset), start nxsuite.nex again, press H.
+; hard reset), start nxsuite.nex again: the start runs the follow-up at once (do_xh2f).
 ; Second pass (PRG_XH2 set by the start after that reset, prg_read2): a 1 / 2 / 3 question - which reset
 ; (reset=soft / hard / power) - then v = "reset-frees" (the start's DMA byte arrived) or "still-locked";
 ; OPERATOR; PRG_XH2 cleared. S = ask later: PENDING-OPERATOR, PRG_XH2 kept.

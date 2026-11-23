@@ -234,8 +234,8 @@ in the test table, and a test any other page of the generator's `xpage` list, fl
    T (timing; the machine timing is put back after each test and at the next start after a hang),
    D (DivMMC; no SD write; when it ends check that the DONE screen's line count grew and the border is
    green), H (DMA hazards; XH1 can freeze the machine; XH2 leaves the DMA deaf: let the group finish,
-   soft-reset - or power off and on -, start the suite again, press H, N to XH1, Y to XH2, say which reset
-   you used - it then reports what that reset did). After a freeze: reset (or power off and on), start the suite from the same folder:
+   soft-reset - or power off and on -, start the suite again: it asks at once which reset you used and
+   reports what that reset did; no key to press first). After a freeze: reset (or power off and on), start the suite from the same folder:
    the test is marked HANG-GUARD and the run goes on.
 5. When the NEXT STEP line says NOTHING OUTSTANDING: copy `NXSUITE.TXT` (and any `NXSUITE.0nn` parts) and
    `NXSUITE.PRG` to the PC; run `python tools/hwtests/intake.py NXSUITE.TXT --board <name>`.
@@ -254,11 +254,14 @@ N skips it; never in RUN ALL). Opt-in details: X-T (T) writes NextReg $03 (machi
 reset) only after saving the start value in `NXSUITE.PRG` (offset 50, flag bit 1); each test puts it back, and
 a start after a hang puts it back from the record and measures the preamble again before anything else.
 XT4 never writes $3FFD when NextReg $D8 bit 0 (the +3 disk-port trap) was set at launch. X-D (D) writes only
-$BB bit 6, $0A bit 4 and a few alt-ROM bytes (saved, written back); its one esxDOS call is F_OPEN (read) of
-`NXNOFILE.XXX`, which does not exist. X-H (H): XH1 can freeze the machine if the interrupt escape fails
+$BB bit 6, a few alt-ROM bytes and two DivMMC RAM bytes at $3D00 (each saved, written back); interrupts stay
+off while DivMMC can be mapped, only one-byte RETs (and XD2's OR A) run there, and the ROM bytes are checked
+against a copy taken at start before anything is printed. Its only esxDOS call is a fallback F_OPEN (read) of
+`NXNOFILE.XXX`, which does not exist; if DivMMC still cannot be unmapped the machine stops on a red screen
+(power off and on). The suite's screens use a RAM copy of the ROM font taken at start. X-H (H): XH1 can freeze the machine if the interrupt escape fails
 (reset, start again: HANG-GUARD); XH2 leaves the DMA deaf on purpose - let the group finish, soft-reset,
-start the suite again and press H (N to XH1, Y to XH2): XH2 then reports `reset-frees` or `still-locked`
-from the one DMA byte the start tried (`NXSUITE.PRG` offset 51, flag bit 0). The NEXT STEP line under the group list
+start the suite again: the start itself asks which reset was used (a one-group XH pass with XH2 only) and
+reports `reset-frees` or `still-locked` from the one DMA byte the start tried (`NXSUITE.PRG` offset 51, flag bit 0). The NEXT STEP line under the group list
 says in plain words what to do next. Border during a group: blue running, then green (no FAIL), yellow
 (INFO only) or red (a FAIL).
 

@@ -15,6 +15,7 @@ entry:  ld sp,MSTACK
         ld bc,$7FFD : ld a,$10 : out (c),a
         xor a : out ($FE),a
         call crc_init
+        call fontinit
         call cls
         ld hl,STAB                          ; results table "NXS1"
         ld (hl),'N' : inc hl : ld (hl),'X' : inc hl : ld (hl),'S' : inc hl : ld (hl),'1' : inc hl
@@ -33,6 +34,7 @@ entry:  ld sp,MSTACK
         cp 1 : jr nz,.nb
         call txt_src : jr z,.st                     ; same build: append
         ld a,3 : ld (fstate),a                      ; another build
+        call hung_clr                               ; its hung marks are not this build's
 .nb:    or a : jr z,.st
         call txt_keep : jr nc,.kept                 ; other build / does not check: copied unchanged first
         call cls : xor a : ld (crow),a : ld (ccol),a : ld hl,m_nokeep : call puts
@@ -41,7 +43,8 @@ entry:  ld sp,MSTACK
 .kept:  ld hl,0 : ld (txtlen),hl
 .st:    ld a,(PRGB+PRG_STATE) : cp 1 : jr nz,.menu
         ld a,1 : ld (resume_pending),a
-.menu:  jp menu
+.menu:  ld a,(PRGB+PRG_XH2) : or a : jp nz,do_xh2f  ; XH2's reset: its follow-up at once (board run 9)
+        jp menu
 
 m_start: db "nxsuite: measuring...",0
 
@@ -408,6 +411,7 @@ run_test_marked:
         ld hl,$FFFF : ld (justhung),hl
         jp .emit
 .nj:    ld a,(retrying) : or a : jr nz,.go
+        ld ix,(cure) : bit 2,(ix+5) : jr nz,.nh     ; opt-in: the hazard screen decides, not the hung list
         ld a,(curt) : call hung_is : jr nc,.nh
         ld hl,why_hung : jr .skip
 .nh:    ld ix,(cure) : bit 2,(ix+5) : jr z,.ni      ; opt-in: never in RUN ALL; else its hazard screen
@@ -848,7 +852,7 @@ scr_status:
 stlet:  db " PFISHVVOQ"
 stcol:  db $38,$60,$50,$78,$38,$58,$68,$68,$68,$68
 
-; ---------------------------------------------------------------- screen primitives (ROM font at $3D00)
+; ---------------------------------------------------------------- screen primitives (font: RAM copy, fontinit)
 cls:    ld hl,$4000 : ld de,$4001 : ld bc,6143 : ld (hl),0 : ldir
         ld hl,$5800 : ld de,$5801 : ld bc,767 : ld (hl),$38 : ldir
         ret
@@ -864,12 +868,11 @@ putc:   push hl : push de : push bc
         ld a,(crow) : cp 24 : jr nc,.x
         ld a,c : sub 32 : jr c,.x
         ld l,a : ld h,0 : add hl,hl : add hl,hl : add hl,hl
-        ld de,$3D00 : add hl,de
+        ld de,FONTC : add hl,de                     ; the RAM copy (fontinit)
         ld a,(crow) : and $18 : or $40 : ld d,a
         ld a,(crow) : and 7 : rrca : rrca : rrca : ld e,a
         ld a,(ccol) : or e : ld e,a
-        ld b,8
-.l:     ld a,(hl) : ld (de),a : inc hl : inc d : djnz .l
+        call fontcp
 .x:     ld a,(ccol) : inc a : ld (ccol),a
         pop bc : pop de : pop hl
         ret

@@ -17,8 +17,8 @@ m_xh2:  db "XH2 DONE. The DMA may now be",0
         db "2 POWER OFF AND ON (or a hard",0
         db "  reset; F4 if you test that)",0
         db "3 start nxsuite.nex again from",0
-        db "  the same folder, press H:",0
-        db "  it asks which reset you used",0
+        db "  the same folder: it asks at",0
+        db "  once which reset you used",0
         db "  and XH2 says what it did.",0
         db " ",0
         db "Press a key.",0,0

@@ -42,6 +42,37 @@ pbuf_pat:
         ORG $8000
 start:  di
         jp entry
+; the ROM font ($3D00-$3FFF, a read: reads never automap) and ROM $0000-$0007 copied to page 62 at start, so
+; the suite's screens never depend on what is mapped over $0000-$3FFF (board run 8: DivMMC left mapped)
+fontinit:
+        nextreg $53,STRPAGE
+        ld hl,$3D00 : ld de,FONTC : ld bc,768 : ldir
+        ld hl,0 : ld de,ROM8C : ld bc,8 : ldir
+        nextreg $53,$0B : ret
+; HL = glyph in the copy (slot 3 view), DE = screen -> 8 rows; slot 3 put back as it was
+fontcp: ld a,$53 : call rdreg : push af : nextreg $53,STRPAGE
+        ld b,8
+.l:     ld a,(hl) : ld (de),a : inc hl : inc d : djnz .l
+        pop af : nextreg $53,a : ret
+; a new build: the hung list emptied (board run 10: XD stayed SKIP why=hung-last-run on every later pass)
+hung_clr:
+        ld hl,PRGB+PRG_HUNG : ld b,12
+.h:     ld (hl),$FF : inc hl : djnz .h
+        ret
+; the start after XH2's reset (prg_read2 set PRG_XH2): the follow-up question and the start's DMA byte
+; recorded at once, as a one-group pass of XH with XH2 only (board run 9: the restart was taken as a resume
+; between tests and the question never came). Then DONE as any pass.
+do_xh2f:
+        xor a : ld (resume_pending),a
+        ld a,GI_XH+1 : ld (mode),a
+        call pass_mark
+        ld a,GI_XH : ld (curg),a : call gent
+        ld a,(ix+0) : ld (gfirst),a : ld a,(ix+1) : ld (gcount),a
+        call gscreen
+        ld a,1 : ld (retrying),a
+        ld a,TI_XH2 : call run_test_marked
+        xor a : ld (retrying),a
+        jp run_end
         ; G2 JP (C) edge case: a JP (C) at $BFFE that took its base from its own address lands here
         ; (z80ntest's wrongpc: A = $FF, back through IX)
         ds $8140-$
@@ -94,7 +125,7 @@ OVL_XD  equ 60                  ; X-D after G1 on page 60
 OVL_XH  equ 63                  ; X-H after G6 on page 63 (IM2 table $FC00)
 OVLX_1  equ 40                  ; V tests in gv3.asm at $F200-$FCFF of page 40 (Z04: $F000-$F1FF, F05: $FD00-)
 OVLX_2  equ 43                  ; V tests in gv4.asm after G5 / G8 (test table flags bits 5-7 = k: page OVLX_k)
-OVLX_3  equ 60                  ; V tests in gv5.asm after G1 / X-D
+OVLX_3  equ 61                  ; V tests in gv5.asm after G7 / X-T
 OVLX_4  equ 63                  ; V tests in gv6.asm at $FD02 (above X-H's IM2 table and vector)
         MMU 7,OVL_G2
         ORG $E000
@@ -157,10 +188,10 @@ gv3_end:
 gv4_end:
         ASSERT $ <= G5PAL
         MMU 7,OVLX_3
-        ORG gxd_end
+        ORG gxt_end
         INCLUDE "nxsuite/gv5.asm"
 gv5_end:
-        ASSERT $ <= SCRATCH
+        ASSERT $ <= $10000
         MMU 7,OVLX_4
         ORG $FD02
         INCLUDE "nxsuite/gv6.asm"

@@ -68,3 +68,6 @@ GS_PENDOP   equ 3
 GS_HUNG     equ 4
 GS_RUN      equ 5
 VNEG        equ 0               ; 1 = the V tests' negative-control build (never committed as 1)
+XDNEG       equ 0               ; 1 = XD's negative-control build: DivMMC left mapped (never committed as 1)
+FONTC       equ $7D00           ; RAM copy of the ROM font ($3D00-$3FFF), page 62 offset $1D00 in slot 3
+ROM8C       equ $7CF0           ; RAM copy of ROM $0000-$0007 at launch, page 62 offset $1CF0
