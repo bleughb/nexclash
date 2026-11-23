@@ -37,6 +37,10 @@ pbuf_pat:
         ORG $8000
 start:  di
         jp entry
+        ; G2 JP (C) edge case: a JP (C) at $BFFE that took its base from its own address lands here
+        ; (z80ntest's wrongpc: A = $FF, back through IX)
+        ds $8140-$
+wrongpc: ld a,$FF : jp (ix)
         INCLUDE "nxsuite/core.asm"
         INCLUDE "nxsuite/g1.asm"
         INCLUDE "nxsuite/g2.asm"

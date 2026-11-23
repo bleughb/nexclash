@@ -489,6 +489,18 @@ ex_kd:  push de : call ex_k : pop hl : jp wdec
 ex_kmean:
         call ex_k : ld hl,(tr_mean) : ld de,(tr_mean+2) : jp wfix
 
+; a sub-test line now: HL = id string; R_* and the extras written so far as for a test line; afterwards
+; the extras are empty again and the status INFO (the main line is written by the harness at the end)
+sub_emit:
+        ld (subid),hl
+        ld hl,(wp) : ld (hl),0
+        call emit_t
+        ld hl,0 : ld (subid),hl
+        ld hl,EXB : ld (wp),hl : ld (hl),0
+        xor a : ld (wsink),a
+        ld a,ST_INFO : ld (R_st),a
+        ret
+
 ; ---------------------------------------------------------------- the T line
 emit_t: call w_lb
         ld hl,s_tid : call wstr
