@@ -156,6 +156,30 @@ Open: the first calibration interrupt's extra ~574 T (not subtracted, 0.06 %); s
 - hand-rolled: [local: the host Next model (MMU, line clock, zxnDMA, IM 2) is per engine; hooklib.NextModel has no MMU or interrupts]
 - scratch: [local: push605.py, hd_repo_quick.py dropped: one-off reproductions, the engine's verify covers them]
 
+## Route 2: finer time steps (proposed 2026-11-23, after hardware test 1)
+Hardware test 1 (user, 2026-11-23): the smooth build plays "just as unplayable as the original": in-between views
+smooth the picture, but the game still reads the controls and moves the car once an update (~4 a second).
+Proposal (user: "a good idea"): every update at 28 MHz, each advancing game time by 1 / N (N ~4), so controls and
+picture run ~N x as often at the same game speed. An engine rewrite (own Layer 2 renderer for pixel smoothness and
+response) to consider on top: it needs the same sub-stepped game state, so this is its first step too.
+### Probe 1 (writers of the car state, update 120-123, step/writers.py; static reads, step/hdis.py)
+- The car is explicit per-update Euler, all inside 0xA423 (called from 0x9E74, after the view copy):
+  0xA834 position x/y/z (43400/2/4) += velocity words 0xA99C / 0xA99E / 0xA9A0; 0xA856 angles 43407/8/9 += rates
+  0xA9A2 / 0xA9A3 / 0xA9A4, with a fraction byte 0xA9A6 into 0xA9A5 (carry into 43408); 0xA823 (airborne,
+  0x965D = 2) = integrate + velocity y += 12 (gravity); 0xA6F4 (on the road) = integrate, then velocity from speed
+  and heading (multiply 0xC52C). Integrate also from 0xA4DB.
+- Speed 0x965B (16-bit): set only by 0xF568 (from 0xA8BB), which also draws the speedometer. Turn rate 0xA9A3 /
+  0xA9A6 = speed (capped at 30) x steering 0x96AC (written 0xA6E2 / 0xA6E7).
+- Lap clock 0xA38A: 0x950B counts updates to 5 per clock second (BCD 0x950C-0x950E).
+- Inferred plan: keep every rate in per-original-update units (thresholds on them stay valid); scale only the
+  accumulations: position and angle += rate / N with fraction bytes, gravity 12 / N, speed change / N, clock 5 N,
+  timers x N. Open: the other car and traffic (0xA47A walks the object list 0xF02C), the crash replay buffer (per
+  update), per-update sound 0xEA60, collision tests that use one update's step.
+- Pace target to decide (user): the original's game speed varies with the scene (updates 7-21 frames); fixed
+  sub-steps give one speed: the original's median (1 clock second = ~1.3 s) or real time (1 s).
+- Next: probe 2: from a recorded state, run 1 original update vs N patched sub-updates with the same input and
+  list the state bytes that differ beyond rounding: each is an accumulation still to scale.
+
 ## Hardware checklist
 Test 1 (2026-11-23), sent to the user: C:\1NEXT\harddrivin_work\hardware1 (CHECKLIST.txt + both builds: hard_drivin_smooth.nex
 9fb23f8e, hard_drivin.nex d74f75e6, the stamped record's outputs). Steps: start-up and options; smoothness (more,
