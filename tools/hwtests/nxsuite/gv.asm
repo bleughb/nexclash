@@ -154,8 +154,10 @@ q_v16:  db 1
 ; ---------------------------------------------------------------- V10 Layer 2 flip is not synced
 ; Layer 2 256 x 192 on top ($15 order LSU). Pages 44-47 red ($E0), 48-53 blue ($03). $12 = 22 shows pages
 ; 44-49 (red rows 0-127, blue 128-191); $12 = 24 shows 48-53 (all blue). The CPU polls the raster: $12 =
-; 24 at line 96, $12 = 22 at line 200, every frame until a key. Not synced (the claim): still, red top
-; half, blue bottom half. Taken at the frame start: still, red two thirds, blue one third. 1 / 2 / 3 other.
+; 24 at line 96, $12 = 22 at line 200, every frame until a key. Not synced (the claim): red top half, blue
+; bottom half - 1 with a clean edge, 2 with an edge that steps part-way along a line or jitters (the CPU's
+; write lands somewhere in the line it polled: board run 7, owner: "about at half a line and slightly
+; flickery"). Taken at the frame start: no split at half, red two thirds (3, also anything else).
 @t_v10: call cls
         ld hl,m_v10 : ld a,1 : call plines
         call gv_key
@@ -187,12 +189,14 @@ m_v10:  db "V10: Layer 2 picture next, red",0
 q_v10:  db 1
         db "V10 LAYER 2 FLIP AT LINE 96",0
         db " ",0
-        db "1 = still: red top HALF,",0
-        db "    blue bottom half",0
-        db "2 = still: red top TWO THIRDS,",0
-        db "    blue bottom third",0
-        db "3 = something else (flicker ...)",0,0
-        db "split-96",0,"frame-start",0,"other",0
+        db "1 = red top HALF, blue bottom",0
+        db "    half; a clean straight edge",0
+        db "2 = red top HALF, blue bottom",0
+        db "    half; the edge steps part-",0
+        db "    way along a line or jitters",0
+        db "3 = NO split at half (red top",0
+        db "    two thirds, or other)",0,0
+        db "split-clean",0,"split-jitter",0,"no-split",0
 
 ; ---------------------------------------------------------------- V02 sprite order ($15 bit 6)
 ; Sprite 1 red ($E0) at X 128 Y 112, sprite 2 green ($1C) at X 136 Y 120 (16 x 16, they overlap 8 x 8),

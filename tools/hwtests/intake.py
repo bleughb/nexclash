@@ -618,6 +618,22 @@ def _xt4(e, rec, src):
     return None
 
 
+def _v10(e, rec, src):
+    w = rec.get('v')
+    say = {'split-clean': 'the picture split at about line 96 with a clean edge: $12 took effect mid-frame',
+           'split-jitter': ('the picture split at about line 96, the edge stepping part-way along a line or '
+                            'jittering: $12 took effect mid-frame, at the point in the line where the CPU wrote it'),
+           'no-split': 'no split at line 96: $12 did not take effect mid-frame (or the picture was something else)',
+           'split-96': 'the picture split at line 96 (older build: clean or jittering not asked)',
+           'frame-start': 'red two thirds: $12 taken at the frame start',
+           'other': 'something else (older build; see the operator\'s words)'}.get(w)
+    if not say:
+        return None
+    st = 'PASS' if w in ('split-clean', 'split-jitter', 'split-96') else ('FAIL' if w in ('no-split', 'frame-start')
+                                                                         else None)
+    return st, 'operator: %s.' % say
+
+
 RESETS = {'soft': 'an F4 soft reset', 'hard': 'a hard reset', 'power': 'power off and on'}
 
 
@@ -642,7 +658,8 @@ def _xh2(e, rec, src):
     return st, 'board: %s.' % '; '.join(parts)
 
 
-DERIVE = {('XH2', 'dma-wr4-interrupt-lock'): _xh2, ('XT2', 'frame-timing-change-frame-end'): _xt2,
+DERIVE = {('XH2', 'dma-wr4-interrupt-lock'): _xh2, ('V10', 'lay-l2-flip-not-synced'): _v10,
+          ('XT2', 'frame-timing-change-frame-end'): _xt2,
           ('XT4', 'mem-48k-timing-7ffd'): _xt4, ('D02', 'dma-default-cycle-length'): _d02_default, ('D02', 'dma-cost-per-byte'): _d02_cost,
           ('D04', 'dma-prescaler-rate'): _d04, ('D05', 'dma-burst-cpu-share'): _d05,
           ('D13', 'dma-blitter-transparent-fill'): _d13, ('SP10', 'spr-line-limit'): _sp10,
