@@ -71,6 +71,7 @@ OVL_G2  equ 40                  ; G2 extras and G4 share page 40 (Z04 uses $F000
 OVL_G4  equ 40
 OVL_G3  equ 41                  ; G3: tables at $F800-$FFFF
 OVL2_G3 equ 42                  ; G3 tests in g3b.asm (flag 8 in the test table: group page + 1)
+OVL_G5  equ 43                  ; G5 COPPER (P08 keeps a palette copy at $F600)
         MMU 7,OVL_G2
         ORG $E000
         INCLUDE "nxsuite/g2b.asm"
@@ -84,6 +85,10 @@ OVL2_G3 equ 42                  ; G3 tests in g3b.asm (flag 8 in the test table:
         ORG $E000
         INCLUDE "nxsuite/g3b.asm"
         ASSERT $ <= $F800
+        MMU 7,OVL_G5
+        ORG $E000
+        INCLUDE "nxsuite/g5.asm"
+        ASSERT $ <= G5PAL
         MMU 7,HOMEP7
 
         ; bank 7 (pages 14 / 15) in the .nex, so tests C03 / C04 time code in pages the suite owns
