@@ -62,6 +62,36 @@ hung_clr:
 ; the start after XH2's reset (prg_read2 set PRG_XH2): the follow-up question and the start's DMA byte
 ; recorded at once, as a one-group pass of XH with XH2 only (board run 9: the restart was taken as a resume
 ; between tests and the question never came). Then DONE as any pass.
+; ask's prompt line: Y / N (askk 0), 1-3 (askk 1), 1 to askk + 2 (askk 2, 3: four or five answers)
+askprm: ld hl,m_yn : ld a,(askk) : or a : jp z,puts
+        ld hl,m_123 : dec a : jp z,puts
+        add a,'3' : ld (m_1n+5),a : ld hl,m_1n : jp puts
+m_1n:   db "1 to 4          S = ask later",0
+; V19 (gv.asm; here because page 41 is full): frame_sync (core.asm) with the CTC polled in every wait, each
+; wait with a 65,536-pass timeout
+v19_sync:
+        ld bc,$243B : ld a,$1E : out (c),a
+        ld hl,0
+.a:     call v19_ctc : ld bc,$253B : in a,(c) : and 1 : jr nz,.a1
+        dec hl : ld a,h : or l : jr nz,.a
+        ret
+.a1:    ld bc,$243B : ld a,$1F : out (c),a
+        ld hl,0
+.b:     call v19_ctc : ld bc,$253B : in a,(c) : cp 2 : jr nc,.c
+        dec hl : ld a,h : or l : jr nz,.b
+        ret
+.c:     call v19_ctc : ld bc,$253B : in a,(c) : or a : ret z
+        dec hl : ld a,h : or l : jr nz,.c
+        ret
+; CTC channel 3 read; a count above the last one = a wrap (it counts down): v19w + 1 (24 bits)
+v19_ctc:
+        ld bc,$1B3B : in a,(c) : push hl : ld hl,v19c : cp (hl) : ld (hl),a : jr c,.n : jr z,.n
+        ld hl,v19w : inc (hl) : jr nz,.n
+        inc hl : inc (hl) : jr nz,.n
+        inc hl : inc (hl)
+.n:     pop hl : ret
+v19w:   ds 3
+v19c:   db 0
 do_xh2f:
         xor a : ld (resume_pending),a
         ld a,GI_XH+1 : ld (mode),a

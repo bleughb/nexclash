@@ -589,10 +589,31 @@ def _v19(e, rec, src):
         secs = se + te / 10
         lo, hi = fr / (secs + 0.3), fr / (secs - 0.3)
         how = 'tenths typed: +-0.3 s (reading and reaction)'
-    return None, ('board: %d frames in %s s = %s Hz (cable %s); %s, so %.2f-%.2f Hz. %s' % (
+    say = 'board: %d frames in %s s = %s Hz (cable %s); %s, so %.2f-%.2f Hz. %s' % (
         fr, secs, rec.get('v'), e.get('cable', '?'), how, lo, hi,
         '50.00 Hz lies inside that range.' if lo <= 50 <= hi else
-        '50.00 Hz lies outside that range: time it again with tenths to be sure.'))
+        '50.00 Hz lies outside that range: time it again with tenths to be sure.')
+    w, c0, c1 = _k(e, 'ctcw'), _hex(e.get('c0')), _hex(e.get('c1'))
+    if None not in (w, c0, c1):
+        ticks = 256 * w + c0 - c1          # CTC channel 3, prescaler 256: one tick = 256 clocks of 28 MHz
+        cs = ticks * 256 / 28e6
+        if cs > 0:
+            say += (' Same interval by the CTC (28 MHz clock / 256, book ch 6): %d ticks = %.2f s, so %.3f Hz; '
+                    'the watch said %s s (%+.2f s). %s' % (
+                        ticks, cs, fr / cs, secs, secs - cs,
+                        "The watch and the machine agree: the rate by the watch is the machine's."
+                        if abs(secs - cs) <= 0.3 else
+                        'The watch time differs from the CTC time by more than the reading error: a timing error '
+                        'at the watch (start / stop) - or the 28 MHz clock itself is off by %.2f %%, which only the '
+                        'watch can show.' % (100 * (secs - cs) / cs)))
+    return None, say
+
+
+def _hex(v):
+    try:
+        return int(v[1:], 16) if v and v.startswith('$') else None
+    except ValueError:
+        return None
 
 
 def _xt2(e, rec, src):
@@ -645,13 +666,25 @@ def _v18(e, rec, src):
         st, how = 'FAIL', 'copper line 0 is Layer 2 row 0 with $64 = 32, not with 33'
     else:
         st, how = None, 'not one setting alone (row 0 lit with: %s)' % (', '.join(lit) or 'neither')
-    return st, 'operator: $64 = 33 -> %s line(s), $64 = 32 -> %s (two = row 0 lit by the copper at its line 0 plus ' \
-        'the reference): %s.' % (a, b, how)
+    part = [o for o, w in (('33', a), ('32', b)) if w.startswith('part-')]
+    if part:
+        how += ('; a part-lit row 0 (with $64 = %s) means the colour change came part-way along that row: the '
+                'copper line starts (part-right) or ends (part-left) inside the Layer 2 row, not at its left edge'
+                % ' and '.join(part))
+    return st, 'operator: $64 = 33 -> %s, $64 = 32 -> %s (two = row 0 lit by the copper at its line 0 plus ' \
+        'the reference; part-left / part-right = row 0 white on that part only): %s.' % (a, b, how)
 
 
 def _v05(e, rec, src):
     say = {'lower': ('PASS', 'Layer 2 showed through the side borders of lines 96-191, where its colour was made equal to '
                              '$14: a border in the $14 colour is transparent'),
+           'lower-green': ('PASS', 'Layer 2 showed through the side borders of lines 96-191 (a border in the $14 colour '
+                                   'is transparent), then a strip in the fallback colour ($4A, green for the test) '
+                                   'out to the screen edge: the screen shows border beyond the 320 x 256 Layer 2 '
+                                   '(book N14 says nothing is drawn beyond the wide area)'),
+           'lower-black': ('PASS', 'Layer 2 showed through the side borders of lines 96-191 (a border in the $14 colour '
+                                   'is transparent), then black, not the green fallback, out to the screen edge: '
+                                   'the picture ends with the 320 x 256 wide area there (book N14)'),
            'none': ('FAIL', 'no Layer 2 in the side borders of lines 96-191 (plain or black there): the layer below '
                             'did not show through a border in the $14 colour'),
            'other': (None, 'something else - see the operator\'s notes')}.get(rec.get('v'))
@@ -697,7 +730,10 @@ _v01u = {'book': ('PASS', 'sprite clip window: display dots without the border, 
          'one-dot': ('FAIL', 'sprite clip window over the border with $15 bit 5 still in display dots (not 2-dot units)'),
          'other': OTHER}
 _v01l = {'late': ('PASS', 'a copper sprite change shown one line after the line it was made on'),
-         'same-line': ('FAIL', 'a copper sprite change shown on the line it was made on'), 'other': OTHER}
+         'same-line': ('FAIL', 'a copper sprite change shown on the line it was made on'),
+         'two-late': ('FAIL', 'a copper sprite change (WAIT line 157) shown TWO lines after the line it was made on '
+                              '(row 159); TECHNIQUES.md:331 already says to write at WAIT(line N-2) for line N'),
+         'other': OTHER}
 _v03 = _vtwo('s', {'wide': ('PASS', 'X scale 4 after rotation: the bar stayed wide'),
                    'tall': ('FAIL', 'X scale 4 with rotation gave a tall bar: scale before rotation'), 'other': OTHER},
              'o', {'tl': ('PASS', 'rotate + X mirror left the red corner top left: rotation first, then the mirror'),

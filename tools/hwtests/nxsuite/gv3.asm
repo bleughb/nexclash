@@ -1,9 +1,9 @@
 ; nxsuite/gv3.asm - V VISUAL on page 40 at $F200 (OVLX_1; Z04 uses $F000-$F1FF, F05 $FD00-$FF01): the
-; tilemap and layer tests V11, V12, V13, V14, V04. GPL-3.0-or-later. The tilemap lives in bank 7 page 14
-; ($6E / $6F bit 7, first 8K only: NEXT_REGISTERS.md:46; C03 / C04 build their code there at run time): map
-; at offset $0800 (40 x 32, two bytes an entry), definitions at $1400. Palette entries through pal_set /
-; pal_back; $6B $6C $6E $6F $68 $15 $4A by the harness; sprites by spr_off; the copper stopped. VNEG = 1: the
-; decisive setting changed.
+; tilemap and layer tests V11, V12, V13, V14, V04, and V07 (from gv2.asm). GPL-3.0-or-later. The tilemap
+; lives in bank 7 page 14 ($6E / $6F bit 7, first 8K only: NEXT_REGISTERS.md:46; C03 / C04 build their code
+; there at run time): map at offset $0800 (40 x 32, two bytes an entry), definitions at $1400. Palette
+; entries through pal_set / pal_back; $6B $6C $6E $6F $68 $15 $4A by the harness; sprites by spr_off; the
+; copper stopped. VNEG = 1: the decisive setting changed.
 
 TMAP    equ $6800                   ; page 14 in slot 3
 TDEF    equ $7400
@@ -293,3 +293,43 @@ q_v04:  db 1
         db "2 = one or more bands differ",0
         db "3 = something else",0,0
         db "claim",0,"differ",0,"other",0
+
+; ---------------------------------------------------------------- V07 320 x 256 Layer 2 under the reset clip window
+; 320 x 256 Layer 2, transparent except a green band at rows 0-15 (the reference, inside every window) and one
+; at rows 224-255 (the bottom border, below the question). Asked with the clip window at its reset value
+; 0-255 / 0-191 (book p114, N15), then at 0-159 / 0-255: both bands or the top one only. Keys c0 / c1;
+; means=<c0>-<c1>, the claim (the reset window hides the bottom 64 rows until 0-159 / 0-255 is written):
+; top-both. v = the second answer.
+@t_v07: ld a,(NRSNAP+$14) : call l2w_fill
+        ld b,0
+.t:     ld c,$1C : push bc : call l2w_row : pop bc : inc b : ld a,b : cp 16 : jr nz,.t
+        ld b,224
+.b:     ld c,$1C : push bc : call l2w_row : pop bc : inc b : jr nz,.b
+        call l2w_on
+        nextreg $1C,1 : nextreg $18,0 : nextreg $18,255 : nextreg $18,0 : nextreg $18,191
+        ld hl,(wp) : ld (.wp),hl
+        ld hl,q_v07 : call ask : jr c,.x
+        ld hl,(askp) : ld (.w0),hl
+        ld hl,(.wp) : ld (wp),hl : ld hl,k_vc0 : call ex_k : ld hl,(askp) : call wstr
+        ld hl,(wp) : ld (.wp),hl
+        nextreg $1C,1 : nextreg $18,0 : nextreg $18,159 : nextreg $18,0 : nextreg $18,255
+        ld hl,q_v07 : call ask : jr c,.x
+        ld hl,(.wp) : ld (wp),hl : ld hl,k_vc1 : call ex_k : ld hl,(askp) : call wstr
+        ld hl,k_means : call ex_k : ld hl,(.w0) : call wstr
+        ld a,'-' : call wchr : ld hl,(askp) : call wstr
+.x:     jp l2w_off
+.wp:    dw 0
+.w0:    dw 0
+k_vc0:   db "c0",0
+k_vc1:   db "c1",0
+q_v07:  db 1
+        db "V07 GREEN BANDS",0
+        db " ",0
+        db "Look at the whole picture, top",0
+        db "to bottom, border included.",0
+        db " ",0
+        db "1 = a green band at the TOP and",0
+        db "    one at the BOTTOM",0
+        db "2 = a green band at the top only",0
+        db "3 = something else",0,0
+        db "both",0,"top",0,"other",0

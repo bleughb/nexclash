@@ -1517,7 +1517,7 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
-   "fields": "V01: u / l = two answers. u (sprite rows over three bands, clip window X 64-127): book (band 1 between the white lines at display 63 / 128, band 2 all across with the sprites over the border, band 3 between the yellow lines at 95 / 224: 2-dot units across the wide area), one-dot (band 3 between the white lines) or other. l (sprite 31 shown by the copper at line 157 and hidden at 158, white Layer 2 rows 156 and 158): late (the dash covers row 158: shown one line later, the claim) or same-line (it fills the gap at 157). means=<u>-<l>. The copper writes the clip window again after each $15 MOVE (V17's claim). The copper $15 bit 6 part of the claim is not asked."
+   "fields": "V01: u / l = two answers. u (sprite rows of 7 over three bands, clip window X 64-127; the question gives the counts): book (top band 2 squares between the white lines at display 63 / 128, middle band all 7 with the sprites over the border, bottom band 4 between the yellow lines at 95 / 224: 2-dot units across the wide area), one-dot (bottom band 2, between the white lines) or other. l (sprite 31 at display rows 146-161, shown by the copper at line 157 and hidden at 158; white 256 x 192 Layer 2 rows 156 and 158; copper line = display row with $64 = 0, NEXT_REGISTERS.md:84, $00 at launch on the board; P04: the copper line number equals the raster counter): same-line (the dash fills the gap, row 157), late (it covers row 158: one line later, the claim) or two-late (row 159, just below the lower line: two lines later; board run 8 answered other and described this; TECHNIQUES.md:331 already says to write a sprite at WAIT(line N-2) for line N). means=<u>-<l>. The copper writes the clip window again after each $15 MOVE (V17's claim). The copper $15 bit 6 part of the claim is not asked."
   },
   {
    "id": "V02",
@@ -1572,7 +1572,7 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
-   "fields": "V05: v = lower (Layer 2 stripes show in the side borders of lines 96-191, where the copper made the border colour equal $14; plain elsewhere: the claim), none (plain or black there), or other. The claim's second part (the ULA clip window never clips the border) is not asked."
+   "fields": "V05: v = lower (Layer 2 stripes show in the side borders of lines 96-191, where the copper made the border colour equal $14, out to the screen edge; plain elsewhere: the claim), lower-green (stripes, then a green strip to the screen edge: the fallback colour $4A, set green for this test, shows where the screen has border beyond the 320 x 256 Layer 2), lower-black (stripes, then black: nothing is drawn beyond the 320 x 256 wide area, book N14), none (plain or black there), or other. Board run 8 (older build, fallback $00 black at launch) answered lower with a black strip beyond the stripes in the lower half: border transparent (the claim), the black strip being either the black fallback or the end of the wide area - green now tells them apart. The claim's second part (the ULA clip window never clips the border) is not asked."
   },
   {
    "id": "V06",
@@ -1751,7 +1751,7 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
-   "fields": "V18: o33 / o32 = the answer with $64 = 33, then 32: two (Layer 2 row 0 turned white by the copper at its line 0, plus the reference row 4) or one (only the reference). means=<o33>-<o32>; the claim: two-one. JNext 1.3.0 lights row 0 with $64 = 32 and not with 33 (one-two): an emulator answer only."
+   "fields": "V18: o33 / o32 = the answer with $64 = 33, then 32: two (Layer 2 row 0 turned white by the copper at its line 0, plus the reference row 4), one (only the reference), part-left / part-right (row 0 white on its left / right part only, black on the rest: the colour change came part-way along the row, so the copper's line 0 ends (part-left) or starts (part-right) inside that Layer 2 row, not at its left edge) or other. means=<o33>-<o32>; the claim: two-one. Board run 8 (older build) answered other-other: with both values the upper line was part white, part black. JNext 1.3.0 lights row 0 with $64 = 32 and not with 33 (one-two): an emulator answer only."
   },
   {
    "id": "V19",
@@ -1764,7 +1764,8 @@
    "auto": false,
    "operator": true,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "fields": "V19: v = frames / watch seconds (Hz). cable = hdmi / vga / other; frames, secs, tenths (typed off the watch), tol (+-0.3 s as % of the time), r05 / r11. ctcw / c0 / c1: the same interval timed by CTC channel 3 (prescaler 256, time constant 256; the CTC clock is 28 MHz whatever the CPU speed, book ch 6): ticks = 256 x ctcw + c0 - c1, CTC time = ticks x 256 / 28,000,000 s. The intake gives the rate by both: a watch time unlike the CTC time is a timing error at the watch (or a 28 MHz clock that is off, which only the watch can show). Board run 8: 49.29 Hz +-0.19 by the watch (7592 frames / 154.0 s, HDMI; no CTC count in that build). The same file's F01 / F02 (311 lines of 228.02 T, T measured by the CTC as 8 clocks of 28 MHz) give 28,000,000 / (311 x 1824.2) = 49.36 Hz, inside the watch's range; 50.02 Hz is what the same 311 x 228 T give with the 128K's 3.5469 MHz clock instead."
   },
   {
    "id": "XT1",

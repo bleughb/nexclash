@@ -225,11 +225,13 @@ in the test table, and a test any other page of the generator's `xpage` list, fl
    group was written; the number grows group by group. DONE: the border turns green when the file was
    saved, red with FILE WRITE FAILED when it was not (photograph that screen; builds up to 7a9f92e could
    show that line when the file was saved); any key.
-3. Press V (the visual pass, about 8 minutes): answer each screen with Y / N or 1 / 2 / 3 (S = ask later).
+3. Press V (the visual pass, about 8 minutes): answer each screen with Y / N or a number (1 to 3, 4 or 5 as the
+   screen's last line says; S = ask later).
    Each picture is drawn under the question with a reference beside it (white / yellow lines, a square,
    a computed colour); V01, V03, V07, V09, V12 and V18 ask about two pictures, one after the other.
    V19 first asks which cable carries the picture, then needs a watch showing seconds (SPACE starts,
-   SPACE after 60 s or more stops, type the seconds, ENTER).
+   SPACE after 60 s or more stops, type the seconds, ENTER; the machine times the same interval by its CTC,
+   and the intake sets the two against each other).
 4. Optional, only if you agree to the risk shown before each test (Y runs it, N skips it):
    T (timing; the machine timing is put back after each test and at the next start after a hang),
    D (DivMMC; no SD write; when it ends check that the DONE screen's line count grew and the border is
@@ -248,7 +250,7 @@ Run: copy `nxsuite.nex` into a folder of its own on the SD card and start it fro
 writes `NXSUITE.TXT` (results), `NXSUITE.PRG` (progress record, 64 bytes) and, when needed, parts
 `NXSUITE.001`, `NXSUITE.002`, ... into that folder and nothing anywhere else. Menu keys: A = all automatic tests (about 6 minutes - G7 BENCH alone is about 3 - leave it alone), 0-9 = one group,
 R = resume, U = retry the tests that hung, V = the visual pass (the person at the machine answers: Y / N or
-1 / 2 / 3, S = ask later; in RUN ALL these tests are PENDING-OPERATOR), T / D / H = the opt-in groups (timing,
+a number, S = ask later; in RUN ALL these tests are PENDING-OPERATOR), T / D / H = the opt-in groups (timing,
 DivMMC, DMA hang: each test shows what it risks and what to do if the machine does not come back, Y runs it,
 N skips it; never in RUN ALL). Opt-in details: X-T (T) writes NextReg $03 (machine timing, survives a soft
 reset) only after saving the start value in `NXSUITE.PRG` (offset 50, flag bit 1); each test puts it back, and

@@ -20,7 +20,13 @@ m_look: db "Look, then press any key.",0
 ; starts the count and the watch together, SPACE stops both after 60 s or more; frames counted from the
 ; raster line (frame_sync); the seconds and tenths typed in (board run 6 had whole seconds only: +-1.6 %).
 ; v = frames / seconds (Hz); keys frames, secs, tenths, tol (+-0.3 s of reading and reaction as % of the
-; time: 0.25 % at 2 minutes), r05 (NextReg $05: bit 2 = 60 Hz), r11 (VGA timing).
+; time: 0.25 % at 2 minutes), r05 (NextReg $05: bit 2 = 60 Hz), r11 (VGA timing). The same interval is
+; also timed by CTC channel 3 (prescaler 256, time constant 256: a wrap every 65,536 clocks of the fixed
+; 28 MHz CTC clock, book ch 6 (rate independent of the CPU speed), polled in every frame wait): ctcw = wraps,
+; c0 / c1 = the count at start / stop; ticks = 256 x ctcw + c0 - c1, so the machine's own time is
+; ticks x 256 / 28,000,000 s. The intake sets frames / watch time against frames / CTC time: a human timing
+; error shows as a watch time unlike the CTC time (board run 8: 49.29 Hz by the watch; its F01 / F02, 311
+; lines of 228.02 T counted in CTC clocks, give 49.36 Hz at 28 MHz; 50.02 Hz assumed a 3.5469 MHz clock).
 @t_v19: ld hl,q_cable : call ask : ret c
         ld hl,(askp) : push hl
         ld hl,EXB : ld (wp),hl                      ; the cable answer as cable= only
@@ -34,11 +40,16 @@ m_look: db "Look, then press any key.",0
         ld a,4 : out ($FE),a
         ld hl,0 : ld (.n),hl
         call keys_up
-.f:     call frame_sync
+        ld bc,$1B3B : ld a,$27 : out (c),a : xor a : out (c),a   ; ch 3: timer, prescaler 256, TC 256, reset
+        ld (v19w),a : ld (v19w+1),a : ld (v19w+2),a
+        in a,(c) : ld (v19c),a : ld (.c0),a
+.f:     call v19_sync
         ld hl,(.n) : inc hl : ld (.n),hl
         ld a,l : and 15 : jr nz,.k
         ld a,12 : ld (crow),a : xor a : ld (ccol),a : ld hl,(.n) : call sdec
 .k:     ld a,$7F : in a,($FE) : rra : jr c,.f        ; SPACE (row $7F bit 0)
+        call v19_ctc : ld a,(v19c) : ld (.c1),a
+        ld bc,$1B3B : ld a,$03 : out (c),a                      ; ch 3 stopped (reset)
         ld a,1 : out ($FE),a
         ld a,12 : ld (crow),a : xor a : ld (ccol),a : ld hl,(.n) : call sdec
         ld a,14 : ld (crow),a : xor a : ld (ccol),a : ld hl,m_secs : call puts
@@ -61,12 +72,20 @@ m_look: db "Look, then press any key.",0
         ld hl,30000 : ld de,0 : ld bc,(.ts) : call div32 : call wfix         ; +-0.3 s as % (x 100)
         ld a,$05 : call rdreg : ld hl,k_r05 : call ex_kh
         ld a,$11 : call rdreg : ld hl,k_r11 : call ex_kh
+        ld hl,k_ctcw : call ex_k : ld hl,(v19w) : ld a,(v19w+2) : ld e,a : ld d,0 : call wdec32
+        ld a,(.c0) : ld hl,k_cc0 : call ex_kh
+        ld a,(.c1) : ld hl,k_cc1 : call ex_kh
         jp gscreen
 .pend:  ld a,ST_PENDOP : ld (R_st),a : call keys_up : jp gscreen
 .n:     dw 0
 .s:     dw 0
 .d:     db 0
 .ts:    dw 0
+.c0:    db 0
+.c1:    db 0
+k_ctcw: db "ctcw",0
+k_cc0:   db "c0",0
+k_cc1:   db "c1",0
 q_cable: db 1
         db "V19 FRAME RATE - first:",0
         db " ",0
@@ -202,8 +221,13 @@ q_v10:  db 1
 ; 320 x 256 Layer 2 of red / yellow stripes (8 columns each) UNDER the ULA (order ULS); border colour 1, so
 ; the border is ULA palette entry 17 (paper 1: border from paper, TECHNIQUES.md:369). The copper sets entry
 ; 17 to $14's colour at line 96 and back at line 192: the side borders of lines 96-191 are transparent (book
-; ch 17, N2); the rest of the border, plain, is the reference. Answer: lower (stripes there) / none (plain or
-; black there) / other. Entry 17 put back.
+; ch 17, N2); the rest of the border, plain, is the reference. The fallback colour ($4A) is green for the test
+; (the harness puts it back): the Layer 2 covers the wide area only (320 x 256, book N14: nothing is drawn
+; beyond it), so where the screen shows more border than that, a transparent border shows the fallback there.
+; Board run 8 (HDMI, $4A = $00 black at launch): stripes, then a black strip to the screen edge - fallback or
+; nothing drawn could not be told apart; green now tells them apart. Answers: lower (stripes to the edge),
+; lower-green (stripes, then a green strip: fallback beyond the wide area), lower-black (stripes, then black:
+; the wide area ends there, nothing drawn), none, other. Entry 17 put back.
 @t_v05: ld a,1 : out ($FE),a
         nextreg $43,0 : nextreg $40,17 : ld a,$41 : call rdreg : ld (.c0+1),a : ld (.c2+1),a : ld (.org),a
         ld a,(NRSNAP+$14) : ld (.c1+1),a
@@ -219,6 +243,7 @@ q_v10:  db 1
         call l2w_on
         ld a,(NRSNAP+$15) : and %11100011 : or %00010100 : nextreg $15,a     ; ULS: the ULA over Layer 2
         ld hl,.cop : ld b,.cope-.cop : call cop_load
+        nextreg $4A,$1C                                                     ; fallback green
         ld hl,q_v05 : call ask
         nextreg $62,0
         nextreg $43,0 : nextreg $40,17 : ld a,(.org) : nextreg $41,a
@@ -229,19 +254,19 @@ q_v10:  db 1
 .c2:    db $41,0, $FF,$FF
 .cope:
 .org:   db 0
-q_v05:  db 1
+q_v05:  db 3
         db "V05 STRIPES IN THE BORDER",0
-        db " ",0
-        db "Look at the border around the",0
-        db "grey area.",0
-        db " ",0
-        db "1 = red / yellow stripes left",0
-        db "    and right of the LOWER half",0
-        db "    of the grey, plain elsewhere",0
-        db "2 = no stripes there (plain, or",0
-        db "    black)",0
-        db "3 = something else",0,0
-        db "lower",0,"none",0,"other",0
+        db "Look at the border left and",0
+        db "right of the LOWER half of the",0
+        db "grey area (plain elsewhere).",0
+        db "1 = red / yellow stripes there,",0
+        db "    out to the screen edge",0
+        db "2 = stripes, then a GREEN strip",0
+        db "    out to the screen edge",0
+        db "3 = stripes, then a BLACK strip",0
+        db "4 = no stripes there",0
+        db "5 = something else",0,0
+        db "lower",0,"lower-green",0,"lower-black",0,"none",0,"other",0
 
 ; ---------------------------------------------------------------- V02 sprite order ($15 bit 6)
 ; Sprite 1 red ($E0) at X 128 Y 112, sprite 2 green ($1C) at X 136 Y 120 (16 x 16, they overlap 8 x 8),

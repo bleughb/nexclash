@@ -57,8 +57,11 @@ q_v17:  db 1
 ; sets $15 per band: band 1 sprites not over the border (window in display dots: 64-127, white lines at 63 /
 ; 128); band 2 over the border, $15 bit 5 clear (window ignored: all across); band 3 over the border with
 ; bit 5 (window in 2-dot units across the wide area: display 96-223, yellow lines at 95 / 224). Book p114.
-; Part 2 (l): sprite 31 (red) at y 146 hidden; the copper shows it at line 157 and hides it at 158 (white
-; Layer 2 rows 156 and 158 beside it): claim (a change shows one line later) -> it covers row 158 (late).
+; Part 2 (l): sprite 31 (red) at display y 146 (rows 146-161) hidden; the copper shows it at line 157 and
+; hides it at 158 (white 256 x 192 Layer 2 rows 156 and 158 beside it; copper line = display row with $64 = 0,
+; NEXT_REGISTERS.md:84, board launch value $00; P04: the copper line number equals the raster counter):
+; same-line (row 157, the gap), late (row 158: the claim, one line later), two-late (row 159, just below the
+; lower line: board run 8; TECHNIQUES.md:331 already says to write a sprite at WAIT(line N-2) for line N).
 @t_v01: ld a,(NRSNAP+$14) : call l2w_fill
         ld e,63 : ld c,$FF : call l2_vl
         ld e,128 : ld c,$FF : call l2_vl
@@ -97,16 +100,17 @@ k_u:    db "u",0
 k_l:    db "l",0
 q_v01u: db 1
         db "V01 THREE BANDS OF RED SQUARES",0
+        db "Count the squares in each band.",0
         db " ",0
-        db "1 = top band between the WHITE",0
-        db "    lines, middle band all",0
-        db "    across, bottom band between",0
-        db "    the YELLOW lines",0
-        db "2 = as 1 but the bottom band is",0
-        db "    between the WHITE lines",0
-        db "3 = something else",0,0
+        db "1 = top 2 (between the WHITE",0
+        db "    lines), middle 7 (all",0
+        db "    across), bottom 4 (between",0
+        db "    the YELLOW lines)",0
+        db "2 = top 2, middle 7, bottom 2",0
+        db "    (between the WHITE lines)",0
+        db "3 = other counts",0,0
         db "book",0,"one-dot",0,"other",0
-q_v01l: db 1
+q_v01l: db 2
         db "V01 A SHORT RED DASH",0
         db " ",0
         db "Look at the red dash and the",0
@@ -115,5 +119,7 @@ q_v01l: db 1
         db "    between the two lines",0
         db "2 = the dash covers the LOWER",0
         db "    line (a gap above it)",0
-        db "3 = something else / no dash",0,0
-        db "same-line",0,"late",0,"other",0
+        db "3 = the dash is just BELOW the",0
+        db "    lower line (touching it)",0
+        db "4 = something else / no dash",0,0
+        db "same-line",0,"late",0,"two-late",0,"other",0

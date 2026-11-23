@@ -70,16 +70,14 @@ plines: ld (crow),a
         ld a,(crow) : inc a : ld (crow),a : jr .l
 .e:     inc hl : ret
 
-; HL = question: db kind (0 = Y / N, 1 = 1 / 2 / 3), the lines (plines), then the answers' words (2 or 3,
-; 0-ended). -> NC, A = 0 / 1 / 2: R_st OPERATOR, v = the answer's word, extras key= / means=; or carry:
+; HL = question: db kind (0 = Y / N, k = 1-3: keys 1 to k + 2), the lines (plines), then the answers' words
+; (2 for Y / N, else k + 2; 0-ended). -> NC, A = the answer's index: R_st OPERATOR, v = the answer's word, extras key= / means=; or carry:
 ; S pressed - R_st PENDING-OPERATOR (the question stays open). The group screen is drawn again after.
 ask:    ld a,(hl) : ld (askk),a : inc hl
         push hl : call cls : pop hl
         ld a,1 : call plines : ld (askw),hl
         ld a,22 : ld (crow),a : xor a : ld (ccol),a
-        ld hl,m_yn : ld a,(askk) : or a : jr z,.p
-        ld hl,m_123
-.p:     call puts
+        call askprm                                 ; the prompt line (nxsuite.asm, bank 2)
         call keys_up
 .w:     call getkey : or a : jr z,.w
         cp 'S' : jr z,.s
@@ -89,8 +87,7 @@ ask:    ld a,(hl) : ld (askk),a : inc hl
         inc b : cp 'N' : jr z,.ok
         jr .w
 .n:     ld a,c : sub '1' : jr c,.w
-        cp 3 : jr nc,.w
-        ld b,a
+        ld b,a : ld a,(askk) : inc a : cp b : jr c,.w  ; keys 1 to askk + 2
 .ok:    ld a,b : ld (aski),a
         ld hl,(askw) : or a : jr z,.f
 .sk:    ld a,(hl) : inc hl : or a : jr nz,.sk
