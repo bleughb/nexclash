@@ -6,8 +6,8 @@ Inputs: TOSEC `Jack the Nipper II - In Coconut Capers (1987)(Gremlin Graphics So
 6f5d708c439f3356a930ea4f176a0c8f: 48K, in game); rzxarchive `j/jacknipper2.rzx` (158,593 frames, 52 min; its own
 start snapshot md5 f89e14ab3939e70ecbe94cc1f42b38fe)    Branch: add-jack-the-nipper
 Checks: survey (GATE CHECK, below), inspect    Pending user answers: none yet (the stage-1 question comes with the preview)
-Start with: `python nexclash.py scan jtn2_start.z80 --rzx jacknipper2.rzx --stop 15000 --range 0xFB00-0xFD7F --writers`
-(who composes what 0xB25F copies)    Read: PLAYBOOK 2-3, 3d (an unknown engine: feasibility first)
+Start with: the composite draw at 0xB28B per type path (0xB3B1, 0xB534, 0xB5D3) and its cell loop
+("Stage 1 analysis" below)    Read: PLAYBOOK 2-3, 3d (an unknown engine: feasibility first)
 Open: the three unreached CALL sites; the figure plotter(s); a short recording (3-5 min) from the 48K snapshot
 
 ## Snapshot (0b)
@@ -28,6 +28,15 @@ Open: the three unreached CALL sites; the figure plotter(s); a short recording (
   did). 0x967F is a screen redraw and 0x9B1A a text printer, not figure plotters: likely a message or screen the
   recording did not bring up; confirm in stage 1.
 - Plain conversion: built from the loader snapshot, so not meaningful; rebuild from `[a]`.
+
+## Stage 1 analysis (2026-11-22, started)
+- 0xB25F is the object loop, not a copier: a table at 0x88E2, 11 bytes each, count at 0xBDF2; per object 0x9D91 then
+  the draw at 0xB28B: x = (IX+0) (+-6 by (IX+5) bit 0 for some types), y = (IX+1), (IX+8) bit 5 = skip.
+- No shadow screen (unlike Jack the Nipper): the draw composites straight onto the screen: screen address from x / y,
+  the attribute map at 0xFB00-0xFD7F (32 x 24 cells), background tiles at 0xE900 + 8 x tile (IY), graphics fetched with
+  SP as a data pointer (POP blits, SP saved at 0xBDE8), widths patched into the code (self-modifying, 0xB412 / 0xB417
+  ...), a path per (IX+2) type bit (0xB5D3, 0xB534, 0xB3B1). A conversion splits the composite: background only to the
+  screen, the figure as sprites.
 
 ## Stage log
 - 2026-11-22: stage 0, ~1.5 h wall (with Jack the Nipper), ~20 tool calls, no user rounds.
