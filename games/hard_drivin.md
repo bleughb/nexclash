@@ -14,10 +14,9 @@ Checks: `python nexclash.py auto hard_drivin.z80 --rzx hard_drivin.rzx --quick 2
   COMPLETE. Prototype evidence (C:\1NEXT\harddrivin_work): whole-RZX verify PASS (3,112 checks), 18 / 18 mutants,
   JNext pace +3 frames / 178 updates.
 Pending user answers: none
-Start with: route 2a build, stage 1 (exact integer spec + hook sites) running in a subagent (2026-11-23): brief
-  C:\1NEXT\harddrivin_work\step\STAGE1_BRIEF.md, progress stage1_results.md there; if incomplete, a subagent resumes from them. Then
-  stage 2: hook asm verified against spec.py; stage 3: pace (10 frames per original update), adaptive N, JNext.
-  Auto-resume after a session reset is allowed (user, 2026-11-23).
+Start with: route 2a stage 2 (hook asm hd3.asm verified byte-exact against spec.py) running in a subagent
+  (2026-11-23): brief C:\1NEXT\harddrivin_work\step\STAGE2_BRIEF.md, progress stage2_results.md; if incomplete, a subagent resumes from them. Then
+  stage 3: pace (10 frames per original update), adaptive N, JNext. Auto-resume after a reset is allowed (user).
 Open: the first calibration interrupt's extra ~574 T (not subtracted, 0.06 %); sub-unit angle interpolation;
   the CALL at 0xA402 (time-out path, not in the recording); R not preserved (patch.preserve-r: the verify excludes
   R; no consumer of R found, not proven)
@@ -195,6 +194,19 @@ response) to consider on top: it needs the same sub-stepped game state, so this 
 - Proposed build (route 2a): N chosen per original update from the last render's cost (4 when it fits, else 2),
   player physics sub-stepped, traffic once per N first (its own interpolation later), replay and clock flash gated
   once per N; verify = probe2's comparison per update + RZX equivalence of the game state at whole-update points.
+### Build 2a stage 1 (subagent, 2026-11-23; C:\1NEXT\harddrivin_work\step\stage1_results.md, spec.py, hooksites.py)
+- spec.py = the exact integer rules the hooks implement: one 8-bit fraction per accumulated variable (start 0x80,
+  adds (rate << 8) >> s; exact for N | 256; carries across N changes; a shadow copy resets it when game code writes
+  the value), relaxation 0xA7BA [A:F] += (gap x C + 128) >> 8 (C = 75 at N = 2, 41 at N = 4), speed change / N only
+  after a velocity rebuild, steering +-30 / N, throttle by data words, gravity whole on the last sub-step, 15 one-byte
+  gates the driver rewrites per sub-step (traffic, clock, timers, odometer on the first or last sub-step). Driver:
+  CALL drv at 0x9E2F and 0xFC4C, N x (PUSH CONT; JP 0x9E34). Time-out predictor at entry -> N = 1 (update 554).
+- Checked: N = 1 = the capture byte for byte for all 1,552 non-escaping updates (rerun, 0 differ); 30 sites, original
+  bytes and instruction boundaries all ok. N = 4 vs the original: position p99 31-47, speed p99 9, heading tail 672
+  (steering acts 1 / N update late instead of 1: the point of the route).
+- Risks: render overruns more likely with new camera positions: clip buffer 9E00-9E11 into 0x9E12 (guard at 0xCEB9),
+  span fill C5E0-C665 over 9000-96E5 (stage 2); skid / push-out untested (not in the capture); input quirks: centre
+  key + left / right gives 7.5 not 30, up + down nets one step.
 
 ## Hardware checklist
 Test 1 (2026-11-23), sent to the user: C:\1NEXT\harddrivin_work\hardware1 (CHECKLIST.txt + both builds: hard_drivin_smooth.nex
