@@ -1,7 +1,7 @@
 # Hard Drivin' (Domark / Binary Design, 1989; 128K tape)
 
 ## Next session
-Stage: 1 for route 2 (feasibility)    State: route 1 (smooth views) stamped verified, hardware: plays like the original; route 2 probe 2 in progress
+Stage: 1 for route 2 (feasibility)    State: route 1 (smooth views) stamped verified, hardware: plays like the original; route 2 probe 2 done, build 2a next
 Techniques: `patch.inbetween-views`, `detect.pacing-structure`, `patch.pace-limiter`, `patch.restore-speed`, `patch.whole-altrom-image`, `verify.update-locked-pace`
 Inputs: C:\1NEXT\harddrivin_work: hard_drivin.z80 (MD5 18809405, snapshot 0 of hard_drivin.rzx), hard_drivin.rzx (MD5 c649e04c, 22,116 frames), in\hd.tap (MD5 02e1f96c), in\hd.tzx (61f7d04c), in\hd.dsk ([a], 43a6bc4c). Game data: never in this repo; not yet in specnext/reference (a maintainer push: ask first).
 Branch: add-hard-drivin (worktree C:\1NEXT\nexclash-hd), main merged 2026-11-23 (83cd68b)    Commit: see git log
@@ -14,11 +14,8 @@ Checks: `python nexclash.py auto hard_drivin.z80 --rzx hard_drivin.rzx --quick 2
   COMPLETE. Prototype evidence (C:\1NEXT\harddrivin_work): whole-RZX verify PASS (3,112 checks), 18 / 18 mutants,
   JNext pace +3 frames / 178 updates.
 Pending user answers: none
-Start with: route 2 (finer time steps, real time; "## Route 2" below). Probe 2 was running in a subagent when
-  the session stopped (2026-11-23): its brief is C:\1NEXT\harddrivin_work\step\PROBE2_BRIEF.md, its progress C:\1NEXT\harddrivin_work\step\probe2_results.md.
-  If the results file is incomplete, start a subagent with the brief + "resume from probe2_results.md". Then check its
-  numbers (rerun one state), record them here, and propose the build plan (N sub-steps per original update in 10 frames).
-  Hardware test 1 builds stay as they are (the smooth route is verified and stamped).
+Start with: route 2a build (see "Probe 2" below: adaptive N 4 / 2, traffic once per N first); probe2.py is the
+  per-update check. Auto-resume after a session reset is allowed (user, 2026-11-23).
 Open: the first calibration interrupt's extra ~574 T (not subtracted, 0.06 %); sub-unit angle interpolation;
   the CALL at 0xA402 (time-out path, not in the recording); R not preserved (patch.preserve-r: the verify excludes
   R; no consumer of R found, not proven)
@@ -181,6 +178,21 @@ response) to consider on top: it needs the same sub-stepped game state, so this 
   share 10 frames per original update; the original's own pace varies, 7-21 frames an update).
 - Next: probe 2: from a recorded state, run 1 original update vs N patched sub-updates with the same input and
   list the state bytes that differ beyond rounding: each is an accumulation still to scale.
+### Probe 2 (subagent, 2026-11-23; C:\1NEXT\harddrivin_work\step\probe2_results.md, scripts probe2.py / scale.py / capture.py)
+- N=1 replay of captured updates = the recording byte for byte (15 states; rechecked: state 105, 0 bytes, all 128K).
+- With the accumulations scaled (Python stand-ins), N=2 and N=4 match one original update within rounding, step-size
+  error (airborne y +4 at N=4) and earlier reactions (steering applied 1 / N update late instead of 1). Scaled:
+  position, angles (0xA7BA relaxation: gap x (1 - 0.5^(1/N)), 0.159 at N=4), heading 16-bit, gravity 12 / N, skid
+  velocity changes, speed change at 0xA8BB, steering 96AC +-30 / N, throttle 96AD +-500 / N, clock 950B to 5N, timers
+  958B / 91DD once per N, odometer DAA(speed) / N, traffic speed / N, replay records (9 bytes at 5B00, ptr 954E) once
+  per N (gate at 0xFC4F). Collision thresholds all compare velocities (per original update): unchanged.
+- Blockers: traffic interpolation 0xF92D has 4 phases only (fraction 00/40/80/C0; rechecked: Z / P / PO branches),
+  finer fractions need new code or traffic steps once per N; time: logic 55k T median, render 741k median / 1.25M
+  p95 / 1.5M max, copy 61k: budget 10 frames at 28 MHz ~4.6M T per original update: N=2 fits (max 3.2M), N=4 fits
+  the median (3.4M) but not p95 (5.45M).
+- Proposed build (route 2a): N chosen per original update from the last render's cost (4 when it fits, else 2),
+  player physics sub-stepped, traffic once per N first (its own interpolation later), replay and clock flash gated
+  once per N; verify = probe2's comparison per update + RZX equivalence of the game state at whole-update points.
 
 ## Hardware checklist
 Test 1 (2026-11-23), sent to the user: C:\1NEXT\harddrivin_work\hardware1 (CHECKLIST.txt + both builds: hard_drivin_smooth.nex
