@@ -179,28 +179,6 @@ g_s3:   db "questions open",0
 g_s4:   db "hung (see file)",0
 g_s5:   db "stopped",0
 
-; the NEXT STEP lines -> (ns1), (ns2)
-next_step:
-        ld a,(resume_pending) : or a : jr z,.n1
-        ld hl,ns_res1 : ld (ns1),hl : ld hl,ns_res2 : ld (ns2),hl : ret
-.n1:    ld b,0                              ; any automatic group with built tests not run?
-.l:     ld a,b : cp 10 : jr nc,.n2
-        push bc : call gent : pop bc
-        ld a,(ix+2) : or a : jr z,.nx
-        ld hl,PRGB+PRG_GST : ld a,l : add a,b : ld l,a
-        ld a,(hl) : or a : jr z,.auto
-        cp GS_RUN : jr z,.auto
-.nx:    inc b : jr .l
-.auto:  ld hl,ns_all1 : ld (ns1),hl : ld hl,ns_all2 : ld (ns2),hl : ret
-.n2:    ld hl,ns_done1 : ld (ns1),hl : ld hl,ns_done2 : ld (ns2),hl : ret
-ns1:    dw 0
-ns2:    dw 0
-ns_res1: db "Last run stopped. R or wait 5 s:",0
-ns_res2: db "resume, the test is marked hung",0
-ns_all1: db "Press A: all automatic tests,",0
-ns_all2: db "about 5 min. Leave it alone.",0
-ns_done1: db "ALL DONE (this version). Copy",0
-ns_done2: db "NXSUITE.TXT to the PC.",0
 
 ; ---------------------------------------------------------------- running
 do_all: xor a : ld (mode),a

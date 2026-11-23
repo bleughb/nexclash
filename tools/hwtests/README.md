@@ -261,6 +261,11 @@ before END: the intake prints a WARNING and the JSON has `"truncated"`. The DONE
 lines written and any bytes lost. (Builds up to 3803884 lost everything past 64 KB silently while still
 writing a valid END line.)
 
+50 / 60 Hz (addition B): F06 (in G4, so in RUN ALL) measures lines per frame, line length and the ULA
+interrupt line at the start rate and at the other one (NextReg $05 bit 2 read-modify-write, put back; a
+line on the screen warns that the picture may blink); the intake prints them side by side with F01 / F02 /
+F03 / I09. Starting the machine at 60 Hz gives the same table (the keys are named by rate, not by order).
+
 `video=`: always `unknown` - no register the repository's sources cite says which output (HDMI, VGA, RGB)
 is in use. Board facts (KS1, core 3.03.00): NextReg $11 read $00 with an HDMI cable and with "Digital"
 selected in the settings, and the frame was 128K VGA timing (311 lines, INT line 248), so digital output

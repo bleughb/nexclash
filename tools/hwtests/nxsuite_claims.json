@@ -904,6 +904,18 @@
    "stage": 1
   },
   {
+   "id": "F06",
+   "group": "G4",
+   "claims": [],
+   "risk": "none",
+   "title": "50 / 60 Hz table",
+   "auto": true,
+   "operator": false,
+   "opt_in": false,
+   "stage": 2,
+   "fields": "The same numbers at both rates ($05 bit 2 switched and put back): l50 / l60 lines per frame, t50 / t60 line length in T (3.5 MHz), i50 / i60 the raster line at which the ULA interrupt status ($C8 bit 0) was first seen. v = l60. The intake prints them side by side."
+  },
+  {
    "id": "P01",
    "group": "G5",
    "claims": [

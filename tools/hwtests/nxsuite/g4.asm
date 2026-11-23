@@ -254,3 +254,64 @@ f05h:   push af : push hl
         call line : ld (f05l),hl
         pop hl : pop af : ei : reti
 f05l:   dw 0
+
+; ---------------------------------------------------------------- F06 the 50 / 60 Hz table (addition B)
+; The same three numbers at the start rate and at the other one ($05 bit 2, read-modify-write, as F03;
+; back to the start rate even if a number is missing, two frames waited): lines per frame (4 frames), line
+; length (CTC3 over 256 lines at 28 MHz, T of 3.5 MHz x 100) and the raster line at which NextReg $C8 bit 0
+; (ULA interrupt status) is first seen set (polled at 28 MHz, interrupts off; 0 = not seen). Keys l50 t50
+; i50 l60 t60 i60 whatever the start rate; v = l60. The intake prints them side by side. A line on the
+; screen warns that the picture may blink.
+t_f06:  ld a,22 : ld (crow),a : xor a : ld (ccol),a : ld hl,m_f06 : call puts
+        ld a,$05 : call rdreg : ld (.r5),a
+        call .m : ld hl,.a : call .st
+        ld a,(.r5) : xor 4 : nextreg $05,a
+        call fwrapmax : call fwrapmax : call fwrapmax
+        call .m : ld hl,.b : call .st
+        ld a,$05 : call rdreg : and $FB : ld b,a : ld a,(.r5) : and 4 : or b : nextreg $05,a
+        call fwrapmax : call fwrapmax
+        ld ix,.a : ld a,(.r5) : and 4 : jr z,.o            ; .a = the 50 Hz numbers when the start is 50
+        ld ix,.b
+.o:     ld hl,k_l50 : call .kx
+        ld a,(.r5) : and 4 : ld ix,.b : jr z,.o2
+        ld ix,.a
+.o2:    ld hl,k_l60 : call .kx
+        ld l,(ix+0) : ld h,(ix+1) : call res_int
+        ld hl,u_lines : jp res_unit
+; HL = first key (3 keys follow each other) , IX = numbers -> " lNN=.. tNN=.. iNN=.."
+.kx:    push hl : ld e,(ix+0) : ld d,(ix+1) : call ex_kd : pop hl
+        ld bc,4 : add hl,bc : push hl
+        call ex_k : ld l,(ix+2) : ld h,(ix+3) : ld e,(ix+4) : ld d,(ix+5) : call wfix
+        pop hl : ld bc,4 : add hl,bc
+        ld e,(ix+6) : ld d,(ix+7) : jp ex_kd
+; -> .n lines, .t line T x 100 (dword), .i ULA line
+.m:     ld a,4 : call flines_n
+        ld a,h : or l : jr z,.z
+        inc hl
+.z:     ld (.n),hl
+        nextreg $07,3
+        call ctc_line : add hl,hl : rl e : rl d : ld (.t),hl : ld (.t+2),de
+        ld a,(NRSNAP+$C4) : or 1 : nextreg $C4,a
+        call frame_sync
+        nextreg $C8,$FF
+        ld bc,$243B : ld a,$C8 : out (c),a : inc b
+        ld de,0
+.w:     in a,(c) : rra : jr c,.s
+        dec de : ld a,d : or e : jr nz,.w
+        ld hl,0 : jr .e
+.s:     call line
+.e:     ld (.i),hl
+        nextreg $C8,$FF
+        ld a,(spd0) : nextreg $07,a
+        ret
+; HL = 8-byte record <- .n .t .i
+.st:    ex de,hl : ld hl,.n : ld bc,8 : ldir : ret
+.n:     dw 0
+.t:     ds 4
+.i:     dw 0
+.a:     ds 8
+.b:     ds 8
+.r5:    db 0
+k_l50:  db "l50",0,"t50",0,"i50",0
+k_l60:  db "l60",0,"t60",0,"i60",0
+m_f06:  db "F06: 60/50 Hz - picture may blink",0

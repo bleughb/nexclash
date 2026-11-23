@@ -514,6 +514,7 @@ def report(doc, table, out=sys.stdout):
         for x in na:
             print('  %-32s %s - %s' % (x['claim'], x['part'], x['status']), file=out)
         print('  reason: %s' % na[0]['reason'], file=out)
+    rate_table(doc, out)
     lo = [t for t in table['tests'] if 'left_out' in t]
     if lo:
         print('left out on purpose (%d tests; the file says SKIP why=left-out):' % len(lo), file=out)
@@ -528,6 +529,27 @@ def report(doc, table, out=sys.stdout):
             for r in d['records']:
                 print('    pass %d: %s' % (r['pass'], r['result']), file=out)
     print('(nothing was changed in lessons or docs: apply the results in a reviewed change)', file=out)
+
+
+def rate_table(doc, out=sys.stdout):
+    """addition B: F06's numbers at 50 and 60 Hz side by side (F01 / F02 / I09 / F03 beside them)."""
+    t = doc['run'].get('tests', {})
+    f6 = t.get('F06')
+    if not f6 or f6.get('status') not in ('INFO', 'PASS', 'FAIL'):
+        return
+    e = f6.get('extra', {})
+    rows = [('lines per frame', 'l'), ('line length (T at 3.5 MHz)', 't'), ('ULA interrupt line ($C8 bit 0)', 'i')]
+    print('50 / 60 Hz side by side (F06; the start rate first measured, the other after $05 bit 2):', file=out)
+    print('  %-32s %10s %10s' % ('', '50 Hz', '60 Hz'), file=out)
+    for name, k in rows:
+        print('  %-32s %10s %10s' % (name, e.get(k + '50', '?'), e.get(k + '60', '?')), file=out)
+    also = []
+    for tid in ('F01', 'F02', 'I09', 'F03'):
+        r = t.get(tid)
+        if r and r.get('status') in ('PASS', 'FAIL', 'INFO'):
+            also.append('%s v=%s' % (tid, r.get('v')))
+    if also:
+        print('  beside it: %s (F01 / F02 / I09 at the start rate, F03 at the other)' % ', '.join(also), file=out)
 
 
 def compare(a, b, out=sys.stdout):
