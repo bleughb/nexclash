@@ -340,7 +340,8 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "fields": "8 samples (lines 20-27, the write at the start of the line): T from the NEXTREG $08 write to the first read (reads 23 T apart) that shows the new bit 6; v = max, min, t0 = how many were 0. Board run 5: v=23 min=0 t0=2 - the new bit is read back by the first or the second read every time (two populations = which side of the change the first read lands): the read-back follows the write within 23 T, it does not keep the old bit until dot 256 of the line."
   },
   {
    "id": "C10",
@@ -647,7 +648,8 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "fields": "pN = T at 3.5 MHz from the line interrupt for line N to the moment the raster counter ($1E / $1F) reads N (negative = before), mean of 5; sN = spread of the 5 raw readings (above ~24 T = not repeatable). Board run 5: mid-frame p100=-150 s100=0 and p191=-149 s191=2 - the interrupt comes 150 T (+-12) before the counter reads N, i.e. 78 T after the counter read N-1 (a 228 T line), repeatable; near the frame end it moves and spreads (p0=-7 s0=88, plast2=-122 s50): those two lines sit next to the counter's wrap at the frame end, where this test's own sync waits cross the frame boundary - read them as 'not constant there', not as a position."
   },
   {
    "id": "I11",
@@ -778,7 +780,8 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "fields": "v = the most handler runs in one interrupts-on window after 5 CTC0 wraps with interrupts off (1 = the requests folded into one, 2-5 = they queued); least = the fewest; runs / periods = the old busy-handler ratio (board runs 4 / 5: 0.24-0.25), which cannot decide fold against queue."
   },
   {
    "id": "I21",
@@ -830,7 +833,8 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "fields": "v = bytes the DMA had copied when the handler ran; line = where; bad = wrong bytes after the EI run; dbad = wrong bytes after the interrupts-off run; pend = requests already waiting before the start (taken first); di = completes / returned-not-copied / paused-at-request. Board run 5: 1212 bytes at line 248, bad=0; dbad=15203 = 1181 bytes copied: with interrupts off the DMA stops at the ULA request at the same place and, with no acknowledge, does not restart - the CPU runs on (no hang)."
   },
   {
    "id": "F01",
@@ -949,7 +953,8 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "fields": "lL = the line read after the copper's MOVE showed; oL = T (3.5 MHz) from the raster counter change to the MOVE's effect (negative = the MOVE first), median of 3 frames; sL = spread. Board runs 4 and 5: o191 = -62 / -60 with s191 = 0 and 0 at lines 0, 120, 250: a WAIT for line 191 - the last display line - takes effect about 60 T (a quarter line) before the counter reads 191, every frame; the other lines coincide within the poll step. The copper line number still equals the counter (l191 = 191)."
   },
   {
    "id": "P05",
@@ -1054,7 +1059,8 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "fields": "keys <m|p><a|3|2><35|28> = clocks of 28 MHz per byte (memory / port $5B; timing byte absent / 3 / 2; 3.5 / 28 MHz), slope (t2048 - t256) / 1792. Board run 5 (d99fbf8): 0 / 584 / 0.32 were a timing fault - in continuous mode the CPU is frozen and the CTC3 wraps were lost; the board's own nb.DMA rows predict about 4.99 clocks (28 MHz) and 32 (3.5 MHz) at timing byte 2. method=fault marks a slope outside 0.5-100 (INFO, never FAIL)."
   },
   {
    "id": "D03",
@@ -1080,7 +1086,8 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "fields": "pP_<35|28> = clocks of 28 MHz per byte in burst mode with prescaler P. Board run 5 (d99fbf8): 16 for every P was a test fault (the tick count was overwritten before use); JNext after the fix: about 32 x P (875 kHz / P)."
   },
   {
    "id": "D05",
@@ -1093,7 +1100,8 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "fields": "v = the CPU's polling-loop rate during a burst (P = 100) against the same loop with no DMA, %; cont = the same during a continuous transfer. Board run 5 (d99fbf8): 104 % came from comparing loop counts over different lengths; rates are compared now."
   },
   {
    "id": "D06",
@@ -1269,7 +1277,8 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "fields": "side = two opaque dots side by side (0 = no collision), same = on the same dot (1), clip = an overlap outside the clip window (1 = still collides), off = with $15 bit 0 = 0 (1 = still collides), second = a second $303B read (0 = the first read cleared it), alone = control, one sprite by itself (must be 0). Board run 5 (KS1 3.03.00): 0 1 1 1 0 0 = the claim exactly."
   },
   {
    "id": "SP02",
@@ -1360,7 +1369,8 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "fields": "x160 = a probe at the anchor X + byte 0 (relative place), x10 = a probe at byte 0 alone (absolute place); 1 = it collided. Board run 5: x160=1 x10=0 = relative (byte 4 bits 7:6 = 01 makes an 8-bit sprite relative)."
   },
   {
    "id": "SP09",
@@ -1386,7 +1396,8 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "fields": "v = the smallest number k of unscaled sprites on one line that sets $303B bit 1 (k-1 fit); s2 / s4 / s8 = the same at X scale 2 / 4 / 8; moved = with all 128 shown, how many must leave the line to clear the flag. Board run 5: 106 / moved 23 (105 fit whether the other 23 are hidden or shown on another line): fits 17 clocks a sprite in a 1,785-1,801 clock budget (the claim's 1,792 for 48K), not 18 in 1,824. s2-s8 = 60 there only meant 'below 60' (the sweep started at 60; it now starts at 1)."
   },
   {
    "id": "SP11",

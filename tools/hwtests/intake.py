@@ -313,6 +313,17 @@ def verdicts(res, table):
             v['why'] = 'not in the file'
             out[cid] = v
             continue
+        src = (res['sessions'][0]['header'].get('src') or '')[:7]
+        fixed = []
+        for r in recs:
+            why = KNOWN_FAULTS.get(r['id'], {}).get(src)
+            if r.get('extra', {}).get('method') == 'fault':
+                why = 'the program found its own timing out of range (method=fault)'
+            if why and r['status'] in ('PASS', 'FAIL', 'INFO'):
+                r = dict(r, status='SKIP', why='test-fault')
+                v['notes'].append('%s: test fault in build %s, not a finding - %s' % (r['id'], src, why))
+            fixed.append(r)
+        recs = fixed
         st = [r['status'] for r in recs]
         if 'HANG-GUARD' in st:
             v['verdict'], v['why'] = 'hung', 'the machine stopped in %s' % ','.join(
@@ -368,6 +379,13 @@ def verdicts(res, table):
     return out
 
 
+# test faults found after a build went to a board: that build's PASS / FAIL of the test is not evidence
+_G6T = ('continuous-mode transfers freeze the CPU and the CTC3 wraps were lost (fixed in g6_run after '
+        'd99fbf8: the time is rebuilt from the raster line, CTC0 and CTC3)')
+KNOWN_FAULTS = {'D02': {b: _G6T for b in ('32af2e0', '562b0db', 'd99fbf8')},
+                'D04': {b: 'the tick count was overwritten before use (every P read 16)'
+                        for b in ('32af2e0', '562b0db', 'd99fbf8')},
+                'D05': {b: 'loop counts over different lengths were compared' for b in ('32af2e0', '562b0db', 'd99fbf8')}}
 TABLE_TESTS = {'N01': 'nb.'}       # tests whose answer is a table of sub-lines, not one value
 
 
@@ -480,6 +498,10 @@ def report(doc, table, out=sys.stdout):
             print('    sources   %s' % ', '.join(c['sources']), file=out)
             for nt in x.get('notes', []):
                 print('    note      %s' % nt, file=out)
+            for t in x['tests']:
+                f = table['by_test'][t].get('fields') if t in table.get('by_test', {}) else None
+                if f:
+                    print('    fields    %s: %s' % (t, f), file=out)
     n = {}
     for x in v.values():
         n[x['verdict']] = n.get(x['verdict'], 0) + 1

@@ -297,7 +297,7 @@ t_sp09: call g8_init
         ld a,ST_PASS : ld (R_st),a : ret
 
 ; ---------------------------------------------------------------- SP10 sprites per line
-; k full sprites (pattern 0) on the same line (X = 2 x i), k = 60..128, X scale 1x / 2x / 4x / 8x (attr4
+; k full sprites (pattern 0) on the same line (X = 2 x i), k = 1..128, X scale 1x / 2x / 4x / 8x (attr4
 ; bits 4:3); $303B bit 1 after a frame. Then 128 shown, sprites 0..k-1 moved off the line (Y + 40): the
 ; smallest k for which bit 1 is clear. INFO v = smallest k with the flag at 1x (0 = never); s2 / s4 / s8;
 ; moved. About 15 s.
@@ -313,9 +313,10 @@ t_sp10: call g8_init
         ld a,(.r+2) : ld hl,k_s4 : call g8_kd
         ld a,(.r+3) : ld hl,k_s8 : call g8_kd
         ld a,(.r+4) : ld hl,k8_mv : jp g8_kd
-; B = attr4 (scale) -> A = the smallest k (60..128) with bit 1 set, 0 none
+; B = attr4 (scale) -> A = the smallest k (1..128) with bit 1 set, 0 none (board run 5 swept from 60:
+; s2 / s4 / s8 = 60 only said "below 60")
 .scan:  ld a,b : ld (.a4),a
-        ld a,60 : ld (.k),a
+        ld a,1 : ld (.k),a
 .k1:    call g8_hide
         ld a,(.k) : ld e,a : xor a
 .p:     push af : push de

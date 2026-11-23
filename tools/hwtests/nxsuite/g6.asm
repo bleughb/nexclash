@@ -117,8 +117,13 @@ g6_run: ld (.pa+1),hl : ld a,h : or l : ld (.np),a
 .t:     push hl : call line : ld (.l1),hl : pop hl
         ld bc,$183B : in a,(c) : ld (.a1),a
         ld a,(.np) : or a : jr z,.fx
+        push hl
         ld a,(.c0) : sub h : ld l,a : ld a,e : sbc a,0 : ld h,a : ld a,d : sbc a,0 : ld e,a : ld d,0
-        ret
+        ld a,e : or a : jr nz,.cn                       ; counted wraps: right when the CPU polled all along;
+        push hl : ld bc,24000 : or a : sbc hl,bc : pop hl   ; below 24000 ticks (less than any frame) the
+        jr nc,.cn                                       ; rebuilt time is used instead, which is right
+        pop hl : jr .fx                                 ; also when the DMA held the CPU part of the time
+.cn:    pop bc : ret
 .fx:    ld a,(.c0) : sub h : ld (.fi),a                 ; CTC3 ticks, mod 256
         ld hl,(.l1) : ld de,(.l0) : or a : sbc hl,de : jr nc,.f1
         ld de,(flines) : inc de : add hl,de             ; across the frame end
@@ -206,11 +211,13 @@ t_d01:  call g6_map
 ; byte absent / 3 / 2 (WR1 and WR2 bit 6 + that byte), 256 and 2048 bytes, at 3.5 and 28 MHz: clocks
 ; per byte = the slope (t2048 - t256) / 1792. Keys: m / p (memory / port), a / 3 / 2, 35 / 28.
 ; PASS if "absent" is the 3-cycle setting within 0.10 clocks everywhere (dma-default-cycle-length);
-; v = m a 28.
+; v = m a 28. A slope outside 0.5-100 clocks is a timing fault (method=fault, INFO, never FAIL). The
+; transfers are continuous: the CPU is frozen, g6_run rebuilds the time (board run 5 of d99fbf8 lost
+; the CTC3 wraps: 0 / 584 clocks).
 t_d02:  call g6_map
         ld hl,0 : ld bc,2048 : call g6_pat
         ld hl,.tab : ld (.p),hl
-        ld a,1 : ld (.ok),a
+        ld a,1 : ld (.ok),a : ld (.sane),a
 .l:     ld hl,(.p) : ld a,(hl) : cp $FF : jp z,.x
         ld (.kind),a : inc hl : ld a,(hl) : ld (.tim),a : inc hl : ld a,(hl) : ld (.spd),a : inc hl
         ld (.p),hl
@@ -219,6 +226,12 @@ t_d02:  call g6_map
         ld hl,2048 : call .time
         ld de,(.t1) : or a : sbc hl,de                  ; ticks for 1792 bytes
         ld de,0 : ld bc,1792 : call g6_cpb : ld (.v),hl : ld (.v+2),de
+        ld a,d : or e : jr nz,.ins                      ; a slope outside 0.5-100 clocks a byte is the
+        push hl : ld bc,50 : or a : sbc hl,bc : pop hl  ; method failing, not the DMA: INFO, never FAIL
+        jr c,.ins
+        ld bc,10001 : or a : sbc hl,bc : jr c,.sn
+.ins:   xor a : ld (.sane),a
+.sn:
         ; key "<kind><tim><spd>"
         ld a,(.kind) : ld (.kb),a
         ld a,(.tim) : or a : ld a,'a' : jr z,.ka
@@ -242,7 +255,9 @@ t_d02:  call g6_map
         xor a : ld (.ok),a
 .c:     jp .l
 .x:     call g6_unmap
-        ld a,(.ok) : or a : jp z,g6_fail
+        ld a,(.sane) : or a : jr nz,.s1
+        ld hl,k_meth : call ex_k : ld hl,w_fault : jp wstr    ; INFO method=fault
+.s1:    ld a,(.ok) : or a : jp z,g6_fail
         ld a,ST_PASS : ld (R_st),a : ret
 ; HL = bytes -> HL = ticks (one transfer of that kind / timing)
 .time:  ld (g6n),hl
@@ -264,6 +279,7 @@ t_d02:  call g6_map
 .v:     ds 4
 .va:    dw 0
 .ok:    db 0
+.sane:  db 0
 .kb:    db "xxxx",0
 
 ; ---------------------------------------------------------------- D03 length 0 / 1 / 16
@@ -321,8 +337,8 @@ t_d04:  call g6_map
         call g6_mk : call g6_send
         ld hl,$4000 : ld (g6lim),hl
         ld a,($00FF) : ld e,a : ld hl,$20FF : call g6_run
-        push af : ld hl,256 : ld (g6lim),hl : pop af
-        jr nc,.ok
+        push af : push hl : ld hl,256 : ld (g6lim),hl : pop hl : pop af   ; (board run 5: HL was lost here,
+        jr nc,.ok                                                     ; so every P read 16)
         ld hl,-100 : ld de,-1 : jr .w
 .ok:    ld bc,256 : call g6_cpb
 .w:     ld (.v),hl : ld (.v+2),de
@@ -378,27 +394,44 @@ t_d05:  call g6_map
         call g6_mk : call g6_send
         ld hl,$4000 : ld (g6lim),hl
         ld a,($07FF) : ld e,a : ld hl,$27FF : call g6_run
+        ld (.tk),hl : ld (.tk+2),de                         ; the ticks (board run 5: lost before use)
         ld a,$83 : out ($6B),a
-        ld hl,(g6it) : ld (.i1),hl : ld hl,(g6it+2) : ld (.i1+2),hl
+        ld hl,(g6it) : ld (.ii),hl : ld hl,(g6it+2) : ld (.ii+2),hl
+        call .rt : ld (.r1),hl
         ; the loop alone for as many wraps (+1)
+        ld hl,(.tk) : ld de,(.tk+2)
         ld l,h : ld h,e : inc hl : ld (g6lim),hl            ; wraps = ticks / 256 + 1
         xor a : ld (g6go),a
         ld e,$FF : ld hl,.nev : call g6_run
+        ld (.tk),hl : ld (.tk+2),de
         ld a,1 : ld (g6go),a : ld hl,256 : ld (g6lim),hl
-        ; share x 100 = I1 x 100 / (I0 / 100)
-        ld hl,(g6it) : ld de,(g6it+2) : ld bc,100 : call div32
-        ld a,h : or l : or d : or e : jr nz,.d
+        ld hl,(g6it) : ld (.ii),hl : ld hl,(g6it+2) : ld (.ii+2),hl
+        call .rt
+        ld a,h : or l : jr nz,.d
         inc l
-.d:     ld b,h : ld c,l
-        push bc
-        ld hl,(.i1) : ld de,(.i1+2) : call g6_x100
+.d:     push hl                                             ; share x 100 = rate1 x 10000 / rate0
+        ld bc,(.r1) : ld de,10000 : call mul16
+        pop bc : jp div32
+; (.ii) loop passes over (.tk) ticks -> HL = passes x 100 per 16 ticks (rates over different lengths
+; compare; board run 5's 104 % came from a baseline about a wrap longer than the transfer)
+.rt:    ld hl,(.tk) : ld de,(.tk+2)
+        ld b,4
+.sh:    srl d : rr e : rr h : rr l : djnz .sh
+        ld a,h : or l : jr nz,.r0
+        inc l
+.r0:    push hl
+        ld hl,(.ii) : ld de,(.ii+2) : call g6_x100
         pop bc : jp div32
 .r4:    db 0
-.i1:    ds 4
+.tk:    ds 4
+.ii:    ds 4
+.r1:    dw 0
 .b:     ds 4
 .c:     ds 4
 .nev:   db 0
 k_cont: db "cont",0
+k_meth: db "method",0
+w_fault: db "fault",0
 u_pct:  db "%",0
 
 ; ---------------------------------------------------------------- D06 status read

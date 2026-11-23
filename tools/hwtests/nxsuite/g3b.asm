@@ -781,7 +781,10 @@ k_fr:   db "frames",0
 ; acknowledge from the first byte), so each variant now first takes any waiting request (EI for two NOPs,
 ; pend= counts them) right after the line sync (the sync itself passes the ULA line of the frame before).
 ; v = bytes copied when the handler ran; ran / line / bad / dbad. PASS if the handler ran mid-transfer and
-; the copy is right.
+; the copy is right. di= : completes (dbad 0), returned-not-copied (nothing copied), paused-at-request
+; (part copied: board run 5 of d99fbf8, dbad=15203 = 1181 bytes copied against 1212 with EI at line 248 -
+; the DMA stops at the ULA request and, with interrupts off, no acknowledge comes to restart it, while the
+; CPU runs on; it does not hang).
 @t_i24:  call g3_map
         nextreg $07,3
         call g3_ulaline : ld de,5 : call g3_before : ld (.st),hl
@@ -825,7 +828,8 @@ k_fr:   db "frames",0
         ld de,(.st) : ld hl,k_start : call ex_kd
         ld a,(.pd) : ld hl,k_pend : call ex_kad
         ld hl,(.dbad) : ld a,h : or l : ld hl,w_compl : jr z,.dw
-        ld hl,w_nocopy
+        ld hl,(.dbad) : ld de,$4000 : or a : sbc hl,de : ld hl,w_nocopy : jr z,.dw
+        ld hl,w_paused                              ; part copied: the DMA stopped at the request
 .dw:    push hl : ld hl,k_di : call ex_k : pop hl : call wstr
         ld a,(i24f) : or a : ret z
         ld hl,(.bad) : ld a,h : or l : ret nz
@@ -853,6 +857,7 @@ k_dbad: db "dbad",0
 k_di:   db "di",0
 w_compl: db "completes",0
 w_nocopy: db "returned-not-copied",0
+w_paused: db "paused-at-request",0
 k_start: db "start",0
 i24h:   push af : push bc : push de : push hl
         ld a,(i24f) : or a : jr nz,.x               ; the first interrupt of the copy only
