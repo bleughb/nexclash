@@ -14,7 +14,9 @@ writes, interrupts taken, hook time from NR 7 (cycles with the CPU speed non-zer
 20 lines a frame) and the longest gap between two interrupts taken (a held-off music interrupt). Phases: windows of --window updates, sorted by the ORIGINAL's time per update:
 quiet = the fastest third, busy = the slowest third. Penalty = build time / original time - 1 over the same
 updates. With the profile's `state` addresses the runs are checked to be in lockstep at every update;
-the penalty is computed only up to the first difference.
+the penalty is computed only up to the first difference. With its `reach` addresses (some of `state`: position,
+score) a run in which none of them changes is "not measured: keys did not reach play". A probe hit under 20,000 T
+after the one before, with an interrupt taken between, is warned of as a JNext duplicate.
 
 Prints the table (pace/RESULT.txt, the lines a proof record quotes) and writes pace/pace.json. Warns when
 the penalty is beyond +-limit % (2: slower, or faster than the original's pace) or interrupts are held off
@@ -28,6 +30,7 @@ from . import jnext as J
 
 MHZ28 = 28e6                      # JNext's CYCLE: the 28 MHz master clock (8 per T at 3.5 MHz)
 DI_LINES = tuple(range(0, 311, 16))
+DUP_T = 20000                     # T: a second probe hit closer than this around an interrupt is suspect (Booty's guard)
 
 
 def script(prog, prof, probe, updates, seed, orig, max_frames, state=(), candidates=None, frames=None):
@@ -147,10 +150,50 @@ def lockstep(uo, ub, nstate):
     return None, min(len(uo), len(ub))
 
 
-def table(prog_b, prog_o, probe, note, uo, ub, co, cb, nstate, window, limit, seed):
+def duplicates(us):
+    """Probe hits that look like JNext firing an execute rule twice at one address around an accepted interrupt
+    (lesson jnext-execute-probe-fires-twice): under DUP_T T states after the hit before, under half the run's
+    median gap, and an interrupt taken in between. -> [(update, gap in T)]"""
+    gaps = [(b['u'], b['C'] - a['C'], b.get('INT', 0) - a.get('INT', 0)) for a, b in zip(us, us[1:])]
+    if not gaps:
+        return []
+    med = sorted(g for _, g, _ in gaps)[len(gaps) // 2]
+    return [(u, g // 8) for u, g, i in gaps if i > 0 and g < 8 * DUP_T and 2 * g < med]
+
+
+def reached(us, idx):
+    """The first update at which one of the state bytes idx (indices into the profile's state list) differs from
+    its value at the first update, or None: the input never changed them."""
+    for r in us:
+        if any(r.get('S%d' % k) != us[0].get('S%d' % k) for k in idx):
+            return r
+    return None
+
+
+def table(prog_b, prog_o, probe, note, uo, ub, co, cb, nstate, window, limit, seed, reach=()):
+    """reach: indices into the profile's state list of the bytes the input must change (its "reach" key)."""
     first, upto = lockstep(uo, ub, nstate)
     lines = ['PACE  %s (%s) vs %s (%s): probe 0x%04X (%s), input keyed to updates, seed %d' % (
         os.path.basename(prog_b), J.md5(prog_b)[:8], os.path.basename(prog_o), J.md5(prog_o)[:8], probe, note, seed)]
+    for tag, us in (('original', uo), ('build', ub)):
+        dup = duplicates(us)
+        if dup:
+            lines.append('WARNING: %s: the probe fired twice around an interrupt %d time(s), first at update %d (%d T '
+                         'after the hit before): a JNext duplicate shifts the update count and the keyed input; guard the '
+                         'probe or move it (lesson jnext-execute-probe-fires-twice)' % (tag, len(dup), dup[0][0], dup[0][1]))
+    if reach:
+        got = [(tag, reached(us, reach)) for tag, us in (('original', uo), ('build', ub))]
+        miss = [tag for tag, r in got if r is None]
+        if miss:
+            lines.append('RESULT: not measured: keys did not reach play: no "reach" byte changed in the %s run (%s '
+                         'updates; start keys, a menu, or keys the game does not read?)' % (
+                             ' and '.join(miss), ' / '.join(str(len(us)) for us in (uo, ub))))
+            return lines, None
+        lines.append('reach: input reached play: a "reach" byte changed at update %s' % ', '.join(
+            '%d (frame %d) in the %s' % (r['u'], r['F'], tag) for tag, r in got))
+    else:
+        lines.append('reach: not checked (no "reach" addresses in the profile: bytes such as position or score '
+                     'that the input must change)')
     if upto < 2 * window:
         lines.append('RESULT: not measured: %d updates in lockstep (original %d, build %d; the probe or the start keys?)' % (
             upto, len(uo), len(ub)))
@@ -214,12 +257,17 @@ def main(argv=None):
             J.result_block(['PACE  RESULT: not measured: %s' % note], os.path.join(a.out, 'RESULT.txt'))
             return 0
     state = [J.num(x) for x in prof.get('state', [])]
-    jobs = [(prog, script(prog, prof, probe, a.updates, a.seed, o, a.max_frames, state), os.path.join(out, tag),
+    reach = [J.num(x) for x in prof.get('reach', [])]
+    if any(x not in state for x in reach):
+        raise SystemExit('profile "reach" addresses must be in its "state" list (they are read from the logged state): %s'
+                         % ', '.join('0x%04X' % x for x in reach if x not in state))
+    jobs =[(prog, script(prog, prof, probe, a.updates, a.seed, o, a.max_frames, state), os.path.join(out, tag),
              a.max_frames, card, a.jnext_home) for tag, prog, o in (('original', a.original, True), ('build', a.build, False))]
     J.run_all(jobs)
     uo, co = load(os.path.join(out, 'original'))
     ub, cb = load(os.path.join(out, 'build'))
-    lines, res = table(a.build, a.original, probe, note, uo, ub, co, cb, len(state), a.window, a.limit, a.seed)
+    lines, res = table(a.build, a.original, probe, note, uo, ub, co, cb, len(state), a.window, a.limit, a.seed,
+                       [state.index(x) for x in reach])
     for tag, prog, _ in (('original', a.original, 0), ('build', a.build, 0)):
         w = J.check_start(os.path.join(out, tag, 'run.log'), prog)
         if w:
@@ -245,6 +293,37 @@ def selfcheck():
     ub2 = [dict(r, S0=r['S0'] + (1 if r['u'] > 90 else 0)) for r in ub]
     if lockstep(uo, ub2, 1) != (91, 90):
         bad.append(('lockstep', lockstep(uo, ub2, 1)))
+    # probe duplicates: updates of 70,000 T with an interrupt each; a second hit 300 T after update 20 around one
+    run = [dict(u=i + 1, F=i, C=560000 * i, INT=i) for i in range(50)]
+    dup = run[:20] + [dict(run[19], u=21, C=run[19]['C'] + 2400, INT=20)] + [dict(r, u=r['u'] + 1) for r in run[20:]]
+    if duplicates(dup) != [(21, 300)]:
+        bad.append(('duplicate probe hit missed', duplicates(dup)))
+    short = [dict(u=i + 1, F=i // 7, C=80000 * i, INT=i // 7) for i in range(70)]     # 10,000 T updates, 7 a frame
+    if duplicates(run) or duplicates(short):
+        bad.append(('duplicate on a clean run', duplicates(run), duplicates(short)))
+    # reach: the input must change a "reach" state byte (S1) in both runs, or "keys did not reach play"
+    import tempfile
+    import shutil
+    t = tempfile.mkdtemp(prefix='nexclash_pace_')
+    try:
+        prog = os.path.join(t, 'x.z80')
+        open(prog, 'wb').write(b'x')
+        moved = [dict(r, T28=0, S0=r['u'], S1=40 + (r['u'] > 30)) for r in run]
+        still = [dict(r, S1=40) for r in moved]
+        for label, o, b, ok in (('moved', moved, moved, True), ('build still', moved, still, False),
+                                ('both still', still, still, False)):
+            lines, res = table(prog, prog, 0x8000, 'given', o, b, [], [], 2, 10, 2.0, 1, reach=[1])
+            if ok != (res is not None) or ok != ('keys did not reach play' not in lines[-1]):
+                bad.append(('reach %s' % label, lines[1:3]))
+        lines, res = table(prog, prog, 0x8000, 'given', still, still, [], [], 2, 10, 2.0, 1)
+        if res is None or not any(ln.startswith('reach: not checked') for ln in lines):
+            bad.append(('reach not asked', lines[1:3]))
+        dupb = [dict(r, T28=0, S0=r['u'], S1=40 + (r['u'] > 30)) for r in dup]
+        lines, _ = table(prog, prog, 0x8000, 'given', moved, dupb, [], [], 2, 10, 2.0, 1, reach=[1])
+        if not any('build: the probe fired twice' in ln for ln in lines):
+            bad.append(('duplicate not reported', lines[1:3]))
+    finally:
+        shutil.rmtree(t, ignore_errors=True)
     return bad
 
 

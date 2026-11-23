@@ -91,6 +91,8 @@ def _ypix(a):
 
 
 def verify(prof, patch, rzx_path, stop=None):
+    from .machine import refuse_128k_rzx         # 48K only: a 128K engine carries its own verifier copy (fwd128.py)
+    refuse_128k_rzx(rzx_path, 'verify (the generic TID verifier)')
     U = prof['undo_buffer']
     lo, hi = prof['plotter'], prof['eraser'] + 53
     sites = [(a, new) for a, old, new in patch.sites]

@@ -7,6 +7,12 @@
    "game": "notes",
    "text": "Reading of the paging behaviour in the maintainers' notes; not checked against a source file.",
    "shown_on": "unknown"
+  },
+  {
+   "game": "games/prince_of_the_yolkfolk.md",
+   "text": "An unlocked 7FFD write every frame resets MMU slots 0/1 to ROM, so a slot-1 RAM page cannot stay mapped.",
+   "quote": "an unlocked 7FFD write every frame, which",
+   "shown_on": "analysis"
   }
  ],
  "level": "inferred",

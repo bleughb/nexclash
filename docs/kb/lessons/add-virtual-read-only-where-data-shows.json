@@ -26,6 +26,11 @@
    "text": "Original leaves ghost pixels; nothing else reads that buffer (no game logic reads the player's pixels), so no virtual read is needed.",
    "quote": "ghost pixels; nothing else reads that buffer) (docs/VERIFICATION.md).",
    "shown_on": "unknown"
+  },
+  {
+   "game": "sessions",
+   "text": "Dizzy 1: falling objects land on Dizzy by reading his pixels (472 of 736 tests depend on it), so a virtual read is needed there.",
+   "shown_on": "unknown"
   }
  ],
  "level": "observed",

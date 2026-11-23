@@ -701,6 +701,12 @@ def tools_check(src):
     print('%-4s tools: z80n - every Z80N instruction against worked results (core 3.02.05 / guide r3)%s' % (
         'OK' if not zbad else 'FAIL', '' if not zbad else ' (%s)' % zbad[:3]))
     cbad += len(zbad)
+    from nexclash import machine as mach         # the 48K-only recorder / analyse / verify (lesson recorder-128k-not-in-toolkit)
+    m128 = mach.selfcheck()
+    print('%-4s tools: 48K-only paths - recorder, analyse and verify refuse a made-up 128K snapshot / recording and '
+          'take the 48K one; the recorder takes a 128K one with an engine\'s own paging model%s' % (
+              'OK' if not m128 else 'FAIL', '' if not m128 else ' (%s)' % str(m128)[:200]))
+    cbad += len(m128)
     from nexclash import jnext                  # play checks: soak / pace / flicker / looksheet (docs/CHECKS.md)
     for name, jbad in jnext.selfcheck():
         print('%-4s tools: %s%s' % ('OK' if not jbad else 'FAIL', name, '' if not jbad else ' (%s)' % str(jbad)[:200]))
