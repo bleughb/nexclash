@@ -104,6 +104,7 @@ $08 bit 7 semantics, 48K timing vs 7FFD decoding (see A1, LEARNINGS 1.2-1.4).
 ### A1. What we rely on
 | Item | Setting / fact |
 |---|---|
+| Core | 3.03 only (owner, 2026-11-24): no 28 MHz read wait on 3.03.00 (docs/kb/hardware/next-issue2-3.03.00.json, nxsuite C01), so 28 MHz budgets may use the full 8x of 3.5 MHz; the x1.4 / 8-over-6.5 factors are a 3.02 allowance, dropped per build when it is next revised (and its checks pass). 3.02 figures in the docs are history |
 | CPU speed | NextReg $07 = 0 (3.5 MHz) |
 | Video | 50Hz forced (NextReg $05) unless `--allow-60hz` (nexclash.py convert / auto / patch / new / verify: sets z80tonex.ALLOW_60HZ, every build path; outputs then differ from the verified MD5s). "50 Hz" = clk28 / clocks per frame: 50.08 Hz at our 48K timing and VGA 0 (28e6 / (312 x 1792), computed), 49.36 at 128K timing (measured: KS1 3.03.00, nxsuite V19); VGA timings 1-6 (NextReg $11, the user's setting) run up to ~18 % fast (TECHNIQUES 2.6 clock table, register notes). Ask for the video mode with any "runs too fast" hardware report |
 | 48K fidelity | NextReg $03 = 48K timing (written after the legacy paging writes; VHDL: this does NOT stop 7FFD/1FFD decoding - with 48K/128K timing 7FFD decodes as A15=0, A1:0=01, A14 ignored; timing only changes contention); NextReg $08 contention on; 7FFD lock via the tail's own 7FFD write (bit 5) |
@@ -384,8 +385,7 @@ Hardware to confirm
    holds the list until next frame (nxsuite P01; an h passed on the CURRENT line does not wait);
    neither $64 = 33 nor 32 puts copper line 0 on 320x256 Layer 2 row 0 (V18); a 60 Hz frame has 264
    lines (F03), so with $64 = 0 a WAIT for 311 never fires there (TECHNIQUES "Raster numbering").
-   How to test any of these: tools/hwtests/README.md (one test .nex per question, a results table in
-   fixed RAM, one coloured block per test; Dean photographs the board, MAME runs the same file).
+   Tests: tools/hwtests/README.md (nxsuite).
 38. NEXLOAD overwrites the 48K printer buffer (0x5B00-0x5BFF: NextZXOS paging routines + system
    variables) after loading bank 5 (Match Day, hardware 2026-10-20: icons and team names lost, plain
    build too). Fixed per game by z80tonex `keep_printer_buffer` (opt-in, so no other output changed).
