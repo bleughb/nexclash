@@ -256,7 +256,7 @@ f_read: ld l,$9D : jp esx                              ; A = handle, IX = buffer
 f_write: ld l,$9E : jp esx                             ; A = handle, IX = buffer, BC = length
 f_close: ld l,$9B : jp esx                             ; A = handle
 
-; ---------------------------------------------------------------- the result text (8 pages, 64 KB)
+; ---------------------------------------------------------------- the result text (6 pages, 48 KB)
 ; append BC bytes from HL (bank 2 / bank 5 / slot 7 source; never slot 6) -> txtlen, crc, txtlines
 txt_append:
         ld a,b : or c : ret z
@@ -271,7 +271,7 @@ txt_append:
         ld hl,(txtlen) : call txt_map               ; HL = address in slot 6
         pop af : ld (hl),a
         ld hl,(txtlen) : inc hl : ld (txtlen),hl
-        ld a,h : cp $FF : jr nz,.ok                  ; 65280 bytes: full (room for the END line)
+        ld a,h : cp $BF : jr nz,.ok                  ; 48896 bytes: full (room for the END line)
         ld a,1 : ld (txtfull),a
 .ok:    pop hl : pop bc
         dec bc : ld a,b : or c : jr nz,.l
@@ -297,7 +297,7 @@ txt_peek:
         push hl : call txt_map : ld a,(hl) : pop hl
         nextreg $56,HOMEP6
         ret
-txtpg:  db 32,33,34,35,58,59,60,61
+txtpg:  db 32,33,34,35,58,59
 txtlen: dw 0
 txtlines: dw 0
 txtfull: db 0
@@ -390,7 +390,7 @@ txt_load:
         ld hl,0
 .p:     ld de,(PRGB+PRG_FLEN) : ex de,hl : or a : sbc hl,de : ex de,hl : jr z,.cl   ; DE = remaining
         jr c,.cl
-        ld a,h : cp $E0 : jr nc,.cl                  ; at most 7 pages read back
+        ld a,h : cp $C0 : jr nc,.cl                  ; at most 6 pages read back (no END in them: kept as a part)
         ld a,d : or a : jr z,.lt
         ld de,256
 .lt:    push hl : push de
@@ -449,6 +449,8 @@ txt_load:
 .end:   dw 0
 .bol:   db 0
 s_magic: db "NXSUITE 1",10,0
+k_choice: db "choice",0                     ; shared by the overlays (G1, G2, G3)
+w_other: db "other",0
 
 ; ---------------------------------------------------------------- progress record
 prg_read:                                           ; -> carry: no record

@@ -339,85 +339,111 @@ k_lmin: db "linemin",0
 
 ; ---------------------------------------------------------------- I10 line interrupt position
 ; 3.5 MHz, hardware IM2, line interrupt n only, CTC3 free running (/16, 256: a tick = 16 clocks of 28 MHz,
-; 2 T here). The handler reads CTC3 and the line LSB; the main loop (DI) then polls the line LSB until it
-; is n (unrolled IN / CP / JR, 23 T apart) and reads CTC3 again. raw = T between the two CTC reads; the
-; estimate of "T before line n" = raw + 61 (acknowledge 19 + handler to its read) - 35 (poll read to CTC
-; read) + 11 (half the poll step) = raw + 37, +-12. 5 interrupts each at n = 0, 100, 191, last-2; a handler
-; that already read line n's LSB is "late" (not in the mean). v = estimate at n = 100.
+; 2 T here). Forward method (board runs 3 / 4 of the old method - a handler that read the line, then a
+; poll for line n - gave 37 or 302 T at n = 0 on the same board): interrupts off, the full line is waited
+; for until it is n-2, then the line LSB is polled (unrolled IN / CP / JR, 23 T apart) until it is n-1 and
+; CTC3 is read (c0); EI and a short loop until the handler (first thing: CTC3) has run. raw = T between
+; the two CTC reads, always forward, less than 512 T (the CTC wrap) unless the interrupt is over a line
+; late. Offsets: poll read to CTC read 35 + half the poll step 11 = 46; interrupt to the handler's CTC
+; read: the loop's instruction 0-13 (7), acknowledge 19, PUSH AF / BC 22, LD BC 10, IN 12 = 70. So
+; T from the start of line n-1 to the interrupt = raw + 46 - 70 = raw - 24, +-12; minus the line length
+; (ctcpl / 50 T) = the position against the start of line n (negative = before it). 5 samples each at
+; n = 0, 100, 191, last-2: pN = mean position, sN = max - min of raw in the run (a spread above about
+; 24 T says the position is not repeatable). v = p100. No sample (no interrupt in ~65536 loops) = 9999.
 @t_i10:  nextreg $07,0
         ld bc,$1B3B : ld a,$07 : out (c),a : xor a : out (c),a
         ld hl,i10h : call g3_hwtab
-        xor a : ld (i10late),a
-        ld hl,0 : call .one : ld (.t),hl
-        ld hl,100 : call .one : ld (.t+2),hl : ld a,(i10l) : ld (.lh),a
-        ld hl,191 : call .one : ld (.t+4),hl
-        ld hl,(flines) : dec hl : dec hl : call .one : ld (.t+6),hl
+        ld hl,(ctcpl) : ld de,(ctcpl+2) : ld c,50 : call div8 : ld (.lt),hl
+        ld ix,.t
+        ld hl,0 : call .one : call .i3
+        ld hl,100 : call .one : call .i3
+        ld hl,191 : call .one : call .i3
+        ld hl,(flines) : dec hl : dec hl : call .one
         call g3_hwoff
         nextreg $07,3
-        ld hl,(.t+2) : ld de,37 : add hl,de : call res_int
+        ld hl,(.t+3) : call g3_sx100 : call res_num
         ld hl,u_t : call res_unit
-        ld hl,(.t) : ld de,37 : add hl,de : ex de,hl : ld hl,k_e0 : call ex_kd
-        ld hl,(.t+4) : ld de,37 : add hl,de : ex de,hl : ld hl,k_e191 : call ex_kd
-        ld hl,(.t+6) : ld de,37 : add hl,de : ex de,hl : ld hl,k_el2 : call ex_kd
-        ld de,(.t+2) : ld hl,k_raw : call ex_kd
-        ld a,(.lh) : ld hl,k_lh : call ex_kad
-        ld a,(i10late) : ld hl,k_late : jp ex_kad
-.t:     ds 8
-.lh:    db 0
-; HL = n -> HL = mean raw T (0 if no sample)
+        ld ix,.t : ld hl,.k : ld b,4
+.k1:    push bc
+        ld e,(ix+0) : ld d,(ix+1) : push hl : call ex_ksd : pop hl
+        call .nx : ld a,(ix+2) : push hl : call ex_kad : pop hl
+        call .nx : inc ix : inc ix : inc ix
+        pop bc : djnz .k1
+        ret
+.nx:    ld a,(hl) : inc hl : or a : jr nz,.nx
+        ret
+.i3:    inc ix : inc ix : inc ix : ret
+.lt:    dw 0
+.t:     ds 12                                       ; per n: position (signed word), spread (byte)
+.k:     db "p0",0, "s0",0, "p100",0, "s100",0, "p191",0, "s191",0, "plast2",0, "slast2",0
+; HL = n -> (ix+0/1) = mean position (9999 none), (ix+2) = raw max - min in T
 .one:   ld (.n),hl
+        ld de,(flines) : add hl,de : dec hl : call .mod : ld (.n1),hl     ; n-1, n-2 (mod the lines)
+        ld a,h : or l : jr nz,.m
+        ld hl,(flines)
+.m:     dec hl : ld (.n2),hl
         call g3_hw : nextreg $C4,2
         ld a,(.n) : nextreg $23,a
         ld a,(NRSNAP+$22) : and $F8 : or 6 : ld hl,.n+1 : or (hl) : nextreg $22,a
         ld a,G3HW>>8 : ld i,a : im 2
-        ld hl,0 : ld (.sum),hl : xor a : ld (.ns),a
+        ld hl,0 : ld (.sum),hl : xor a : ld (.ns),a : ld (.mx),a : dec a : ld (.mn),a
         ld b,5
 .s:     push bc
-        ld bc,$243B : ld a,$1F : out (c),a
         call g3_ack
         xor a : ld (i10f),a
-        ld de,0
-        ei
-.w:     ld a,(i10f) : or a : jr nz,.g
-        dec de : ld a,d : or e : jr nz,.w
-        di : jr .nx
-.g:     di
-        ld a,(.n) : ld e,a : ld a,(i10l) : cp e : jr z,.lt
-        ld bc,$253B
+        ld de,0                                     ; the full line until it is n-2
+.f:     dec de : ld a,d : or e : jr z,.nx1
+        call line : ld bc,(.n2) : or a : sbc hl,bc : jr nz,.f
+        ld bc,$243B : ld a,$1F : out (c),a : inc b
+        ld a,(.n1) : ld e,a
 .p:     in a,(c) : cp e : jr z,.q
         in a,(c) : cp e : jr z,.q
         in a,(c) : cp e : jr z,.q
         in a,(c) : cp e : jr nz,.p
-.q:     ld b,$1B : in a,(c)
-        ld e,a : ld a,(i10c) : sub e
-        ld l,a : ld h,0 : add hl,hl
+.q:     ld b,$1B : in a,(c) : ld (.c0),a
+        ld de,0
+        ei
+.w:     ld a,(i10f) : or a : jr nz,.g
+        dec de : ld a,d : or e : jr nz,.w
+        di : jr .nx1
+.g:     di
+        ld a,(.c0) : ld hl,i10c : sub (hl)           ; ticks, 8 bits
+        ld hl,.mx : cp (hl) : jr c,.g1
+        ld (hl),a
+.g1:    ld hl,.mn : cp (hl) : jr nc,.g2
+        ld (hl),a
+.g2:    ld l,a : ld h,0 : add hl,hl                 ; raw T
         ld de,(.sum) : add hl,de : ld (.sum),hl
         ld hl,.ns : inc (hl)
-        jr .nx
-.lt:    ld hl,i10late : inc (hl)
-.nx:    pop bc : djnz .s
+.nx1:   pop bc : djnz .s
         ld a,(NRSNAP+$22) : nextreg $22,a : ld a,(NRSNAP+$23) : nextreg $23,a
-        ld hl,0 : ld a,(.ns) : or a : ret z
-        ld c,a : ld hl,(.sum) : ld de,0 : call div8
+        ld a,(.ns) : or a : jr nz,.av
+        ld hl,9999 : ld (ix+0),l : ld (ix+1),h : ld (ix+2),0 : ret
+.av:    ld c,a : ld hl,(.sum) : ld de,0 : call div8   ; mean raw
+        ld de,24 : or a : sbc hl,de
+        ld de,(.lt) : or a : sbc hl,de
+        ld (ix+0),l : ld (ix+1),h
+        ld a,(.mn) : ld b,a : ld a,(.mx) : sub b : add a,a : jr nc,.sp
+        ld a,255
+.sp:    ld (ix+2),a
         ret
+; HL mod DE (HL < 2 x DE) -> HL
+.mod:   or a : sbc hl,de : ret nc
+        add hl,de : ret
 .n:     dw 0
+.n1:    dw 0
+.n2:    dw 0
 .sum:   dw 0
 .ns:    db 0
+.mn:    db 0
+.mx:    db 0
+.c0:    db 0
 i10h:   push af : push bc
         ld bc,$1B3B : in a,(c) : ld (i10c),a
-        ld b,$25 : in a,(c) : ld (i10l),a
         ld a,1 : ld (i10f),a : ld (g3int),a
         pop bc : pop af : ei : reti
 i10c:   db 0
-i10l:   db 0
 i10f:   db 0
-i10late: db 0
-k_e0:   db "e0",0
-k_e191: db "e191",0
-k_el2:  db "elast2",0
-k_raw:  db "raw100",0
-k_lh:   db "lh100",0
-k_late: db "late",0
 
 ; ---------------------------------------------------------------- I14 interrupt acknowledge cost
 ; hardware IM2, ULA enable on, every vector -> RETI. At line 150, 64 times: status cleared; [NEXTREG
@@ -718,7 +744,11 @@ k_fr:   db "frames",0
 ; once and the immediate stop cut both copies (bad=15138, dbad=16384) - so the DMA does yield the bus to
 ; the CPU here, and the test now measures the copy after it had time to finish. JNext 1.3.0 gives the same
 ; numbers as that board run (handler at the start line, 0 bytes copied by then; with interrupts off the
-; copy does not run at all): line= next to start= says whether a request was already waiting.
+; copy does not run at all): line= next to start= says whether a request was already waiting. Board run 4
+; (074feb1) gave the same with bad=0: the handler at the start line, 0 bytes, dbad=16384. A request left
+; waiting from the interrupts-off stretch before each start would explain both (the DMA then waits for an
+; acknowledge from the first byte), so each variant now first takes any waiting request (EI for two NOPs,
+; pend= counts them) right after the line sync (the sync itself passes the ULA line of the frame before).
 ; v = bytes copied when the handler ran; ran / line / bad / dbad. PASS if the handler ran mid-transfer and
 ; the copy is right.
 @t_i24:  call g3_map
@@ -730,8 +760,10 @@ k_fr:   db "frames",0
         call g3_hw
         nextreg $CC,$01
         ld a,G3HW>>8 : ld i,a : im 2
+        xor a : ld (.pd),a
         ld hl,i22p : ld b,i22p_e-i22p : call g3_dma
         ld hl,(.st) : call g3_atline
+        call .dr
         call g3_ack
         ei
         ld a,$87 : out ($6B),a
@@ -742,6 +774,9 @@ k_fr:   db "frames",0
         ld hl,$4000 : ld de,0 : ld bc,$4000 : call g3_ncpy
         ld hl,i22p : ld b,i22p_e-i22p : call g3_dma
         ld hl,(.st) : call g3_atline
+        ld hl,(i24p) : push hl : ld hl,(i24l) : push hl : ld a,(i24f) : push af
+        call .dr
+        pop af : ld (i24f),a : pop hl : ld (i24l),hl : pop hl : ld (i24p),hl
         call g3_ack
         ld a,$87 : out ($6B),a
         call .w3
@@ -757,6 +792,7 @@ k_fr:   db "frames",0
         ld de,(.bad) : ld hl,k_bad : call ex_kd
         ld de,(.dbad) : ld hl,k_dbad : call ex_kd
         ld de,(.st) : ld hl,k_start : call ex_kd
+        ld a,(.pd) : ld hl,k_pend : call ex_kad
         ld hl,(.dbad) : ld a,h : or l : ld hl,w_compl : jr z,.dw
         ld hl,w_nocopy
 .dw:    push hl : ld hl,k_di : call ex_k : pop hl : call wstr
@@ -773,6 +809,14 @@ k_fr:   db "frames",0
 .st:    dw 0
 .bad:   dw 0
 .dbad:  dw 0
+.pd:    db 0
+; a request already waiting is taken now (EI for two NOPs, after the line sync): pend counts them
+.dr:    xor a : ld (i24f),a
+        ei : nop : nop : di
+        ld a,(i24f) : ld hl,.pd : add a,(hl) : ld (hl),a
+        xor a : ld (i24f),a : ld hl,$FFFF : ld (i24p),hl : ld (i24l),hl
+        ret
+k_pend: db "pend",0
 k_ran:  db "ran",0
 k_dbad: db "dbad",0
 k_di:   db "di",0

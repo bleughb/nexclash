@@ -233,12 +233,12 @@ session or pass appends to the same file. The intake keeps every pass: a test's 
 pass, and every test whose passes disagree is listed (files from before the `P` line: a pass is inferred
 where a group starts that does not follow the previous one).
 
-Parts (no 64 KB limit): the program keeps the text in a 64 KB buffer. When it passes 48 KB the buffer is
+Parts (no 64 KB limit): the program keeps the text in a 48 KB buffer. When it passes 40 KB the buffer is
 written, with its own END line, to the next free `NXSUITE.nnn`, and `NXSUITE.TXT` goes on as a continuation:
 `NXSUITE 1`, then `C part=<nnn> src=<build>`. The intake follows the C lines back through the parts (give it
 `NXSUITE.TXT`; every part must be beside it and check; a missing one is refused). At start, an
 `NXSUITE.TXT` from another build (its first `src=` differs) or one that does not check (cut short, damaged,
-longer than the 56 KB the program reads back) is first copied unchanged to the next free `NXSUITE.nnn`
+longer than the 48 KB the program reads back) is first copied unchanged to the next free `NXSUITE.nnn`
 (menu: "file: other build kept, new" / "old kept as NXSUITE.nnn"; the new file's second line names the
 part) and a new file is started; if that copy fails the program stops with a message and writes nothing.
 If a part cannot be written, the buffer fills and every later write carries `X truncated lost=<bytes>`

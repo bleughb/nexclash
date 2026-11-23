@@ -198,31 +198,42 @@ k_hits: db "hits",0
 ; ---------------------------------------------------------------- P04 copper line = raster line
 ; for L = 0, 120, 191, 250: WAIT (L, 0); MOVE $7F,$AA; HALT started at line 0 (28 MHz); the CPU polls the
 ; line LSB and $7F in one loop and keeps the CTC3 value (/16) at the first sighting of each; then the line
-; read after $AA. PASS if the line equals L all four times; extras lL = that line, oL = T (3.5 MHz) from
-; the line change to the $7F change (ticks x 2; poll loop resolution ~4 T; negative = $7F first).
+; read after $AA. PASS if the line equals L every time; extras lL = that line, oL = T (3.5 MHz) from
+; the line change to the $7F change (ticks x 2; poll loop resolution ~4 T; negative = $7F first). Each L
+; is run in 3 frames: oL = the median, sL = max - min (board run 4 gave o191 = -62 with the other three
+; 0, JNext o120 = -74: one-off readings, so one frame per L was not enough).
 t_p04:  nextreg $07,3
         ld a,$07 : call g5_ctc
         ld a,1 : ld (.ok),a                         ; v = 1: all four lines equal
         ld hl,.ls
-.l:     ld e,(hl) : inc hl : ld d,(hl) : inc hl : ld a,d : and e : inc a : jr z,.x
+.l:     ld e,(hl) : inc hl : ld d,(hl) : inc hl : ld a,d : and e : inc a : jp z,.x
         push hl
         ld (.L),de
         ld a,d : or $80 : ld (.cl),a : ld a,e : ld (.cl+1),a
+        ld hl,.ov : ld (.op),hl : ld b,3
+.f3:    push bc
         nextreg $7F,0
         ld hl,.cl : ld bc,6 : call g5_up
         call frame_sync
         nextreg $62,$40
         call .pl
         push hl : nextreg $62,0 : pop de
+        ld (.lr),de
         ld hl,(.L) : or a : sbc hl,de : jr z,.eq
         xor a : ld (.ok),a
-.eq:    ld a,(.L) : call .kl : push hl : call g5_kl : pop hl
-        ld a,(.cc) : ld b,a : ld a,(.cl0) : sub b       ; line change - $7F change, counting down
+.eq:    ld a,(.cc) : ld b,a : ld a,(.cl0) : sub b       ; line change - $7F change, counting down
+        ld hl,(.op) : ld (hl),a : inc hl : ld (.op),hl
+        pop bc : djnz .f3
+        ld de,(.lr) : ld a,(.L) : call .kl : push hl : call g5_kl : pop hl
+        call .med : push bc
         ld l,a : ld h,0 : bit 7,a : jr z,.ps
         dec h
 .ps:    add hl,hl : ex de,hl
-        ld a,(.L) : call .kl : ld bc,5*4 : add hl,bc : call g5_ksd
-        pop hl : jr .l
+        ld a,(.L) : call .kl : ld bc,5*4 : add hl,bc : push hl : call g5_ksd : pop hl
+        ld bc,5*4 : add hl,bc : pop af : add a,a : ld e,a : ld d,0 : jr nc,.sp
+        ld de,999
+.sp:    call ex_kd
+        pop hl : jp .l
 .x:     ld a,(.ok) : ld l,a : ld h,0 : call res_int
         ld a,(.ok) : or a : jp z,g5_fail
         ld a,ST_PASS : ld (R_st),a : ret
@@ -250,6 +261,19 @@ t_p04:  nextreg $07,3
         ld hl,.k0+15 : ret
 .ls:    dw 0, 120, 191, 250, $FFFF
 .L:     dw 0
+; the three offsets (.ov, signed ticks) -> A = the median, B = max - min (ticks)
+.med:   ld hl,.ov : ld a,(hl) : xor $80 : ld c,a : inc hl
+        ld a,(hl) : xor $80 : ld d,a : inc hl : ld a,(hl) : xor $80 : ld e,a
+        ld a,c : cp d : jr c,.m1                    ; C = min(c, d), D = max(c, d)
+        ld c,d : ld d,a
+.m1:    ld a,e : cp c : jr nc,.m2                   ; E below the min: the min is the median
+        ld b,c : ld c,e : jr .m4                    ; (B = median, C = min, D = max)
+.m2:    cp d : jr c,.m3                             ; E above the max: the max is the median
+        ld b,d : ld d,e : jr .m4
+.m3:    ld b,e
+.m4:    ld a,d : sub c : push af : ld a,b : xor $80 : pop bc : ret
+.ov:    ds 3
+.op:    dw 0
 .cl:    db $80,0, $7F,$AA, $FF,$FF
 .ok:    db 0
 .fl:    db 0
@@ -258,6 +282,7 @@ t_p04:  nextreg $07,3
 .lr:    dw 0
 .k0:    db "l0",0,0,0, "l120",0, "l191",0, "l250",0
         db "o0",0,0,0, "o120",0, "o191",0, "o250",0
+        db "s0",0,0,0, "s120",0, "s191",0, "s250",0
 
 ; ---------------------------------------------------------------- P05 copper clocks per instruction
 ; WAIT (100, 0); MOVE $7F,1; 1000 x MOVE $7F,1; MOVE $7F,$AA; HALT: CTC3 (/16) ticks from the CPU's first

@@ -148,11 +148,9 @@ k_lda:  db "lda",0
 k_pop:  db "pop",0
 k_ldix: db "ldixn",0
 k_ldir: db "ldir",0
-k_choice: db "choice",0
 k_nr07: db "nr07",0
 w_nowait: db "no-wait",0
 w_wait: db "wait",0
-w_other: db "other",0
 ; v = the NOP row's mean, min, max (5 runs)
 res_g1nop:
         ld hl,(g1r) : ld de,(g1r+2) : call res_num
@@ -313,12 +311,32 @@ k_off:  db "off",0
 k_c7:   db "c7",0
 
 ; ---------------------------------------------------------------- C09: $08 bit 6 read back after a write
-; DI, at the start of line 20 write $08 with bit 6 flipped, then read $08 every 23 T (unrolled) 24 times;
-; v = T from the NEXTREG to the first read showing the new bit (999 = not within 24 reads)
+; DI, at the start of line L write $08 with bit 6 flipped, then read $08 every 23 T (unrolled) 24 times;
+; a sample = T from the NEXTREG to the first read showing the new bit (999 = not within 24 reads). 8
+; samples, L = 20..27 (board runs gave 23, 0, 0 with one sample each: the read lands either side of the
+; change, so one sample says little). v = the largest, min = the smallest, n = 8; t0 = how many were 0.
 t_c09:  nextreg $07,0
         ld a,$08 : call rdreg : ld (.r8),a
         xor $40 : and $7F : ld (.nv),a
-        call frame_sync : ld a,20 : call sync_lsb
+        ld hl,0 : ld (.mx),hl : ld (.z),hl : dec hl : ld (.mn),hl
+        ld a,20 : ld (.ln),a
+.s:     call .one
+        ld a,h : or l : jr nz,.nz
+        ld a,(.z) : inc a : ld (.z),a
+.nz:    ld de,(.mx) : push hl : or a : sbc hl,de : pop hl : jr c,.m1
+        ld (.mx),hl
+.m1:    ld de,(.mn) : push hl : or a : sbc hl,de : pop hl : jr nc,.m2
+        ld (.mn),hl
+.m2:    ld a,(.ln) : inc a : ld (.ln),a : cp 28 : jr c,.s
+        ld a,(spd0) : nextreg $07,a
+        ld hl,(.mx) : call res_int
+        ld hl,(.mn) : call x100 : ld (R_min),hl : ld (R_min+2),de
+        ld hl,8 : ld (R_n),hl
+        ld a,(.z) : ld e,a : ld d,0 : ld hl,k_t0 : call ex_kd
+        ld hl,u_t : jp res_unit
+; one sample at line (.ln) -> HL = T (999 none)
+.one:   nextreg $07,0
+        call frame_sync : ld a,(.ln) : call sync_lsb
         ld a,$08 : ld bc,$243B : out (c),a : inc b
         ld hl,WORK
         ld a,(.nv) : nextreg $08,a
@@ -326,17 +344,20 @@ t_c09:  nextreg $07,0
         in a,(c) : ld (hl),a : inc l
         EDUP
         ld a,(.r8) : and $7F : nextreg $08,a
-        ld a,(spd0) : nextreg $07,a
         ld hl,WORK : ld b,0 : ld a,(.nv) : and $40 : ld c,a
 .f:     ld a,(hl) : and $40 : cp c : jr z,.got
         inc hl : inc b : ld a,b : cp 24 : jr nz,.f
-        ld hl,999 : jr .r
+        ld hl,999 : ret
 .got:   ld l,b : ld h,0 : ld d,h : ld e,l
         add hl,hl : add hl,de : add hl,hl : add hl,hl : add hl,hl : or a : sbc hl,de   ; x 23
-.r:     call res_int
-        ld hl,u_t : jp res_unit
+        ret
 .r8:    db 0
 .nv:    db 0
+.ln:    db 0
+.z:     dw 0
+.mn:    dw 0
+.mx:    dw 0
+k_t0:   db "t0",0
 
 ; ---------------------------------------------------------------- C10: IN A,($FE) display vs border lines
 ; 1024 reads at 3.5 MHz started at line 0 (display) and at line 193 (border; ends before line 243)
@@ -434,7 +455,8 @@ k_otir: db "otir2",0
 ; ---------------------------------------------------------------- C14: undocumented flag bits 5 / 3
 ; BIT 0,(HL) with (HL) = $28, SCF, CCF, CPI ((HL) = $28, BC = 2), IN A,(C) (NextReg $7F = A, read through
 ; port $253B), LD A,I (I = A, interrupts off); each from (A, F) = ($28,0) ($28,$FF) ($D7,0) ($D7,$FF):
-; 4 hex pairs per instruction
+; 4 hex pairs per instruction. BIT n,(HL) takes bits 5 / 3 from the internal WZ register, here the CALL
+; target's high byte (i14_bit): wz= gives it, as it moves with the code (G1 moved to page 60 at $Exxx).
 t_c14:  ld a,$28 : ld (SCRATCH),a
         ld hl,k_bit : ld de,i14_bit : call .one
         ld hl,k_scf : ld de,i14_scf : call .one
@@ -442,6 +464,7 @@ t_c14:  ld a,$28 : ld (SCRATCH),a
         ld hl,k_cpi : ld de,i14_cpi : call .one
         ld hl,k_inc : ld de,i14_in : call .one
         ld hl,k_ldai : ld de,i14_ldai : call .one
+        ld a,i14_bit>>8 : ld hl,k_wz : call ex_kh
         ld a,(launch_i) : ld i,a
         ld hl,24 : jp res_int
 .one:   push de : call ex_k : pop de
@@ -472,6 +495,7 @@ k_scf:  db "scf",0
 k_ccf:  db "ccf",0
 k_cpi:  db "cpi",0
 k_ldai: db "ldai",0
+k_wz:   db "wz",0
 
 ; ---------------------------------------------------------------- C15: Layer 2 visible vs CPU at 28 MHz
 ; LDIR 1K x 8 ($8000 bank 2 -> $F000 bank 0) from line 0, Layer 2 320x256 visible (bank 22: $12 = 22,

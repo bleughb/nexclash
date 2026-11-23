@@ -14,12 +14,13 @@
 ;           $5D00 line buffer; $5E00 extras buffer; $5F00 variables; $6000 z80ntest window (G2);
 ;           $6400 NextReg snapshot; $6500 progress record; $6600 work; $6800 bank-5 timing code (C02);
 ;           $7000 results table "NXS1"; $7800 G2 records; $7E00 "NXHT" (G2 / G3); $7FFF done flag $A5
-;   bank 2  $8000 code that must not move with slots 6/7 (timing core, file I/O, G1, G2, G9);
+;   bank 2  $8000 code that must not move with slots 6/7 (timing core, file I/O, G2, G9);
 ;           $B000 timing blocks; $B800 result file parts code (txt2); $BC00-$BFFF stacks (SP $BE00; G2 timing $BFE0)
 ;   bank 0  $C000-$DFFF harness, menu, G0, test table; $F000-$F7FF scratch (page 1)
-;   pages 40-43 + 63 slot 7 overlays (40 G2 extras + G4, 41-42 G3, ...), $F800-$FFFF their own area;
+;   pages 40-43 + 60 + 63 slot 7 overlays (40 G2 extras + G4, 41-42 G3, 43 G5 + G8, 60 G1 below $F000 -
+;           C15 copies to $F000 -, 63 G6), $F800-$FFFF their own area; page 61 free;
 ;           36-39 DMA / G9 scratch, 44-53 Layer 2, 54 sprites, 55 alt ROM image
-;   pages 32-35 + 58-61 result text (64 KB), 56-57 G1 data / G2 slot 6-7 sandbox, 62 strings
+;   pages 32-35 + 58-59 result text (48 KB), 56-57 G1 data / G2 slot 6-7 sandbox, 62 strings
 
         DEVICE ZXSPECTRUMNEXT
         OPT --zxnext
@@ -44,7 +45,6 @@ start:  di
         ds $8140-$
 wrongpc: ld a,$FF : jp (ix)
         INCLUDE "nxsuite/core.asm"
-        INCLUDE "nxsuite/g1.asm"
         INCLUDE "nxsuite/g2.asm"
         INCLUDE "nxsuite/g9.asm"
 code2_end:
@@ -74,6 +74,7 @@ OVL2_G3 equ 42                  ; G3 tests in g3b.asm (flag 8 in the test table:
 OVL_G5  equ 43                  ; G5 COPPER (P08 keeps a palette copy at $F600)
 OVL_G8  equ 43                  ; G8 SPRITES shares page 43 with G5
 OVL_G6  equ 63                  ; G6 DMA (program buffer $F700)
+OVL_G1  equ 60                  ; G1 CPU (below SCRATCH: C15 copies 1 KB to $F000)
         MMU 7,OVL_G2
         ORG $E000
         INCLUDE "nxsuite/g2b.asm"
@@ -96,6 +97,10 @@ OVL_G6  equ 63                  ; G6 DMA (program buffer $F700)
         ORG $E000
         INCLUDE "nxsuite/g6.asm"
         ASSERT $ <= G6P
+        MMU 7,OVL_G1
+        ORG $E000
+        INCLUDE "nxsuite/g1.asm"
+        ASSERT $ <= SCRATCH
         MMU 7,HOMEP7
 
         ; bank 7 (pages 14 / 15) in the .nex, so tests C03 / C04 time code in pages the suite owns

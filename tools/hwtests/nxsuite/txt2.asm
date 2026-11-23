@@ -1,5 +1,5 @@
 ; nxsuite/txt2.asm - result file parts, keeping an earlier file, the build check. GPL-3.0-or-later.
-; Bank 2 at $B800 (where the CRC table was; crcb now works bit by bit). The text buffer holds 64 KB; a
+; Bank 2 at $B800 (where the CRC table was; crcb now works bit by bit). The text buffer holds 48 KB; a
 ; session may write more. So when the buffer passes ROTAT bytes, the buffer is written (with its END line)
 ; to the next free NXSUITE.nnn ("part"), and a new buffer starts with "NXSUITE 1" and
 ; "C part=<nnn> src=<build>" (it continues that part); NXSUITE.TXT is written at once with that start.
@@ -9,7 +9,7 @@
 ; first (read until F_READ returns fewer bytes than asked), then a new file is started. Only the four
 ; documented esxDOS calls are used (spec 1.1).
 
-ROTAT   equ $C000               ; 48 KB: a part is written when the buffer has this many bytes
+ROTAT   equ $A000               ; 40 KB: a part is written when the buffer has this many bytes
 
 ; called by txt_append with HL = the pending bytes, BC = their count; returns with HL / BC unchanged
 txt_rot:
