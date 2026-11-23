@@ -372,11 +372,11 @@ txt_load:
         xor a : ld (txtfull),a
         ld hl,0 : ld (txtlen),hl
         ld hl,txtname : ld b,$01 : call f_open
-        ld a,0 : ret c
-        ld (.h),a
-        ; read exactly the length the progress record holds, 256 bytes at a time into WORK (bank 5) and
-        ; copied to the text page: JNext's esxDOS refused (error 5, nothing read) a read past the end of
-        ; the file and also an 8K read into slot 6, so the suite asks only for what is there, in small reads
+        jr nc,.op
+        xor a : ret                                  ; no file
+.op:    ld (.h),a
+        ; read exactly the length the progress record holds (never past the end of the file), 256 bytes
+        ; at a time into WORK (bank 5), copied to the text page
         ld hl,0
 .p:     ld de,(PRGB+PRG_FLEN) : ex de,hl : or a : sbc hl,de : ex de,hl : jr z,.cl   ; DE = remaining
         jr c,.cl
@@ -410,7 +410,7 @@ txt_load:
         inc hl : inc hl : call txt_peek : dec hl : dec hl : cp 'D' : jr nz,.nb
         inc hl : inc hl : inc hl : call txt_peek : dec hl : dec hl : dec hl : cp ' ' : jr z,.fe
 .nb:    call txt_peek
-        call crcb
+        push af : call crcb : pop af                 ; (crcb changes A)
         ld b,0 : cp 10 : jr nz,.nl
         inc b
         ld de,(txtlines) : inc de : ld (txtlines),de
