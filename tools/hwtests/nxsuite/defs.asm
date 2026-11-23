@@ -6,7 +6,7 @@ TBUF        equ $B000           ; timing block (up to $B4FF)
 TBUF2       equ $B500           ; the empty block of the same shape
 TBUF_END    equ $B800
 CODE2B      equ $B800           ; txt2.asm (result file parts), up to $BB00 (stack: $BC00-$BDFF)
-CODE2B_END  equ $BB00
+CODE2B_END  equ $BBC0           ; txt2 + V helpers (vh2.asm); the stack below $BE00 stays above $BC00
 SCRATCH     equ $F000           ; 2 KB scratch in page 1
 IRQAREA     equ $F800           ; interrupt tables (G3)
 
@@ -67,3 +67,4 @@ GS_FAILS    equ 2
 GS_PENDOP   equ 3
 GS_HUNG     equ 4
 GS_RUN      equ 5
+VNEG        equ 0               ; 1 = the V tests' negative-control build (never committed as 1)

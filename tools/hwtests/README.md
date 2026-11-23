@@ -212,22 +212,30 @@ Groups: G0 SYS, G1 CPU, G2 Z80N, G3 IRQ, G4 FRAME, G5 COPPER, G6 DMA, G7 BENCH, 
 `nxsuite_claims.json` (`left_out`; the file says `SKIP why=left-out`, the intake prints the reason);
 `nxsuite_gen.py` refuses a test that is neither, so no `why=not-built` line can appear. Group code that does
 not fit bank 0 runs from a slot-7 overlay page (40-43, 60, 61, 63; a group may have a second page, flag 8
-in the test table).
+in the test table, and a test any other page of the generator's `xpage` list, flags bits 5-7: the V tests in
+`gv3.asm`-`gv6.asm`).
 
 ### Owner checklist (one board, one core)
 
 1. Copy `nxsuite.nex` into a new folder of its own on the SD card; start it from the Browser.
 2. Press A (RUN ALL): about 6 minutes, leave the machine alone. The border is blue while a group runs,
    then green / yellow / red. F03 and F06 switch to the other refresh rate for a moment (the picture may
-   blink; if it does not come back within 10 s: reset, start the suite again - it resumes). DONE: any key.
-3. Press V (the visual pass, about 5 minutes): answer each screen with Y / N or 1 / 2 / 3 (S = ask later).
+   blink; if it does not come back within 10 s: reset, start the suite again - it resumes). From the
+   second group on, row 1 of the group screen says `Saved: <n> lines` - the file's length after the last
+   group was written; the number grows group by group. DONE: the border turns green when the file was
+   saved, red with FILE WRITE FAILED when it was not (photograph that screen; builds up to 7a9f92e could
+   show that line when the file was saved); any key.
+3. Press V (the visual pass, about 8 minutes): answer each screen with Y / N or 1 / 2 / 3 (S = ask later).
+   Each picture is drawn under the question with a reference beside it (white / yellow lines, a square,
+   a computed colour); V01, V03, V07, V09, V12 and V18 ask about two pictures, one after the other.
    V19 first asks which cable carries the picture, then needs a watch showing seconds (SPACE starts,
    SPACE after 60 s or more stops, type the seconds, ENTER).
 4. Optional, only if you agree to the risk shown before each test (Y runs it, N skips it):
    T (timing; the machine timing is put back after each test and at the next start after a hang),
-   D (DivMMC; no SD write), H (DMA hazards; XH1 can freeze the machine; XH2 leaves the DMA deaf: let the
-   group finish, soft-reset, start the suite again, press H, N to XH1, Y to XH2 - it then reports what
-   the reset did). After a freeze: reset (or power off and on), start the suite from the same folder:
+   D (DivMMC; no SD write; when it ends check that the DONE screen's line count grew and the border is
+   green), H (DMA hazards; XH1 can freeze the machine; XH2 leaves the DMA deaf: let the group finish,
+   soft-reset - or power off and on -, start the suite again, press H, N to XH1, Y to XH2, say which reset
+   you used - it then reports what that reset did). After a freeze: reset (or power off and on), start the suite from the same folder:
    the test is marked HANG-GUARD and the run goes on.
 5. When the NEXT STEP line says NOTHING OUTSTANDING: copy `NXSUITE.TXT` (and any `NXSUITE.0nn` parts) and
    `NXSUITE.PRG` to the PC; run `python tools/hwtests/intake.py NXSUITE.TXT --board <name>`.

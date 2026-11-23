@@ -18,7 +18,8 @@
 ;           $B000 timing blocks; $B800 result file parts code (txt2); $BC00-$BFFF stacks (SP $BE00; G2 timing $BFE0)
 ;   bank 0  $C000-$DFFF harness, menu, G0, test table; $F000-$F7FF scratch (page 1)
 ;   pages 40-43 + 60 + 63 slot 7 overlays (40 G2 extras + G4, 41-42 G3, 43 G5 + G8, 60 G1 below $F000 -
-;           C15 copies to $F000 -, 61 G7, 63 G6; X-T after G7, X-D after G1, X-H after G6, V after G3),
+;           C15 copies to $F000 -, 61 G7, 63 G6; X-T after G7, X-D after G1, X-H after G6, V after G3;
+;           more V tests in 40 $F200, 43, 60 and 63 $FD02 by the test table's page number),
 ;           $F800-$FFFF their own area;
 ;           36-39 DMA / G9 scratch, 44-53 Layer 2, 54 sprites, 55 alt ROM image
 ;   pages 32-35 + 58-59 result text (48 KB), 56-57 G1 data / G2 slot 6-7 sandbox, 62 strings
@@ -60,6 +61,7 @@ code2_end:
         ASSERT code2_end <= TBUF
         ORG CODE2B
         INCLUDE "nxsuite/txt2.asm"
+        INCLUDE "nxsuite/vh2.asm"
 txt2_end:
         ASSERT $ <= CODE2B_END
 
@@ -90,6 +92,10 @@ OVL2_V  equ 42                  ; V tests in gv2.asm, after g3b.asm on page 42 (
 OVL_XT  equ 61                  ; X-T after G7 on page 61
 OVL_XD  equ 60                  ; X-D after G1 on page 60
 OVL_XH  equ 63                  ; X-H after G6 on page 63 (IM2 table $FC00)
+OVLX_1  equ 40                  ; V tests in gv3.asm at $F200-$FCFF of page 40 (Z04: $F000-$F1FF, F05: $FD00-)
+OVLX_2  equ 43                  ; V tests in gv4.asm after G5 / G8 (test table flags bits 5-7 = k: page OVLX_k)
+OVLX_3  equ 60                  ; V tests in gv5.asm after G1 / X-D
+OVLX_4  equ 63                  ; V tests in gv6.asm at $FD02 (above X-H's IM2 table and vector)
         MMU 7,OVL_G2
         ORG $E000
         INCLUDE "nxsuite/g2b.asm"
@@ -116,6 +122,7 @@ gv2_end:
         ORG $E000
         INCLUDE "nxsuite/g5.asm"
         INCLUDE "nxsuite/g8.asm"
+g58_end:
         ASSERT $ <= G5PAL
         MMU 7,OVL_G6
         ORG $E000
@@ -138,6 +145,26 @@ gxd_end:
         INCLUDE "nxsuite/g7.asm"
         INCLUDE "nxsuite/gxt.asm"
 gxt_end:
+        ASSERT $ <= $10000
+        MMU 7,OVLX_1
+        ORG $F200
+        INCLUDE "nxsuite/gv3.asm"
+gv3_end:
+        ASSERT $ <= F5T
+        MMU 7,OVLX_2
+        ORG g58_end
+        INCLUDE "nxsuite/gv4.asm"
+gv4_end:
+        ASSERT $ <= G5PAL
+        MMU 7,OVLX_3
+        ORG gxd_end
+        INCLUDE "nxsuite/gv5.asm"
+gv5_end:
+        ASSERT $ <= SCRATCH
+        MMU 7,OVLX_4
+        ORG $FD02
+        INCLUDE "nxsuite/gv6.asm"
+gv6_end:
         ASSERT $ <= $10000
         MMU 7,HOMEP7
 

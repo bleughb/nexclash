@@ -240,7 +240,7 @@ run_end:
         ld a,2 : ld (PRGB+PRG_STATE),a
         ld hl,$FFFF : ld (PRGB+PRG_TIDX),hl
         call prg_write
-        call txt_flush : ld (flushfail),a
+        call txt_flush : sbc a,a : ld (flushfail),a     ; $FF = not saved (carry; A itself is not a status)
         ld a,$A5 : ld (DONEFLAG),a
         call cls
         xor a : ld (crow),a : ld (ccol),a
@@ -258,15 +258,17 @@ run_end:
         ld hl,(lostcnt) : ld a,h : or l : jr z,.nl
         ld a,4 : ld (crow),a : xor a : ld (ccol),a : ld hl,m_lost : call puts
         ld a,1 : ld (wsink),a : ld hl,(lostcnt) : call wdec : xor a : ld (wsink),a
-.nl:    ld a,(flushfail) : or a : jr z,.k
+.nl:    ld a,(flushfail) : or a : ld a,4 : jr z,.k0  ; border green: saved; red: not saved
         ld a,3 : ld (crow),a : xor a : ld (ccol),a : ld hl,m_wfail : call puts
+        ld a,2
+.k0:    out ($FE),a
 .k:     ld a,5 : ld (crow),a : xor a : ld (ccol),a : ld hl,m_any : call puts
         call keys_up
 .w:     call getkey : or a : jr z,.w
         jp menu
 flushfail: db 0
 m_done: db "DONE - you may reset.",0
-m_done2: db "Results: NXSUITE.TXT",0
+m_done2: db "Saved to NXSUITE.TXT (total):",0
 m_wfail: db "FILE WRITE FAILED - photograph",0
 m_bytes: db "bytes ",0
 m_lines: db " lines ",0
@@ -414,12 +416,14 @@ run_test_marked:
         ld ix,(cure)
 .ni:    bit 1,(ix+5) : jr z,.go                     ; operator test, unattended: pending
         ld a,(unatt) : or a : jr z,.go
-        ld a,ST_PENDOP : ld (R_st),a : jr .emit
-.skip:  ld (R_why),hl : ld a,ST_SKIP : ld (R_st),a : jr .emit
+        ld a,ST_PENDOP : ld (R_st),a : jp .emit
+.skip:  ld (R_why),hl : ld a,ST_SKIP : ld (R_st),a : jp .emit
 .go:    ld ix,(cure) : ld a,(ix+4) : call gent       ; slot 7 = the group's overlay page
         ld a,(ix+7) : or a : jr nz,.ov
         ld a,HOMEP7
-.ov:    ld ix,(cure) : bit 3,(ix+5) : jr z,.o1       ; flag 8: the group's second page
+.ov:    ld ix,(cure) : ld b,a : ld a,(ix+5) : and $E0 : jr z,.o2   ; flags bits 5-7 = k: page xpage[k-1]
+        rlca : rlca : rlca : dec a : ld hl,xpage : add hl,a : ld a,(hl) : jr .o1
+.o2:    ld a,b : bit 3,(ix+5) : jr z,.o1             ; flag 8: the group's second page
         inc a
 .o1:    ld (ovlpage),a : nextreg $57,a
         ld ix,(cure) : bit 0,(ix+5) : jr z,.nm
@@ -821,7 +825,7 @@ gscreen:
 .c:     ld a,(hl) : or a : jr z,.cd
         call putc : inc hl : djnz .c
 .cd:    pop bc : inc c : djnz .t
-        ret
+        jp g_show                                   ; row 1: the lines saved at the last group's write
 m_running: db " - running",0
 ; A = test index -> crow / ccol of its line on the group screen (rows 2-23, two columns)
 tpos:   ld hl,gfirst : sub (hl)

@@ -667,6 +667,79 @@ def _v07(e, rec, src):
                 'the 320 x 256 Layer 2 shown too). The claim: top, then both.' % (a, b))
 
 
+def _vone(table):
+    """a one-question V test: v = word -> (status, what the operator saw)"""
+    def f(e, rec, src):
+        say = table.get(rec.get('v'))
+        return (say[0], 'operator: %s.' % say[1]) if say else None
+    return f
+
+
+def _vtwo(k1, t1, k2, t2):
+    """a two-question V test (keys k1 / k2): PASS when both answers are the claim's, FAIL when either is the
+    named other one, else no status"""
+    def f(e, rec, src):
+        a, b = t1.get(e.get(k1)), t2.get(e.get(k2))
+        if not a or not b:
+            return None
+        st = 'PASS' if a[0] == 'PASS' and b[0] == 'PASS' else ('FAIL' if 'FAIL' in (a[0], b[0]) else None)
+        return st, 'operator: %s; %s.' % (a[1], b[1])
+    return f
+
+
+OTHER = (None, "something else - see the operator's notes")
+_v17 = _vone({'lower': ('PASS', 'the upper row stayed inside the clip window, the lower row (below the copper MOVE of $15 '
+                                'with its own value) ran past it: the MOVE reset the clip windows'),
+              'inside': ('FAIL', 'both rows stayed inside the clip window: the copper MOVE to $15 did not reset it'),
+              'other': OTHER})
+_v01u = {'book': ('PASS', 'sprite clip window: display dots without the border, ignored over the border without $15 bit 5, '
+                          '2-dot units across the wide area with it'),
+         'one-dot': ('FAIL', 'sprite clip window over the border with $15 bit 5 still in display dots (not 2-dot units)'),
+         'other': OTHER}
+_v01l = {'late': ('PASS', 'a copper sprite change shown one line after the line it was made on'),
+         'same-line': ('FAIL', 'a copper sprite change shown on the line it was made on'), 'other': OTHER}
+_v03 = _vtwo('s', {'wide': ('PASS', 'X scale 4 after rotation: the bar stayed wide'),
+                   'tall': ('FAIL', 'X scale 4 with rotation gave a tall bar: scale before rotation'), 'other': OTHER},
+             'o', {'tl': ('PASS', 'rotate + X mirror left the red corner top left: rotation first, then the mirror'),
+                   'br': ('FAIL', 'rotate + X mirror put the red corner bottom right: the mirror first'), 'other': OTHER})
+_v06 = _vone({'claim': ('PASS', 'the priority colour drew over the sprites (in order SLU and in blend mode 110), and not '
+                                'where its colour was the transparent one'),
+              'no-prio': ('FAIL', 'the sprites drew over every block: the priority bit did not lift Layer 2'),
+              'other': OTHER})
+_v09 = _vtwo('a', {'on': ('PASS', '256 x 192 scrolled X 128 / Y 96: the stripes met on the square (wrap at 256 / 192)'),
+                   'off': ('FAIL', '256 x 192: the stripes missed the square (not wrapping at 256 / 192)'), 'other': OTHER},
+             'w', {'on': ('PASS', '320 x 256 scrolled X 160 / Y 128: the stripes met on the square (wrap at 320 / 256)'),
+                   'off': ('FAIL', '320 x 256: the stripes missed the square (not wrapping at 320 / 256)'), 'other': OTHER})
+_v11 = _vone({'wrap': ('PASS', "the tiles past bank 7 offset $1FFF took page 14's start (green): the offset wraps at 8K"),
+              'page15': ('FAIL', 'the tiles past bank 7 offset $1FFF came from page 15 (red)'), 'other': OTHER})
+_v12 = _vtwo('t', {'grey': ('PASS', 'text mode: the background index (colour = $14) was transparent'),
+                   'pink': ('FAIL', 'text mode: the background index with the $14 colour was drawn'), 'other': OTHER},
+             'f', {'lower': ('PASS', '$6B bit 0 set by the copper at line 152 put the tiles marked "ULA over" over the ULA '
+                                     'below that line only'),
+                   'none': ('FAIL', '$6B bit 0 did not bring the tiles marked "ULA over" in front of the ULA'),
+                   'other': OTHER})
+_v13 = _vone({'claim': ('PASS', 'order %110 with $68 bits 6:5 = %01: tiles with attribute bit 0 = 0 in front of the '
+                                'sprites, with bit 0 = 1 behind them'),
+              'red-top': ('FAIL', 'the sprites drew over both tile blocks'), 'other': OTHER})
+_v14 = _vone({'match': ('PASS', 'blend 110 (add, clamp 7), blend 111 (add, take 5) and stencil (ULA AND tilemap) each '
+                                'matched the colour computed beside it'),
+              'differ': ('FAIL', 'at least one of blend 110, 111 and stencil differed from the computed colour'),
+              'other': OTHER})
+_v04 = _vone({'claim': ('PASS', 'ULA and Layer 2 transparent by colour = $14, tilemap and sprites by index = $4C / $4B '
+                                '(before the palette offset / palette)'),
+              'differ': ('FAIL', 'one or more of the four bands did not follow its transparency rule'), 'other': OTHER})
+
+
+def _v01u_f(e, rec, src):
+    say = _v01u.get(e.get('u'))
+    return (say[0], 'operator: %s.' % say[1]) if say else None
+
+
+def _v01l_f(e, rec, src):
+    say = _v01l.get(e.get('l'))
+    return (say[0], 'operator: %s.' % say[1]) if say else None
+
+
 RESETS = {'soft': 'an F4 soft reset', 'hard': 'a hard reset', 'power': 'power off and on'}
 
 
@@ -691,7 +764,13 @@ def _xh2(e, rec, src):
     return st, 'board: %s.' % '; '.join(parts)
 
 
-DERIVE = {('XH2', 'dma-wr4-interrupt-lock'): _xh2, ('V07', 'lay-l2-wide-clip-default'): _v07, ('V05', 'lay-border-transparent'): _v05, ('V18', 'frame-64-33-l2-top'): _v18, ('V10', 'lay-l2-flip-not-synced'): _v10,
+DERIVE = {('V17', 'copper-15-resets-clip'): _v17, ('V01', 'spr-clip-units'): _v01u_f,
+          ('V01', 'spr-change-one-line-late'): _v01l_f, ('V03', 'spr-scale-rotate'): _v03,
+          ('V06', 'lay-l2-priority-bit'): _v06, ('V09', 'lay-l2-scroll-ranges'): _v09,
+          ('V11', 'lay-tilemap-bank7-wrap'): _v11, ('V12', 'lay-tilemap-text-and-6b'): _v12,
+          ('V13', 'lay-sprites-between-ula-tilemap'): _v13, ('V14', 'lay-blend-stencil'): _v14,
+          ('V04', 'lay-transparency-rules'): _v04,
+          ('XH2', 'dma-wr4-interrupt-lock'): _xh2, ('V07', 'lay-l2-wide-clip-default'): _v07, ('V05', 'lay-border-transparent'): _v05, ('V18', 'frame-64-33-l2-top'): _v18, ('V10', 'lay-l2-flip-not-synced'): _v10,
           ('XT2', 'frame-timing-change-frame-end'): _xt2,
           ('XT4', 'mem-48k-timing-7ffd'): _xt4, ('D02', 'dma-default-cycle-length'): _d02_default, ('D02', 'dma-cost-per-byte'): _d02_cost,
           ('D04', 'dma-prescaler-rate'): _d04, ('D05', 'dma-burst-cpu-share'): _d05,

@@ -1517,7 +1517,7 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
-   "left_out": "A one-key answer can decide it: a column of sprites across the wide area with a white frame drawn at the clip edges (\"do the sprites stop at the frame: 1 yes / 2 stop short / 3 run past\"), and the one-line delay with the V18 method (a one-line white rule lit only on the line the change should reach: one line or two). Not built in this build only for room: the V group's two overlay pages are full (page 41: 281 bytes free, page 42: 21, bank 2: 39) and a picture test with its question takes 300-600 bytes; it needs a third V page (page 43 has about 3 KB free after G5 / G8, but the test table can only give a test its group's page or the next one - a harness change)."
+   "fields": "V01: u / l = two answers. u (sprite rows over three bands, clip window X 64-127): book (band 1 between the white lines at display 63 / 128, band 2 all across with the sprites over the border, band 3 between the yellow lines at 95 / 224: 2-dot units across the wide area), one-dot (band 3 between the white lines) or other. l (sprite 31 shown by the copper at line 157 and hidden at 158, white Layer 2 rows 156 and 158): late (the dash covers row 158: shown one line later, the claim) or same-line (it fills the gap at 157). means=<u>-<l>. The copper writes the clip window again after each $15 MOVE (V17's claim). The copper $15 bit 6 part of the claim is not asked."
   },
   {
    "id": "V02",
@@ -1544,7 +1544,7 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
-   "left_out": "A one-key answer can decide it: an arrow sprite at X scale 4 in the four rotate / mirror settings, each beside reference arrows drawn in the ULA (\"which reference does it match: 1 / 2 / 3\"). Not built in this build only for room: the V group's two overlay pages are full (page 41: 281 bytes free, page 42: 21, bank 2: 39) and a picture test with its question takes 300-600 bytes; it needs a third V page (page 43 has about 3 KB free after G5 / G8, but the test table can only give a test its group's page or the next one - a harness change)."
+   "fields": "V03: s / o = two answers. s (a green sprite rotated with X scale 4, white rows 114 / 133): wide (it lies between them: scale after rotation, the claim) or tall. o (a green sprite with a red top-left quarter, rotate + X mirror): tl (the corner stays top left: rotate first, then mirror, the claim) or br (mirror first). means=<s>-<o>."
   },
   {
    "id": "V04",
@@ -1558,7 +1558,7 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
-   "left_out": "A one-key answer can decide it: four panels (ULA, Layer 2, tilemap, sprite) over stripes, each set to its own transparency rule (\"how many panels show the stripes through them\"). Not built in this build only for room: the V group's two overlay pages are full (page 41: 281 bytes free, page 42: 21, bank 2: 39) and a picture test with its question takes 300-600 bytes; it needs a third V page (page 43 has about 3 KB free after G5 / G8, but the test table can only give a test its group's page or the next one - a harness change)."
+   "fields": "V04: v = claim (four bands from line 112: Layer 2 stripes through the ULA paper given the $14 colour by the copper; grey through tiles of index 15 = $4C whose palette entry is red; grey through sprites of index $E3 = $4B whose entry is green; the $4A yellow through the ULA paper and a Layer 2 index whose colour is $14's), differ, or other. $4B / $4C are written to their reset values $E3 / $0F; the tilemap text-mode and LoRes cases are not asked here (text mode: V12)."
   },
   {
    "id": "V05",
@@ -1586,7 +1586,7 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
-   "left_out": "A one-key answer can decide it: a sprite crossing a Layer 2 block whose colour has the priority bit, in SLU and in blend mode (\"is the block in front of the sprite: 1 both / 2 SLU only / 3 neither\"). Not built in this build only for room: the V group's two overlay pages are full (page 41: 281 bytes free, page 42: 21, bank 2: 39) and a picture test with its question takes 300-600 bytes; it needs a third V page (page 43 has about 3 KB free after G5 / G8, but the test table can only give a test its group's page or the next one - a harness change)."
+   "fields": "V06: v = claim (red sprite bars over a plain Layer 2 block, under the block whose colour has the priority bit, and through the priority block whose colour is $14's; the same above line 136 in order SLU and below it in blend mode 110), no-prio (red over every block), or other."
   },
   {
    "id": "V07",
@@ -1628,7 +1628,7 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
-   "left_out": "A one-key answer can decide it: a Layer 2 picture with a coloured edge column, scrolled to each wrap edge in copper bands (\"does the edge column reappear at the left in every band\"). Not built in this build only for room: the V group's two overlay pages are full (page 41: 281 bytes free, page 42: 21, bank 2: 39) and a picture test with its question takes 300-600 bytes; it needs a third V page (page 43 has about 3 KB free after G5 / G8, but the test table can only give a test its group's page or the next one - a harness change)."
+   "fields": "V09: a / w = two answers, the red (picture x 0-7) and green (picture y 0-7) Layer 2 stripes crossing a white sprite square at display (120-135, 88-103). a: 256 x 192 scrolled X 128 / Y 96; w: 320 x 256 scrolled X 160 / Y 128: on (they cross on the square: wraps 256 / 192 and 320 / 256, the claim) or off. means=<a>-<w>. $71 bit 0 (X bit 8) is 0 in both: the X range above 255 is not asked."
   },
   {
    "id": "V10",
@@ -1655,7 +1655,7 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
-   "left_out": "A one-key answer can decide it: tile definitions at bank 7 offsets $1F00-$20FF with page 14 painted red and page 15 green (\"are the wrapped tiles red or green\"). Not built in this build only for room: the V group's two overlay pages are full (page 41: 281 bytes free, page 42: 21, bank 2: 39) and a picture test with its question takes 300-600 bytes; it needs a third V page (page 43 has about 3 KB free after G5 / G8, but the test table can only give a test its group's page or the next one - a harness change)."
+   "fields": "V11: v = wrap (a green bar: tile 8 at definition base $1F00 read page 14's first bytes - the bank 7 offset wraps at 8K, the claim), page15 (a red bar: page 15 was read), or other."
   },
   {
    "id": "V12",
@@ -1669,7 +1669,7 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
-   "left_out": "A one-key answer can decide it: text-mode tiles over a ULA pattern, and a band with $6B bit 0 (\"is the ULA pattern visible through the tile background; is the band's tilemap in front\"). Not built in this build only for room: the V group's two overlay pages are full (page 41: 281 bytes free, page 42: 21, bank 2: 39) and a picture test with its question takes 300-600 bytes; it needs a third V page (page 43 has about 3 KB free after G5 / G8, but the test table can only give a test its group's page or the next one - a harness change)."
+   "fields": "V12: t / f = two answers. t (text mode, attribute $20: checks of index $21 green and $20 whose colour is $14's): grey (the background is transparent: colour vs $14, the claim) or pink. f (4-bit tiles with attribute bit 0 = 1, $6B bit 0 set by the copper from line 152): lower (only the bar below line 152 shows over the ULA, the claim) or none. means=<t>-<f>. The 7-bit palette offset is used ($20) but not asked on its own."
   },
   {
    "id": "V13",
@@ -1683,7 +1683,7 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
-   "left_out": "A one-key answer can decide it: tiles with attribute bit 0 clear and set, a sprite crossing both (\"is the sprite behind the first tile and in front of the second\"). Not built in this build only for room: the V group's two overlay pages are full (page 41: 281 bytes free, page 42: 21, bank 2: 39) and a picture test with its question takes 300-600 bytes; it needs a third V page (page 43 has about 3 KB free after G5 / G8, but the test table can only give a test its group's page or the next one - a harness change)."
+   "fields": "V13: v = claim (order %110 with $68 bits 6:5 = %01: a green tile block with attribute bit 0 = 0 over the red sprite bar, one with bit 0 = 1 under it; the ULA paper given $14's colour), red-top (the sprites over both), or other. Layer 2 is not shown: its place at the bottom is not asked."
   },
   {
    "id": "V14",
@@ -1697,7 +1697,7 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
-   "left_out": "A one-key answer can decide it: blend-mode swatches each beside its expected colour drawn in a non-blended layer (\"do all pairs match\"). Not built in this build only for room: the V group's two overlay pages are full (page 41: 281 bytes free, page 42: 21, bank 2: 39) and a picture test with its question takes 300-600 bytes; it needs a third V page (page 43 has about 3 KB free after G5 / G8, but the test table can only give a test its group's page or the next one - a harness change)."
+   "fields": "V14: v = match (three pairs, each one colour: blend 110 and 111 of the ULA grey and Layer 2 colour $24, and the stencil AND of the grey and a yellow tile, each beside a sprite square in the colour computed from the grey read back from the ULA palette), differ, or other. $68 bits 6:5 = 00 (the ULA as the blend source); the book's 5,2,0 + 5,5,0 example itself is not shown."
   },
   {
    "id": "V15",
@@ -1737,7 +1737,7 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
-   "left_out": "A one-key answer can decide it: a sprite clip box with a white frame drawn round it, a copper MOVE of $15 at line 100 (\"below the line, do sprites appear outside the frame\"). Not built in this build only for room: the V group's two overlay pages are full (page 41: 281 bytes free, page 42: 21, bank 2: 39) and a picture test with its question takes 300-600 bytes; it needs a third V page (page 43 has about 3 KB free after G5 / G8, but the test table can only give a test its group's page or the next one - a harness change)."
+   "fields": "V17: v = lower (the copper narrows the sprite clip window to X 96-159 from line 0 and MOVEs $15 with its own value at line 132: the upper sprite row stays between the white lines, the lower one runs past them - the MOVE reset the window, the claim), inside (both rows stay inside), or other. Only the sprite window is looked at."
   },
   {
    "id": "V18",

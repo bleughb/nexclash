@@ -67,6 +67,30 @@ def page2_labels():
     return out
 
 
+def extra_pages():
+    """[(k, OVLX_k symbol, set of test labels)] for files included under `MMU 7,OVLX_<k>` (k = 1-7): their tests
+    run with slot 7 = page OVLX_k (test table flags bits 5-7 = k, harness xpage table)."""
+    files, cur = {}, ''
+    for line in open(os.path.join(HERE, 'nxsuite.asm')):
+        m = re.match(r'\s+MMU 7,(\w+)', line)
+        if m:
+            cur = m.group(1)
+        m = re.match(r'\s+INCLUDE "nxsuite/(\w+\.asm)"', line)
+        if m and cur.startswith('OVLX_'):
+            files.setdefault(int(cur[5:]), set()).add(m.group(1))
+    out = []
+    for k in sorted(files):
+        assert 1 <= k <= 7, k
+        labs = set()
+        for f in files[k]:
+            for line in open(os.path.join(HERE, 'nxsuite', f)):
+                m = re.match(r'@?(t_[a-z0-9]+):', line)
+                if m:
+                    labs.add(m.group(1))
+        out.append((k, 'OVLX_%d' % k, labs))
+    return out
+
+
 def overlays():
     """group id -> overlay page symbol, for groups whose code sits in a slot-7 overlay (OVL_<id> equ ...)."""
     out = {}
@@ -113,13 +137,18 @@ def tests_inc(out):
         first += len(rows)
     lines.append('NBUILT  equ %d' % nbuilt_all)
     # test table, 12 bytes: id (4 chars), group index, flags, routine, claims ptr, title ptr (strings: STRPAGE)
+    xp = extra_pages()
+    xk = {lab: k for k, _, labs in xp for lab in labs}
+    lines.append('xpage:  db %s' % (','.join(sym for _, sym, _ in xp) or '0'))
+    assert [k for k, _, _ in xp] == list(range(1, len(xp) + 1)), 'OVLX_ pages must be numbered 1, 2, ...'
     lines.append('ttab:')
     gidx = {g['id']: g['index'] for g in groups}
     for x in tests:
         assert len(x['id']) <= 4, x['id']
         lab = 't_' + x['id'].lower()
         flags = (FLAG_RISK if x['risk'] != 'none' else 0) | (FLAG_OPER if x['operator'] else 0) | \
-                (FLAG_OPTIN if x['opt_in'] else 0) | (FLAG_OVL2 if lab in p2 else 0) |                 (FLAG_LEFT if 'left_out' in x else 0)
+                (FLAG_OPTIN if x['opt_in'] else 0) | (FLAG_OVL2 if lab in p2 else 0) | \
+                (FLAG_LEFT if 'left_out' in x else 0) | (xk.get(lab, 0) << 5)
         assert not ('left_out' in x and lab in labels), x['id'] + ': left out and built'
         # the final suite: every test is built or left out with a reason - no SKIP why=not-built line
         assert 'left_out' in x or lab in labels, x['id'] + ': neither built nor left out (give it a left_out reason)'

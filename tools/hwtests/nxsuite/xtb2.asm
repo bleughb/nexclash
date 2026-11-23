@@ -143,3 +143,10 @@ cop_load:
         nextreg $62,0 : nextreg $61,0
 .l:     ld a,(hl) : nextreg $60,a : inc hl : djnz .l
         nextreg $61,0 : nextreg $62,%11000000 : ret
+; row 1 of the group screen -> "Saved: <lines>" = NXSUITE.TXT's line count at the last group's good write
+; (board run 7: X-D left no record and nothing on the screen said so); nothing before the first write
+g_show: ld hl,(savedl) : ld a,h : or l : ret z
+        push hl : ld hl,1 : ld (crow),hl : ld hl,m_saved : call puts : pop hl   ; crow = 1, ccol = 0
+        ld a,1 : ld (wsink),a : call wdec
+        ld hl,m_lines : call puts
+        xor a : ld (wsink),a : ret
