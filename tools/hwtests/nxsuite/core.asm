@@ -205,23 +205,15 @@ x100:   ld b,h : ld c,l : ld de,100 : jp mul16
 
 ; ---------------------------------------------------------------- CRC-16/CCITT (poly $1021, init $FFFF)
 crc_init:
-        ld hl,CRCTAB : ld c,0
-.i:     ld d,c : ld e,0 : ld b,8
-.b:     sla e : rl d : jr nc,.n
-        ld a,d : xor $10 : ld d,a : ld a,e : xor $21 : ld e,a
-.n:     djnz .b
-        ld (hl),e : inc hl : ld (hl),d : inc hl
-        inc c : jr nz,.i
         ret
-; A = byte -> (crc) updated (all registers but AF kept)
-crcb:   push hl : push de
-        ld hl,(crc)
-        xor h : ld e,l
-        ld l,a : ld h,0 : add hl,hl : ld a,h : add a,CRCTAB>>8 : ld h,a
-        ld a,(hl) : inc hl : ld d,(hl)
-        ld l,a : ld a,d : xor e : ld h,a
+; A = byte -> (crc) updated (all registers but AF kept); bit by bit (the table's 512 bytes hold txt2.asm)
+crcb:   push hl : push bc
+        ld hl,(crc) : xor h : ld h,a : ld b,8
+.l:     add hl,hl : jr nc,.n
+        ld a,h : xor $10 : ld h,a : ld a,l : xor $21 : ld l,a
+.n:     djnz .l
         ld (crc),hl
-        pop de : pop hl
+        pop bc : pop hl
         ret
 crc:    dw $FFFF
 
@@ -268,7 +260,8 @@ f_close: ld l,$9B : jp esx                             ; A = handle
 ; append BC bytes from HL (bank 2 / bank 5 / slot 7 source; never slot 6) -> txtlen, crc, txtlines
 txt_append:
         ld a,b : or c : ret z
-        ld a,(txtfull) : or a : ret nz
+        call txt_rot                                ; a part written first when the buffer is past ROTAT
+        ld a,(txtfull) : or a : jr nz,txt_lose
 .l:     push bc
         ld a,(hl) : inc hl : push hl
         push af : call crcb : pop af
@@ -284,6 +277,11 @@ txt_append:
         dec bc : ld a,b : or c : jr nz,.l
         nextreg $56,HOMEP6
         ret
+; BC bytes could not be stored: counted (the next write says "X truncated")
+txt_lose:
+        ld hl,(lostcnt) : add hl,bc : jr nc,.s
+        ld hl,$FFFF
+.s:     ld (lostcnt),hl : ret
 ; HL = offset in the text -> the page mapped into slot 6, HL = address there
 txt_map:
         push de
@@ -306,14 +304,23 @@ txtfull: db 0
 
 ; write the text + an END line to NXSUITE.TXT (the END line is not kept in the buffer) -> carry = error
 txt_flush:
+        ld hl,txtname : call txt_wr : ret c
+        ld hl,(txt_wr.flen) : ld (PRGB+PRG_FLEN),hl ; the file's length (END included), for txt_load
+        call prg_write
+        or a : ret
+; HL = file name: the text + ("X truncated" if anything was lost) + an END line written there
+txt_wr: ld (.nm),hl
+        ld hl,rotbusy : inc (hl)                    ; no part is written from inside this write
         ld hl,(txtlen) : ld (.len),hl
         ld hl,(crc) : ld (.crc),hl
         ld hl,(txtlines) : ld (.lin),hl
         ld a,(txtfull) : ld (.full),a
         xor a : ld (txtfull),a
+        call txt_lost
+        xor a : ld (txtfull),a                      ; (the X line may have reached the mark: END still fits)
         call endline                                ; END line into LB, HL = LB, BC = length
         call txt_append
-        ld hl,txtname : ld b,$0E : call f_open : jr c,.out
+        ld hl,(.nm) : ld b,$0E : call f_open : jr c,.out
         ld (.h),a
         ld hl,0                                     ; offset written
 .p:     ld de,(txtlen) : ex de,hl : or a : sbc hl,de : jr z,.cl   ; remaining = len - offset
@@ -330,14 +337,14 @@ txt_flush:
         ex de,hl : or a : sbc hl,bc : ex de,hl     ; written = asked?
         jr nz,.errs
         add hl,bc : jr .p
-.cl:    ld hl,(txtlen) : ld (PRGB+PRG_FLEN),hl      ; the file's length (END included), for txt_load
+.cl:    ld hl,(txtlen) : ld (.flen),hl
         ld a,(.h) : call f_close
-        call prg_write
         or a
         jr .out
 .errs:  scf
 .err:   push af : ld a,(.h) : call f_close : pop af : scf
 .out:   push af
+        ld hl,rotbusy : dec (hl)
         ld hl,(.len) : ld (txtlen),hl
         ld hl,(.crc) : ld (crc),hl
         ld hl,(.lin) : ld (txtlines),hl
@@ -350,6 +357,8 @@ txt_flush:
 .lin:   dw 0
 .full:  db 0
 .h:     db 0
+.nm:    dw 0
+.flen:  dw 0
 txtname: db "NXSUITE.TXT",0
 prgname: db "NXSUITE.PRG",0
 

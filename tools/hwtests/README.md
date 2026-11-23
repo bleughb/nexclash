@@ -216,8 +216,8 @@ Build (keep the .nex out of the repository):
     python tools/hwtests/build.py nxsuite -o OUTDIR          # --sym also writes nxsuite.sym
 
 Run: copy `nxsuite.nex` into a folder of its own on the SD card and start it from the Browser. The suite
-writes `NXSUITE.TXT` (results) and `NXSUITE.PRG` (progress record, 64 bytes) into that folder and nothing
-anywhere else. Menu keys: A = all automatic tests (about 2.5 minutes, leave it alone), 0-9 = one group,
+writes `NXSUITE.TXT` (results), `NXSUITE.PRG` (progress record, 64 bytes) and, when needed, parts
+`NXSUITE.001`, `NXSUITE.002`, ... into that folder and nothing anywhere else. Menu keys: A = all automatic tests (about 2.5 minutes, leave it alone), 0-9 = one group,
 R = resume, U = answer the pending visual questions (later stages). The NEXT STEP line under the group list
 says in plain words what to do next. Border during a group: blue running, then green (no FAIL), yellow
 (INFO only) or red (a FAIL).
@@ -232,6 +232,19 @@ parent's prefix: `zf.` (Z01 cases), `zt.` / `zu.` (Z06 / Z07), `ih.` (I03 = im2h
 session or pass appends to the same file. The intake keeps every pass: a test's verdict uses its latest
 pass, and every test whose passes disagree is listed (files from before the `P` line: a pass is inferred
 where a group starts that does not follow the previous one).
+
+Parts (no 64 KB limit): the program keeps the text in a 64 KB buffer. When it passes 48 KB the buffer is
+written, with its own END line, to the next free `NXSUITE.nnn`, and `NXSUITE.TXT` goes on as a continuation:
+`NXSUITE 1`, then `C part=<nnn> src=<build>`. The intake follows the C lines back through the parts (give it
+`NXSUITE.TXT`; every part must be beside it and check; a missing one is refused). At start, an
+`NXSUITE.TXT` from another build (its first `src=` differs) or one that does not check (cut short, damaged,
+longer than the 56 KB the program reads back) is first copied unchanged to the next free `NXSUITE.nnn`
+(menu: "file: other build kept, new" / "old kept as NXSUITE.nnn"; the new file's second line names the
+part) and a new file is started; if that copy fails the program stops with a message and writes nothing.
+If a part cannot be written, the buffer fills and every later write carries `X truncated lost=<bytes>`
+before END: the intake prints a WARNING and the JSON has `"truncated"`. The DONE screen shows the bytes and
+lines written and any bytes lost. (Builds up to 3803884 lost everything past 64 KB silently while still
+writing a valid END line.)
 
 `video=`: `HDMI` only when NextReg $11 bits 2:0 = 7; otherwise `unknown` - $11 = 0-6 does not say which
 output the owner watches (the first board file, KS1 3.03.00, read $11 = 0 on a machine the owner runs on
@@ -256,7 +269,8 @@ Intake (on the PC):
     python tools/hwtests/intake.py --compare A.json B.json
     python tools/hwtests/intake.py --selfcheck                   # also run by selftest.py --tools
 
-It refuses a file that is cut short, damaged (CRC), not ASCII / LF, or names an unknown test or status.
+It refuses a file that is cut short, damaged (CRC), not ASCII / LF, or names an unknown test or status,
+and a continuation whose parts are not all beside it.
 Per claim it reports CONFIRMED, DISPROVED, MEASURED value +- spread, CHOICE word or NOT ANSWERED (with the
 reason), with the claim's sources; it never edits lessons or docs. The board name defaults to
 `next-issue2` / `3` / `4` from NextReg $00 = $0A and $0F = 0 / 1 / 2 (Issue 2 = the KS1 boards). Emulator
@@ -272,4 +286,7 @@ Checklist for the owner:
 3. Press A and leave the machine alone until the screen says DONE.
 4. If the machine stopped instead: reset, start `nxsuite.nex` again from the same folder; it resumes.
 5. Do what the NEXT STEP line says until it says ALL DONE.
-6. Copy `NXSUITE.TXT` to the PC and run `intake.py` on it; send the report.
+6. Copy every `NXSUITE.*` file of that folder to the PC (the TXT, any `.001`, `.002`, ... parts, the PRG)
+   and run `intake.py` on `NXSUITE.TXT`; send the report. Check the DONE screen said no bytes LOST.
+7. To start clean for a new build, delete all `NXSUITE.*` files together (the program keeps an old
+   build's file as a part anyway, so nothing is lost if you forget).

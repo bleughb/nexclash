@@ -26,6 +26,13 @@ any group that does not follow the previous one in table order. Every test keeps
 pass that ran it, and the report lists every test whose passes disagree (status, value or an extra), so
 passes are never mixed silently.
 
+Parts: a session may write more than the 64 KB buffer. The program then writes the buffer to the next free
+NXSUITE.nnn (a "part", with its own END line) and NXSUITE.TXT goes on with "C part=nnn src=<build>"
+after its first line. Give NXSUITE.TXT: the intake follows the C lines back through the parts beside it
+(every part must check), joins them and reads them as one file. A missing part is REFUSED. Older files
+of another build that the program kept as parts are not read unless named. An "X truncated lost=<n>"
+record (bytes the program could not store) is reported as a WARNING and marked in the JSON ("truncated").
+
 Platform: the program cannot tell a board from an emulator, so --platform says it: "board" (default) or the
 emulator's name and exact version ("JNext 1.3.0", "CSpect 3.0.x"). Emulator results are written to
 docs/kb/hardware/emulator/<platform>-<core>.json, apart from board results, and never count as hardware
@@ -98,8 +105,8 @@ def kv(fields, lineno):
     return d
 
 
-def parse(data, table, check_crc=True):
-    """bytes -> dict(sessions, nextregs, tests {id: record}, groups, lines). Raises Refused."""
+def checked_lines(data, check_crc=True):
+    """bytes of one file -> its lines without the END line (first = "NXSUITE 1"). Raises Refused."""
     if b'\r' in data:
         raise Refused('CR bytes: the file must use LF line ends')
     try:
@@ -121,8 +128,45 @@ def parse(data, table, check_crc=True):
     want = end.get('crc16', '')
     if check_crc and want.upper() != '$%04X' % crc16(body):
         raise Refused('CRC-16 %s, computed $%04X: the file is damaged' % (want, crc16(body)))
+    return lines[:-1]
+
+
+def load_chain(path, check_crc=True, seen=None):
+    """NXSUITE.TXT (or a part) -> (bytes of the joined file, [file names]). A file whose second line is
+    "C part=nnn src=..." continues NXSUITE.nnn in the same folder."""
+    seen = seen or set()
+    ap = os.path.abspath(path)
+    if ap in seen:
+        raise Refused('the C lines go round in a circle at %s' % os.path.basename(path))
+    seen.add(ap)
+    try:
+        lines = checked_lines(open(path, 'rb').read(), check_crc)
+    except Refused as e:
+        raise Refused('%s: %s' % (os.path.basename(path), e))
+    if len(lines) < 2 or not lines[1].startswith('C '):
+        return lines, [os.path.basename(path)]
+    f = kv(lines[1].split()[1:], 2)
+    part = f.get('part', '')
+    if not re.fullmatch(r'\d{3}', part):
+        raise Refused('%s line 2: C line without part=nnn' % os.path.basename(path))
+    folder = os.path.dirname(ap)
+    want = 'NXSUITE.%s' % part
+    prev = next((os.path.join(folder, n) for n in os.listdir(folder) if n.upper() == want), None)
+    if prev is None:
+        raise Refused('%s continues %s, which is not beside it: copy every NXSUITE.* file back' % (
+            os.path.basename(path), want))
+    plines, names = load_chain(prev, check_crc, seen)
+    psrc = next((kv(x.split()[1:], 0).get('src') for x in plines[1:3] if x.startswith(('H suite=', 'C '))), None)
+    if f.get('src') != psrc:
+        raise Refused('%s says src=%s, %s is src=%s' % (os.path.basename(path), f.get('src'), want, psrc))
+    return plines + lines[2:], names + [os.path.basename(path)]
+
+
+def parse(data, table, check_crc=True):
+    """bytes -> dict(sessions, nextregs, tests {id: record}, groups, lines). Raises Refused."""
+    lines = checked_lines(data, check_crc) + ['END']
     res = {'sessions': [], 'nextregs': {}, 'tests': {}, 'groups': {}, 'subtests': {}, 'comments': [],
-           'passes': [], 'history': {}}
+           'passes': [], 'history': {}, 'truncated': None}
     cur = None
     pas = None
     gorder = {g['id']: i for i, g in enumerate(table['groups'])}
@@ -147,6 +191,11 @@ def parse(data, table, check_crc=True):
             if cur is None:
                 raise Refused('line %d: H line before the first "H suite=" line' % n)
             cur['header'].update({k: v for k, v in f.items() if v is not True})
+        elif rec == 'X':
+            res['truncated'] = f.get('lost', '?')
+        elif rec == 'C':
+            raise Refused('line %d: a continuation record: give the intake NXSUITE.TXT with its parts beside it'
+                          % n)
         elif rec == 'R':
             if 'nr' not in f or 'v' not in f:
                 raise Refused('line %d: R line without nr= / v=' % n)
@@ -351,6 +400,7 @@ def write_json(res, table, path_in, data, board=None, outdir=OUTDIR, dry=False, 
                    'file_sha256': sha, 'sessions': [s['header'] for s in res['sessions']],
                    'nextregs': res['nextregs'], 'tests': res['tests'], 'subtests': res['subtests'],
                    'comments': res['comments'], 'passes': res['passes'],
+                   'parts': res.get('parts', []), 'truncated': res['truncated'],
                    'passes_disagree': [{'id': t, 'records': [{'pass': p_, 'result': x} for p_, x in rs]}
                                        for t, rs in passes_disagree(res)]},
            'claims': v}
@@ -373,6 +423,11 @@ def report(doc, table, out=sys.stdout):
     else:
         print('EMULATOR %s  core %s  (intake run %d)  - emulator results, not hardware evidence' % (
             pf['name'], doc['core'], doc['intake_runs']), file=out)
+    if len(doc['run'].get('parts', [])) > 1:
+        print('files joined: %s' % ' + '.join(doc['run']['parts']), file=out)
+    if doc['run'].get('truncated'):
+        print('WARNING: TRUNCATED - the program could not store %s bytes; tests after the loss are missing'
+              % doc['run']['truncated'], file=out)
     ps = doc['run'].get('passes', [])
     if len(ps) > 1:
         print('passes: %s (each test: its latest pass)' % '; '.join(
@@ -437,8 +492,10 @@ def compare(a, b, out=sys.stdout):
 
 def intake(path, board=None, outdir=OUTDIR, dry=False, out=sys.stdout, table=None, platform=None):
     table = table or load_table()
-    data = open(path, 'rb').read()
+    lines, names = load_chain(path)
+    data = make_file(lines)
     res = parse(data, table)
+    res['parts'] = names
     p, doc = write_json(res, table, path, data, board, outdir, dry, platform)
     report(doc, table, out)
     print(('would write ' if dry else 'wrote ') + p, file=out)
@@ -545,6 +602,37 @@ def selfcheck():
         parse(damaged, table, check_crc=False)
     except Refused as e:
         bad.append('negative control: the damaged file is refused even without the CRC check (%s)' % e)
+    # parts: a session split into NXSUITE.001 + NXSUITE.TXT (C line) joins back to the same lines
+    whole = sample(table)
+    cut = len(whole) // 2
+    src = kv(whole[1].split()[1:], 2)['src']
+    with tempfile.TemporaryDirectory() as d:
+        open(os.path.join(d, 'NXSUITE.001'), 'wb').write(make_file(whole[:cut]))
+        open(os.path.join(d, 'NXSUITE.TXT'), 'wb').write(
+            make_file(['NXSUITE 1', 'C part=001 src=%s' % src] + whole[cut:]))
+        try:
+            lines, names = load_chain(os.path.join(d, 'NXSUITE.TXT'))
+            if lines != whole or names != ['NXSUITE.001', 'NXSUITE.TXT']:
+                bad.append('parts: joined %s, not the whole file' % names)
+        except Refused as e:
+            bad.append('parts refused: %s' % e)
+        os.remove(os.path.join(d, 'NXSUITE.001'))
+        try:
+            load_chain(os.path.join(d, 'NXSUITE.TXT'))
+            bad.append('parts: a missing part was accepted')
+        except Refused:
+            pass
+        try:
+            parse(make_file(['NXSUITE 1', 'C part=001 src=%s' % src] + whole[cut:]), table)
+            bad.append('parts: a continuation read alone was accepted')
+        except Refused:
+            pass
+    try:
+        r = parse(make_file(whole + ['X truncated lost=99']), table)
+        if r['truncated'] != '99':
+            bad.append('X truncated not reported: %s' % r['truncated'])
+    except Refused as e:
+        bad.append('X truncated file refused: %s' % e)
     return bad
 
 

@@ -5,7 +5,8 @@ MSTACK      equ $BE00           ; main stack (bank 2)
 TBUF        equ $B000           ; timing block (up to $B4FF)
 TBUF2       equ $B500           ; the empty block of the same shape
 TBUF_END    equ $B800
-CRCTAB      equ $B800           ; CRC-16/CCITT table, 512 bytes, page aligned
+CODE2B      equ $B800           ; txt2.asm (result file parts), up to $BB00 (stack: $BC00-$BDFF)
+CODE2B_END  equ $BB00
 SCRATCH     equ $F000           ; 2 KB scratch in page 1
 IRQAREA     equ $F800           ; interrupt tables (G3)
 

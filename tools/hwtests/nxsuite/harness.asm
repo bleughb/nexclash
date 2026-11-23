@@ -28,8 +28,18 @@ entry:  ld sp,MSTACK
         call prg_read : jr nc,.prgok
         call prg_new
 .prgok: ld hl,(PRGB+4) : inc hl : ld (PRGB+4),hl : ld (runno),hl
+        ld hl,srcstr : ld de,src2 : ld bc,8 : ldir : xor a : ld (de),a
         call txt_load : ld (fstate),a
-        ld a,(PRGB+PRG_STATE) : cp 1 : jr nz,.menu
+        cp 1 : jr nz,.nb
+        call txt_src : jr z,.st                     ; same build: append
+        ld a,3 : ld (fstate),a                      ; another build
+.nb:    or a : jr z,.st
+        call txt_keep : jr nc,.kept                 ; other build / does not check: copied unchanged first
+        call cls : xor a : ld (crow),a : ld (ccol),a : ld hl,m_nokeep : call puts
+        ld a,1 : ld (crow),a : xor a : ld (ccol),a : ld hl,m_nokeep2 : call puts
+        di : halt
+.kept:  ld hl,0 : ld (txtlen),hl
+.st:    ld a,(PRGB+PRG_STATE) : cp 1 : jr nz,.menu
         ld a,1 : ld (resume_pending),a
 .menu:  jp menu
 
@@ -92,6 +102,7 @@ menu:   ld sp,MSTACK
         ld hl,m_run : call puts : ld hl,(runno) : call sdec
         ld hl,m_file0 : ld a,(fstate) : or a : jr z,.f
         ld hl,m_file1 : cp 1 : jr z,.f
+        ld hl,m_file3 : cp 3 : jr z,.f
         ld hl,m_file2
 .f:     call puts
         ; groups
@@ -139,7 +150,10 @@ m_title: db "NXSUITE 1.0  core ",0
 m_run:  db "run ",0
 m_file0: db "  file: new",0
 m_file1: db "  file: earlier results kept",0
-m_file2: db "  file: unreadable, new",0
+m_file2: db "  file: old kept as NXSUITE.nnn",0
+m_file3: db "  file: other build kept, new",0
+m_nokeep: db "NXSUITE.TXT could not be kept:",0
+m_nokeep2: db "copy it off the card, restart",0
 m_next: db "NEXT STEP:",0
 m_keys: db "A all  0-9 group  R resume",0
 m_keys2: db "U retry hung tests",0
@@ -257,7 +271,18 @@ run_end:
         ld hl,m_done : call puts
         ld a,1 : ld (crow),a : xor a : ld (ccol),a
         ld hl,m_done2 : call puts
-        ld a,(flushfail) : or a : jr z,.k
+        ld a,2 : ld (crow),a : xor a : ld (ccol),a : ld hl,m_bytes : call puts
+        ld a,1 : ld (wsink),a
+        ld hl,(txtlen) : ld de,(txtbase) : add hl,de : ld de,(txtbase+2) : jr nc,.b1
+        inc de
+.b1:    call wdec32
+        ld hl,m_lines : call puts
+        ld hl,(txtlines) : ld de,(linebase) : add hl,de : call wdec
+        xor a : ld (wsink),a
+        ld hl,(lostcnt) : ld a,h : or l : jr z,.nl
+        ld a,4 : ld (crow),a : xor a : ld (ccol),a : ld hl,m_lost : call puts
+        ld a,1 : ld (wsink),a : ld hl,(lostcnt) : call wdec : xor a : ld (wsink),a
+.nl:    ld a,(flushfail) : or a : jr z,.k
         ld a,3 : ld (crow),a : xor a : ld (ccol),a : ld hl,m_wfail : call puts
 .k:     ld a,5 : ld (crow),a : xor a : ld (ccol),a : ld hl,m_any : call puts
         call keys_up
@@ -267,6 +292,9 @@ flushfail: db 0
 m_done: db "DONE - you may reset.",0
 m_done2: db "Results: NXSUITE.TXT",0
 m_wfail: db "FILE WRITE FAILED - photograph",0
+m_bytes: db "bytes ",0
+m_lines: db " lines ",0
+m_lost: db "LOST (not stored) bytes ",0
 m_any:  db "Any key: menu",0
 
 ; B = group: G line, its tests, G end line, file written, group state
@@ -631,8 +659,9 @@ sess_header:
         ld a,(fstate) : cp 1 : jr z,.h
         ld hl,0 : ld (txtlen),hl : ld (txtlines),hl : ld hl,$FFFF : ld (crc),hl
         call w_lb : ld hl,s_magic : call wstr : call w_len : call txt_append
-        ld a,(fstate) : cp 2 : jr nz,.h
-        call w_lb : ld hl,s_unread : call wstr : call w_len : call txt_append
+        ld a,(fstate) : cp 2 : jr c,.h
+        call w_lb : ld hl,s_unread : call wstr : ld hl,keptname : call wstr
+        ld a,10 : call wchr : call w_len : call txt_append
 .h:     ; H suite
         call w_lb : ld hl,h_suite : call wstr
         ld hl,srcstr : call wstr : ld hl,h_built : call wstr : ld hl,datestr : call wstr
@@ -691,7 +720,7 @@ sess_header:
         pop de : inc e : jr nz,.r
         ret
 hend:   ld a,10 : call wchr : call w_len : jp txt_append
-s_unread: db "# the NXSUITE.TXT found was not complete; a new file was started",10,0
+s_unread: db "# the NXSUITE.TXT found (another build, or it did not check) was kept unchanged as ",0
 h_suite: db "H suite=1.0 src=",0
 h_built: db " built=",0
 h_run:  db " run=",0
