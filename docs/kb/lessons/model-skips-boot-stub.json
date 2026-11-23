@@ -1,0 +1,25 @@
+{
+ "id": "lesson.model-skips-boot-stub",
+ "kind": "pitfall",
+ "claim": "A model that starts from game state and never runs the startup stub cannot see hook code lost under the stub's register block; compare hook bytes after a simulated boot.",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "Hook code under the stub's register block is lost at boot; models without the stub cannot see it: compare hook bytes after a simulated boot (a register-block crash was fixed).",
+   "quote": "at boot; models without the stub cannot see it: compare hook bytes after a simulated boot.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "NEX startup stub",
+  "boot check",
+  "register block",
+  "hook bytes",
+  "model",
+  "crash"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

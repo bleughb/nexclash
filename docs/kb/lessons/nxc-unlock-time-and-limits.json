@@ -1,0 +1,25 @@
+{
+ "id": "lesson.nxc-unlock-time-and-limits",
+ "kind": "fact",
+ "claim": "A multi-part game is one game with one NXC patch: one colour set and at most 4 toggles for the whole game, each a byte difference from the default, each combination read back.",
+ "evidence": [
+  {
+   "game": "games/winter_sports.md",
+   "text": "One .nxc holds the default build, one colour set and at most 4 toggles for the whole game; a set or toggle is the byte difference from the default, and make_nxc reads every combination back.",
+   "shown_on": "simulator",
+   "quote": "(an .nxc has at most 4 toggles for the whole game; \"Original pace\" is the first)."
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "NXC",
+  "toggles",
+  "colour set",
+  "multi-part game",
+  "one patch",
+  "read back"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

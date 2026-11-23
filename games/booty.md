@@ -39,13 +39,13 @@ Nothing has run on a Next. To check: pace (K values fitted in JNext); ISR notes 
 - verify.update-locked-pace: used: lockstep pace runs with music off in both arms.
 
 ## Lessons
-- [local: pace noise] A free-running game with notes played in the ISR compares unlike phases of the tune: arms a note apart read +13% in a stretch with no real cost. Music off in both arms, for the table.
-- [local: probe twice] JNext fires an execute probe twice when an interrupt lands on it. A probe at a loop head gave one extra update and read as a run shifted by one; the pace script now ignores a second firing within 20,000 T.
-- [local: moving graphics] A table by the graphic's address is only right if the bytes never change. The replay's ULA check found the frame buffer in the first 500 frames; the check holds what was printed, not what is at the source now.
-- [local: hook reads] Reading the game's own tables must come before mapping slot 5 over them: the first version read a width of 0 from the table.
+- [kb lesson.pace-lockstep-compares-sound-state: pace noise] A free-running game with notes played in the ISR compares unlike phases of the tune: arms a note apart read +13% in a stretch with no real cost. Music off in both arms, for the table.
+- [kb lesson.jnext-execute-probe-fires-twice: probe twice] JNext fires an execute probe twice when an interrupt lands on it. A probe at a loop head gave one extra update and read as a run shifted by one; the pace script now ignores a second firing within 20,000 T.
+- [kb lesson.rewritten-graphics-no-prebuilt-patterns: moving graphics] A table by the graphic's address is only right if the bytes never change. The replay's ULA check found the frame buffer in the first 500 frames; the check holds what was printed, not what is at the source now.
+- [kb lesson.read-game-bytes-before-remap: hook reads] Reading the game's own tables must come before mapping slot 5 over them: the first version read a width of 0 from the table.
 
-- [local: ISR near a whole number of frames] A handler a few T short of or past two frames decides whether the game gets a frame between notes. A wrapper of 300 T on every interrupt took a death's room from 36 frames to 94. So no hook on the handler: a second vector, selected by I inside hooks only. Worth a line in patch.isr-deferral's card.
-- [local: room time] A room at 28 MHz needs its original time back: a fit over all rooms, then a wait at the game's clock, so the ISR takes its share as it did.
+- [kb lesson.isr-wrapper-changes-frame-count: ISR near a whole number of frames] [kb lesson.second-im2-vector-inside-hooks] A handler a few T short of or past two frames decides whether the game gets a frame between notes. A wrapper of 300 T on every interrupt took a death's room from 36 frames to 94. So no hook on the handler: a second vector, selected by I inside hooks only. Worth a line in patch.isr-deferral's card.
+- [kb lesson.fast-draw-must-pad-to-original-time: room time] [kb lesson.pace-averages-hide-scene-types] A room at 28 MHz needs its original time back: a fit over all rooms, then a wait at the game's clock, so the ISR takes its share as it did.
 
 ## Friction
 - reuse: [none: the shared pace and hook libraries were enough]

@@ -1,0 +1,26 @@
+{
+ "id": "lesson.dma-model-mapped-callbacks",
+ "kind": "pitfall",
+ "claim": "A virtual DMA transfer needs the game's actual mapped-memory callbacks; CPU alt-ROM reads are not proof of DMA visibility, so check source, full destination and gaps.",
+ "evidence": [
+  {
+   "game": "games/rainbow_dma.md",
+   "text": "Functional DMA callbacks access Rainbow's own memory and MMU; no DMA read uses a CPU-only alt ROM view; untouched gaps and the source are preserved.",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "DMA",
+  "mapped memory",
+  "alt ROM",
+  "callbacks",
+  "model",
+  "source",
+  "destination",
+  "gaps"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

@@ -76,23 +76,23 @@
  "outputs": {
   "plain": {
    "file": "renegade.nex",
-   "md5": "62a06036dec229a7d19821df2cca6a04"
+   "md5": "59c50d991f292728f95a59170196959c"
   },
   "sprites": {
    "file": "renegade_sprites.nex",
-   "md5": "b4b452100f88d54415f3f5f11568c454"
+   "md5": "10070d06abbc98f25160b119e2f9cc80"
   },
   "sprites_nooutline": {
    "file": "renegade_sprites_nooutline.nex",
-   "md5": "c8baf422e7a76776f10a48ac270dd1ae"
+   "md5": "99f6d3abbb8f34ff8d6c1d28e6497b53"
   },
   "sprites_blackoutline": {
    "file": "renegade_sprites_blackoutline.nex",
-   "md5": "28e56c4fc2789efeecf054f5cb49c80c"
+   "md5": "4e9b74e76a5467ce4556bc04cb7366c2"
   },
   "enhanced": {
    "file": "renegade_enhanced.nex",
-   "md5": "f60ec79d6dd0a62d1b3d262ecf394203"
+   "md5": "d032ec5d0286ad68d32fef2f96b4018f"
   }
  },
  "repro": [],

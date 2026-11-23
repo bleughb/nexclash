@@ -1,0 +1,33 @@
+{
+ "id": "lesson.hook-call-overhead-at-28mhz",
+ "kind": "pitfall",
+ "claim": "For many small calls, the cost of switching to 28 MHz per call can exceed the saving; use one window around the whole pass.",
+ "evidence": [
+  {
+   "game": "games/rainbow_z80n.md",
+   "text": "Running the cell hooks at 28 MHz cut 124 frames to 94, not to the original's 58: a hook called 5,500 times spends most of its time getting there (PC sample by NR 7).",
+   "shown_on": "unknown",
+   "quote": "cut 124 frames to 94, not to the original's 58: a hook called 5,500 times spends most of its time getting there."
+  },
+  {
+   "game": "games/simpsons.md",
+   "text": "A wait per figure cost about 1,600 T of 3.5 MHz time each, more than the 28 MHz saved on a small figure; one window around the whole draw pass fixed it.",
+   "shown_on": "unknown",
+   "quote": "more than the 28 MHz saved on a small figure: the first build was slower than the original with no"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "card": "patch.pace-limiter",
+ "words": [
+  "28 MHz",
+  "speed switch",
+  "per call overhead",
+  "hook count",
+  "window",
+  "pace",
+  "sample"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,28 @@
+{
+ "id": "lesson.stage-sprites-commit-once",
+ "kind": "pitfall",
+ "claim": "Do not change live sprites piece by piece while the game draws; stage patterns and attributes during the render and commit them in one burst at render end.",
+ "evidence": [
+  {
+   "game": "games/rainbow_islands.md",
+   "text": "Tearing and ghosting: sprites were changed piece by piece during the render while the beam was drawing them; fixed by a render-end commit (pieces staged, then pattern OTIR and attributes in one burst), sprites hidden on non-play screens (hardware: smooth, runs).",
+   "quote": "Tearing/ghosting cause: sprites were changed piece by piece during the render while the beam",
+   "shown_on": "hardware"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "design",
+ "when": [
+  "hook.updates_visible_image"
+ ],
+ "words": [
+  "sprite commit",
+  "tearing",
+  "ghosting",
+  "staged",
+  "render end",
+  "flicker"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

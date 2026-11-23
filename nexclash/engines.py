@@ -15,6 +15,7 @@ import importlib
 
 # (module, detector, extra condition on the auto arguments or None)
 ENGINES = [
+    ('cisco_heat', 'is_cisco_heat', None),                               # Cisco Heat (128K), smooth engine
     ('winter_sports', 'is_winter_sports', None),                        # Winter Sports (48K), six tape events embedded; plain build
     ('stock_car_3d', 'is_stock_car_3d', None),                           # 3D Stock Car Championship (48K)
     ('highway_encounter', 'is_highway_encounter', None),             # Highway Encounter (48K), optional Enhanced
@@ -71,11 +72,15 @@ ENGINES = [
     ('cauldron', 'is_cauldron', None),                                    # Cauldron (48K)
     ('nightshade', 'is_nightshade', None),                                # Nightshade (48K)
     ('knight_tyme', 'is_knight_tyme', None),                              # Knight Tyme (128K)
+    ('stormbringer', 'is_stormbringer', None),                            # Stormbringer (128K): Knight Tyme engine relocated
     ('spellbound_magic_knight', 'is_spellbound_magic_knight', None),      # Spellbound (128K, Magic Knight 2)
+    ('crystal_kingdom_dizzy_sprites', 'is_crystal_kingdom_dizzy_sprites', None),  # Crystal Kingdom Dizzy (128K) sprites
+    ('finders_keepers', 'is_finders_keepers', None),                      # Finders Keepers (48K, Magic Knight 1)
     ('three_weeks', 'is_three_weeks', None),                              # Three Weeks in Paradise (128K)
     ('starquake', 'is_starquake', None),                                  # Starquake (48K)
     ('lunar_jetman', 'is_lunar_jetman', None),                            # Lunar Jetman (48K)
     ('dynamite_dan', 'is_dynamite_dan', None),                            # Dynamite Dan (48K)
+    ('monty_on_the_run', 'is_monty_on_the_run', None),                    # Monty on the Run (48K)
     ('sabre_wulf', 'is_sabre_wulf', None),                                # Sabre Wulf (48K)
     ('solomons_key', 'is_solomons_key', None),                            # Solomon's Key (48K)
     ('robin_of_the_wood', 'is_robin_of_the_wood', None),                  # Robin of the Wood (128K)
@@ -98,6 +103,8 @@ ENGINES = [
     ('olli_and_lissa_3', 'is_olli_and_lissa_3', None),                    # Olli and Lissa III (48K): figures staged from the draw list
     ('olli_and_lissa_2', 'is_olli_and_lissa_2', None),                    # Olli and Lissa II: Halloween (48K): default and Enhanced
     ('chase_hq', 'is_chase_hq', None),                                    # Chase H.Q. (128K): Speed, Enhanced in two sets (local art)
+    ('auf_wiedersehen_monty', 'is_auf_wiedersehen_monty', None),          # Auf Wiedersehen Monty (128K): figures as sprites
+    ('monty_is_innocent', 'is_monty_is_innocent', None),                  # Monty is Innocent (48K): figures as sprites
     ('atom_ant', 'is_atom_ant', None),                                    # Atom Ant (128K tape form): default and Enhanced
     ('silkworm', 'is_silkworm', None),                                    # Silkworm (128K): default and Enhanced
     ('ruff_and_reddy', 'is_ruff_and_reddy', None),                        # Ruff and Reddy (128K): default and Enhanced
@@ -113,6 +120,13 @@ ENGINES = [
     ('flying_shark', 'is_flying_shark', None),                            # Flying Shark (48K): Layer 2 outline
     ('jillys_farm', 'is_jillys', None),                                   # Jilly's Farm Volume 1 - SokoBAArn! (48K): default and Enhanced
     ('that_sinking_feeling', 'is_tsf', None),                             # That Sinking Feeling (128K tape form): default and Enhanced
+    ('jsw', 'is_jsw', None),                                              # Jet Set Willy (48K)
+    ('altered_beast', 'is_altered_beast', None),                          # Altered Beast (128K)
+    ('bomb_jack', 'is_bomb_jack', None),                                  # Bomb Jack (48K)
+    ('manic_miner', 'is_manic_miner', None),                              # Manic Miner (48K)
+    ('arkanoid', 'is_arkanoid', None),                                    # Arkanoid (48K)
+    ('cybernoid', 'is_cybernoid', None),                                  # Cybernoid (48K)
+    ('pentagram', 'is_pentagram', None),                                 # Pentagram (48K), original presentation + optional Enhanced
 ]
 
 

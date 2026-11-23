@@ -1,0 +1,23 @@
+{
+ "id": "lesson.simulator-ldix-low-writes",
+ "kind": "pitfall",
+ "claim": "The simulator's LDIX family once dropped writes below 0x4000, so the verifier's write map showed nothing though JNext was right; sim.low_writes lets a model see them.",
+ "evidence": [
+  {
+   "game": "games/mad_mix_2.md",
+   "text": "The simulator's LDIX family dropped writes below 0x4000, so the write map showed nothing in the verifier though JNext was right.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "LDIX",
+  "write map",
+  "low writes",
+  "simulator",
+  "0x4000"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

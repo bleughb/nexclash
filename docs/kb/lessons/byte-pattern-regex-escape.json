@@ -1,0 +1,22 @@
+{
+ "id": "lesson.byte-pattern-regex-escape",
+ "kind": "pitfall",
+ "claim": "Byte patterns for site search must go through re.escape because bytes such as 0x2A, 0x28 and 0x5B are regex syntax.",
+ "evidence": [
+  {
+   "game": "games/simpsons.md",
+   "text": "Byte patterns for site search go through re.escape: 0x2A, 0x28 and 0x5B are regex syntax.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "regex",
+  "re.escape",
+  "site search",
+  "byte pattern"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

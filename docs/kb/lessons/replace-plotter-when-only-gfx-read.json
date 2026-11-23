@@ -1,0 +1,32 @@
+{
+ "id": "lesson.replace-plotter-when-only-gfx-read",
+ "kind": "method",
+ "claim": "When replacing a plotter, reproduce its exact end state (registers, flags, stack push, self-modified operands); running the original once over a mapped RAM canvas page is a way to get the exact register state.",
+ "evidence": [
+  {
+   "game": "games/everyones_a_wally.md",
+   "text": "Plotters A and B are converted to sprites; they self-modify 43232/43260 and 61359 and PUSH AF on the game stack with no DI (4,299 A and 1,058 B plots converted in the RZX).",
+   "shown_on": "unknown",
+   "quote": "self-mods 43232/43260, 61359 (x/8). PUSH AF on the game stack; no DI."
+  },
+  {
+   "game": "games/rainbow_islands.md",
+   "text": "The original plotter is run once over canvas RAM page 29 for the exact register state, then the sprite attributes are staged; AF' may hold a canvas byte, which verify proves dies.",
+   "shown_on": "simulator",
+   "quote": "plotter once over canvas 29 for the exact register state, then stage the sprite attributes:"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "card": "detect.routine-removal",
+ "words": [
+  "replace plotter",
+  "end state",
+  "canvas",
+  "self-modified",
+  "patterns",
+  "register state"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

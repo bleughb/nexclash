@@ -1,0 +1,28 @@
+{
+ "id": "lesson.sprite-vs-pattern-limit",
+ "kind": "fact",
+ "claim": "A pattern cache gives no help when the protected union of patterns exceeds the hardware pattern limit.",
+ "evidence": [
+  {
+   "game": "games/r_type.md",
+   "text": "Pattern-cache attempt: no help, since the protected union of patterns exceeds the limit.",
+   "quote": "optimise.pattern-cache: no help: protected union exceeds128",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "inferred",
+ "area": "platform",
+ "when": [
+  "sprite.working_set_fits"
+ ],
+ "card": "optimise.pattern-cache",
+ "words": [
+  "128 patterns",
+  "pattern limit",
+  "DMA upload",
+  "pattern cache",
+  "churn"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

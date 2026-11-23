@@ -1,0 +1,59 @@
+{
+ "id": "lesson.r-register-checks-local-vs-global",
+ "kind": "pitfall",
+ "claim": "Per-hook R checks can pass while global R differs, so separate hook R correctness from the original's own R differences and include R in the comparison.",
+ "evidence": [
+  {
+   "game": "games/bubbler.md",
+   "text": "A death HALT's fetch-count difference (6,459 modulo 128) explains the complete R offset 59; preserve this distinction from hook R correctness.",
+   "quote": "Native E449 fetch-count difference 6,459 modulo 128 explains the complete R offset 59.",
+   "shown_on": "analysis"
+  },
+  {
+   "game": "games/bruce_lee.md",
+   "text": "Native global R sequences can still differ through idle-loop and interrupt phase while per-hook boundary R has zero errors.",
+   "quote": "Native global R sequences can still differ through idle-loop and",
+   "shown_on": "analysis"
+  },
+  {
+   "game": "games/exolon.md",
+   "text": "Moving the speed latch before IFF/R capture removes 29.75us from a sampled full effect call, but R correction must include the 15 fetches moved before capture; all four incoming clocks and IFF/R boundaries are checked.",
+   "quote": "fetches moved before capture. All four incoming clocks and IFF/R boundaries are checked.",
+   "shown_on": "analysis"
+  },
+  {
+   "game": "games/dizzy_ultimate_cartoon_adventure.md",
+   "text": "The inherited comparison excluded R; including R exposed differences at seven hook sites in the first 400 replay frames; the legacy result was not an R proof.",
+   "quote": "differences at seven hook sites in the first 400 replay frames; the legacy result was not an R proof",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/beyond_the_ice_palace.md",
+   "text": "The particle and damage routines require R preservation even inside rendering.",
+   "quote": "The particle and damage routines require R preservation even inside rendering.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/gryzor.md",
+   "text": "The star routine's path depends on the figures in its bytes; a star hook that works out the original's bytes from the tick's plot list keeps R exact, with the pace runs in lockstep and no fixture.",
+   "quote": "a star hook that works out the original's bytes from the tick's plot list keeps R exact, and the pace runs stay in lockstep with the original with no fixture.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "when": [
+  "exec.game_reads_r"
+ ],
+ "card": "patch.preserve-r",
+ "words": [
+  "R register",
+  "per-hook",
+  "global R",
+  "fetch count",
+  "IFF",
+  "comparison"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

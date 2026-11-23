@@ -1,0 +1,25 @@
+{
+ "id": "lesson.recording-checks-and-mutants",
+ "kind": "pitfall",
+ "claim": "A replacement checked only on recorded inputs can pass while wrong on rare paths; add random and edge-value sweeps and failing mutants, and gate every redraw rather than a sample.",
+ "evidence": [
+  {
+   "game": "games/castle_master.md",
+   "text": "Two of four mutants passed every recorded call and failed only on random or edge inputs; a missed stage (sector cull 0x8D4F) showed as one wrong cube in one of 5,233 redraws, which a sample would have missed.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "words": [
+  "mutant",
+  "random sweep",
+  "edge values",
+  "recording coverage",
+  "bit exact",
+  "staged gates",
+  "every redraw"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

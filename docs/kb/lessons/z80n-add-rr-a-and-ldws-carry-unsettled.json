@@ -1,0 +1,26 @@
+{
+ "id": "lesson.z80n-add-rr-a-and-ldws-carry-unsettled",
+ "kind": "open",
+ "claim": "Do not test carry after ADD HL/DE/BC,A or LDWS: the book says ADD rr,A always clears it and LDWS has the flags of INC D, while docs/LEARNINGS.md and docs/NEXT_REGISTERS.md report board results that disagree with each other.",
+ "limit": "Unresolved: the two board notes in the repository contradict one another, so one of them is misread; compare the result instead of testing the flag.",
+ "evidence": [
+  {
+   "game": "reference",
+   "source": "I. Novak, Unraveling the ZX Spectrum Next, Vol 1 (2026; core 3.03.03), chapter 2",
+   "text": "ADD rr,A adds A unsigned, wraps past FFFF and clears carry even on a wrap, other flags kept; ADD rr,nn leaves every flag; LDWS takes the flags of INC D.",
+   "shown_on": "documentation"
+  }
+ ],
+ "level": "inferred",
+ "area": "platform",
+ "words": [
+  "Z80N",
+  "ADD",
+  "LDWS",
+  "carry",
+  "flags",
+  "opcode"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

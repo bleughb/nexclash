@@ -183,17 +183,17 @@ and whole-hook native measurement. No DMA gain or hardware result is claimed.
 - [local: Highway timing/geometry evidence] Passing quiet/busy averages can hide scene-change
   delays: report individual slow updates as well as 20-update windows. Current source remains
   held at that stage despite three averages within 2%; the final window/LUT work resolved it.
-- [local: Highway timing/geometry evidence] Raster samples omit wrapper entry/exit and the
+- [kb lesson.native-not-simulator-timing: Highway timing/geometry evidence] Raster samples omit wrapper entry/exit and the
   gap between window/debt samples. Profile those native offsets before choosing fixed debt;
   otherwise the limiter can turn a real copy optimization into additional waiting.
-- [local: Highway timing/geometry evidence] Group complete original loops, including their
+- [kb lesson.displaced-loop-entries: Highway timing/geometry evidence] Group complete original loops, including their
   final ADD/DJNZ and alternate registers. Preserve original writes and R while removing repeated
   hooks. The verifier must permit reached displaced interiors, not arbitrary interior jumps.
 - [local: Highway timing/geometry evidence] Map a rectangle once only after checking both
   positive byte-span crossings and negative row steps. Erasure and tile page faults need
   separate negative controls; table flags must be cached before mapping over their RAM.
 
-- [local: Highway-specific buffer and loader evidence] Profile complete hooks before assigning cost to large copies. The 100-update
+- [kb lesson.profile-before-optimising: Highway-specific buffer and loader evidence] Profile complete hooks before assigning cost to large copies. The 100-update
   seed 5 profile attributes 4.35s to dirty cells, 2.91s to erasure and 1.09s to dirty flags;
   the background LDIR at 97E8 occurs only once (29ms). The old per-cell profiler counted
   repeat returns incorrectly; the replacement resets each entry guard after its first exit.
@@ -209,14 +209,14 @@ and whole-hook native measurement. No DMA gain or hardware result is claimed.
   The private colour decoder asserts the count and dimensions before producing the reviewed sheets.
 - [local: Highway-specific buffer and loader evidence] Model the -4-pixel plotter's two-byte output width separately; the other three draw
   three bytes. Compare to original writes, and retain a wrong-position negative control.
-- [local: Highway-specific buffer and loader evidence] This archive POK has overlapping immunity variants at 40905 (0 versus 8).
+- [kb lesson.archive-poke-translation: Highway-specific buffer and loader evidence] This archive POK has overlapping immunity variants at 40905 (0 versus 8).
   They require independent behaviour checks and compatible menu choices, not blind concatenation.
 - [local: Highway-specific buffer and loader evidence] Dirty flags at 99A0/99A2/99A4 overlap the last colour-buffer row. Later scene copies
   at A5F0/A603 also need mirroring; missing them produced eight bad bytes from demo frame 1450.
   Audit actual writes, not only the final image, to find the first lost dependency.
-- [local: Highway-specific buffer and loader evidence] Original INK=PAPER can hide an intact bitmap. An opaque colour layer must reproduce
+- [kb lesson.invisible-bitmap-ink-equals-paper: Highway-specific buffer and loader evidence] Original INK=PAPER can hide an intact bitmap. An opaque colour layer must reproduce
   that visibility change; matching bitmap bytes alone does not prove the ending screen.
-- [local: Highway-specific buffer and loader evidence] NEXLOAD overwrites the printer buffer before entry. Restore 5B00..5CFF, including
+- [kb lesson.nexload-printer-buffer: Highway-specific buffer and loader evidence] NEXLOAD overwrites the printer buffer before entry. Restore 5B00..5CFF, including
   both the font and temporary startup tail, then compare every byte and register at B0E0.
 - [local: Highway-specific buffer and loader evidence] The same player routine runs during the initial procession. Gate 9C7F by caller 916C
   and start paired native trials from one original checkpoint to avoid mixing startup with play.

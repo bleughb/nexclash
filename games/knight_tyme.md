@@ -124,9 +124,9 @@ Cheats: archive .pok's [128K] entries; time and others' stats held in the simula
 - [tool docs/records/knight_tyme.json] A real ROM difference the build keeps: the Bridge star map reads alt image 0
   (the Next's ROM 0) at 0x0D00-0x0D20, kt_t1 frame 937 / kt_rooms frame 153; the record's `rom_paths_known` lists it
   (KNOWN), any other difference is a MISMATCH. Limit: only these 33 bytes were seen; the altrom0 rework removes it.
-- [local: a composite whose clean copy is captured after figures are plotted needs the plots undone before the capture] Run plot, restore cells: all registers equal for free, no second path.
-- [local: count hook instructions out and the original and patched machines stay in lockstep] Whole 128K compared per frame, with no per-site pairing; every hook counted as nothing. Works only where game instructions stay the same.
-- [local: the 128K ROM 1 in SkoolKit is not the Next's] 128-1.rom has keypad code at 0x386E on the ISR path; a stub there broke replay. Record on the 48K ROM for this kind of engine.
+- [kb lesson.clean-copy-capture: a composite whose clean copy is captured after figures are plotted needs the plots undone before the capture] Run plot, restore cells: all registers equal for free, no second path.
+- [kb lesson.lockstep-count-hook-instructions-out: count hook instructions out and the original and patched machines stay in lockstep] Whole 128K compared per frame, with no per-site pairing; every hook counted as nothing. Works only where game instructions stay the same.
+- [kb lesson.rom1-128k-differs: the 128K ROM 1 in SkoolKit is not the Next's] 128-1.rom has keypad code at 0x386E on the ISR path; a stub there broke replay. Record on the 48K ROM for this kind of engine.
 - [local: a negative needs a check of its own] Blit from the composed box passed every model at first: screen + sprites still matched. Added: under each box the ULA equals the room's clean copy.
 - [local: tile-level window hide cuts figures beside a window] Store the figure's real extent per tile.
 

@@ -236,14 +236,14 @@ peak transfer estimates do not establish a whole-hook gain.
 
 - [local: Bruce exact-entry requirement] Resume before E200 and preserve the original prefix.
   A convenient title checkpoint hides loader state and is not an archive-to-build boot proof.
-- [local: Bruce renderer boundary] Hardware positions belong after C7D2's visible copy,
+- [kb lesson.back-buffer-displayed-frame: Bruce renderer boundary] Hardware positions belong after C7D2's visible copy,
   not the next back-buffer plot. Match the displayed frame, not the newest logical position.
-- [local: Bruce pattern budget] Deduplicate packed parts and mirrored forms before deciding
+- [kb lesson.cache-spare-slots: Bruce pattern budget] Deduplicate packed parts and mirrored forms before deciding
   that all frames need uploads. Retain 12 spare slots so any active part can change safely.
 - [local: Bruce pace evidence] Compare game state at every player update and retain failed
   trials. Packed transfers removed the observed extra interrupt gap in three repeat trials;
   that is not a proof that every possible interrupt arrival is safe.
-- [local: native snapshot inspection] JNext ordinary RAM pages have a physical SRAM offset;
+- [kb lesson.jnext-ram-dump-offset: native snapshot inspection] JNext ordinary RAM pages have a physical SRAM offset;
   reconstruct CPU RAM through the MMU and dedicated bank 5 VRAM, not raw ram.bin offsets.
 
 - [local: Bruce partial-copy visibility] A figure newly drawn outside its dirty rectangle must retain
@@ -255,13 +255,13 @@ peak transfer estimates do not establish a whole-hook gain.
 - [local: Bruce clock boundary] Fast-clock accounting alone omits wrapper instructions at 3.5MHz.
   Moving speed restoration later improves pace but changes interrupt arrival phase; shorter hooks
   are not proof that interrupts cannot be lost.
-- [local: pooled simulator units] Copy result registers/memory before reusing a simulator pool slot.
+- [kb lesson.simpool-copy-results: pooled simulator units] Copy result registers/memory before reusing a simulator pool slot.
   Keeping the mutable simulator reference made two trainer outcomes appear equal.
-- [local: Bruce hidden-ROM bounds] The model must expose only the actual hidden-ROM span when
+- [kb lesson.hidden-rom-model-bounds: Bruce hidden-ROM bounds] The model must expose only the actual hidden-ROM span when
   page 24 is unmapped. Exposing its whole private page hid two native entry/exit failures.
-- [local: Bruce temporary vector] A private IM2 vector permits the original ISR during hook
+- [kb lesson.second-im2-vector-inside-hooks: Bruce temporary vector] A private IM2 vector permits the original ISR during hook
   work without rewriting C003. Save its actual interrupted clock and use a separate IRQ stack.
-- [local: Bruce idle refresh] Per-hook native R checks pass while original idle/IRQ phase changes
+- [kb lesson.r-register-checks-local-vs-global: Bruce idle refresh] Per-hook native R checks pass while original idle/IRQ phase changes
   global R and some random decisions; the local assertion is not global trajectory identity.
 - [local: Bruce room budget] Steady-play averages hid 60..80ms of extra room-entry time.
   The unchanged original tile composer supplies enough time for repainting; pacing that window
@@ -270,7 +270,7 @@ peak transfer estimates do not establish a whole-hook gain.
 - [local: Bruce game-over visibility] Correct descriptors and pixels are insufficient when the
   native display intentionally removes every figure. Mark CAC0, hide at the original final
   copy, clear at room/title entry, and compare native original/default game-over pictures.
-- [local: isolated interrupt modelling] A direct-opcode scope must set int_active=0 when it
+- [kb lesson.ld-a-i-quirk-harness-int-active: isolated interrupt modelling] A direct-opcode scope must set int_active=0 when it
   does not deliver interrupts. SkoolKit otherwise clears P/V on both LD A,I reads inside its
   raw-T signal window without running the ISR. Preserve IFF comparisons; test real delivery
   separately with the instruction-boundary injection matrix. The captured 69476T failure passes.
@@ -286,7 +286,7 @@ peak transfer estimates do not establish a whole-hook gain.
 
 - reuse: [local: Bruce stage2] shared survey, recorder, nextboot, hooklib and pace tools used.
 - retries: [local: Bruce stage2] corrected periodic ENTER input which paused the first recording.
-- environment: [local: Bruce stage2] private JNext config/temp folders; shared card read-only.
+- environment: [kb lesson.jnext-isolate-config: Bruce stage2] private JNext config/temp folders; shared card read-only.
 - hand-rolled: [local: Bruce stage2] original-plot and packed-pixel oracles are game-specific.
 - scratch: [local: Bruce stage2] ABI, packed-pixel, lifecycle, PNG import and continuous composition promoted into the engine; private native/injection probes retained with evidence.
 - retries: [local: Bruce record integration] Generated checksum entry exceeded the historical verification-file budget. Consolidated only its generic introduction; kept all game evidence and generated hashes.

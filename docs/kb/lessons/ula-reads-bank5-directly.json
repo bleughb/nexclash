@@ -1,0 +1,24 @@
+{
+ "id": "lesson.ula-reads-bank5-directly",
+ "kind": "fact",
+ "claim": "The ULA reads bank 5 directly, so pages mapped over 0x4000-0x7FFF (slots 2/3) are invisible to it.",
+ "evidence": [
+  {
+   "game": "games/rainbow_islands.md",
+   "text": "Pages mapped over 0x4000-0x7FFF are invisible to the ULA; the original plotter draws into a canvas page (RAM page 29) that is discarded.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "platform",
+ "words": [
+  "ULA",
+  "bank 5",
+  "MMU slot",
+  "canvas page",
+  "screen memory",
+  "slot 2"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

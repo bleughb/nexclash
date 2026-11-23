@@ -1,0 +1,28 @@
+{
+ "id": "lesson.legacy-paging-lock-semantics",
+ "kind": "open",
+ "claim": "Reading of the VHDL (3.01.09): locked 7FFD writes are ignored without remapping, NextReg $08 bit 7 can only unlock, and 48K timing (NextReg $03) does not stop 7FFD/1FFD decoding.",
+ "limit": "Not confirmed on hardware.",
+ "evidence": [
+  {
+   "game": "notes",
+   "text": "VHDL reading for core 3.01.09, not confirmed on hardware.",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "inferred",
+ "area": "platform",
+ "facts": {
+  "machine": "128K"
+ },
+ "words": [
+  "7FFD lock",
+  "NextReg 08",
+  "48K timing",
+  "VHDL",
+  "port decoding",
+  "1FFD"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

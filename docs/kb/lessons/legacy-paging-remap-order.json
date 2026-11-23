@@ -1,0 +1,27 @@
+{
+ "id": "lesson.legacy-paging-remap-order",
+ "kind": "fact",
+ "claim": "An unlocked legacy paging write remaps MMU slots 0/1 (ROM) and 6/7 and the latest change wins, so map a RAM slot-1 page after the tail's own paging writes; a 128K unlocked write remaps C000-FFFF at once.",
+ "evidence": [
+  {
+   "game": "notes",
+   "text": "Reading of the paging behaviour in the maintainers' notes; not checked against a source file.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "inferred",
+ "area": "platform",
+ "facts": {
+  "machine": "128K"
+ },
+ "words": [
+  "legacy paging",
+  "7FFD",
+  "MMU slot",
+  "remap",
+  "tail",
+  "slot 1"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,28 @@
+{
+ "id": "lesson.sprite-conversion-spread-over-updates",
+ "kind": "method",
+ "claim": "Convert sprite patterns a few at a time per update and fall back to native cell drawing for overflow, so conversion bursts do not slow an update.",
+ "evidence": [
+  {
+   "game": "games/r_type.md",
+   "text": "Graphics converted once into 4bpp patterns, 24 tiles converted per update, overflow falls back to native cells; pacing equal to the control (297-299 of 301 updates at 3 frames).",
+   "shown_on": "unknown",
+   "quote": "patterns, cached by address + ink with checksum; flips = mirror bits; 24 tiles converted per"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "when": [
+  "sprite.working_set_fits"
+ ],
+ "words": [
+  "pattern cache",
+  "conversion",
+  "burst",
+  "fallback",
+  "sprite",
+  "spread work"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

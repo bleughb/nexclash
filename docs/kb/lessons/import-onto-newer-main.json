@@ -1,0 +1,47 @@
+{
+ "id": "lesson.import-onto-newer-main",
+ "kind": "method",
+ "claim": "When importing an engine onto a newer main, rebuild on main first and compare bytes before trusting earlier proofs; judge each main-only change against the branch's base.",
+ "evidence": [
+  {
+   "game": "games/new_zealand_story.md",
+   "text": "A shared stub piece had moved (436 bytes) when rebuilding on main.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/quazatron.md",
+   "text": "Upstream by checking main's copy equals the branch's base, then judging each main-only fix.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/underwurlde.md",
+   "text": "Engine files byte for byte the frozen release sources, so both builds are byte-identical and the proof carried.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/three_weeks.md",
+   "text": "An approved build made before the new defaults rebuilds only with the record's pin.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/spellbound_magic_knight.md",
+   "text": "A pilot's change to the shared boot model goes into the engine on import.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "words": [
+  "import",
+  "main",
+  "rebuild",
+  "byte for byte",
+  "pin",
+  "upstream",
+  "proof",
+  "stub"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7",
+ "next_check": "After an import, compare the rebuild byte for byte with the MD5 recorded before it and name each shared file that differs."
+}

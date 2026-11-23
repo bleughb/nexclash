@@ -138,8 +138,8 @@ Hardware risk review (PLAYBOOK 6b): DivMMC: hooks at 0x2000-0x2200 and RAM, not 
   latch call goes in: recount it (Rambo s_tn + 18 -> + 17).
 - [local: only this game's stack and table are this direct] demonstrated: a display list with an object type gives the figure / scenery split in one comparison, and scrolling costs nothing when the world is objects on black.
 - [backlog C2 #35] observed: `inspect` warns "IM 2 handler in ROM"; the handler is RAM at 0xFFFF through the ROM's FF block.
-- [local: needed because this game's music takes its timing from interrupts] demonstrated: running the patched game beside the original on fetch counts with hooks left out keeps interrupt-driven code in step; T-state frames do not.
-- [local: a hook must keep what the next instruction uses] observed: the blit's BC is B from its own LD and C = 0 left by the wait; the first commit lost C and the blit ran off its table. Found by lockstep at once.
+- [kb lesson.rzx-fetch-count-frames: needed because this game's music takes its timing from interrupts] demonstrated: running the patched game beside the original on fetch counts with hooks left out keeps interrupt-driven code in step; T-state frames do not.
+- [kb lesson.hook-register-state-at-resume: a hook must keep what the next instruction uses] observed: the blit's BC is B from its own LD and C = 0 left by the wait; the first commit lost C and the blit ran off its table. Found by lockstep at once.
 - [local: this game's flag] observed: a flag saying "x signed" also goes with small positive x; the first hook took it for negative, 3 frames in 55,000. Only the picture check would find that.
 - [local: the script follows this game's recording format, run folder only] demonstrated: a recorded state as a .z80 + the same patch gives a JNext frame of any scene with no keys: work/scene.py.
 - [deferred Open: reconsider when a maintainer reviews the batch] observed: `selftest --verify` leaves the verify report in its temp folder only; the stamped numbers were read there.
@@ -148,7 +148,7 @@ Hardware risk review (PLAYBOOK 6b): DivMMC: hooks at 0x2000-0x2200 and RAM, not 
 - [local: figure frames] demonstrated: replay each direction key and read the hook's descriptor counts before painting: guessing front from back by shape was wrong, and a head that should be hair got a face.
 - [deferred Open: reconsider when a maintainer reviews the batch] demonstrated: a colour change's trouble can be outside play: black ink on black paper is hidden until the paper is see-through, as in the tune before a life.
 
-- [local: this game's approved build had two steps outside the engine] observed (import, 2026-11-04): the published
+- [kb lesson.published-build-steps-in-engine: this game's approved build had two steps outside the engine] observed (import, 2026-11-04): the published
   .nxc held the Enhanced set and a loading screen that only run-folder scripts made; the record's outputs were the
   engine's alone (4f8330c6, stale). An import compares against `nxc.py --bare`, not the record, and moves such steps in.
 - [deferred Open: reconsider when a second game needs a build input that is not a recording] observed (import,

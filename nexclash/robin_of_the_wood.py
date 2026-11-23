@@ -162,6 +162,7 @@ def item_variant(peek,index,raw=False):
 class RobinPatch:
     name='Robin of the Wood 128K figure sprites'
     uses_printer_buffer=True
+    keep_printer_buffer=True       # the snapshot's stack is at 0x5B76: NEXLOAD overwrites 0x5B00-0x5BFF, put it back
     def __init__(self,cmap=None,enhanced=False):
         self.prof=load_profile();self.cmap=cmap or {};self.enhanced=enhanced
         h=self.prof['hooks'];self.syms={k:int(v,16) for k,v in h['syms'].items()}
@@ -303,7 +304,7 @@ def reference(entries):
 
 
 NEGATIVES = ('position', 'colour', 'outline', 'hide', 'reset', 'register', 'outside', 'seam', 'hollow', 'late',
-             'pal_guard0', 'pal_robin15')
+             'pal_guard0', 'pal_robin15', 'speed')
 # Enhanced: 'hollow' corrupts the default art, which the Enhanced paint replaces (UNDETECTED in the pilot too, by design:
 # enh_hollow is its Enhanced form); 'outside' is refused by the build's own silhouette guard (a ValueError = detected).
 NEGATIVES_ENH = tuple(m for m in NEGATIVES if m != 'hollow') + ('enh_palette', 'enh_default_art', 'enh_hollow', 'enh_outline')
@@ -439,7 +440,7 @@ def verify(path, z80, mode='normal', enh=False, limit=None, progress=None):
         HOOK_REGS={0x53,0x54,0x07,0x34,0x35,0x36,0x37,0x38,0x39}
         class Hardware:
          def __init__(self,m):
-          self.mem=m;self.attr=[[0]*5 for _ in range(128)];self.pat=bytearray(16384);self.sel=0;self.ptr=0;self.speed=0;self.bad=[]
+          self.mem=m;self.attr=[[0]*5 for _ in range(128)];self.pat=bytearray(16384);self.sel=0;self.ptr=0;self.speed=0;self.nrsel=0;self.bad=[]
           # Reset state: sprite palettes hold the identity RRRGGGBB colour, B0=B1|B0.
           ident=[(i<<1)|(1 if i&3 else 0) for i in range(256)]
           self.spal=[ident[:],ident[:]];self.palctl=0;self.palidx=0;self.pal9=None
@@ -469,9 +470,12 @@ def verify(path, z80, mode='normal', enh=False, limit=None, progress=None):
            if v&2:self.clipi=0
           elif n==0x19:self.clip[self.clipi]=v;self.clipi=(self.clipi+1)&3
           else:self.bad.append(('nextreg',n,v))
-         def read_port(self,r,p):raise RuntimeError(f'hook input {p:04X}')
+         def read_port(self,r,p):
+          if p==0x253B and self.nrsel==7:return self.speed   # NR 7 read: the programmed speed in bits 1:0
+          raise RuntimeError(f'hook input {p:04X}')
          def write_port(self,r,p,v,*args):
-          if p==0x303b:self.ptr=(v&63)*256+(128 if v&128 else 0)
+          if p==0x243b:self.nrsel=v      # NextReg select: the setup leaves NR 7 for the hooks' speed reads
+          elif p==0x303b:self.ptr=(v&63)*256+(128 if v&128 else 0)
           elif p&255==0x5b:self.pat[self.ptr]=v;self.ptr=(self.ptr+1)&16383
           else:self.bad.append(('out',p,v))
          def global_state(self):
@@ -602,6 +606,7 @@ def verify(path, z80, mode='normal', enh=False, limit=None, progress=None):
           if mode=='hide':
            d=overlay.pages[26];i=d.index(bytes.fromhex('B8D0ED9234ED9138003C18F4'));d[i+5:i+9]=bytes(4) # omit the actual sprite-tail hide write
           if mode=='reset':overlay.pages[26][P.syms['clear']-0x6000]=0xc9
+          if mode=='speed':q=P.syms['spdout']-0x6000;overlay.pages[26][q:q+3]=bytes([0xAF,0,0])   # 3.5 MHz given back
           if mode in ('pal_guard0','pal_robin15'):
            # Change the figure-table palette nibble the engine copies into attribute 2.
            d=overlay.pages[26];q=P.syms['table']-0x6000;inv=INV
@@ -642,6 +647,7 @@ def verify(path, z80, mode='normal', enh=False, limit=None, progress=None):
              for b,data in zip(mp.banks,banks):b[:]=data
              for n,data in pages.items():overlay.pages[n][:]=data
              hw.attr=attr;hw.pat[:]=pat;hw.sel=sel;hw.ptr=ptr;hw.speed=0;overlay.s3=11;overlay.s4=4
+           spd=hw.speed=counts['hooks entered']%4;counts['hooks entered']+=1;counts[f'entry speed {spd}']+=1   # all four in turn
            vm.registers[:]=before
            for step in range(200000):
             vm.opcodes[overlay[vm.registers[24]]]()
@@ -653,7 +659,7 @@ def verify(path, z80, mode='normal', enh=False, limit=None, progress=None):
            if hw.bad:fail('unexpected hardware access',hw.bad[:4]);hw.bad.clear()
            if hw.global_state()!=SETUP_STATE:fail('sprite display state changed',pc)
            counts['hardware state checks']+=1
-           if overlay.s3!=11 or overlay.s4!=4 or hw.speed:fail('mapping/speed', [pc,overlay.s3,overlay.s4,hw.speed])
+           if overlay.s3!=11 or overlay.s4!=4 or hw.speed!=spd:fail('mapping/speed', [pc,overlay.s3,overlay.s4,hw.speed,spd])
            if overlay.pages[26][P.syms['error']-0x6000]:fail('engine error',overlay.pages[26][P.syms['error']-0x6000])
            if pc==0xc08d:
             if mode=='late':
@@ -829,7 +835,7 @@ def build_all(z80, out, name, say=print):
     # and the pilot that built these ran none; the replay starts from the snapshot as the .nex does.
     scr = Path(z80).resolve().parent / LOADING
     plain = os.path.join(out, name + '.nex')
-    convert(z80, plain, None, True, quiet=True)
+    convert(z80, plain, None, True, quiet=True, keep_printer_buffer=True)   # stack at 0x5B76, as RobinPatch
     ok = True
     say('Plain     : %s  %s  (boot not simulated: 128K paging)' % (os.path.basename(plain), md5(plain)))
     for tag, enh in (('sprites', False), ('enhanced', True)):

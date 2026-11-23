@@ -120,3 +120,67 @@ The user chose "auto-paint first". Code: nexclash/winter_sports_dh.py (hooks, pa
   an unchanged heading takes < 400 T. Negative controls: a wrong-sign scroll register fails every update, a rotated pad table fails 15 of 17 cases.
   JNext 1.2.0: Downhill, Slalom, Giant Slalom play with the painted panorama at the same game state as the plain build at the same frames; GAME OVER, then the options, Exit, Ice Hockey: no panorama, no magenta,
   the rink as in the plain build. Hardware (user, 2026-11-22): the sprites build tests and plays OK on a real Next (the transparency and clip-window risk did not bite). Not covered: the other five events.
+
+## Event plugins (the contract for converting Ice Hockey, Ski Jumping, Speed Skating, Bobsled, Biathlon; 2026-11-22)
+**Priorities (user, 2026-11-22), in order.** (1) The DEFAULT build of every event is smoother, similar gameplay in the ORIGINAL 16 colours: the speed of play stays the
+original's, the picture may be redrawn per pixel (Layer 2, sprites, hi-colour, whatever removes the attribute clash) but only the 16 Spectrum colours
+(winter_sports_common.SPECCY) appear. (2) Anything beyond that (extended colours, painted scenery, effects) is an OPTION the player turns on in the .nxc menu, never the default.
+
+**How options reach the player.** One .nxc holds the whole game: the default build, one colour set ("Enhanced": every plugin's extended colours together) and the toggles
+(an .nxc has at most 4 toggles for the whole game; "Original pace" is the first). A set or toggle is the byte difference from the default, so its bytes must be picture data / flag
+bytes the default does not share with another option (nxc.py refuses overlapping writes). Plugins therefore take `enhanced` and `original_pace` and put extended colours in their own
+picture banks (BANK_PLAN) and the pace flag in one data byte. NAME_outputs.json (winter_sports.auto) tells nxcout what is what; `make_nxc` builds NAME.nxc for the TAPE as target with the
+menu snapshot as start state and reads every combination back.
+
+**A plugin** is nexclash/winter_sports_<event>.py (see winter_sports_dh.py, the worked example, and winter_sports_dh_test.py) with `INDEX`, `BANKS` (inside BANK_PLAN[INDEX]), `patch_event(block, enhanced,
+original_pace) -> (block, {bank: bytes})`, `disable_code()` (NextReg writes the menu's loader hook runs before ANY event loads: put the display back), `tests(patch, z80, say) -> (ok, lines)`, and a line in
+`winter_sports.PLUGINS`. Helpers: winter_sports_common.py (`Asm` assembler with labels, `Block` (checked reads / writes by runtime address), `SPECCY`, `pace_wrapper`, `CADENCE`).
+The shared parts are measured and tested once (the loader hook, the loading screen, the NEX layout); a plugin owns only its event's bytes: patch sites are checked against the original bytes, hook
+code goes in free bytes of the event's own block (find a zero run in the tape block that no run touched: survey `scan --writers`), variables there too.
+
+**Rules learned in Downhill (apply them, or say why not).**
+- Find the game's per-update loop and its drawing call first; the cheapest honest pace fix is the wrapper `pace_wrapper(call)`: halt to the frame interrupt, draw at 28 MHz (NextReg 0x07 = 3) inside the vertical
+  blank, 3.5 MHz back; the game's own sound / timing loops (the beeper routine at 0xFE44 runs with interrupts off) must stay at 3.5 MHz, so only the drawing is sped up. Measure the original's update interval over a run
+  (mean, spread) and pick the cadence whose mean is within a few percent (Downhill: 2.24 frames per update originally, cadence 2).
+- Prove display-only before replacing a display routine: trace every read of the screen / attributes / buffers (`simrun` hooks, `on_read`); what the game reads back must stay as the game writes it.
+- The ULA transparent trick (bright white paper = NextReg 0x14's colour 0xE3, NextReg 0x15 = 0x08 ULA over Layer 2, a clip window): works on hardware (Downhill, user 2026-11-22). Layer 2 uses banks via NextReg 0x12; its
+  palette is the default RRRGGGBB; `SPECCY` values are the toolkit's 16 colours (do not use 0xE3 except as transparent).
+- Test as Downhill does: the same key script through the original (tape served at ROM 0x0562) and the build, per-update comparison where the runs can be aligned (scroll / state models, not heading by update),
+  unit tests calling the hooks with measured T-states, negative controls that must fail. `winter_sports._sim` models NextReg 0x50 and 0x07; `_exec` in the Downhill test module adds HALT and the 28 MHz time scale.
+- JNext (script frames = program frame + 500; screenshot frames = program frame) for the pictures: C:\1NEXT\wintersports_work\jrun.py / jall.py; event snapshots from tapeload.py / runall.py.
+
+**Banks.** Events 12-26 (tape blocks), 27 (menu screen), per plugin BANK_PLAN: 0: 28-30, 1: 31-33, 2: 34-36, 3: 37-39, 4: 40-42, 5: 43-45 (banks 46/47 are the alt-ROM sources of other builds: never).
+
+## Events 1-5 (2026-11-22): pace-only plugins
+Ice Hockey (nexclash/winter_sports_ice_hockey.py), Speed Skating (_speed_skating), Bobsled (_bobsled) and Biathlon (_biathlon) are plugins built on winter_sports_pace.PaceEvent: each of the event's screen-copy call
+sites becomes a wrapper (winter_sports_common.draw_wrapper): halt to the frame interrupt (N frames where the loop is free-running), the copy at 28 MHz (NextReg 0x07 = 3), 3.5 MHz back; the
+beeper (blocking, interrupts off) is never sped up (tests: no port 0xFE write while fast). Per event, found with C:\1NEXT\wintersports_work\findloop.py / freecheck.py (work folder, not in the repo):
+- Ice Hockey: 0x7809 (the rink, 423,000 T) from 0x7FC1 and 0x8063; halts 5; interval 6.80 -> 6.41 frames (-5.7 %); wrappers 0xF42A, mode byte 0xF482.
+- Speed Skating: 0x8BFE (78,600 T) from 0x84C3 (loop 0x841E..0x84F1, interrupts on after 0x848F); halts 1; 9.10 -> 8.56 (-5.9 %); wrapper 0xC390, mode byte 0xC3C0; the race starts with SPACE on the ready screen (port 0x7FFE bit 0 at 0x8415).
+- Bobsled: 0x87E6 (a row-blit, 28,400 T) from 0x7A43 (`DI / CALL / EI`, the run), 0x8446, 0x8554; self-paced (its delay loops set the speed: 8 frames per update at a standstill to 2 at speed), halts 1; 2.29 -> 2.23 (-2.8 %); wrappers 0xC390, mode byte 0xC414.
+- Biathlon: 0x81E8 (set-up + the 152,000-byte copy 0x80FD) from 0x8270 and the attribute copy 0x8202 from 0x8273; halts 1 / 0; 11.46 -> 11.25 (-1.9 %); wrappers 0xACAE, mode byte 0xAD06; SPACE starts the race (0x89B1).
+Free memory: only zero runs that stay zero through menu, options and a run (freecheck): the runs at 0x9E3D-0xABFF of events 1-4 are written when the event starts and must not be used.
+Tests per plugin (winter_sports_pace.PaceEvent.tests): the key script through the original (tape served at ROM 0x0562) and the build, update interval mean within 8 %, no beeper write at 28 MHz, 3.5 MHz restored at every marker, each wrapper transparent
+(from a copy of the build's state, halts NOPed, its registers and memory equal the plain call's), negative controls (a wrapper that leaves 28 MHz on; one that calls a bare RET instead of the routine) caught.
+**Not done:** Ski Jumping stays the plain conversion: the jump needs a key at the right moment (the loop at 0x864F is the GAME OVER exit; without a key the jump ends GAME OVER by ~frame 2200) and its jump control was not found; no per-pixel clash fix and no Enhanced colours for events 1-5; no
+hardware test of events 1,3,4,5 and of the new Downhill default. Events keep their original colours; the Enhanced set changes Downhill only.
+
+## Lessons
+- [local: this game's pace] An event's pacing decides the smoothing: Downhill is free-running (an even cadence of halts at the original's mean fits), Bobsled paces itself with delay loops (a single halt, never a cadence), Ice Hockey and
+  Speed Skating are draw- or logic-bound (halts chosen by measuring the mean interval). Measure the original's update interval over a run before choosing, and compare means within a few percent.
+- [local: this game's free memory] A zero run in a tape block is not free: Bobsled's and Ice Hockey's runs at 0x9E3D-0xABFF are written when the event starts (the snapshot is taken after that). Only use runs that stay zero through
+  menu, options and a run (freecheck over the whole flow, from the menu).
+- [local: this game's keys] A snapshot that sits in a delay loop is waiting for a key: Speed Skating and Biathlon start the race on SPACE (port 0x7FFE bit 0), Ski Jumping's loop at 0x864F is the GAME OVER exit. Read the port the loop polls before guessing keys.
+- [none: the shared wrapper (winter_sports_common.draw_wrapper) and the pace plugin (winter_sports_pace) are in this game's engine modules; no other game uses them yet]
+
+## Technique use
+- patch.hybrid-display-replacement: helped: Downhill's left view (display-only, proven by read-back tracing) moved to Layer 2 with the game's own pole drawing left on the ULA (2026-11-22)
+- patch.pace-limiter: no help: events 1-5 use a halt-to-interrupt wrapper with the drawing at 28 MHz instead; Downhill's pad table is the limiter's original-pace form (2026-11-22)
+- detect.routine-removal: no help: read-back tracing of screen / buffer reads (simrun on_read) answered display-only without removing the routine
+
+## Friction
+- reuse: [tool nexclash.winter_sports_pace] the tear-free fast-draw plugin (wrapper, transparency test, negative controls) is generic for events that copy their screen with one routine
+- retries: [local: this game's key flows] several runs to find what starts each event's race (SPACE on the ready screen) and which zero runs are really free
+- environment: [none: no workaround needed]
+- hand-rolled: [local: this game's work folder] callprof / findloop / freecheck / varwatch / tapeload / jrun scripts in C:\1NEXT\wintersports_work were hand-rolled for the surveys and JNext pictures
+- scratch: [none: the scratch scripts answer game-specific questions; the reusable parts are in winter_sports_pace and winter_sports_dh_test]

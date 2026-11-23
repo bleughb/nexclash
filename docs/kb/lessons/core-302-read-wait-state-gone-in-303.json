@@ -1,0 +1,28 @@
+{
+ "id": "lesson.core-302-read-wait-state-gone-in-303",
+ "kind": "fact",
+ "claim": "The wait state on every memory read at 28 MHz belongs to core 3.02; core 3.03 has none, so 28 MHz times and ratios measured on 3.02 are the slow case and the same code runs faster on 3.03.",
+ "limit": "From the book, not measured here on core 3.03: re-measure a time budget on the core the build targets, and never tune a delay so that it only fits 3.02.",
+ "evidence": [
+  {
+   "game": "reference",
+   "source": "I. Novak, Unraveling the ZX Spectrum Next, Vol 1 (2026; core 3.03.03), chapter 2 and 3",
+   "text": "Core 3.02 holds /WAIT for one T on each memory read at 28 MHz (fetch, operand, data; SRAM and bank 5), not on writes, I/O or page 0x0E; core 3.03 (system release 26.11a) runs 28 MHz with no wait on every board.",
+   "shown_on": "documentation"
+  }
+ ],
+ "level": "inferred",
+ "area": "platform",
+ "words": [
+  "wait",
+  "state",
+  "28MHz",
+  "core",
+  "timing",
+  "speed",
+  "ratio",
+  "budget"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

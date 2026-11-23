@@ -1,0 +1,24 @@
+{
+ "id": "lesson.dma-zero-fill-empty-quadrants",
+ "kind": "method",
+ "claim": "Zero-fill empty pattern quadrants with ordinary DMA instead of writing blank cells one by one.",
+ "evidence": [
+  {
+   "game": "games/r_type.md",
+   "text": "Ordinary-DMA zero fill avoids per-cell blank writes; live23-sprite preparation47.687ms including native IRQs, down from66.915ms.",
+   "quote": "Demonstrated: ordinary-DMA zero fill avoids per-cell blank writes; live23-sprite preparation47.687ms including native IRQs, down from66.915ms.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "design",
+ "words": [
+  "DMA",
+  "zero fill",
+  "pattern quadrants",
+  "blank writes",
+  "sprite preparation"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

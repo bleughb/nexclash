@@ -1,0 +1,182 @@
+{
+ "name": "manic_miner",
+ "order": 23,
+ "game": "Manic Miner",
+ "doc": "manic_miner.md",
+ "engine": "manic_miner",
+ "representative": true,
+ "reference": "manic_miner",
+ "inputs": {
+  "snapshot": {
+   "name": "manic_miner.z80",
+   "md5": "d8face31a18a9543b093443b6f115f84",
+   "path": "manic_miner/manic_miner.z80"
+  },
+  "recordings": [
+   {
+    "name": "mm_play1.rzx",
+    "md5": "3b7d23ae550ec0186c328703d2dc7492",
+    "path": "manic_miner/mm_play1.rzx"
+   },
+   {
+    "name": "mm_demo.rzx",
+    "md5": "42bb30ecb3cd3392eccdd0ef868eb5aa",
+    "path": "manic_miner/mm_demo.rzx"
+   },
+   {
+    "name": "mm_bot.rzx",
+    "md5": "3bef95414dc109e99e6699e8c184a1b9",
+    "path": "manic_miner/mm_bot.rzx"
+   },
+   {
+    "name": "mm_kong.rzx",
+    "md5": "a65d04f1b015eba729fe3c196f587b80",
+    "path": "manic_miner/mm_kong.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "manic_miner"
+ ],
+ "own_modules": [
+  "manic_miner"
+ ],
+ "data": [
+  "docs/profiles/manic_miner.json",
+  "asm/manic_miner_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "mm_play1.rzx",
+   "mm_demo.rzx",
+   "mm_bot.rzx",
+   "mm_kong.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 30,
+  "note": "Pilot: recordings made by nexclash record --script, no human player."
+ },
+ "outputs": {
+  "plain": {
+   "file": "manic_miner.nex",
+   "md5": "6b205fc37cc5791dc07d5caa4df5b139"
+  },
+  "sprites": {
+   "file": "manic_miner_sprites.nex",
+   "md5": "57e9b6df0fc78205566d09648a9553a5"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Manic Miner",
+  "engine_col": "manic_miner (manic_miner.md)",
+  "build": "manic_miner_sprites.nex 2f033d89",
+  "software": "Verify + lockstep IDENTICAL on 4 script/search recordings; unit PASS; 6 negatives detected (no human recording)",
+  "hardware": "untested",
+  "next": "hardware test; a human's design answers"
+ },
+ "checks": [
+  "asm2profile:manic_miner"
+ ],
+ "techniques": [
+  {
+   "application": "manic_miner.buffer-layout",
+   "id": "detect.buffer-layout-producer",
+   "revision": 1,
+   "target": "LDIR 0x6000 -> 0x4000 (0x87AB), LDIR 0x5C00 -> 0x5800 (0x87D1); clean layers 0x7000, 0x5E00",
+   "phases": []
+  },
+  {
+   "application": "manic_miner.screen-readers",
+   "id": "detect.gameplay-screen-readers",
+   "revision": 2,
+   "target": "scan --writers over the ULA, 0x5C00, 0x6000: no logic reads the ULA",
+   "phases": []
+  }
+ ],
+ "results": [
+  {
+   "application": "manic_miner.screen-readers",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "2f033d89",
+   "scope": "4 recordings, 37345 frames, 8345 pictures compared IDENTICAL (2026-11-02, stamped, 2f033d89); no human recording; ending and extra-life flash unit cases only; no hardware",
+   "evidence": "games/manic_miner.md \"Results\""
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/manic_miner_hooks.asm": "c37a7d1838d3b0d9",
+   "docs/profiles/manic_miner.json": "299a3edabe12999a",
+   "nexclash.py": "d9b430cef7478a38",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/engines.py": "a2a47a48c20fb25c",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/manic_miner.py": "0ff2861fbc07dd3c",
+   "nexclash/nextboot.py": "d4d8a6b6c9055025",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
+   "skoolkit": "10.1",
+   "recipe": "e7f1821c684ac0d3",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-22"
+ },
+ "verified": {
+  "deps": {
+   "asm/manic_miner_hooks.asm": "c37a7d1838d3b0d9",
+   "docs/profiles/manic_miner.json": "299a3edabe12999a",
+   "nexclash.py": "d9b430cef7478a38",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/engines.py": "a2a47a48c20fb25c",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/manic_miner.py": "0ff2861fbc07dd3c",
+   "nexclash/nextboot.py": "d4d8a6b6c9055025",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
+   "skoolkit": "10.1",
+   "recipe": "e7f1821c684ac0d3",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-22"
+ },
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/manic_miner.md#results-stamped-run-2026-11-02-selftestpy---game-manic_miner---verify---stamp-simulation-only"
+   ],
+   "coverage": "The recordings in the record, in the simulator.",
+   "result": "Hooks add 0.32-0.77 % of the frames' T (simulated T / 6, estimated); no real-machine timing."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/manic_miner.md#rendering-model-playbook-2-back-buffer-composer"
+   ],
+   "coverage": "The back-buffer composer's writes and the blit in every recording (Rendering model).",
+   "result": "A back-buffer composer: figures to sprites at the blit, the buffers untouched."
+  },
+  "decision": "Figures as sprites over the back-buffer composer (the defaults).",
+  "next_experiment": "A board run: no stray sprites, pace within 2 % in a busy cavern."
+ }
+}

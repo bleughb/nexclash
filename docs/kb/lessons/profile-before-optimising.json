@@ -1,0 +1,56 @@
+{
+ "id": "lesson.profile-before-optimising",
+ "kind": "method",
+ "claim": "Profile before optimising: time hooks by the lines one call takes, count calls and cache misses per update, and require one timing row per hook; guessed costs are often wrong.",
+ "evidence": [
+  {
+   "game": "games/castle_master.md",
+   "text": "Profile before tuning: no hot spot (largest routine 13 %).",
+   "quote": "Profile before tuning: no hot spot (largest routine 13 %).",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/atic_atac.md",
+   "text": "Profile a hook by the lines one call takes (a JDS rule at its entry and return) before optimising around it: build at 257 to 297 lines a call was hidden by the audit's per-update hook times.",
+   "quote": "Profile a hook by the lines one call takes (a JDS rule at its entry and return) before optimising around it",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/ikari_warriors.md",
+   "text": "The image-cache misses are the cost (38 ms against 0.1): count them per update before tuning a limiter.",
+   "quote": "the misses are the cost (38 ms against 0.1): count them per update before tuning a limiter.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/lunar_jetman.md",
+   "text": "A hook with no speed switch, run for every object every update, cost about 7% where hooks that switch cost 2-6%: count calls per update before trusting \"small\" hooks.",
+   "quote": "cost about 7% where the hooks that switch cost 2-6%: count calls per update before trusting \"small\" hooks;",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/highway_encounter.md",
+   "text": "Profile complete hooks before assigning cost to large copies.",
+   "quote": "Profile complete hooks before assigning cost to large copies.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/inferno.md",
+   "text": "Require one timing row per completed hook and reconcile component sums; an empty timing list must not look like successful profiling.",
+   "quote": "Require one timing row per completed hook and",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "profile",
+  "hook cost",
+  "per update",
+  "cache misses",
+  "timing row",
+  "hot spot"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7",
+ "next_check": "Make nexclash.hookprofile work for every engine and fail an engine report in which a hook has no timing row."
+}

@@ -275,7 +275,7 @@ The logic at 28 MHz down to the frame sync; R kept at every hook; see games/comm
 - [card patch.restore-speed §Use / do not use] A full alt ROM: call one latch routine pair instead of the macros
   inline (25 bytes against 38 for two sites).
 - [local: no limiter needed] A game with its own frame sync and idle time at the end of the update needs no limiter: run its logic at 28 MHz down to the sync, back at any interrupt that plays its sound.
-- [local: verify a pace figure's input] The published +0.38% had keys the game does not read: a pace run shows the player moving in its pictures, or it is not a measurement of play.
+- [kb lesson.scripted-keys-must-reach-game: verify a pace figure's input] The published +0.38% had keys the game does not read: a pace run shows the player moving in its pictures, or it is not a measurement of play.
 - [local: a game writes its own vector] 0xFCFC looked like a site; the verifier's write check caught it, and a JNext run looked right all the same.
 
 ## Technique use

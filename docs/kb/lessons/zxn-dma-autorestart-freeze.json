@@ -1,0 +1,23 @@
+{
+ "id": "lesson.zxn-dma-autorestart-freeze",
+ "kind": "pitfall",
+ "claim": "DMA auto-restart (WR5 A2, AA, B2, BA) in continuous mode freezes the machine because the transfer restarts as soon as it ends and the CPU never runs.",
+ "evidence": [
+  {
+   "game": "notes",
+   "text": "Continuous-mode memory copy with auto-restart froze the machine at once; normal Z80 DMA behaviour, not warned in the documentation.",
+   "shown_on": "hardware"
+  }
+ ],
+ "level": "observed",
+ "area": "platform",
+ "words": [
+  "zxnDMA",
+  "WR5",
+  "auto restart",
+  "continuous mode",
+  "freeze"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,24 @@
+{
+ "id": "lesson.zxn-dma-wr4-interrupt-lock",
+ "kind": "pitfall",
+ "claim": "Writing a Z80 DMA WR4 byte with 'interrupt control follows' (91) locks the Next DMA until power-off; do not port such code onto the zxnDMA.",
+ "limit": "Only byte 91 tested; hard reset untested.",
+ "evidence": [
+  {
+   "game": "notes",
+   "text": "Issue 2 board, core 3.03.00: after WR4 byte 91 then 87 every later transfer failed; six C3 resets, A3, AF, 8B did not recover it, only power-off.",
+   "shown_on": "hardware"
+  }
+ ],
+ "level": "observed",
+ "area": "platform",
+ "words": [
+  "zxnDMA",
+  "WR4",
+  "interrupt control",
+  "DMA lock",
+  "power cycle"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

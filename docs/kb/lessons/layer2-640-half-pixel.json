@@ -1,0 +1,25 @@
+{
+ "id": "lesson.layer2-640-half-pixel",
+ "kind": "fact",
+ "claim": "Layer 2 at 640x256 scrolls only whole pixels; a half-pixel scroll needs two screens, one a half pixel on.",
+ "evidence": [
+  {
+   "game": "games/r_type.md",
+   "text": "Layer 2 640x256 scrolls only whole pixels, so two screens (one half a pixel on) halve it.",
+   "shown_on": "unknown",
+   "quote": "Layer 2 640x256 scrolls only whole pixels, so two screens (one half a pixel on) halve it."
+  }
+ ],
+ "level": "observed",
+ "area": "platform",
+ "words": [
+  "Layer 2",
+  "640x256",
+  "half-pixel",
+  "scroll",
+  "two screens",
+  "interrupt"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

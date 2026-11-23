@@ -1,0 +1,28 @@
+{
+ "id": "lesson.beeper-contention",
+ "kind": "pitfall",
+ "claim": "ULA contention changes beeper edge durations even with equal clock, instructions and R; bound the difference, keep a contention-off diagnostic, and never claim byte-identical waveforms.",
+ "evidence": [
+  {
+   "game": "games/gunfright.md",
+   "text": "Original-clock beeper proof: 5,650 pulses equal in register/R/FE sequences; ULA contention phase bounds edge-time differences (aggregate below 0.011%); contention-off diagnostic gives exact edges.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "emulator",
+ "when": [
+  "routine.emits_timed_output"
+ ],
+ "words": [
+  "beeper",
+  "contention",
+  "waveform",
+  "ULA",
+  "sound",
+  "timing",
+  "edge"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

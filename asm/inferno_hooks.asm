@@ -5874,6 +5874,8 @@ drv_fill:
 drv_sel_reset:
         call drv_sel_soft
         jp drv_index_reset
+drv_keys_default:               ; 8660: P, O, A, Q, M (the first five controls)
+        db 0xFE,0xDF,0x01, 0xFE,0xDF,0x02, 0xFE,0xFD,0x01, 0xFE,0xFB,0x01, 0xFE,0x7F,0x04
 drv_sel_soft:
         ld bc,0x243B            ; joystick port 1 = Kempston 1 (NR 05 bits 7-6 = 01, bit 3 = 0), other bits kept
         ld a,5
@@ -5883,6 +5885,39 @@ drv_sel_soft:
         and 0x37
         or 0x40
         nextreg 5,a
+        ld a,(0x7534)           ; the game's CP operand: 20 only after "Kempston? Y/A" (6DBB writes it once)
+        cp 0x20
+        jr nz,.keys
+        ld hl,0x5B00            ; controls table (row, port, mask) x 7: still the keyboard defaults copied from 8660?
+        ld de,drv_keys_default
+        ld b,15
+.kcmp:  ld a,(de)
+        cp (hl)
+        jr nz,.keys             ; redefined (REDEFINICE): leave it alone
+        inc hl
+        inc de
+        djnz .kcmp
+        ld hl,0x5B00            ; right, left, down, up, fire on Kempston (port 1F, bits 0-4, active high);
+        ld a,1                  ; weapon pick and activate stay on their keys (Symbol Shift, N)
+.kset:  ld (hl),0x1F
+        inc hl
+        ld (hl),0
+        inc hl
+        ld (hl),a
+        inc hl
+        add a,a
+        cp 0x20
+        jr nz,.kset
+.keys:  ld bc,0x243B            ; autosave: the pilot's record to its slot and INFERNO.SAV (page 123 in slot 7)
+        ld a,0x57
+        out (c),a
+        inc b
+        in a,(c)
+        push af
+        nextreg 0x57,SAVE_PAGE
+        call SD_AUTO
+        pop af
+        nextreg 0x57,a
         nextreg 0x15,0          ; sprites off until a complete frame is published
         nextreg 0x6B,0x0B       ; scenery layer off
         nextreg 0x62,0
@@ -7448,59 +7483,38 @@ wi_stub_end:
         ASSERT wi_stub_end <= 0x3BE0
         SAVEBIN "inferno_wistub.bin",wi_stub,wi_stub_end-wi_stub
 
-; SAVE/LOAD: the pilot record (49 bytes at 5B15, name at 7001) goes to named slots in page 120, not to tape.
-; Both routines replace ROM tape code in the alt ROM's low page and run in slot 0, so they may use slot 1.
+; SAVE/LOAD: the pilot record (49 bytes: a key byte, then the 48-byte record at 82DD XOR the key; name at 7001)
+; goes to named slots in page 123, and page 123's slots are kept in INFERNO.SAV on the SD card (esxDOS API, the
+; folder the game was started from). The file is read once, before the first SAVE/LOAD/autosave, and written after
+; every change, so pilots survive reset and power-off. With no SD card or no file the slots stay in RAM only.
+; The alt ROM stubs below only map page 123 into slot 7 (E000) and call its code (sd_code, ORG FC00).
 SAVE_PAGE   EQU 123
 SAVE_NAME   EQU 0x7001
 SAVE_SIZE   EQU 49
 SAVE_STEP   EQU 64          ; slot: 8 name bytes (0 = empty), 49 data bytes, pad
+SD_SLOTS    EQU 112         ; page 123 0000-1BFF: slots (the file); 1C00-1FFF: sd_code and its variables
+SD_BASE     EQU 0xE000      ; page 123 as seen in slot 7
+SD_SAVE     EQU 0xFC00
+SD_LOAD     EQU 0xFC03
+SD_AUTO     EQU 0xFC06
         ORG 0x04C6              ; the game's CALL 04C6 (SA-BYTES past its return-address push)
 save_hook:
         or a
         ret z                   ; header block: the name is taken from 7001 with the data
         di
-        call save_find
-        ex de,hl
-        ld hl,SAVE_NAME
-        ld bc,8
-        ldir
-        push ix
-        pop hl
-        ld bc,SAVE_SIZE
-        ldir
-        nextreg 0x51,255
+        ld bc,0x243B            ; keep slot 7's page (the game's 1)
+        ld a,0x57
+        out (c),a
+        inc b
+        in a,(c)
+        push af
+        nextreg 0x57,SAVE_PAGE
+        call SD_SAVE            ; IX = the record
+        pop af
+        nextreg 0x57,a
         ret                     ; the game's 72B8 follows with EI
-
-save_find:                      ; -> HL = slot; NZ found, Z free (or the last slot when full). Uses A, BC, DE.
-        nextreg 0x51,SAVE_PAGE
-        ld hl,0x2000
-        ld b,128
-.next:  ld a,(hl)
-        or a
-        ret z
-        push hl
-        ld de,SAVE_NAME
-        ld c,8
-.cmp:   ld a,(de)
-        cp (hl)
-        jr nz,.other
-        inc de
-        inc hl
-        dec c
-        jr nz,.cmp
-        pop hl
-        or 1
-        ret
-.other: pop hl
-        ld de,SAVE_STEP
-        add hl,de
-        djnz .next
-        ld de,-SAVE_STEP
-        add hl,de
-        xor a
-        ret
 save_hook_end:
-        ASSERT save_hook_end <= 0x053F
+        ASSERT save_hook_end <= 0x050E
         SAVEBIN "inferno_savehook.bin",save_hook,save_hook_end-save_hook
 
         ORG 0x0574              ; past 056B, where JNext's tape trap rewrites A; 0562 jumps here
@@ -7518,20 +7532,73 @@ load_front:
         pop af
         jp loader
 .user:  pop af
-        push de                 ; 17 for the header request, 49 for the data
-        call save_find
+        ld bc,0x243B
+        ld a,0x57
+        out (c),a
+        inc b
+        in a,(c)
+        push af
+        nextreg 0x57,SAVE_PAGE
+        call SD_LOAD            ; DE = 17 (header) or 49 (data), IX = destination; Z = no such pilot
         pop bc
-        jr nz,.found
-        nextreg 0x51,255
-        jp 0x7227               ; no such pilot: the game's tape error, which resets the stack
-.found: push ix
+        ld a,b
+        nextreg 0x57,a
+        jp z,0x7227             ; no such pilot: the game's tape error, which resets the stack
+        scf                     ; loaded
+        ret
+load_front_end:
+        ASSERT load_front_end <= 0x05C5
+        SAVEBIN "inferno_loadfront.bin",load_front,load_front_end-load_front
+
+; Page 123, 1C00-1FFF, run in slot 7 (FC00). Called with interrupts off from the two stubs above and from the
+; driver at each play start (autosave). esxDOS calls are made with the ROM in slots 0 and 1: on the Next the RST 8
+; entry is a delayed automap, so the opcode at 0008 is fetched from whatever slot 0 holds.
+        ORG 0xFC00
+sd_code:
+        jp sd_save
+        jp sd_load
+        jp sd_auto
+sd_file:
+        db "INFERNO.SAV",0
+sd_state:
+        db 0                    ; 0: the file has not been read yet
+sd_handle:
+        db 0
+sd_name:
+        ds 8
+sd_rec:
+        ds SAVE_SIZE
+
+sd_save:                        ; IX = the 49-byte record, name at 7001
+        push ix
+        call sd_in
+        ld de,SAVE_NAME
+        call sd_find
+        ex de,hl
+        ld hl,SAVE_NAME
+        ld bc,8
+        ldir
+        pop hl
+        ld bc,SAVE_SIZE
+        ldir
+        jp sd_out
+
+sd_load:                        ; DE = 17 or 49, IX = destination -> Z: no such pilot
+        push ix
+        push de
+        call sd_in
+        ld de,SAVE_NAME
+        call sd_find
+        pop bc
         pop de
+        ret z
         ld a,c
         cp 17
         jr nz,.data
-        ld a,3                  ; synthesise the header the game checks (type, name, length)
-        ld (de),a
+        ld a,3                  ; synthesise the header the game checks (type, name, length): the name as
+        ld (de),a               ; requested, since the slot's may differ in case
         inc de
+        ld hl,SAVE_NAME
         ld bc,8
         ldir
         ld a,' '
@@ -7544,18 +7611,219 @@ load_front:
         inc de
         xor a
         ld (de),a
-        jr .done
-.data:  ld a,l
-        add a,8
-        ld l,a
+        or 1
+        ret
+.data:  ld bc,8
+        add hl,bc
         ld bc,SAVE_SIZE
         ldir
-.done:  nextreg 0x51,255
-        scf                     ; loaded
+        or 1
         ret
-load_front_end:
-        ASSERT load_front_end <= 0x05E3
-        SAVEBIN "inferno_loadfront.bin",load_front,load_front_end-load_front
+
+sd_auto:                        ; play start: the live record under the pilot's name (first 8 characters)
+        push af
+        push bc
+        push de
+        push hl
+        push ix
+        ld hl,0x82DD            ; the pilot name opens the record, CR-terminated
+        ld de,sd_name
+        ld b,8
+.name:  ld a,(hl)
+        cp ' '+1
+        jr c,.pad               ; CR, space or end
+        ld (de),a
+        inc hl
+        inc de
+        djnz .name
+        jr .named
+.pad:   ld a,' '
+.padl:  ld (de),a
+        inc de
+        djnz .padl
+.named: ld a,(sd_name)
+        cp ' '
+        jr z,.done              ; no pilot name: nothing to file it under
+        ld hl,sd_rec            ; key 0, so the game's LOAD decodes it unchanged
+        ld (hl),0
+        inc hl
+        ex de,hl
+        ld hl,0x82DD
+        ld bc,SAVE_SIZE-1
+        ldir
+        call sd_in
+        ld de,sd_name
+        call sd_find
+        ex de,hl                ; DE = slot
+        ld c,0                  ; bytes changed
+        ld hl,sd_name
+        ld b,8
+        call sd_put
+        ld hl,sd_rec
+        ld b,SAVE_SIZE
+        call sd_put
+        ld a,c
+        or a
+        call nz,sd_out          ; unchanged: no SD write
+.done:  pop ix
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ret
+
+sd_put:                         ; copy B bytes HL -> DE, C += number that differed
+        ld a,(de)
+        cp (hl)
+        jr z,.same
+        ld a,(hl)
+        ld (de),a
+        inc c
+.same:  inc hl
+        inc de
+        djnz sd_put
+        ret
+
+sd_find:                        ; DE -> 8-byte name; HL = slot; NZ found, Z free (or the last slot when full)
+        ld hl,SD_BASE
+        ld b,SD_SLOTS
+.next:  ld a,(hl)
+        or a
+        ret z
+        push hl
+        push de
+        ld c,8
+.cmp:   ld a,(hl)               ; letters match in either case (the game's input gives no capitals)
+        call sd_fold
+        ld (sd_t),a
+        ld a,(de)
+        call sd_fold
+        push hl
+        ld hl,sd_t
+        cp (hl)
+        pop hl
+        jr nz,.other
+        inc de
+        inc hl
+        dec c
+        jr nz,.cmp
+        pop de
+        pop hl
+        or 1
+        ret
+.other: pop de
+        pop hl
+        push de
+        ld de,SAVE_STEP
+        add hl,de
+        pop de
+        djnz .next
+        ld hl,SD_BASE+SAVE_STEP*(SD_SLOTS-1)
+        xor a
+        ret
+
+sd_fold:                        ; A: A-Z -> a-z
+        cp 'A'
+        ret c
+        cp 'Z'+1
+        ret nc
+        or 0x20
+        ret
+sd_t:   db 0
+
+sd_in:                          ; once: the file's slots over page 123 (no file: the RAM slots stand)
+        ld a,(sd_state)
+        or a
+        ret nz
+        inc a
+        ld (sd_state),a
+        ld b,0x01               ; FA_READ
+        call sd_open
+        ret c
+        ld (sd_handle),a
+        ld ix,SD_BASE
+        ld bc,SAVE_STEP*SD_SLOTS
+        ld l,0x9D               ; F_READ
+        call sd_esx
+        jr sd_close
+
+sd_out:                         ; page 123's slots -> the file (created or truncated)
+        ld b,0x0E               ; FA_WRITE + FA_CREATE_AL
+        call sd_open
+        ret c
+        ld (sd_handle),a
+        ld ix,SD_BASE
+        ld bc,SAVE_STEP*SD_SLOTS
+        ld l,0x9E               ; F_WRITE
+        call sd_esx
+sd_close:
+        ld a,(sd_handle)
+        ld l,0x9B               ; F_CLOSE
+        jr sd_esx
+
+sd_open:                        ; B = mode -> A = handle, carry on error
+        ld ix,sd_file
+        ld a,'*'                ; the current drive
+        ld l,0x9A               ; F_OPEN
+sd_esx:                         ; RST 8 function L with A, B/BC, IX -> A, carry. Keeps IY, the alternate set
+        ld (.sp),sp             ; and the slot 0/1 pages (the ROM is there for the call). Own stack at the top of
+        ld sp,0                 ; page 123: the driver's stack is in slot 0, which the ROM and DivMMC overlay
+        push af
+        ld a,l
+        ld (.fn),a
+        ld a,0x50
+        call sd_nr
+        ld (.mmu0),a
+        ld a,0x51
+        call sd_nr
+        ld (.mmu1),a
+        nextreg 0x50,255
+        nextreg 0x51,255
+        pop af
+        push iy
+        exx
+        push bc
+        push de
+        push hl
+        exx
+        ex af,af'
+        push af
+        ex af,af'
+        rst 8
+.fn:    db 0
+        di
+        ex af,af'
+        pop af
+        ex af,af'
+        exx
+        pop hl
+        pop de
+        pop bc
+        exx
+        pop iy
+        push af
+        ld a,(.mmu0)
+        nextreg 0x50,a
+        ld a,(.mmu1)
+        nextreg 0x51,a
+        pop af
+        ld sp,(.sp)
+        ret
+.sp:    dw 0
+.mmu0:  db 0
+.mmu1:  db 0
+
+sd_nr:                          ; A = NextREG -> A = its value (BC kept)
+        push bc
+        ld bc,0x243B
+        out (c),a
+        inc b
+        in a,(c)
+        pop bc
+        ret
+sd_code_end:
+        ASSERT sd_code_end <= 0xFF00    ; FF00-FFFF: sd_esx's stack
+        SAVEBIN "inferno_sdsave.bin",sd_code,sd_code_end-sd_code
 
 ; English build: text tables (count16, dest16, bytes; count 0 ends) in pages 118 (main), 119 (intro), 124-127 (levels).
         ORG 0x050E              ; after save_hook, in the old SA-BYTES and LD-BYTES entry code
@@ -7623,13 +7891,15 @@ en_start_end:
         ASSERT en_start_end <= 0x05E3
         SAVEBIN "inferno_enstart.bin",en_start,en_start_end-en_start
 
-; English story screens: after the level picture is drawn, its text bytes come from pages 127 and 121
+; English story screens: after the level picture is drawn, its text bytes come from pages 127 and 121.
+; While the game draws it (about 0.2 s, Czech words in black and white) the ULA shows the shadow screen,
+; bank 7, which the English build keeps black. NR69 is 0 here: the exit to the menu cleared Layer 2,
+; and the game never sets the Timex mode.
         ORG 0x0558
 en_story:                       ; replaces CALL C350 at 7166
+        nextreg 0x69,0x40
         call 0xC350
-        ld a,(0x7335)
-        sub '0'
-        jr en_story2
+        jp en_story3
 en_story_end:
         ASSERT en_story_end <= 0x0562
         SAVEBIN "inferno_enstory.bin",en_story,en_story_end-en_story
@@ -7651,5 +7921,12 @@ en_story2:                      ; A = level: pages 127 (0-2) and 121 (3-5), tabl
         ld l,0
         ld a,b
         jp en_apply
+en_story3:
+        ld a,(0x7335)
+        sub '0'
+        call en_story2
+        nextreg 0x69,0          ; the patched picture
+        ret
 en_story2_end:
+        ASSERT en_story2_end <= 0x0605  ; LD-EDGE's body, dead with LD-BYTES replaced; SAVE-ETC stays
         SAVEBIN "inferno_enstory2.bin",en_story2,en_story2_end-en_story2

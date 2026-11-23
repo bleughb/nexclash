@@ -1,0 +1,30 @@
+{
+ "id": "lesson.nextboot-rom-path-check",
+ "kind": "fact",
+ "claim": "The boot ROM-path check must credit bytes a build's own boot code restores, and treat a replaced BASIC loader prefix or an explicit entry boundary as needing its own exact boot proof.",
+ "evidence": [
+  {
+   "game": "games/beyond_the_ice_palace.md",
+   "text": "A tail jumping to the build's boot code, which puts 0x5B00-0x5BFF back, was reported as read before written. The check now boots on to the game's PC and credits the bytes back.",
+   "shown_on": "analysis"
+  },
+  {
+   "game": "games/bubbler.md",
+   "text": "A replaced BASIC loader prefix is not a runtime ROM path. An explicit entry boundary needs separate exact boot proof, records its first frame, rejects a missing entry and still catches later ROM faults.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "toolkit",
+ "words": [
+  "nextboot",
+  "boot_restores",
+  "ROM path",
+  "entry boundary",
+  "tail",
+  "BASIC loader",
+  "boot proof"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

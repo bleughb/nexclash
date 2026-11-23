@@ -1537,7 +1537,7 @@ setup:
         ld bc,0x303B
         xor a
         out (c),a
-        ld b,64
+        ld b,128                ; all 128: another program may have left any of them visible
 .hide:  xor a
         out (0x57),a
         out (0x57),a

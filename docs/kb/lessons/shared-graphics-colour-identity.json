@@ -1,0 +1,38 @@
+{
+ "id": "lesson.shared-graphics-colour-identity",
+ "kind": "pitfall",
+ "claim": "Actors or objects can share source bytes, so a colour map keyed on source address or frame number can paint one on another; key colours to actor identity and the bytes drawn, and check source identity, not only raw bytes.",
+ "evidence": [
+  {
+   "game": "games/gunfright.md",
+   "text": "A shared source address cannot give the sheriff a badge without the bandits; the selector uses the IX actor type and independent body/leg IDs, keeping geometry and MMU.",
+   "quote": "A shared source address cannot give the sheriff a badge without the bandits. The selector uses IX actor type 10/22",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/heartland.md",
+   "text": "A record's frame number is not what is in a shared shift buffer at the plot: key colours to the bytes drawn; the owner's recording passed with the record's fields, five scripted ones did not.",
+   "quote": "A record's frame number is not what is in a shared shift buffer at the plot: key colours",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/herbert.md",
+   "text": "A painted cache must check source identity as well as raw bytes, since another object with identical graphics can have different paint.",
+   "quote": "A painted cache must check source identity as well as raw bytes: another object with identical graphics can have different paint.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "design",
+ "card": "patch.runtime-colour-map",
+ "words": [
+  "colour map",
+  "shared graphics",
+  "actor identity",
+  "painting",
+  "source address",
+  "cache"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

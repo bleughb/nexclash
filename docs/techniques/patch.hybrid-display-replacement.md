@@ -4,7 +4,7 @@
 {
   "schema": 4,
   "id": "patch.hybrid-display-replacement",
-  "revision": 1,
+  "revision": 2,
   "kind": "patch",
   "title": "Hybrid: keep the original game logic, replace its display with Next layers",
   "question": "Can the game's own display work be replaced by tilemap / Layer 2 / sprites while its logic, pace and sound stay original?",
@@ -19,7 +19,7 @@
             "cross": ["layers hide on every exit from gameplay before the game draws a menu",
                       "replaced display time is padded back (patch.pace-limiter)"]},
   "owns": {"next_pages": "param", "sprite_ids": "param", "pattern_slots": "param", "hook_state": ["CW_WOQ"]},
-  "examples": ["inferno"],
+  "examples": ["inferno", "r_type"],
   "sources": ["specnext reference/inferno/build/hybrid.md (plan, hardware rounds 2026-11-09)"]
 }
 ```
@@ -30,11 +30,16 @@ run the original game logic and producers, take scenery from the game's own map 
 its own lists, and draw them on Next layers. Reclaim the replaced display time for rendering work,
 then pad to the original duration so pace is unchanged. Keep any gameplay call inside the routine
 (Inferno 9804) and any sound it makes. Not when logic reads the figures it draws.
+R-Type: replacing the picture beat recognising the original's cells every update (parked after a
+28 MHz main-loop measurement): scenery on Layer 2 from the level map, figures as sprites keyed by
+the plotter call, all in front (`patch.scenery-edge-masks`; what the original hid:
+`detect.behind-scenery`); 28 MHz only in play (menus time with CPU loops), fixed
+frames per update from the original's histogram (PACE 4); TECHNIQUES 1.9 lists the set.
 
 **Assumptions.** A clean source exists (Inferno: tile map 9B00 at 8F7C, actor lists C100); the
 HUD and menus can stay on the ULA under a layer priority that shows them.
 
-**Validation gap.** Inferno only; hardware by eye (all levels, intro, restart); freshness
+**Validation gap.** Inferno; R-Type (CSpect, owner playtest 2026-11-16); hardware by eye (all levels, intro, restart); freshness
 (publication rate, display age) not measured on hardware.
 
 ## Recognise

@@ -1,0 +1,24 @@
+{
+ "id": "lesson.read-game-bytes-before-remap",
+ "kind": "pitfall",
+ "claim": "In a hook that remaps a slot, read the game's own bytes first, because reading tables after mapping a page over them returns the wrong data.",
+ "evidence": [
+  {
+   "game": "games/booty.md",
+   "text": "Reading the game's own tables must come before mapping slot 5 over them: the first version read a width of 0.",
+   "quote": "Reading the game's own tables must come before mapping slot 5 over them: the first version read a width of 0 from the table.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "slot remap",
+  "hook",
+  "read before map",
+  "tables",
+  "attributes"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

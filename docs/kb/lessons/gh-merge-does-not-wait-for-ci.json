@@ -1,0 +1,24 @@
+{
+ "id": "lesson.gh-merge-does-not-wait-for-ci",
+ "kind": "pitfall",
+ "claim": "gh pr merge does not wait for CI; check that gh pr checks has passed before every merge.",
+ "evidence": [
+  {
+   "game": "sessions",
+   "text": "gh pr merge merged a pull request whose doc check was still failing, turning main red until a follow-up fixed it.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "words": [
+  "gh pr merge",
+  "CI",
+  "doccheck",
+  "main red",
+  "pull request",
+  "checks"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

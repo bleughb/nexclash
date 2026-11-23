@@ -1,0 +1,41 @@
+{
+ "id": "lesson.speed-latch-restore-caller-speed",
+ "kind": "pitfall",
+ "claim": "A hook must restore the caller's CPU speed, not a fixed 3.5 MHz: read NR 7 first, keep it on the stack or in state, and use a latch per plotter window.",
+ "evidence": [
+  {
+   "game": "games/dizzy_ultimate_cartoon_adventure.md",
+   "text": "Three latches (plotter 2, the Dizzy plotter, every other hook) because those can run inside a plotter's 28 MHz window; NR 7 is read first (51 T at the caller's clock, no stack, flags kept); exits give the speed back.",
+   "quote": "Three latches: plotter 2, the Dizzy plotter and every other hook (those can run inside a plotter's 28 MHz window).",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/finders_keepers.md",
+   "text": "Every hook left NR 7 at 3.5 MHz; HK_IN keeps the caller's speed on the stack.",
+   "quote": "every hook left NR 7 at 3.5 MHz; HK_IN keeps the caller's speed on the stack (card patch.restore-speed).",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/jetpac.md",
+   "text": "e_nw reads NR 7 (bits 1:0) before switching to 28 MHz and keeps it on the stack: alt-ROM hooks have no RAM for a latch; the exit writes it back instead of a fixed NEXTREG 7,0.",
+   "quote": "The exit writes it back instead of a fixed NEXTREG 7,0.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "enforced_by": [
+  "nexclash.hooklib.speed_audit"
+ ],
+ "words": [
+  "speed latch",
+  "NR 7",
+  "caller speed",
+  "28 MHz",
+  "HK_IN",
+  "restore speed",
+  "stack"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,25 @@
+{
+ "id": "lesson.ctc-polled-clock",
+ "kind": "method",
+ "claim": "CTC channel 3 polled with 32 T ticks can serve as a clock that places OUTs near their original T (model error about -24..+56 T).",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "CTC ch 3 polled with 32 T ticks places OUTs at the original T and 9907 at the original time; model OUT -24..+56 T, 9907 -25..+43 T.",
+   "quote": "(CTC ch 3 polled, 32 T ticks), 9907 at the original time; model OUT -24..+56 T, 9907 -25..+43 T.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "platform",
+ "words": [
+  "CTC",
+  "channel 3",
+  "polled clock",
+  "T-states",
+  "timer",
+  "32 T tick"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

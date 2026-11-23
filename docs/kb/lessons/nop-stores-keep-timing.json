@@ -1,0 +1,58 @@
+{
+ "id": "lesson.nop-stores-keep-timing",
+ "kind": "method",
+ "claim": "To stop a plotter painting the screen, replace its store instructions with same-length ones (NOP, or CP (HL) to keep 7 T and the access) so state and timing stay identical to the original.",
+ "limit": "Not safe when the removed paint was a write the game later reads (Starquake): save and restore those bytes.",
+ "evidence": [
+  {
+   "game": "games/pac_mania.md",
+   "text": "Removing only the store instructions made the patched run equal the original in every register at each frame boundary, bar A and F inside the plot and blit loops, which follow the bytes read.",
+   "quote": "Removing only the store instructions made the patched run equal the original in every register at each frame boundary",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/sabre_wulf.md",
+   "text": "Paint site LD (HL),D became CP (HL), not NOP: 7 T and one access of the cell (the NOP was 3 T a cell faster); a build with only the screen sites stays in lockstep with the plain build for 600 rounds.",
+   "quote": "Paint site LD (HL),D -> CP (HL), not NOP: 7 T and one access of the cell, as the write (the NOP was 3 T a cell faster).",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/pssst.md",
+   "text": "A store read instead of written takes the same time to the T state: no pace cost.",
+   "quote": "store read instead of written takes the same time to the T state",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/spellbound_magic_knight.md",
+   "text": "Replacing one store with NOP keeps instruction counts and the lockstep; a watch at the site still checks the store's would-be effect.",
+   "quote": "Replacing one store with NOP keeps instruction counts and the lockstep; a watch at the site still checks the store's would-be effect.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/chuckie_egg.md",
+   "text": "Only screen pixel and attribute write instructions were removed (39697, 39827, 37646, 37653, 37707); the plotters keep running, so all game state stays the original's.",
+   "quote": "The plotters keep running, so all game state stays the original's.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/starquake.md",
+   "text": "The paint ran past the attribute area into 0x5B00, read by collision; save and restore the attributes round the painter instead of removing its stores. A full-memory lockstep found it (b1 frame 5398).",
+   "quote": "The paint ran past the attribute area into 0x5B00, read by collision:",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "words": [
+  "NOP",
+  "store",
+  "CP (HL)",
+  "plotter",
+  "timing",
+  "lockstep",
+  "paint removal"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7",
+ "next_check": "A site check that the replacement bytes at a paint site have the length, T states and memory accesses of the original instruction."
+}

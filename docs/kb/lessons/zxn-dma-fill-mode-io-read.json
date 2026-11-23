@@ -1,0 +1,25 @@
+{
+ "id": "lesson.zxn-dma-fill-mode-io-read",
+ "kind": "pitfall",
+ "claim": "The undocumented DF fill mode with a search-mode WR0 reads I/O ports without a length limit and can freeze the machine or trip NextZXOS traps.",
+ "limit": "Observed on core 3.03.00 / firmware 1.46 only.",
+ "evidence": [
+  {
+   "game": "notes",
+   "text": "Standard program followed by 42 DF 08 87: DMA reads port N and writes memory from the destination upward, ignoring length; continuous mode freezes; NextZXOS stopped with an FDC trap until 0xD8 set to 0.",
+   "shown_on": "hardware"
+  }
+ ],
+ "level": "observed",
+ "area": "platform",
+ "words": [
+  "zxnDMA",
+  "DF command",
+  "fill",
+  "I/O trap",
+  "0xD8",
+  "freeze"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

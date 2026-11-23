@@ -151,17 +151,17 @@ No hardware claim; no shared card writes or pushes.
 
 ## Lessons
 
-- [local: Bubbler loader] Observed: the archive complements 37,300 bytes before game entry. Compare a decoded execution state with the conversion, not the encoded loader RAM.
+- [kb lesson.tape-intake-decoded-state: Bubbler loader] Observed: the archive complements 37,300 bytes before game entry. Compare a decoded execution state with the conversion, not the encoded loader RAM.
 - [local: Bubbler conversion provenance] Demonstrated: all twelve apparent program differences have original runtime writers; graphic ranges match exactly. Evidence is retained in the source-match report.
-- [local: Bubbler rendering] Observed: masked actors and scenery compose into a 24-byte stride buffer, then a separate stack copier publishes it. Screen-writer ranking alone initially emphasizes the copier and menus.
+- [kb lesson.writer-ranking-finds-copier: Bubbler rendering] Observed: masked actors and scenery compose into a 24-byte stride buffer, then a separate stack copier publishes it. Screen-writer ranking alone initially emphasizes the copier and menus.
 - [local: scenery occlusion] Demonstrated: the C741 partial scenery path explains a three-pixel discrepancy that persists even when an isolated actor plot matches. Final-copy comparison catches missing intervening painters.
 - [local: conversion geometry] Demonstrated: unpainted GFX bytes can contain a later shifted walkway. Use original mask/ink geometry for source indices 0/255; import actual paint only inside the original footprint.
 - [tool nexclash/coloursheet.py] Demonstrated: the sheet importer truncated palettes at 15 entries. It now uses the declared palette length, with unchanged legacy behaviour and explicit high-index tests.
 - [local: native start state] Observed: fixed video-frame snapshots can land in the game's pause loop. Capture the original player-update boundary for pace trials instead.
 
 - [local: saved rectangle row count] Original save and restore branch to DJNZ before the first pixel copy. Header height N copies N−1 rows; treating it as N left stale or overdrawn pixels.
-- [local: death HALT refresh] Native E449 fetch-count difference 6,459 modulo 128 explains the complete R offset 59. The repeated E491 phase then advances R identically; preserve this distinction from hook R correctness.
-- [local: overlapping colour transfer] Ordinary forward DMA cannot implement an overlapping right shift directly. Copy backward chunks through a dedicated scratch page, or use the verified LDDR fallback.
+- [kb lesson.r-register-checks-local-vs-global: death HALT refresh] Native E449 fetch-count difference 6,459 modulo 128 explains the complete R offset 59. The repeated E491 phase then advances R identically; preserve this distinction from hook R correctness.
+- [kb lesson.overlapping-dma-shift: overlapping colour transfer] Ordinary forward DMA cannot implement an overlapping right shift directly. Copy backward chunks through a dedicated scratch page, or use the verified LDDR fallback.
 
 - [tool nexclash/coloursheet.py] Palette indexes above 15 must serialize as explicit integer arrays; variable-width hex loses pixel boundaries. Preserve duplicate-RGB semantic indexes during unchanged imports. Both behaviours have golden checks.
 - [tool nexclash/nextboot.py] A replaced BASIC loader prefix is not a runtime ROM path. An explicit entry boundary requires separate exact boot proof, records its first frame, rejects missing entry and still catches later ROM faults.

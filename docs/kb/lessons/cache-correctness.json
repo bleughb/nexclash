@@ -1,0 +1,31 @@
+{
+ "id": "lesson.cache-correctness",
+ "kind": "method",
+ "claim": "A pattern cache keyed by hash or checksum must still compare the full bytes on every hit.",
+ "evidence": [
+  {
+   "game": "games/knight_lore.md",
+   "text": "A 256-byte comparison follows every cache-hash match.",
+   "shown_on": "unknown",
+   "quote": "A 256-byte comparison follows every cache-hash match;"
+  },
+  {
+   "game": "games/ghosts_n_goblins.md",
+   "text": "Group cache keyed by address + shape; every hit is still checked byte for byte against the atlas or parent copy, so the checksum runs on a miss only; hits 3,073, misses 747 of 3,820 visible plots.",
+   "shown_on": "unknown",
+   "quote": "still checked byte for byte against the atlas or parent copy (rewritten images: armour, levels)"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "pattern cache",
+  "hash",
+  "checksum",
+  "collision",
+  "compare bytes",
+  "hit rate"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

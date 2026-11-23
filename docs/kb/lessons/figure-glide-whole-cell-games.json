@@ -1,0 +1,27 @@
+{
+ "id": "lesson.figure-glide-whole-cell-games",
+ "kind": "method",
+ "claim": "In games that move figures in whole cells every few frames, make motion smooth by gliding each sprite part of the way each frame, not by changing resolution.",
+ "limit": "Collisions stay cell-based, so a gliding sprite may look closer than the game counts.",
+ "evidence": [
+  {
+   "game": "games/r_type.md",
+   "text": "Build uses filled whole-figure sprites that glide; the recording averages 4.35 frames per update (28% 3, 34% 4, 22% 5).",
+   "quote": "The recording averages 4.35 frames per update (28% 3, 34% 4, 22% 5);",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "inferred",
+ "area": "design",
+ "card": "patch.figure-glide",
+ "words": [
+  "glide",
+  "interpolation",
+  "whole cell",
+  "smooth",
+  "update rhythm",
+  "sprites"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

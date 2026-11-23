@@ -66,6 +66,23 @@ t_speed2:                       ; the no-stack forms: A, F, B, C lost
         HLIB_SPEED_OUT_A V_SPD2
         ret
 
+t_speed3:                       ; the stack forms (no RAM latch): every register kept
+        push af
+        push bc
+        HLIB_SPEED_IN_SP
+        ld a,d
+        add a,e
+        ld h,a
+    IFDEF NEG_FORCED35
+        pop af
+        nextreg 0x07,0          ; the old convention: a fixed 3.5 MHz exit
+    ELSE
+        HLIB_SPEED_OUT_SP
+    ENDIF
+        pop bc
+        pop af
+        ret
+
 ; ---- R: the original sums B + 1 bytes (B = 0: 257); the hook does the same work with more code ------
 o_r:    ld a,(hl)               ; O = 1 + 3B + 1 (RET) M1s
 .l:     add a,(hl)

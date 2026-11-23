@@ -33,7 +33,7 @@ the paths to equal M1s and lower its delta (GnG).
 
 **Assumptions.** An interrupt accepted at the end of LD A,I / LD A,R leaves P/V = 0 (NMOS Z80; JNext
 does it, SkoolKit's simulator too; the Next's core untested - the double read is right either way). The
-/INT lasts 32 T at 3.5 MHz on a Spectrum; at 28 MHz JNext loses interrupts in DI windows of a few hundred T (Quazatron).
+/INT lasts 32 T at 3.5 MHz on a Spectrum; at 28 MHz JNext loses interrupts in DI windows of a few hundred T (Quazatron; Cisco Heat's line clock read under DI lost every one in its busy waits: read it lock-free, again if the ISR's count changed).
 
 **Validation gap.** Library unit tests on the simulator with the interrupt injected; JNext interrupt counts
 on the games that changed. No board run.

@@ -1,0 +1,23 @@
+{
+ "id": "lesson.inputrecording-slice-by-frame",
+ "kind": "pitfall",
+ "claim": "An InputRecording's data includes frame headers, so slice it by each frame's start and end; reading it whole silently desynchronises the run and looks like a hang.",
+ "evidence": [
+  {
+   "game": "games/jet_set_willy.md",
+   "text": "Reading the recording data whole silently desynchronised the run into what looked like a hang.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "InputRecording",
+  "slice",
+  "frame header",
+  "desync",
+  "RZX"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

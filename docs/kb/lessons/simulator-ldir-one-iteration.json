@@ -1,0 +1,23 @@
+{
+ "id": "lesson.simulator-ldir-one-iteration",
+ "kind": "pitfall",
+ "claim": "SkoolKit runs one LDIR iteration per execution, so a model that treats LDIR as one block per call is wrong.",
+ "evidence": [
+  {
+   "game": "games/quazatron.md",
+   "text": "The model first followed LDIR as one block per call; SkoolKit runs one iteration per execution.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "emulator",
+ "words": [
+  "skoolkit",
+  "LDIR",
+  "iteration",
+  "simulator",
+  "model"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

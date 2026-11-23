@@ -1,0 +1,29 @@
+{
+ "id": "lesson.shifted-copies-differ",
+ "kind": "fact",
+ "claim": "Pre-shifted copies of an image need not be identical shifts: they can be separate animation frames or be painted in different colours, so count colours per shift.",
+ "evidence": [
+  {
+   "game": "games/starquake.md",
+   "text": "The four shifted copies of a base image are four animation frames.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/that_sinking_feeling.md",
+   "text": "A set can paint a frame's pre-shifts differently: the jellyfish's tentacles are yellow at even shifts, red at odd.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "pre-shifted",
+  "shift",
+  "animation frames",
+  "colour per shift",
+  "census",
+  "graphics"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

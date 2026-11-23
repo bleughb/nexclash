@@ -35,7 +35,19 @@ PROBE_FIELDS = ('Invocation:', 'Limits:', 'Origin:', 'Smoke test:')
 FRICTION_KEYS = ('reuse', 'retries', 'environment', 'hand-rolled', 'scratch')     # docs/LEARNING.md 2b
 SHARED = re.compile(r'\b(simpool|z80tonex|nextboot|rzx|records|selftest|learncheck|doccheck|survey|memscan|'
                     r'snapinfo|isrinfo|drawcost|simrun|preview|userflow|build\.py|sprites\.py|engines\.py)\b')
-TAG = re.compile(r'\[(card|doc|tool|backlog|probe|local|deferred|none)\b([^\]]*)\]')
+TAG = re.compile(r'\[(card|doc|tool|backlog|probe|kb|local|deferred|none)\b([^\]]*)\]')
+KB = os.path.join(ROOT, 'docs', 'kb', 'lessons')       # one file per shared lesson
+ALIKE = 0.5         # a new [local] lesson holding this share of a shared lesson's words gets a notice (not a failure:
+#                     measured 2026-11-23 on 347 retagged and 384 local bullets: 26% of the first, 3% of the second)
+
+
+def rediscovered(item, shared_rows):
+    """A [local] lesson that reads like a shared one -> (lesson id, share of its words) or None."""
+    import knowledge
+    if not item.startswith('[local'):
+        return None
+    best = max(((knowledge.covered(item, x), x['id']) for x in shared_rows), default=(0, ''))
+    return (best[1], best[0]) if best[0] >= ALIKE else None
 
 
 def cards():
@@ -149,6 +161,12 @@ def _check_tag(kind, arg, game_text, cs, ps, ctx):
         missing, listed = ps[n]
         if missing or not listed:
             return 'probe %s: %s' % (n, ', '.join(missing + ([] if listed else ['not in tools/probes/README.md'])))
+    elif kind == 'kb':
+        ids = ctx.get('kb')
+        arg = arg.split(':')[0].strip()                     # [kb lesson.<id>: what this game adds]
+        if not (arg in ids if ids is not None else re.fullmatch(r'lesson\.[a-z0-9-]+', arg)
+                and os.path.exists(os.path.join(KB, arg[7:] + '.json'))):
+            return 'no shared lesson "%s" in docs/kb/lessons/ (add the file in the same change)' % arg
     elif kind == 'none':
         if not re.match(r':\s*\S.{6,}', arg):
             return 'none tag needs a reason "[none: <why there is no new finding>]"'
@@ -198,7 +216,7 @@ def check_friction(rel, t, cs, ps, ctx, required):
     if required:
         for i, item in enumerate(_section(t, 'Lessons') or [], 1):
             if item.startswith('[local') and SHARED.search(item):
-                bad.append('%s: lesson %d is [local] but names shared code (%s): tag it tool / doc / backlog '
+                bad.append('%s: lesson %d is [local] but names shared code (%s): tag it tool / doc / backlog / kb '
                            '(docs/LEARNING.md 2b)' % (rel, i, SHARED.search(item).group(1)))
     return bad
 
@@ -304,6 +322,15 @@ def check(ctx=None):
             bad.append('%s: "## Lessons" is empty (nothing new: "- [none: <why>]")' % rel)
         if revisited and base:
             old = set(_section(_at_base(base, rel), 'Lessons') or [])
+            import knowledge
+            rows = ctx.get('shared')
+            rows = knowledge.shared() if rows is None else rows
+            for x in lessons:
+                hit = x not in old and rediscovered(x, rows)
+                if hit:
+                    print('learncheck: NOTE %s: new [local] lesson reads like %s (%.0f%% of its words): if it is the '
+                          'same finding, tag it [kb %s] and add this game to its evidence. %s'
+                          % (rel, hit[0], 100 * hit[1], hit[0], x[:60]))
             if not [x for x in lessons if x not in old]:
                 bad.append('%s: changed since %s but no lesson added or changed (nothing new: add '
                            '"- [none: <why>]", docs/LEARNING.md 2)' % (rel, base[:7]))
@@ -391,6 +418,13 @@ def selfcheck():
     for arg, ok in ((': hardware report only, nothing new', True), ('', False), (':  ', False)):
         if (_check_tag('none', arg, '', {}, {}, {}) is None) != ok:
             bad.append('none tag %r' % arg)
+    row = [dict(id='lesson.a', claim='NEXLOAD overwrites the printer buffer', words=['boot'])]
+    if rediscovered('[local: here] NEXLOAD overwrites our printer buffer at boot', row) != ('lesson.a', 1.0) or \
+            rediscovered('[local: here] the tune restarts', row) or rediscovered('[kb lesson.a] NEXLOAD printer buffer boot', row):
+        bad.append('rediscovered')
+    for arg, ok in (('lesson.a', True), (' lesson.a: seen here too', True), ('lesson.b', False), ('', False)):
+        if (_check_tag('kb', arg, '', {}, {}, {'kb': {'lesson.a'}}) is None) != ok:
+            bad.append('kb tag %r' % arg)
     use = '## Technique use\n- patch.a: helped\n- patch.a: helped (again)\n- patch.b: used\n'
     cnt, games = usage_counts({'g1.md': use, 'g2.md': '## Technique use\n- patch.b: no help: why\n'})
     if (len(games['patch.a']), cnt['patch.a']['uses'], len(games['patch.b']), cnt['patch.b']['uses']) != (1, 2, 2, 2):

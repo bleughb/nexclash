@@ -1,0 +1,25 @@
+{
+ "id": "lesson.setup-call-stub-slots",
+ "kind": "pitfall",
+ "claim": "A setup call that runs with the stub in MMU slots 6-7 writes the game's 0xC000-0xFFFF into the stub's bank, so put start-up state in the image where the boot check covers it.",
+ "evidence": [
+  {
+   "game": "games/castle_master.md",
+   "text": "setup_call runs with the stub in slots 6-7; a write to the game's 0xC000-0xFFFF lands in the stub's bank. Only JNext showed it (the harness poked the same bytes).",
+   "shown_on": "jnext"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "setup_call",
+  "stub",
+  "MMU",
+  "slot 6",
+  "image",
+  "start-up state",
+  "boot check"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,24 @@
+{
+ "id": "lesson.hook-stack-below-sp",
+ "kind": "pitfall",
+ "claim": "A hook that saves registers on the game's own stack before switching to its own writes bytes below the game's SP; compare all game memory to catch it, and set up the private stack first.",
+ "evidence": [
+  {
+   "game": "games/olli_and_lissa_2.md",
+   "text": "A hook saving AF on the game's stack before switching writes two bytes below the game's SP, found by comparing all game memory; HLIB_R_IN goes after the stack switch.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "stack switch",
+  "SP",
+  "hook",
+  "all memory compare",
+  "AF",
+  "HLIB_R_IN"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

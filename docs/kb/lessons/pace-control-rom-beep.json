@@ -1,0 +1,31 @@
+{
+ "id": "lesson.pace-control-rom-beep",
+ "kind": "pitfall",
+ "claim": "A game that makes sound through the ROM needs the original .z80 on a 48K machine as its pace control: NextZXOS's ROM3 BEEP runs 12% faster than Sinclair's, so the plain .nex is not a faithful baseline.",
+ "evidence": [
+  {
+   "game": "games/abu_simbel.md",
+   "text": "Pace control is the original .z80 on a 48K machine, not the plain .nex: NextZXOS's ROM3 BEEP (ROM 0x03F8) runs 12% faster than Sinclair's, so the plain .nex is faster than the original in sound scenes.",
+   "quote": "runs 12% faster than Sinclair's, so the plain .nex is faster than the original in sound scenes.",
+   "shown_on": "jnext"
+  }
+ ],
+ "level": "observed",
+ "area": "emulator",
+ "when": [
+  "hook.faster_than_original"
+ ],
+ "card": "patch.pace-limiter",
+ "words": [
+  "pace",
+  "control",
+  "BEEP",
+  "ROM3",
+  "plain nex",
+  "NextZXOS",
+  "baseline",
+  "Sinclair ROM"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

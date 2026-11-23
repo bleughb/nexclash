@@ -12,7 +12,8 @@ Techniques: detect.gameplay-screen-readers
 - Built with tools/build_herbert.py (not yet an engine in engines.py: its verifier, negatives and clock matrix are
   the pilot's scripts, not ported; the engine contract's verify / unit_tests / CMP are the next step).
   `tools/build_herbert.py GAME.z80 -o OUT.nex --work DIR [--enhanced] [--screen PICTURE.scr]` gives, with the tape
-  picture, byte for byte the published .nxc 1.3 --bare default (537f88c7) and Enhanced (dbb38ec4).
+  picture, byte for byte the published .nxc 1.5 --bare default (7df91b7c) and Enhanced (f568c81d): 1.3 plus bright magenta
+  ink 0xE3 -> 0xE7 (Layer 2 transparency, a real Next compares the RGB) and the automap-off start (2026-11-22).
 - No game pixels are stored. The paint routines' bytes and every image are read from the player's snapshot; the
   owner's figure paintings (herbert_parts.json) and the scenery paint (herbert_scenery.json) hold one colour digit
   per ink pixel of the game's image, in pixel / bit order, and the build lays them over the image it reads.
@@ -211,16 +212,16 @@ ENHANCED.md; v1.2 evidence is retained in ENHANCED-v1.2.md.
 ## Lessons
 
 - [local: v1.2 complete-object paint census] Repeated glyph bytes need object identity AND placement to distinguish materials within and between objects. Forged hash-collision negatives prove the full identity checks independently of the hash.
-- [local: v1.2 sun-room timing, measured room by room] A rare per-update water strip invokes 22 direct glyph hooks. Measure every room; speed the original display-only writer with a paired restore rather than reducing the global pace limiter.
+- [kb lesson.pace-averages-hide-scene-types: v1.2 sun-room timing, measured room by room] A rare per-update water strip invokes 22 direct glyph hooks. Measure every room; speed the original display-only writer with a paired restore rather than reducing the global pace limiter.
 - [local: v1.2 Layer 2 publication] Flush queued scenery before the final border wait. Putting a large flush inside the existing sprite publication window can push attribute writes into active display.
 
-- [local: implemented in this engine and independently checked in native snapshots] Attribute NextRegs and port 57 use separate sprite selectors. A simulator that aliases them can falsely approve stale copies. Explicit port selection and a broken-selector negative now cover this.
+- [kb lesson.sprite-selector-aliasing: implemented in this engine and independently checked in native snapshots] Attribute NextRegs and port 57 use separate sprite selectors. A simulator that aliases them can falsely approve stale copies. Explicit port selection and a broken-selector negative now cover this.
 - [local: Herbert's mutable graphics and repeated cube frames] Cache by image address across figures, then compare complete source bytes. Per-slot caches can pass pixels while rebuilding the same animation many times.
-- [local: v1.1 painting and the unknown-address negative] A painted cache must check source identity as well as raw bytes: another object with identical graphics can have different paint. Unknown or altered graphics fall back to the ordinary pattern.
-- [local: v1.1 raster phase sweep] A faster renderer can make a formerly caught unsafe-publication negative pass at one phase. Sweep the raster phase: the good build must pass every phase, and the broken build must fail where publication reaches active display.
-- [local: this game's clean buffer changes during an update] Freeze scenery at reset, not at commit; copying the live clean buffer presents some edits one update early.
+- [kb lesson.shared-graphics-colour-identity: v1.1 painting and the unknown-address negative] A painted cache must check source identity as well as raw bytes: another object with identical graphics can have different paint. Unknown or altered graphics fall back to the ordinary pattern.
+- [kb lesson.publication-raster-phase: v1.1 raster phase sweep] A faster renderer can make a formerly caught unsafe-publication negative pass at one phase. Sweep the raster phase: the good build must pass every phase, and the broken build must fail where publication reaches active display.
+- [kb lesson.clean-copy-capture: this game's clean buffer changes during an update] Freeze scenery at reset, not at commit; copying the live clean buffer presents some edits one update early.
 - [local: self-modifying B32 base operand in this game] Intercept after the base load; placing the jump over its operand corrupts the hook when the room changes.
-- [local: the native keyboard queue crosses a video boundary] Queue replay keys before the long copy window and count pace at player update 9095. Queuing at the reader itself can give one build an extra jump update.
+- [kb lesson.pace-input-timing: the native keyboard queue crosses a video boundary] Queue replay keys before the long copy window and count pace at player update 9095. Queuing at the reader itself can give one build an extra jump update.
 
 - [local: a painting can be stored without the picture it paints] colours per ink pixel in order, laid over the image read from the snapshot, gave the same build.
 
@@ -234,7 +235,7 @@ ENHANCED.md; v1.2 evidence is retained in ENHANCED-v1.2.md.
 ## Friction
 
 - reuse: [local: family methods reused without copying an incompatible whole engine] Wally and Three Weeks supplied the plot/buffer model; Atic supplied cache and every-clock testing patterns.
-- retries: [local: earlier candidates and failing measurements retained] Native pictures caught the selector-model mistake; the all-room pace survey caught sparse-room speedup and crowded-room slowdown.
+- retries: [kb lesson.compare-final-frame-with-original: earlier candidates and failing measurements retained] Native pictures caught the selector-model mistake; the all-room pace survey caught sparse-room speedup and crowded-room slowdown.
 - environment: [local: this task must remain inside its own run folder] All emulator HOME/temp/output paths are private, and the supplied card image is opened read-only.
 - hand-rolled: [local: game-specific adapters are retained beside their raw logs] Exact-fetch recording and native classic-screen extraction avoid the unsuitable assumptions found in the generic helpers; shared tools were not edited.
 - scratch: [local: reproducible evidence is retained with this game] work/ scripts and logs remain in the run; source ROM, snapshots, recordings and extracted art are not committed.

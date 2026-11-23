@@ -1,0 +1,27 @@
+{
+ "id": "lesson.port-303b-shared",
+ "kind": "pitfall",
+ "claim": "Port 0x303B selects both sprite and pattern-upload index, so an ISR moving sprites garbles pattern uploads in progress; stay off it during uploads, count skipped steps and make them up with even update lengths.",
+ "evidence": [
+  {
+   "game": "games/r_type.md",
+   "text": "An ISR moving sprites garbled uploads; count skipped steps and make them up; even update lengths are needed.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "platform",
+ "facts": {
+  "interrupts": "on"
+ },
+ "words": [
+  "port 0x303B",
+  "sprite index",
+  "pattern upload",
+  "ISR",
+  "glide",
+  "skipped steps"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

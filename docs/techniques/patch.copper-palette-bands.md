@@ -32,7 +32,10 @@ Use for a still picture (title, intro, a "wow" upgrade of an original screen) th
 **Validation gap.** CSpect only (R-Type start-up); NR 0x64 alignment and the 9-bit failure not checked on a board.
 
 ## Recognise
-A paletted or AI-upscaled picture to show at the highest Next resolution.
+A paletted or AI-upscaled picture to show at the highest Next resolution. Capture the original
+screen at exactly 256x192 for the owner's upscaler; a 320x256 paletted PNG (up to 256 colours)
+goes straight into 320x256 x 8 (R-Type showpiece.py `indexed_320`; an entry equal to 0xE3 is
+nudged off the transparent colour).
 
 ## Probe and stop
 Preview offline (indices through each band's palette). In CSpect find rows whose whole width shows the wrong palette: they give the WAIT offset.

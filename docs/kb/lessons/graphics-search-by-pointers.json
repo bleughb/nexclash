@@ -1,0 +1,25 @@
+{
+ "id": "lesson.graphics-search-by-pointers",
+ "kind": "pitfall",
+ "claim": "A whole-snapshot graphic search returns many false matches; only graphics the code points at or a replay really plots count.",
+ "evidence": [
+  {
+   "game": "games/phantis.md",
+   "text": "A graphic search over the whole snapshot finds 1,028 matches; only those the code points at, or that a replay really plots, are graphics: 166.",
+   "quote": "A graphic search over the whole snapshot finds 1,028 matches; only those the code points at, or that a replay really plots, are graphics: 166.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "card": "detect.graphics-record-layout",
+ "words": [
+  "graphics search",
+  "false match",
+  "pointers",
+  "replay",
+  "census"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

@@ -88,7 +88,7 @@ Dean's builds (cd620010 / 9182f2f8, and the printer repro c09213be) are untouche
 
 ## Friction
 - reuse: [tool nextboot.rom_paths] the ROM path and tail checks; the boot check, pace, flicker and soak ran on the 128K build unchanged
-- retries: [local: the pace trials' box / title unstick (an ENTER tap opened the inventory)]
+- retries: [kb lesson.scripted-keys-must-reach-game: the pace trials' box / title unstick (an ENTER tap opened the inventory)] 
 - environment: [none: headless JNext with HOME in the run folder, the read-only card]
 - hand-rolled: [local: bot recorder on SkoolKit's C simulator; pace trials from TID's script]
 - scratch: [none: scripts stay in the pilot run folder runs/dean_fantasy_world_dizzy/work]

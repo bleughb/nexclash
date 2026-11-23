@@ -83,18 +83,18 @@ Techniques: detect.gameplay-screen-readers
 
 ## Lessons
 
-- [local: frame-edge snapshots can catch a correct hook halfway through an upload] Diagnose persistence and inspect rendered frames before calling a temporary pattern/grid mismatch visible corruption; death-specific owner reproduction remains open.
+- [kb lesson.frame-edge-snapshot-mid-upload: frame-edge snapshots can catch a correct hook halfway through an upload] Diagnose persistence and inspect rendered frames before calling a temporary pattern/grid mismatch visible corruption; death-specific owner reproduction remains open.
 
 - [local: a colour-only revision can inherit engine proof when its binary scope is demonstrated] Forward/reverse recolouring and unchanged non-pattern banks establish the boundary; current sheet, all-graphic and targeted replay checks validate the new pixels.
 - [local: some edited animation poses are absent from available recordings] Report the five unit-only poses explicitly instead of presenting all twelve as recorded coverage.
 
 - [local: an Enhanced set that also switches a HUD needs recolour to switch it too] the guard found the one byte (hud_enabled) recolour left as built.
 
-- [deferred Open: reconsider when card patch.pace-limiter has room under its 600-word budget] (v1.6, 2026-11-08) A single floor per update cannot hold a game whose displaced work varies by figure: it reads slow where the original is light and fast where it is busy, and its whole-run figure hides both. Windows on what was displaced, sized from the plain build, held nearly every stretch within 2%.
-- [deferred Open: reconsider when card patch.pace-limiter has room under its 600-word budget] A window that reads line + frame serial needs the two in step at the wrap; a window under a frame needs only the wrap. The mismatch here read as 164 lines of false time per interrupt and drove the account to its floor.
-- [local: pace audit state lists] Before trusting lockstep on a figure-heavy game, put the objects' own bytes in the state list and read every source of chance: a time-dependent read in front of a fixed random sequence moves the sequence. The audit's list, picked from addresses that agreed, could not see it.
+- [deferred Open: reconsider when card patch.pace-limiter has room under its 600-word budget] [kb lesson.pace-windows-by-displaced-work] (v1.6, 2026-11-08) A single floor per update cannot hold a game whose displaced work varies by figure: it reads slow where the original is light and fast where it is busy, and its whole-run figure hides both. Windows on what was displaced, sized from the plain build, held nearly every stretch within 2%.
+- [deferred Open: reconsider when card patch.pace-limiter has room under its 600-word budget] [kb lesson.pace-window-wrap-line-only] A window that reads line + frame serial needs the two in step at the wrap; a window under a frame needs only the wrap. The mismatch here read as 164 lines of false time per interrupt and drove the account to its floor.
+- [kb lesson.pace-fixture-and-control: pace audit state lists] Before trusting lockstep on a figure-heavy game, put the objects' own bytes in the state list and read every source of chance: a time-dependent read in front of a fixed random sequence moves the sequence. The audit's list, picked from addresses that agreed, could not see it.
 - [local: R span entry count] Code added to e_blit before ny_r_begin moves the count original_m1 subtracts (59 -> 84): the replay's R compare caught it at every copy, and JNext's lockstep with R fixed per site could not.
-- [local: fit by size] Screen contention moves a copy's cost 5% by scene; a fit by rows and columns is unbiased over a stretch, and the carry takes up the rest.
+- [kb lesson.original-time-by-running-it: fit by size] Screen contention moves a copy's cost 5% by scene; a fit by rows and columns is unbiased over a stretch, and the carry takes up the rest.
 
 ## Friction
 

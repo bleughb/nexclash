@@ -57,16 +57,16 @@ Nothing has run on a Next. Enhanced also: the window against the panel, no teari
 - patch.isr-deferral: no help: the handler must run on time for the sound; the work moves to where no interrupt is due instead.
 
 ## Lessons
-- [local: match by behaviour] A 61.5% byte match was sprites mirrored in place at run time. Walk the sprite table before calling a set unmatched.
+- [kb lesson.graphics-changed-in-place: match by behaviour] A 61.5% byte match was sprites mirrored in place at run time. Walk the sprite table before calling a set unmatched.
 - [local: read the whole set] The set's file has a background image past the planes: the mock-up's dark grey is not palette 0. Compare the first screens with the mock-up by colour count, not by eye.
 - [local: mono model] A second plane model fed with the release's own mono bytes, checked against the real buffer and ULA, finds a missed writer at once; the colour model alone cannot.
-- [local: DMA timing] In JNext 1.1.104, DMA with both ports at cycle length 2 took 3.6 T a byte against 12.5 with the reset timing. Program it.
-- [local: look for what the original wastes] Pace was won by running the game's own 21 ms scroll at 28 MHz, not by polishing the colour work.
-- [local: empty entries] A sprite table entry with no rows can hold the same address as a real one; a lookup by address must skip it.
+- [kb lesson.jnext-dma-cycle-length: DMA timing] In JNext 1.1.104, DMA with both ports at cycle length 2 took 3.6 T a byte against 12.5 with the reset timing. Program it.
+- [kb lesson.pace-repay-places: look for what the original wastes] Pace was won by running the game's own 21 ms scroll at 28 MHz, not by polishing the colour work.
+- [kb lesson.graphic-keys-collide-or-move: empty entries] A sprite table entry with no rows can hold the same address as a real one; a lookup by address must skip it.
 - [local: masks are not clean] This set's graphics are not empty where the mask is clear: a skip on a clear mask drew wrong pixels, and the replay caught it.
 - [local: nearly monochrome] A game's colour look can read as monochrome and still have a little clash: measure figure cells by attribute before saying so.
 - [local: unsafe POKE] An archive POKE of an opcode byte can open a new instruction over the next bytes: 29479 turns CP 1 / JP Z into NOP / LD BC,nn / LD (HL),E. Read it before offering it.
-- [local: menu keys] J opens a joystick menu; K there picks Kempston. A J alone leaves the game on keys, and a script that holds Kempston directions then looks like it plays while nothing moves. Check the sheet moves.
+- [kb lesson.scripted-keys-must-reach-game: menu keys] J opens a joystick menu; K there picks Kempston. A J alone leaves the game on keys, and a script that holds Kempston directions then looks like it plays while nothing moves. Check the sheet moves.
 
 ## Friction
 - reuse: [none: nextboot, jnext, soak, flicker and pace were enough]

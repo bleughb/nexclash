@@ -1,0 +1,1199 @@
+{
+ "graphics": [
+  {
+   "id": 2,
+   "addr": 39499,
+   "width": 24,
+   "height": 24,
+   "flags": 64
+  },
+  {
+   "id": 3,
+   "addr": 39645,
+   "width": 16,
+   "height": 24,
+   "flags": 128
+  },
+  {
+   "id": 4,
+   "addr": 39743,
+   "width": 24,
+   "height": 24,
+   "flags": 128
+  },
+  {
+   "id": 5,
+   "addr": 39889,
+   "width": 24,
+   "height": 24,
+   "flags": 128
+  },
+  {
+   "id": 6,
+   "addr": 40035,
+   "width": 24,
+   "height": 55,
+   "flags": 0
+  },
+  {
+   "id": 7,
+   "addr": 40367,
+   "width": 16,
+   "height": 40,
+   "flags": 0
+  },
+  {
+   "id": 8,
+   "addr": 42327,
+   "width": 24,
+   "height": 49,
+   "flags": 0
+  },
+  {
+   "id": 9,
+   "addr": 42109,
+   "width": 24,
+   "height": 36,
+   "flags": 0
+  },
+  {
+   "id": 10,
+   "addr": 40529,
+   "width": 32,
+   "height": 25,
+   "flags": 0
+  },
+  {
+   "id": 11,
+   "addr": 35005,
+   "width": 32,
+   "height": 29,
+   "flags": 0
+  },
+  {
+   "id": 12,
+   "addr": 40731,
+   "width": 16,
+   "height": 43,
+   "flags": 64
+  },
+  {
+   "id": 13,
+   "addr": 40905,
+   "width": 16,
+   "height": 53,
+   "flags": 64
+  },
+  {
+   "id": 14,
+   "addr": 41119,
+   "width": 16,
+   "height": 53,
+   "flags": 64
+  },
+  {
+   "id": 15,
+   "addr": 41333,
+   "width": 16,
+   "height": 50,
+   "flags": 0
+  },
+  {
+   "id": 16,
+   "addr": 33965,
+   "width": 32,
+   "height": 18,
+   "flags": 0
+  },
+  {
+   "id": 17,
+   "addr": 33965,
+   "width": 32,
+   "height": 18,
+   "flags": 0
+  },
+  {
+   "id": 18,
+   "addr": 39077,
+   "width": 24,
+   "height": 15,
+   "flags": 0
+  },
+  {
+   "id": 19,
+   "addr": 39169,
+   "width": 24,
+   "height": 18,
+   "flags": 0
+  },
+  {
+   "id": 20,
+   "addr": 39077,
+   "width": 24,
+   "height": 15,
+   "flags": 0
+  },
+  {
+   "id": 21,
+   "addr": 38985,
+   "width": 24,
+   "height": 15,
+   "flags": 0
+  },
+  {
+   "id": 22,
+   "addr": 34935,
+   "width": 16,
+   "height": 17,
+   "flags": 0
+  },
+  {
+   "id": 23,
+   "addr": 34709,
+   "width": 32,
+   "height": 28,
+   "flags": 0
+  },
+  {
+   "id": 28,
+   "addr": 34709,
+   "width": 32,
+   "height": 28,
+   "flags": 0
+  },
+  {
+   "id": 29,
+   "addr": 38985,
+   "width": 24,
+   "height": 15,
+   "flags": 0
+  },
+  {
+   "id": 30,
+   "addr": 34539,
+   "width": 32,
+   "height": 21,
+   "flags": 0
+  },
+  {
+   "id": 31,
+   "addr": 34539,
+   "width": 32,
+   "height": 21,
+   "flags": 0
+  },
+  {
+   "id": 32,
+   "addr": 39077,
+   "width": 24,
+   "height": 15,
+   "flags": 0
+  },
+  {
+   "id": 33,
+   "addr": 38985,
+   "width": 24,
+   "height": 15,
+   "flags": 0
+  },
+  {
+   "id": 34,
+   "addr": 38893,
+   "width": 24,
+   "height": 15,
+   "flags": 0
+  },
+  {
+   "id": 35,
+   "addr": 38985,
+   "width": 24,
+   "height": 15,
+   "flags": 0
+  },
+  {
+   "id": 36,
+   "addr": 39279,
+   "width": 24,
+   "height": 18,
+   "flags": 0
+  },
+  {
+   "id": 37,
+   "addr": 39169,
+   "width": 24,
+   "height": 18,
+   "flags": 0
+  },
+  {
+   "id": 38,
+   "addr": 39389,
+   "width": 24,
+   "height": 18,
+   "flags": 0
+  },
+  {
+   "id": 39,
+   "addr": 39169,
+   "width": 24,
+   "height": 18,
+   "flags": 0
+  },
+  {
+   "id": 40,
+   "addr": 38111,
+   "width": 24,
+   "height": 27,
+   "flags": 0
+  },
+  {
+   "id": 41,
+   "addr": 37947,
+   "width": 24,
+   "height": 27,
+   "flags": 0
+  },
+  {
+   "id": 42,
+   "addr": 37783,
+   "width": 24,
+   "height": 27,
+   "flags": 0
+  },
+  {
+   "id": 43,
+   "addr": 37947,
+   "width": 24,
+   "height": 27,
+   "flags": 0
+  },
+  {
+   "id": 44,
+   "addr": 38481,
+   "width": 24,
+   "height": 34,
+   "flags": 0
+  },
+  {
+   "id": 45,
+   "addr": 38275,
+   "width": 24,
+   "height": 34,
+   "flags": 0
+  },
+  {
+   "id": 46,
+   "addr": 38687,
+   "width": 24,
+   "height": 34,
+   "flags": 0
+  },
+  {
+   "id": 47,
+   "addr": 38275,
+   "width": 24,
+   "height": 34,
+   "flags": 0
+  },
+  {
+   "id": 48,
+   "addr": 32767,
+   "width": 24,
+   "height": 26,
+   "flags": 0
+  },
+  {
+   "id": 49,
+   "addr": 32925,
+   "width": 24,
+   "height": 26,
+   "flags": 0
+  },
+  {
+   "id": 50,
+   "addr": 32767,
+   "width": 24,
+   "height": 26,
+   "flags": 0
+  },
+  {
+   "id": 51,
+   "addr": 32925,
+   "width": 24,
+   "height": 26,
+   "flags": 0
+  },
+  {
+   "id": 52,
+   "addr": 41767,
+   "width": 16,
+   "height": 33,
+   "flags": 0
+  },
+  {
+   "id": 53,
+   "addr": 41641,
+   "width": 16,
+   "height": 31,
+   "flags": 0
+  },
+  {
+   "id": 54,
+   "addr": 41535,
+   "width": 16,
+   "height": 26,
+   "flags": 0
+  },
+  {
+   "id": 55,
+   "addr": 41901,
+   "width": 16,
+   "height": 24,
+   "flags": 0
+  },
+  {
+   "id": 56,
+   "addr": 41999,
+   "width": 16,
+   "height": 27,
+   "flags": 0
+  },
+  {
+   "id": 57,
+   "addr": 42623,
+   "width": 16,
+   "height": 34,
+   "flags": 0
+  },
+  {
+   "id": 58,
+   "addr": 35239,
+   "width": 16,
+   "height": 16,
+   "flags": 0
+  },
+  {
+   "id": 59,
+   "addr": 35305,
+   "width": 16,
+   "height": 11,
+   "flags": 0
+  },
+  {
+   "id": 60,
+   "addr": 35417,
+   "width": 16,
+   "height": 16,
+   "flags": 0
+  },
+  {
+   "id": 61,
+   "addr": 35417,
+   "width": 16,
+   "height": 16,
+   "flags": 0
+  },
+  {
+   "id": 62,
+   "addr": 35483,
+   "width": 16,
+   "height": 8,
+   "flags": 0
+  },
+  {
+   "id": 63,
+   "addr": 34313,
+   "width": 32,
+   "height": 28,
+   "flags": 0
+  },
+  {
+   "id": 64,
+   "addr": 33083,
+   "width": 16,
+   "height": 14,
+   "flags": 0
+  },
+  {
+   "id": 65,
+   "addr": 33141,
+   "width": 24,
+   "height": 13,
+   "flags": 0
+  },
+  {
+   "id": 66,
+   "addr": 33221,
+   "width": 24,
+   "height": 17,
+   "flags": 0
+  },
+  {
+   "id": 67,
+   "addr": 33141,
+   "width": 24,
+   "height": 13,
+   "flags": 0
+  },
+  {
+   "id": 68,
+   "addr": 33221,
+   "width": 24,
+   "height": 17,
+   "flags": 0
+  },
+  {
+   "id": 69,
+   "addr": 33221,
+   "width": 24,
+   "height": 17,
+   "flags": 0
+  },
+  {
+   "id": 70,
+   "addr": 33325,
+   "width": 24,
+   "height": 16,
+   "flags": 0
+  },
+  {
+   "id": 71,
+   "addr": 33325,
+   "width": 24,
+   "height": 16,
+   "flags": 0
+  },
+  {
+   "id": 72,
+   "addr": 40529,
+   "width": 32,
+   "height": 25,
+   "flags": 0
+  },
+  {
+   "id": 73,
+   "addr": 35517,
+   "width": 40,
+   "height": 34,
+   "flags": 0
+  },
+  {
+   "id": 74,
+   "addr": 29631,
+   "width": 32,
+   "height": 16,
+   "flags": 0
+  },
+  {
+   "id": 75,
+   "addr": 29761,
+   "width": 32,
+   "height": 16,
+   "flags": 0
+  },
+  {
+   "id": 76,
+   "addr": 40529,
+   "width": 32,
+   "height": 25,
+   "flags": 0
+  },
+  {
+   "id": 77,
+   "addr": 40529,
+   "width": 32,
+   "height": 25,
+   "flags": 0
+  },
+  {
+   "id": 78,
+   "addr": 35005,
+   "width": 32,
+   "height": 29,
+   "flags": 0
+  },
+  {
+   "id": 79,
+   "addr": 35005,
+   "width": 32,
+   "height": 29,
+   "flags": 0
+  },
+  {
+   "id": 80,
+   "addr": 31389,
+   "width": 32,
+   "height": 24,
+   "flags": 0
+  },
+  {
+   "id": 81,
+   "addr": 31583,
+   "width": 32,
+   "height": 24,
+   "flags": 0
+  },
+  {
+   "id": 82,
+   "addr": 34313,
+   "width": 32,
+   "height": 28,
+   "flags": 0
+  },
+  {
+   "id": 84,
+   "addr": 35005,
+   "width": 32,
+   "height": 29,
+   "flags": 0
+  },
+  {
+   "id": 85,
+   "addr": 35005,
+   "width": 32,
+   "height": 29,
+   "flags": 0
+  },
+  {
+   "id": 86,
+   "addr": 30545,
+   "width": 32,
+   "height": 24,
+   "flags": 64
+  },
+  {
+   "id": 87,
+   "addr": 35005,
+   "width": 32,
+   "height": 29,
+   "flags": 0
+  },
+  {
+   "id": 88,
+   "addr": 35005,
+   "width": 32,
+   "height": 29,
+   "flags": 0
+  },
+  {
+   "id": 89,
+   "addr": 33965,
+   "width": 32,
+   "height": 18,
+   "flags": 0
+  },
+  {
+   "id": 90,
+   "addr": 36905,
+   "width": 24,
+   "height": 24,
+   "flags": 0
+  },
+  {
+   "id": 91,
+   "addr": 35005,
+   "width": 32,
+   "height": 29,
+   "flags": 0
+  },
+  {
+   "id": 92,
+   "addr": 30545,
+   "width": 32,
+   "height": 24,
+   "flags": 64
+  },
+  {
+   "id": 93,
+   "addr": 30545,
+   "width": 32,
+   "height": 24,
+   "flags": 64
+  },
+  {
+   "id": 112,
+   "addr": 36181,
+   "width": 32,
+   "height": 39,
+   "flags": 0
+  },
+  {
+   "id": 113,
+   "addr": 36181,
+   "width": 32,
+   "height": 39,
+   "flags": 0
+  },
+  {
+   "id": 114,
+   "addr": 36181,
+   "width": 32,
+   "height": 39,
+   "flags": 0
+  },
+  {
+   "id": 115,
+   "addr": 36181,
+   "width": 32,
+   "height": 39,
+   "flags": 0
+  },
+  {
+   "id": 116,
+   "addr": 36495,
+   "width": 32,
+   "height": 51,
+   "flags": 0
+  },
+  {
+   "id": 117,
+   "addr": 36495,
+   "width": 32,
+   "height": 51,
+   "flags": 0
+  },
+  {
+   "id": 118,
+   "addr": 36495,
+   "width": 32,
+   "height": 51,
+   "flags": 0
+  },
+  {
+   "id": 119,
+   "addr": 36495,
+   "width": 32,
+   "height": 51,
+   "flags": 0
+  },
+  {
+   "id": 120,
+   "addr": 35859,
+   "width": 40,
+   "height": 32,
+   "flags": 0
+  },
+  {
+   "id": 121,
+   "addr": 35005,
+   "width": 32,
+   "height": 29,
+   "flags": 0
+  },
+  {
+   "id": 122,
+   "addr": 35005,
+   "width": 32,
+   "height": 29,
+   "flags": 0
+  },
+  {
+   "id": 123,
+   "addr": 35005,
+   "width": 32,
+   "height": 29,
+   "flags": 0
+  },
+  {
+   "id": 124,
+   "addr": 35005,
+   "width": 32,
+   "height": 29,
+   "flags": 0
+  },
+  {
+   "id": 125,
+   "addr": 35005,
+   "width": 32,
+   "height": 29,
+   "flags": 0
+  },
+  {
+   "id": 126,
+   "addr": 35005,
+   "width": 32,
+   "height": 29,
+   "flags": 0
+  },
+  {
+   "id": 127,
+   "addr": 35005,
+   "width": 32,
+   "height": 29,
+   "flags": 0
+  },
+  {
+   "id": 128,
+   "addr": 28463,
+   "width": 24,
+   "height": 24,
+   "flags": 0
+  },
+  {
+   "id": 129,
+   "addr": 28609,
+   "width": 24,
+   "height": 24,
+   "flags": 0
+  },
+  {
+   "id": 130,
+   "addr": 28755,
+   "width": 24,
+   "height": 24,
+   "flags": 0
+  },
+  {
+   "id": 131,
+   "addr": 28901,
+   "width": 24,
+   "height": 24,
+   "flags": 0
+  },
+  {
+   "id": 132,
+   "addr": 29047,
+   "width": 24,
+   "height": 24,
+   "flags": 0
+  },
+  {
+   "id": 133,
+   "addr": 29193,
+   "width": 24,
+   "height": 24,
+   "flags": 0
+  },
+  {
+   "id": 134,
+   "addr": 29339,
+   "width": 24,
+   "height": 24,
+   "flags": 0
+  },
+  {
+   "id": 135,
+   "addr": 29485,
+   "width": 24,
+   "height": 24,
+   "flags": 0
+  },
+  {
+   "id": 136,
+   "addr": 35005,
+   "width": 32,
+   "height": 29,
+   "flags": 0
+  },
+  {
+   "id": 137,
+   "addr": 29891,
+   "width": 32,
+   "height": 27,
+   "flags": 0
+  },
+  {
+   "id": 138,
+   "addr": 30109,
+   "width": 32,
+   "height": 27,
+   "flags": 0
+  },
+  {
+   "id": 139,
+   "addr": 30327,
+   "width": 32,
+   "height": 27,
+   "flags": 0
+  },
+  {
+   "id": 140,
+   "addr": 35005,
+   "width": 32,
+   "height": 29,
+   "flags": 0
+  },
+  {
+   "id": 141,
+   "addr": 35005,
+   "width": 32,
+   "height": 29,
+   "flags": 0
+  },
+  {
+   "id": 142,
+   "addr": 35005,
+   "width": 32,
+   "height": 29,
+   "flags": 0
+  },
+  {
+   "id": 143,
+   "addr": 35005,
+   "width": 32,
+   "height": 29,
+   "flags": 0
+  },
+  {
+   "id": 144,
+   "addr": 37051,
+   "width": 24,
+   "height": 24,
+   "flags": 0
+  },
+  {
+   "id": 145,
+   "addr": 37197,
+   "width": 24,
+   "height": 24,
+   "flags": 0
+  },
+  {
+   "id": 146,
+   "addr": 37343,
+   "width": 24,
+   "height": 24,
+   "flags": 0
+  },
+  {
+   "id": 147,
+   "addr": 37489,
+   "width": 24,
+   "height": 24,
+   "flags": 0
+  },
+  {
+   "id": 148,
+   "addr": 37635,
+   "width": 24,
+   "height": 24,
+   "flags": 0
+  },
+  {
+   "id": 149,
+   "addr": 33423,
+   "width": 16,
+   "height": 16,
+   "flags": 0
+  },
+  {
+   "id": 150,
+   "addr": 33489,
+   "width": 16,
+   "height": 16,
+   "flags": 0
+  },
+  {
+   "id": 151,
+   "addr": 33555,
+   "width": 16,
+   "height": 16,
+   "flags": 0
+  },
+  {
+   "id": 152,
+   "addr": 37051,
+   "width": 24,
+   "height": 24,
+   "flags": 0
+  },
+  {
+   "id": 153,
+   "addr": 37197,
+   "width": 24,
+   "height": 24,
+   "flags": 0
+  },
+  {
+   "id": 154,
+   "addr": 37343,
+   "width": 24,
+   "height": 24,
+   "flags": 0
+  },
+  {
+   "id": 155,
+   "addr": 37489,
+   "width": 24,
+   "height": 24,
+   "flags": 0
+  },
+  {
+   "id": 156,
+   "addr": 37635,
+   "width": 24,
+   "height": 24,
+   "flags": 0
+  },
+  {
+   "id": 160,
+   "addr": 32209,
+   "width": 32,
+   "height": 23,
+   "flags": 0
+  },
+  {
+   "id": 161,
+   "addr": 32395,
+   "width": 32,
+   "height": 23,
+   "flags": 0
+  },
+  {
+   "id": 162,
+   "addr": 32209,
+   "width": 32,
+   "height": 23,
+   "flags": 0
+  },
+  {
+   "id": 163,
+   "addr": 32581,
+   "width": 32,
+   "height": 23,
+   "flags": 0
+  },
+  {
+   "id": 164,
+   "addr": 31905,
+   "width": 24,
+   "height": 24,
+   "flags": 0
+  },
+  {
+   "id": 165,
+   "addr": 32051,
+   "width": 24,
+   "height": 26,
+   "flags": 0
+  },
+  {
+   "id": 166,
+   "addr": 31905,
+   "width": 24,
+   "height": 24,
+   "flags": 0
+  },
+  {
+   "id": 167,
+   "addr": 31777,
+   "width": 24,
+   "height": 21,
+   "flags": 0
+  },
+  {
+   "id": 168,
+   "addr": 30739,
+   "width": 24,
+   "height": 25,
+   "flags": 0
+  },
+  {
+   "id": 169,
+   "addr": 30891,
+   "width": 24,
+   "height": 25,
+   "flags": 0
+  },
+  {
+   "id": 170,
+   "addr": 31043,
+   "width": 24,
+   "height": 29,
+   "flags": 0
+  },
+  {
+   "id": 171,
+   "addr": 31219,
+   "width": 24,
+   "height": 28,
+   "flags": 0
+  }
+ ],
+ "palette": [
+  [
+   0,
+   0,
+   0
+  ],
+  [
+   0,
+   0,
+   0
+  ],
+  [
+   255,
+   255,
+   219
+  ],
+  [
+   255,
+   182,
+   146
+  ],
+  [
+   109,
+   36,
+   182
+  ],
+  [
+   73,
+   36,
+   109
+  ],
+  [
+   255,
+   219,
+   36
+  ],
+  [
+   146,
+   73,
+   36
+  ],
+  [
+   219,
+   146,
+   73
+  ],
+  [
+   36,
+   109,
+   36
+  ],
+  [
+   109,
+   182,
+   36
+  ],
+  [
+   36,
+   219,
+   219
+  ],
+  [
+   73,
+   109,
+   146
+  ],
+  [
+   146,
+   182,
+   182
+  ],
+  [
+   219,
+   36,
+   36
+  ],
+  [
+   255,
+   255,
+   255
+  ]
+ ],
+ "static_ids": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10,
+  11,
+  12,
+  13,
+  14,
+  15,
+  18,
+  19,
+  20,
+  21,
+  22,
+  23,
+  24,
+  25,
+  26,
+  27,
+  29,
+  30,
+  31,
+  52,
+  53,
+  54,
+  55,
+  56,
+  57,
+  58,
+  59,
+  61,
+  62,
+  74,
+  75,
+  76,
+  77,
+  82,
+  83,
+  94,
+  95,
+  96,
+  97,
+  98,
+  99,
+  100,
+  101,
+  102,
+  103,
+  104,
+  105,
+  106,
+  107,
+  108,
+  109,
+  110,
+  111,
+  152,
+  153,
+  154,
+  155,
+  156,
+  157,
+  158,
+  159
+ ],
+ "approved_interior_fills": [
+  {
+   "sheet_xy": [
+    47,
+    285
+   ],
+   "id": "147",
+   "native_xy": [
+    20,
+    10
+   ],
+   "key": "9271:0a:2",
+   "bit": 4,
+   "palette_index": 6,
+   "rgb": [
+    255,
+    219,
+    36
+   ],
+   "clear_component_pixels": 1,
+   "original_code": 0,
+   "exterior_connected": false
+  }
+ ],
+ "source_identity": {
+  "schema": 1,
+  "game": "pentagram",
+  "engine": "pentagram",
+  "keys": "pentagram-canonical-mask-ink-v1: pointer:top-down-row:byte-column; bit=left-to-right pixel",
+  "inputs": "41ec010f638289437021261a1f0084bd",
+  "geometry": "e086928f67200300405f26f412fbc650"
+ }
+}

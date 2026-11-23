@@ -1,0 +1,25 @@
+{
+ "id": "lesson.copper-wait-offsets",
+ "kind": "fact",
+ "claim": "In CSpect a Copper WAIT on line n shows from Layer 2 row n + 32 of the 320x256 layer, the Copper restarts after the top border, and 9-bit NR 0x44 palette pairs failed from the Copper.",
+ "limit": "Seen in CSpect only, not confirmed on hardware.",
+ "evidence": [
+  {
+   "game": "games/r_type.md",
+   "text": "CSpect: WAIT line n shows from row n + 32 of 320x256 Layer 2; the restart comes after the top border; 9-bit NR 0x44 pairs from the Copper failed.",
+   "shown_on": "cspect"
+  }
+ ],
+ "level": "observed",
+ "area": "emulator",
+ "words": [
+  "Copper",
+  "WAIT",
+  "Layer 2",
+  "CSpect",
+  "NR 0x44",
+  "palette bands"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

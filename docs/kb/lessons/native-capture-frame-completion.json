@@ -1,0 +1,24 @@
+{
+ "id": "lesson.native-capture-frame-completion",
+ "kind": "pitfall",
+ "claim": "Exiting right after requesting a native screenshot can return an error despite valid timing data: let the final frame complete and compare only completed update intervals.",
+ "evidence": [
+  {
+   "game": "games/martianoids.md",
+   "text": "Immediate exit after requesting a screenshot returned an error despite valid timing data; allow frame completion and compare only completed update intervals.",
+   "quote": "Immediate exit after requesting a screenshot returned an error despite valid timing data; allow frame completion and compare only completed update intervals.",
+   "shown_on": "jnext"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "screenshot",
+  "frame completion",
+  "freeze",
+  "native capture",
+  "update interval"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

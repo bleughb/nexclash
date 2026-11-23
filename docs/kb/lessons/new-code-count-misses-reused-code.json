@@ -1,0 +1,24 @@
+{
+ "id": "lesson.new-code-count-misses-reused-code",
+ "kind": "pitfall",
+ "claim": "A search that counts newly executed code can miss a place that reuses the same routines; watch a game variable (such as the room number) instead.",
+ "evidence": [
+  {
+   "game": "games/arc_of_yesod.md",
+   "text": "The descent into the caverns (up row Q from a hatch gap, room 74 -> 90) was found 2026-11-17 after an earlier search missed it by watching the height and new code, not the room; the room number is at 23479.",
+   "shown_on": "unknown",
+   "quote": "An earlier search missed it by watching the height and new code, not the room."
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "new code",
+  "coverage",
+  "game variable",
+  "room number",
+  "reused routines"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

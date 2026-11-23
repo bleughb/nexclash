@@ -111,16 +111,16 @@ title and play in both sets, cheats on and off.
 1. Every figure a sprite, including block flashes, enemies, the player, fireballs, flames. 2. Scenery, HUD, text on the ULA; also blocks, the door, key and items, which the game stamps into the clean copy and so never had clash of their own. 3. Depth: plot order, all over the scenery. 4. Colours: bright white ink, as on an empty cell; black solid body. 5. A blink in the original (above) is not reproduced.
 
 ## Lessons
-- [local: a mirrored-in-place frame set looks like corrupt sprites until the graphics are compared with the snapshot at run time] The first composite check failed on the player only; a diff of the graphics between frames found 43209.
-- [local: a composite check against the original's screen finds the game's own one-pass glitches] Both one-pass effects above came from the check, not from reading the code.
-- [local: skipping past the last room by the debug routine crashes the game into ROM and poisons every later scan] A recording that ran past room 16 showed ROM writers and made free memory look used: read the level count first.
+- [kb lesson.graphics-changed-in-place: a mirrored-in-place frame set looks like corrupt sprites until the graphics are compared with the snapshot at run time] The first composite check failed on the player only; a diff of the graphics between frames found 43209.
+- [kb lesson.compare-final-frame-with-original: a composite check against the original's screen finds the game's own one-pass glitches] Both one-pass effects above came from the check, not from reading the code.
+- [kb lesson.recording-room-skip: skipping past the last room by the debug routine crashes the game into ROM and poisons every later scan] A recording that ran past room 16 showed ROM writers and made free memory look used: read the level count first.
 - [local: an instruction count per recording says nothing of the state of the scan] 'untouched' from one room is not 'untouched': room 0's free memory held other rooms' data, so the tail moved to write-first memory proven on all rooms.
 - [local: a tune without interrupts tests its keys only between notes] Single key presses are missed for seconds at this menu.
-- [local: this game's pace] demonstrated: the game pads each pass to ten figures' time with its own delay, so every hook's time can be repaid there to the T-state; a debt with a constant time for every path, checked at every event, gave +0.1 % in JNext against the approved build's +2.1 %.
+- [kb lesson.pace-repay-places: this game's pace] demonstrated: the game pads each pass to ten figures' time with its own delay, so every hook's time can be repaid there to the T-state; a debt with a constant time for every path, checked at every event, gave +0.1 % in JNext against the approved build's +2.1 %.
 - [local: this game's blit] demonstrated: the build's blit source (the clean copy, all in contended memory) costs time the original's compose buffer did not (+0.39 % with no other change); counted in the debt as 2.3 T a byte of rows 104-191.
 - [local: this engine's model] observed: the 2026-11-03 verifier ran NEXTREG in 0 T (its own ED handlers); z80n.install counts 20 / 17 T, which the pace accounting needs.
-- [local: this game's stack] observed: the stack is at the top of memory, so the state page maps at slot 6, not 7.
-- [local: this game's delay] observed: 39194 copies ROM onto itself; one caller passes BC = 16,384, so it reads the alt ROM's hook bytes (sk_o1): harmless, accepted in the record's rom_paths_known.
+- [kb lesson.mmu-slot-by-what-isr-touches: this game's stack] observed: the stack is at the top of memory, so the state page maps at slot 6, not 7.
+- [kb lesson.alt-rom-spare-area-read: this game's delay] observed: 39194 copies ROM onto itself; one caller passes BC = 16,384, so it reads the alt ROM's hook bytes (sk_o1): harmless, accepted in the record's rom_paths_known.
 
 ## Friction
 - reuse: [local: the debt and pad method is this engine's; card patch.pace-limiter names a raster limiter, not a delay to shorten]

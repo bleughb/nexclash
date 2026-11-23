@@ -1,0 +1,24 @@
+{
+ "id": "lesson.break-at-0000-reset-test",
+ "kind": "pitfall",
+ "claim": "A test that breaks at address 0000 to catch a reset is tripped by a code entry point at 0000; keep entry points at 0100 or above.",
+ "evidence": [
+  {
+   "game": "games/r_type.md",
+   "text": "Tests set a breakpoint at 0000 to catch a reset; a glide page entry at 0000 looked like a reset. Entry points start at 0100.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "reset breakpoint",
+  "0000",
+  "entry point",
+  "false reset",
+  "glide",
+  "page"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

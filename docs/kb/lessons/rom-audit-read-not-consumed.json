@@ -1,0 +1,25 @@
+{
+ "id": "lesson.rom-audit-read-not-consumed",
+ "kind": "method",
+ "claim": "A ROM read that consumes nothing (a self-copy LDIR used as a delay) may be exempted from the ROM audit only with a per-read guard and a full-function proof; never broadly waive unknown ROM consumers or final flags.",
+ "evidence": [
+  {
+   "game": "games/exolon.md",
+   "text": "B0B7's original self-copy LDIR is a delay; keep a per-read guard and a full-function ABI/time proof before exempting 2000..3FFF.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "ROM audit",
+  "read",
+  "LDIR",
+  "delay",
+  "consumed",
+  "waive",
+  "ROM path check"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

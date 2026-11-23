@@ -1166,6 +1166,12 @@ polish_init:
         inc e
         dec d
         jr nz,.attr
+.hide:  ld a,e                  ; sprites 64-127 hidden: another program may have left any of them visible
+        nextreg 0x34,a
+        nextreg 0x38,0
+        inc e
+        bit 7,e
+        jr z,.hide
         nextreg 0x1c,2
         nextreg 0x19,0
         nextreg 0x19,255

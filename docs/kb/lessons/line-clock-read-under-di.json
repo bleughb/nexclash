@@ -1,0 +1,31 @@
+{
+ "id": "lesson.line-clock-read-under-di",
+ "kind": "pitfall",
+ "claim": "Reading the line clock under DI can take longer than the /INT pulse at 28 MHz and lose every interrupt in a hook wait; read it lock-free and read again if the clock moved.",
+ "evidence": [
+  {
+   "game": "games/cisco_heat.md",
+   "text": "`now` under DI took longer than the INT pulse at 28 MHz: every interrupt in a hook wait was lost; lock-free read, again if the clock moved.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "facts": {
+  "interrupts": "on"
+ },
+ "enforced_by": [
+  "asm/lib/hlib_pace.asm",
+  "nexclash.hooklib.selfcheck"
+ ],
+ "words": [
+  "line clock",
+  "DI",
+  "lock-free read",
+  "28 MHz",
+  "INT pulse",
+  "hook wait"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

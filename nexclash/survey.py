@@ -208,6 +208,28 @@ def findings(pt, it, n, routines):
     return out, js
 
 
+def lessons(js, top=10):
+    """Lines for survey.md: the shared lessons (docs/kb/lessons) that fit what this survey measured, best first.
+    [] when this copy has no tools/knowledge.py or no lessons (the survey stands without them)."""
+    import importlib.util
+    path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'tools', 'knowledge.py')
+    try:
+        spec = importlib.util.spec_from_file_location('nexclash_knowledge', path)
+        K = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(K)
+        facts = K.game_facts(js)
+        got, n = K.briefing(facts, K.shared(), top)
+    except Exception:                                       # noqa: BLE001 - never fail a survey for its reading list
+        return []
+    if not got:
+        return []
+    return (['## Shared lessons that fit (%s)' % (', '.join('%s %s' % kv for kv in sorted(facts.items())) or 'no facts measured'),
+             'What other games learned, best supported first: leads to check, not facts about this game. '
+             '%d of %d that fit; more: `python tools/knowledge.py lessons --facts %s` (or `lessons WORD`); '
+             'evidence: `lessons --show ID`.' % (len(got), n, 'SURVEY_DIR/survey.json')]
+            + ['- %s: %s' % (x['id'], x['claim']) for x in got] + [''])
+
+
 def _md5(path):
     import hashlib
     return hashlib.md5(open(path, 'rb').read()).hexdigest() if os.path.exists(path) else None
@@ -416,6 +438,7 @@ def survey(z80, rzx=None, out=None, stop=None, frames=None, keys=None, top=6, lo
     say('- At stage end: `python -m nexclash.kb add %s --game <game>` (docs/kb: the next game starts from this one).'
         % os.path.basename(out))
     say('')
+    md.extend(lessons(js))
     say('## Screen writers by routine (innermost CALL running at the write)')
     say('| Routine | pixel / attr bytes | calls | callers seen | T per call median / max | called from | coverage |')
     say('|---|---|---|---|---|---|---|')

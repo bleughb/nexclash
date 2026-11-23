@@ -118,16 +118,16 @@ unchanged; the game's speed as the original's over a minute of play.
 - 2026-11-20: the flower stays the game's (one picture too tall for two sprites, and it only moves as it grows).
 
 ## Lessons
-- [local: this engine's build step] An Enhanced build's fixed colours were compared as symbols only, never with
+- [kb lesson.enhanced-palette-rgb-check: this engine's build step] An Enhanced build's fixed colours were compared as symbols only, never with
   the RGB the set-up uploads (Codex review 2026-11-20): palette_wrong replays the boot's NEXTREG writes against the
   painted map, the default build as its negative. Clipped figures now check their fixed colours too.
-- [local: this game's analysis] The same plotter as a published game's is found by its bytes with the addresses
+- [kb lesson.sites-found-by-bytes: this game's analysis] The same plotter as a published game's is found by its bytes with the addresses
   left out; the hooks then move over address by address. What does not move is the game round it: which objects
   are drawn once and left (here three), and which handlers call the plot's parts themselves.
-- [local: this game's design] With the bitmap kept, only the colour paint needs to go, and a copy of it with the
+- [kb lesson.nop-stores-keep-timing: this game's design] With the bitmap kept, only the colour paint needs to go, and a copy of it with the
   store read instead of written takes the same time to the T state: no pace cost and no exception in the memory
   comparison but the colour cells.
-- [local: this game's verifier] A check written for another game's plotter (a figure wraps within its row) failed a
+- [kb lesson.plotter-edge-behaviour-differs: this game's verifier] A check written for another game's plotter (a figure wraps within its row) failed a
   third of the edge cases here: this plotter runs on into the next row. The unit places are the game's own.
 - [local: this game's verifier] The replay stopped at 6,000 frames of a 20,000 frame recording: a default meant
   for a free run. A recording is replayed to its end.

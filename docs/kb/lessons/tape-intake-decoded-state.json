@@ -1,0 +1,29 @@
+{
+ "id": "lesson.tape-intake-decoded-state",
+ "kind": "pitfall",
+ "claim": "For tapes with encoded or compressed loaders, run the original decoder and compare a decoded execution state, not the encoded loader RAM.",
+ "evidence": [
+  {
+   "game": "games/bubbler.md",
+   "text": "The archive loader at F000 complements 37,300 bytes before entry; compare a decoded execution state with the conversion.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/exolon.md",
+   "text": "The loading screen in the TAP's sixth block is decompressed by the game's own 8001 routine.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "words": [
+  "tape",
+  "loader",
+  "decoder",
+  "compressed screen",
+  "decoded state",
+  "TAP"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

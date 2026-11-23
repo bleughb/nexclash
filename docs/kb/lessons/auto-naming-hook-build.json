@@ -1,0 +1,40 @@
+{
+ "id": "lesson.auto-naming-hook-build",
+ "kind": "pitfall",
+ "claim": "auto names a hook build NAME_sprites.nex and patch looks only for that name; an engine writing NAME.nex gets 'not supported yet' and no .nxc.",
+ "evidence": [
+  {
+   "game": "games/comando_quatro.md",
+   "text": "Default is a hook build: auto names it NAME_sprites.nex and the loading variant NAME_sprites_loading.nex, which nxcout packages.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/flying_shark.md",
+   "text": "auto names the default NAME_sprites.nex; the plain conversion would take NAME.nex.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/father_christmas.md",
+   "text": "auto names the default NAME_sprites.nex, which nxcout packages as the default.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/alien_8.md",
+   "text": "patch ends 'not supported yet' with no .nxc because userflow looks for NAME_sprites.nex.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "NAME_sprites.nex",
+  "auto",
+  "nxcout",
+  "userflow",
+  "patch",
+  "naming",
+  "hook build"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}
