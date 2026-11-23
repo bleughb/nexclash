@@ -17,6 +17,7 @@
 ;   0x7FBE buffer copy (LD HL,0xC000)   -> flips Layer 2 (NR $12 <-> NR $13) first
 
         DEVICE ZXSPECTRUMNEXT
+        INCLUDE "lib/hlib_iff.asm"      ; macros only: HLIB_IFF_DI (card patch.iff-safe-read)
 
 L2_A      EQU 16            ; Layer 2 16K banks: 16-18 and 19-21 (8K pages 32-37, 38-43)
 L2_B      EQU 19
@@ -239,7 +240,7 @@ h_plot: push af
         ld a,(hl)
         ld (hl),c                       ; the original write
         xor c                           ; A = changed bits
-        jr z,.out
+        jp z,.out
         push de
         push hl
         ld e,a                          ; E = changed bits
@@ -276,9 +277,9 @@ h_plot: push af
         rlca
         ld l,a                          ; L = x of the byte's first pixel
         ld h,c                          ; H = new byte (C is needed for the ports)
-        ld a,i                          ; P/V = IFF2. No interrupt while write-over is on: every write to
+        HLIB_IFF_DI                     ; P/V = IFF, DI. No interrupt while write-over is on: every write to
         push af                         ; 0x0000-0x3FFF goes to Layer 2, h_isr's stack and state included (it ran
-        di                              ; on garbage returns: the Docking hang, 2026-11-23)
+                                        ; on garbage returns: the Docking hang, 2026-11-23)
         ld a,d
         and 0xC0
         or P_L2
@@ -349,9 +350,8 @@ stsave: push af
         push bc
         push de
         push hl
-        ld a,i                          ; P/V = IFF2
+        HLIB_IFF_DI                     ; P/V = IFF; h_isr unmaps the state page on its way out
         push af
-        di                              ; h_isr unmaps the state page on its way out
         nextreg 0x50,STATE_PG
         ld hl,0x7A39
         ld de,S_STP
@@ -447,9 +447,8 @@ cs_sig: nextreg 0x7F,C_RED
 ; the game's own) lose interrupts, and the frame counter must see the raster at least once a frame. Keeps every
 ; register, flag and the interrupt state.
 pollf:  push af                          ; poll, and mark this pass as flight (h_combat)
-        ld a,i
+        HLIB_IFF_DI
         push af
-        di
         nextreg 0x50,STATE_PG
         ld a,1
         ld (S_FLIGHT),a
@@ -461,9 +460,8 @@ pollf:  push af                          ; poll, and mark this pass as flight (h
         pop hl
         jr poll.f
 poll:   push af
-        ld a,i                          ; P/V = IFF2
+        HLIB_IFF_DI                     ; P/V = IFF
         push af
-        di
         nextreg 0x50,STATE_PG
 .f:     ld (S_HSP),sp
         ld sp,HSTK
@@ -704,16 +702,6 @@ isrcount:
         pop bc
         ret
 
-; phase: A = (raster line / 2 - S_INTL) mod 156 (0xFF in S_INTL: not yet known, 0 used). Clobbers BC, HL.
-phase:  call rline
-        ld hl,S_INTL
-        ld b,(hl)
-        inc b
-        ret z
-        sub (hl)
-        ret nc
-        add a,156
-        ret
 
 ; rline: A = raster line / 2 (NR $1E bit 0, NR $1F; read again if bit 8 changed between). Clobbers BC, HL.
 rline:  ld bc,0x243B
@@ -793,6 +781,18 @@ ulaclr: ld a,1
         ld a,d
         cp 127
         jr nz,.r
+        ret
+
+; phase: A = (raster line / 2 - S_INTL) mod 156 (0xFF in S_INTL: not yet known, 0 used). Clobbers BC, HL.
+; (moved here from the main block: alt ROM space, 2026-11-23)
+phase:  call rline
+        ld hl,S_INTL
+        ld b,(hl)
+        inc b
+        ret z
+        sub (hl)
+        ret nc
+        add a,156
         ret
 
         ds 0x3A3A - $, 0xFF
@@ -964,7 +964,13 @@ setup:  nextreg 0x07,3                  ; 28 MHz (the tail leaves NR $07 alone)
         nextreg 0x41,a
         djnz .lp
         nextreg 0x43,0
-        xor a                           ; sprite pattern 0 (8-bit): the light's disc, pixel 1, else TRANS (0xE3)
+        xor a                           ; all 128 sprite records hidden (another program's may be left visible:
+        ld bc,0x303B                    ; tools/probes/sprite_leftovers.py), then pattern 0 (8-bit): the light's
+        out (c),a                       ; disc, pixel 1, else TRANS (0xE3)
+        ld b,a
+.hd:    out (0x57),a
+        out (0x57),a
+        djnz .hd
         ld bc,0x303B
         out (c),a
         ld hl,s_light

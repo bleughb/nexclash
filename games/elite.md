@@ -155,33 +155,18 @@ one pass = 0x7477 0x713C ... 0x74B9 0x7853, 0x74E7 0x8080 (clear), 0x74EE 0x7584
 - Per-ship draw site: 0x9E44 JP 0xF8B4, the hack's wrapper (DI, 0xFEFE = RET, SP 0x4020, CALL 0xA6DF) - ## M2 progress.
 
 ## M1 progress (2026-11-23)
-M1 part 1 (colour mirror) RUNS in CSpect from the Docking and Witch snapshots: planet blue, crosshair / lasers red,
-text and stars white, ships per model (station light grey-blue), stable over ~600 frames of flying.
-M1 part 2 (pacing) RUNS too (Docking ~900 frames, Witch ~260 frames with pitch / climb keys): 28 MHz (setup NR $07 = 3);
-h_flip waits until TICK = 10 frames have passed since the last tick (HALT loop, frame count from h_isr), so a pass at
-28 MHz (~1 frame) idles ~9; measured tick-to-tick 10 frames exactly. h_isr (IM 2 vector 0x3A3A, I = 0x39 table of
-0x3A) counts frames in state page 26 (mapped at slot 0 under DI) and runs the game's ISR body 0xFF25 on 16 of every
-25 frames (pattab), honouring the hack's own 0xFEFE = RET switch. Keys answer at the original rate. Build: `python -m nexclash.elite IN.z80 OUT.nex`
-(`--control` = IM 2 fix only; `--control=rst+cat+...` / `wXXXX` = hook subsets, the bisect used below).
-Code: asm/elite_hooks.asm, nexclash/elite.py, docs/profiles/elite.json (not yet in nexclash/engines.py or the CLI).
-- Writers: every buffer write is LD (HL),A / LD (HL),B / LD (HL),0xFF (probe buf_writers.py, Docking whole: 22 sites
-  + the clear's LDDRs); each becomes RST 18h / 10h / 20h + NOP; the handler does the write, then mirrors the changed
-  bits onto the Layer 2 back buffer (buffer line k = screen-layout decode of HL, shown at y = k + 8, k < 120).
-- Colour: NR $7F = current colour (category hooks at 0x74EE / 0x74F1 / 0x74F4 / 0x74F7), 0 = ship mode: colour =
-  shipcol[IY low byte]. Blueprints are 23-byte records 0x61E3 + 23 n (n = 0-22, distinct low bytes) - all 23 coloured.
-- Layer 2: banks 16 / 19, cleared by DMA with the game's clear (0x8080), flipped with its copy (0x7FBE). ULA copy kept.
-- Start-up: tail at 0x4800 (viewport rows: the copy writes them first; scan_low.log). IM 2 vector table moved to the
-  alt ROM (I = 0x39, 257 x 0xFE) - see the bugs below.
-Bugs found (each a CSpect round): CSpect's IM 2 bus byte is not 0xFF (table in the alt ROM); 0x8080 keeps A;
-CSpect -mmc traps RST 08h as esxDOS (RST 18h used; found by hook-subset bisect).
-Stars plot into columns 0 / 31 outside the frame (copy leaves them out; h_plot skips them).
-Missed writers (found 2026-11-23 from the user's CSpect report: black bar through the sun, dashes at the right;
-probe buf_pcs.py, Witch / Havoc / PoliceAnarchy whole): planet / sun fills 0x8C19 0x8CBB 0x8D1B 0x8DB1 0x90D0 (A),
-0x8C22 0x8CC4 0x8D24 0x8DBA 0x8A78 (0xFF), LDDR 0x5E4B 0x8A81 (RST 28h, h_lddr), stack blits 0x8BCD 0x8CCD 0x8DC3
-(PUSH AF chains: JP pf_*). Left: 0xFB01 (inside another instruction's operand), 0x818C (page save). Logic-pass hooks
-exit early (nomirror) so the game's 32-byte stack 0x4100 goes little deeper; render runs on its own stack
-(0x7410-0x746F, saved); rowfix repaints ULA row 56 (0x40E0, below the stack, which the hack itself saves at 0xF8EC)
-after the planet and in h_flip. Sun (0x7107 via 0x86D0, h_sun) yellow; planet (0x7110) blue outline.
+M1 RUNS in CSpect (Docking, Witch): colour mirror + pacing. 28 MHz; h_flip waits TICK = 10 frames since the last tick;
+h_isr (IM 2 vector 0x3A3A, I = 0x39) counts frames in state page 26 and runs the game's ISR body 0xFF25 on 16 of 25
+frames (pattab), honouring the hack's 0xFEFE = RET. Build: `python -m nexclash.elite IN.z80 OUT.nex` (`--control` =
+IM 2 fix only; `--control=rst+cat+light+...` / `wXXXX` = hook subsets). Code: asm/elite_hooks.asm, asm/elite_render.inc,
+nexclash/elite.py, nexclash/elite_colours.py, docs/profiles/elite.json (not yet in nexclash/engines.py or the CLI).
+- Writers: every buffer write (LD (HL),A / B / 0xFF, probe buf_writers.py + buf_pcs.py, all recordings; LDDR fills,
+  PUSH AF stack blits) becomes an RST / JP into the alt ROM that writes and mirrors the changed bits to Layer 2
+  (buffer line k at y = k + 8). Left: 0xFB01 (inside an operand), 0x818C (page save).
+- Colour: NR $7F = current colour, 0 = ship mode (shipcol[IY low byte]; blueprints 0x61E3 + 23 n, n = 0-22).
+- Layer 2 banks 16 / 19, cleared by DMA with 0x8080, flipped with 0x7FBE. Start-up tail at 0x4800.
+- Bugs (each a CSpect round): CSpect's IM 2 bus byte is not 0xFF; 0x8080 keeps A; CSpect -mmc traps RST 08h; stars
+  plot into columns 0 / 31 (skipped); the game's 32-byte stack 0x4100 overflows into ULA row 56 (rowfix, own stacks).
 Not yet checked: the differential verify (step 6); hardware.
 
 ## M2 progress (2026-11-23)
@@ -195,14 +180,11 @@ asm/elite_hooks.asm; probes draw_deps.py / draw_io.py.
   0x9C97, a flag the flight loop reads (so every render must restore what it wrote).
 - Slot formats [observed: snapshots]: position 3 x (lo, hi, sign | bits 16-22); orientation 9 x (fraction,
   sign | magnitude), unit ~0x7F00 (rows norm 127).
-- Design as built: h_ship (0x9E44) records each ship as the original draws it (slot, blueprint, 0xA79D, the inputs)
-  into list S_W and lets the original draw go to the mono buffer only (NR $7F = 1: no mirror). Everything else the
-  pass draws goes to a base Layer 2 (banks 14-15). h_flip: last list = cur, the one before = prev; until the tick,
-  render once per frame: base copied (DMA) to the back buffer, game's clear (0x8084, keeps the frame), outputs
-  saved, per cur record: slot + inputs written back, x / y / z and the 9 components interpolated from prev's record
-  of the same slot and blueprint (weight frames-since-tick / 10; a jump of 0x8000+ keeps cur), 0xA6DF called as the
-  wrapper does (0xFEFE = RET, SP 0x4020), outputs restored, flip. Only after a flight pass (h_combat sets
-  S_FLIGHT): status / chart pages keep the original copy.
+- Design as built: h_ship (0x9E44) records each ship as drawn (slot, blueprint, inputs) into list S_W; the pass draws
+  ships to the mono buffer only, the rest to a base Layer 2. h_flip renders once per frame until the tick: base copied
+  (DMA), outputs saved, each record's slot / inputs written back, x / y / z and orientation interpolated from the
+  previous list's record (weight frames-since-tick / 10; a jump of 0x8000+ keeps cur), 0xA6DF called as the wrapper
+  does, outputs restored, flip. Only after a flight pass (S_FLIGHT): pages keep the original copy.
 - Frame counting (lesson in ## Lessons): interrupts + raster polls in DI stretches; 506 counted over ~505 frames. The game ISR body runs from an owed count (16 per 25 frames).
 - M3 (ships): ownrot, after interp, turns each ship by one pass of the current roll / pitch (0xFF09 / 0xFF0B) with
   the game's own code - 0xA173 position (speed byte 0xFF: no z move, never its overflow exit 0x5FD5), 0xA0AB x 3
@@ -223,18 +205,19 @@ reproduced in 8 later samples; to watch with a render assert); Havoc.z80 crashes
   interrupt there wrote h_isr's stack to Layer 2: Docking hang). Checked: Docking 1800, Witch sun, pages.
   stars_x: stars moved on by w along their last move (0x7898 on scaled speed wobbled).
 - M4 part 2: ulaclr clears the snapshot's ULA viewport inside its frame once (first h_flip). h_light (0x99D7):
-  condition light = sprite 0 (the game's shape; palette 0x11/0x21/0x31 = ULA red/green/yellow), its c09 cells white
-  so scanner sticks show white; sprites off on pages and docked. Checked: Witch yellow/green/forced red, page and back.
+  condition light = sprite 0 (the game's shape; palette 0x11/0x21/0x31 = ULA red/green/yellow), c09 cells white (scanner
+  sticks white); sprites off on pages and docked. Checked: yellow/green/forced red, page and back.
   Colour: nexclash/elite_colours.py, one key per figure (S<IY lo> = shipcol; C<cat> = `nextreg 0x7F,n` sites cs_*),
   15-colour PAL8, nibble 0 = asm default; recolour() rewrites bank 12 only (empty map = build, tested). Figures: 21
-  models from the recordings (ship_shapes6.py + pick_ships.py; 61E3 6211 62F7 6325 by eye: tunnel rings come under a
-  stale IY) in docs/profiles/elite_shapes.json.gz. The CLI finds it once the M5 record exists.
+  models from the recordings (61E3 6211 62F7 6325 picked by eye: tunnel rings come under a stale IY) in
+  docs/profiles/elite_shapes.json.gz. The CLI finds it once the M5 record exists.
 
 ## Hardware checklist
 None yet (no build).
 
 ## Stage log
 2026-11-22  stage 0 (intake, all five recordings)  ~2 h  ~60 calls  0 user rounds
+2026-11-23  stage 2 M4 (pages, stars, HUD light sprite, colour sheet + recolour)  2 user rounds
 
 ## Lessons
 - [deferred Open: reconsider when a second engine counts frames on the Next with long DI stretches] Counting frames with DI code: interrupts alone lose frames, raster polls alone lose them when polls fall a frame apart at the same line, and a HALT wait polls only at the interrupt line (never sees the raster go round). Count each interrupt and let polls inside DI stretches add only the frames whose interrupt was lost (phase from the interrupt's own line, a flag so neither counts the same frame twice).
@@ -242,7 +225,25 @@ None yet (no build).
 - [deferred Open: reconsider when stage 1 feasibility shows whether a tail can be placed (--tail + scan --range)] A 128K snapshot with the 48K ROM locked in: `convert` found no place for the start-up tail and nextboot.check models 48K start-up only. (2026-11-23: --tail 0x4800, viewport rows the copy writes first, works in CSpect.)
 - [deferred Open: reconsider when the first hardware test shows which is CSpect's alone] CSpect differs from the toolkit's assumptions twice: its IM 2 bus byte is not 0xFF (a table valid only at I*256+0xFF fails), and with -mmc it traps RST 08h as esxDOS (skips the next byte). Candidates for BRIEFING A1 / the kb once hardware confirms which is the emulator's alone.
 - [deferred Open: reconsider when a second engine patches writers that run on a private stack] An RST handler that runs on a game's private stack must fit its depth: measure SP at every patched site (site_ctx.py) before choosing pushes; and a hook that replaces a routine's first instruction must keep every register the original keeps (callers rely on it: 0x8080 kept A).
+- [kb lesson.clash-by-layer-and-no-clash: Elite's mono HUD measured] HUD cell census (Docking, Havoc whole): only three
+  cells clash - scanner sticks reach the condition light's cells and the S cell; the bars switch whole cell rows.
+- [kb lesson.ink-rectangle-sprites-car-colour: a HUD indicator] the condition light, coloured by four attribute writes,
+  is drawn as a sprite of the game's own light pixels; its scanner-side cells go white, so scanner sticks there show white.
+- [kb lesson.coloursheet-one-key-per-figure: new] one colour per ship model: each figure is one colour-map key at bit 0 on
+  a whole-figure sheet, so one painted pixel colours the whole figure on rebuild and on the redrawn sheet.
+- [local: Elite's ship draw path] the launch tunnel rings are drawn while IY still holds the last ship's blueprint, so
+  they take that ship's colour, and a capture of figures per IY must leave them out.
 
 ## Technique use
 - detect.routine-removal: no help: not run; the probe read call paths from the stack instead (2026-11-22)
 - detect.pacing-structure: used: survey flagged pacing (1726 interrupts in 3001 frames); not analysed further yet (2026-11-22)
+- tools/probes/sprite_leftovers.py: helped: 127 sprites left visible once h_light enabled sprites; setup hides all (2026-11-23)
+- tools/probes/attr_census.py: no help: per-window sets; the question was which writers meet in a cell (2026-11-23)
+- patch.iff-safe-read: corrected: 5 single LD A,I reads -> HLIB_IFF_DI; phase to im2tab gap (2026-11-23)
+
+## Friction
+- reuse: [probe tools/probes/cell_writers.py] the per-cell writer census (HUD clash question) was written from scratch; kept.
+- retries: [local: this build] ulaclr first cleared the frame lines too; the light sprite first left out the light's own edge pixels.
+- environment: [local: cause not found] games/elite.md and nexclash/elite.py had CR CR LF line ends from an earlier session; fixed to CRLF.
+- hand-rolled: [local: Elite's view flag] a page in CSpect: break at 0x747A, write 0xFC08 = 1 (press_keys did not open one).
+- scratch: [local: Elite's draw path and recordings] ship_shapes6.py / pick_ships.py / show_cands.py stay in the local elite_work/probe folder.

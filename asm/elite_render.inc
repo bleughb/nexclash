@@ -6,8 +6,7 @@
 ; frame with weight d / TICK (d = frames since the tick); with interrupts off (a screen the game draws with DI)
 ; render cur once. Then the mono buffer is cleared and the original copy shows it (zeros) on the ULA viewport, which
 ; Layer 2 now covers. The original clobbers A, F, BC, DE, HL here too (LD HL / LD DE / the copy loops).
-h_flip: ld a,i                          ; P/V = IFF2
-        di
+h_flip: HLIB_IFF_DI                     ; P/V = IFF
         nextreg 0x50,STATE_PG
         ld a,0
         jp po,.f0

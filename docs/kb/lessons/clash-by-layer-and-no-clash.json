@@ -14,6 +14,12 @@
    "text": "A nearly monochrome look still had a little clash: 0.35% of figure cells in level 1, 0.13% in level 2, 0.08% in level 3, 3.6% in level 4's rooms (measured by the figures' boxes); the owner decides on the default's small clash.",
    "quote": "Measured by the figures' boxes (work/overlap.py): 0.35% of figure cells in level 1, 0.13% in level 2, 0.08% in level 3, 3.6% in level 4's rooms.",
    "shown_on": "unknown"
+  },
+  {
+   "game": "games/elite.md",
+   "text": "Elite's mono HUD (cell census, Docking and Havoc whole): only three cells clash, where scanner sticks reach the condition light's cells and the S cell; bars switch whole cell rows.",
+   "quote": "HUD cell census (Docking, Havoc whole): only three",
+   "shown_on": "analysis"
   }
  ],
  "level": "inferred",

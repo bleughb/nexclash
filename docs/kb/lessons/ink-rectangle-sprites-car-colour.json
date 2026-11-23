@@ -9,6 +9,12 @@
    "text": "The car, which the game colours by OR-ing ink into a cell rectangle, became sprites of the game's own pixels, coloured from the ULA palette, mirrored by the X flag, clipped to that rectangle: no clash, the shadow black as in the original; 43 states, 111 frames exact, plus 103 more car frames.",
    "shown_on": "simulator",
    "quote": "A figure the game colours by OR-ing ink into a cell rectangle (the car) became sprites of the game's own pixels"
+  },
+  {
+   "game": "games/elite.md",
+   "text": "Elite's condition light (four attribute writes) drawn as sprite 0 of the game's own light pixels; its scanner-side cells set white so scanner sticks there show white.",
+   "quote": "is drawn as a sprite of the game's own light pixels",
+   "shown_on": "cspect"
   }
  ],
  "level": "demonstrated",
