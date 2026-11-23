@@ -3,6 +3,7 @@
 Techniques: `patch.hybrid-display-replacement`, `patch.inbetween-views`, `patch.iff-safe-read`
 
 ## Next session
+DIRECTION CHANGE (2026-11-23): rebuild for the STANDARD Firebird "[a]" release; the hack becomes an NXC option. Hack notes: games/elite_hack.md. This file = the hack engine (record `elite`).
 Stage: 2 (build)   State: M5 done 2026-11-23 (record docs/records/elite.json; CSpect / hardware check owed)
 Inputs: specnext/reference/elite/ (tape, 5 RZX, 5 extracted .z80)    Branch: add-elite    Commit: see git log
 Checks: full surveys of all five RZX (7.5k-68.6k frames); tape not run in an emulator
