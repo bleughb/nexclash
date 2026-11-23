@@ -1,7 +1,7 @@
 # Hard Drivin' (Domark / Binary Design, 1989; 128K tape)
 
 ## Next session
-Stage: 3 (prove + deliver)    State: selftest --game hard_drivin --verify --stamp PASSED 2026-11-23 (stamped verified); hardware next
+Stage: 1 for route 2 (feasibility)    State: route 1 (smooth views) stamped verified, hardware: plays like the original; route 2 probe 2 in progress
 Techniques: `patch.inbetween-views`, `detect.pacing-structure`, `patch.pace-limiter`, `patch.restore-speed`, `patch.whole-altrom-image`, `verify.update-locked-pace`
 Inputs: C:\1NEXT\harddrivin_work: hard_drivin.z80 (MD5 18809405, snapshot 0 of hard_drivin.rzx), hard_drivin.rzx (MD5 c649e04c, 22,116 frames), in\hd.tap (MD5 02e1f96c), in\hd.tzx (61f7d04c), in\hd.dsk ([a], 43a6bc4c). Game data: never in this repo; not yet in specnext/reference (a maintainer push: ask first).
 Branch: add-hard-drivin (worktree C:\1NEXT\nexclash-hd), main merged 2026-11-23 (83cd68b)    Commit: see git log
@@ -14,9 +14,11 @@ Checks: `python nexclash.py auto hard_drivin.z80 --rzx hard_drivin.rzx --quick 2
   COMPLETE. Prototype evidence (C:\1NEXT\harddrivin_work): whole-RZX verify PASS (3,112 checks), 18 / 18 mutants,
   JNext pace +3 frames / 178 updates.
 Pending user answers: none
-Start with: the hardware build hard_drivin_smooth.nex (9fb23f8e) + checklist for the user: walk and turn smooth, no
-  tearing, the original's speed (lap clock vs the plain build over a lap); K and the copy time are measured at run time
-  (JNext's ratio 6.2 vs TECHNIQUES' hardware 6.6-7.0). The inputs are in C:\1NEXT\hd_reference (not in specnext: ask before any push)
+Start with: route 2 (finer time steps, real time; "## Route 2" below). Probe 2 was running in a subagent when
+  the session stopped (2026-11-23): its brief is C:\1NEXT\harddrivin_work\step\PROBE2_BRIEF.md, its progress C:\1NEXT\harddrivin_work\step\probe2_results.md.
+  If the results file is incomplete, start a subagent with the brief + "resume from probe2_results.md". Then check its
+  numbers (rerun one state), record them here, and propose the build plan (N sub-steps per original update in 10 frames).
+  Hardware test 1 builds stay as they are (the smooth route is verified and stamped).
 Open: the first calibration interrupt's extra ~574 T (not subtracted, 0.06 %); sub-unit angle interpolation;
   the CALL at 0xA402 (time-out path, not in the recording); R not preserved (patch.preserve-r: the verify excludes
   R; no consumer of R found, not proven)
