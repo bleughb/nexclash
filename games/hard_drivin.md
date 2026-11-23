@@ -155,3 +155,11 @@ Open: the first calibration interrupt's extra ~574 T (not subtracted, 0.06 %); s
 - environment: [none: git, harness and network had no workaround this stage]
 - hand-rolled: [local: the host Next model (MMU, line clock, zxnDMA, IM 2) is per engine; hooklib.NextModel has no MMU or interrupts]
 - scratch: [local: push605.py, hd_repo_quick.py dropped: one-off reproductions, the engine's verify covers them]
+
+## Hardware checklist
+Test 1 (2026-11-23), sent to the user: C:\1NEXT\harddrivin_work\hardware1 (CHECKLIST.txt + both builds: hard_drivin_smooth.nex
+9fb23f8e, hard_drivin.nex d74f75e6, the stamped record's outputs). Steps: start-up and options; smoothness (more,
+smaller steps; smooth turns; none when stopped; no tearing); speed: stopwatch over 30 race-clock seconds (the clock
+counts updates) in both builds, a quiet and a busy stretch, expected within ~1 s (JNext: +3 frames / 178 updates);
+crash replay and key 0; the out-of-time path (0xA402, not in the recording); sounds; a 10-minute soak.
+Results: (pending)
