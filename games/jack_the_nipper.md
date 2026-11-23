@@ -6,8 +6,8 @@ Inputs: TOSEC `Jack the Nipper (1986)(Gremlin Graphics Software).z80` (md5 adcdb
 `[a]` (4c5398b8bcfd88ebd83656f01c3aca21); rzxarchive `j/jacknipper.rzx` (108,043 frames, 36 min; its own start
 snapshot md5 903c092495784d308cf03899b80d7110)    Branch: add-jack-the-nipper
 Checks: survey (GATE OK), inspect    Pending user answers: none yet (the stage-1 question comes with the preview)
-Start with: disassemble the shadow writers 0x80E0-0x8400 and 0x8760 ("Stage 1 analysis" below), then `cost --at` each
-(who composes what 0x86F9 copies: answered)    Read: PLAYBOOK 2-3, 3d (an unknown engine: feasibility first)
+Start with: the object record's position bytes and 0x87BB, the erase / restore at 0x8760, objects per room
+(`cost --at 0x8009`)    Read: PLAYBOOK 2-3, 3d (an unknown engine: feasibility first)
 Open: the figure plotter(s) behind the copier; where the figures' colours come from; a short recording (3-5 min) for
 the design runs (the 36-minute one stays for the full verification)
 
@@ -32,6 +32,11 @@ RAMTOP 0x7C60, border 0. No loader to run.
 - The shadow is written by read-modify-write code at 0x80E5 / 0x80FD, 0x8199 / 0x81D4, 0x8299 / 0x82B7, 0x838B,
   0x865D (it reads each byte back first: masked sprite drawing, several variants), which marks cells at 0x812C,
   0x8209, 0x82F6, 0x845F; 0x8760-0x877C writes eight rows a call (x202,775: most likely the background restore).
+- The sprite routine is 0x8009 (called from 0x92A9, 0xA71A, 0xA729 and the main loop at 0xAA44, which then runs the
+  copier 0x86F9 and 0x8735), one object per call through IX: (IX+6) flags (bit 4: skip), (IX+2) type (bit 0: 16 or
+  24 rows), (IX+5) animation frame (a 32 / 48 / 96 / 144-byte step into the graphics), (IX+7) / (IX+9) graphics and
+  mask pointers; 0x87BB turns the position into a shadow address, then a 16-pixel-wide masked draw bottom-up (0x8781
+  steps up a character row). Shared helpers: 0x8781 and 0x87A0 (8 callers each), 0x87BB (16).
 - Model so far: shadow screen + dirty cells + masked sprites; figures take the room's attributes (0x7F84 sets them
   per room). Next: the plotters' entry points and inputs (x, y, frame), the restore's source, figures per room.
 
