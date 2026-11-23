@@ -328,14 +328,24 @@ def sub_records(res, cid):
     return recs, notes
 
 
-def passes_disagree(res):
-    """tests run in more than one pass whose status, value or extras differ -> [(id, [(pass, summary)])]"""
+FINAL = ('PASS', 'FAIL', 'INFO', 'OPERATOR', 'HANG-GUARD')
+
+
+def passes_disagree(res, final_only=True):
+    """tests run in more than one pass whose status, value or extras differ -> [(id, [(pass, summary)])]. Only
+    final results are compared (final_only): a PENDING-OPERATOR or SKIP line in another pass of the same build
+    (RUN ALL after the visual pass, an opt-in group not selected) is not a different answer (board run 11
+    listed 29 tests for that reason alone)."""
     out = []
 
     def summ(r):
         return '%s v=%s %s' % (r['status'], r.get('v', '-'),
                                ' '.join('%s=%s' % kv_ for kv_ in sorted(r['extra'].items())))
     for tid, hist in sorted(res['history'].items()):
+        if final_only:
+            hist = [r for r in hist if r['status'] in FINAL]
+            if tid == 'XH2':        # the lock pass and its follow-ups after resets are different steps (_xh2)
+                hist = [r for r in hist if r.get('v') in ('deaf', 'copied')]
         if len({r['pass'] for r in hist}) < 2:
             continue
         if len({summ(r) for r in hist}) > 1:
@@ -1125,6 +1135,7 @@ def sample(table, fail=False):
              'T id=F01 st=INFO c=frame-lines-50 v=311 u=lines n=1 min=311 max=311',
              'G id=G4 end fails=0', 'P pass=2 mode=G4', 'G id=G4 name=FRAME start',
              'T id=F01 st=INFO c=frame-lines-50 v=312 u=lines n=1 min=312 max=312',
+             'T id=S03 st=SKIP c=sys-ram-size v=- u=- n=0 min=- max=- why=not-selected',
              'T id=F02 st=INFO c=frame-line-length v=216.1 u=T n=5 min=216 max=216.2',
              'T id=Z01 st=SKIP c=z80n-func-suite v=- u=- n=0 min=- max=- why=not-built',
              'T id=zf.MUL st=PASS c=z80n-func-suite f=$A5 fexp=$A5',
@@ -1160,6 +1171,11 @@ def selfcheck():
             bad.append('good file: no note for the LDPIRX bits-5/3-only difference')
         if len(res['passes']) != 2 or [d[0] for d in passes_disagree(res)] != ['F01']:
             bad.append('passes: %s, disagree %s' % (res['passes'], passes_disagree(res)))
+        # negative control: comparing every line, S03's SKIP in pass 2 would count as a disagreement
+        if [d[0] for d in passes_disagree(res, final_only=False)] != ['F01', 'S03']:
+            bad.append('negative control: all-lines disagree %s' % passes_disagree(res, final_only=False))
+        if v['sys-ram-size']['choice'] is None and v['sys-ram-size']['verdict'] != 'choice':
+            bad.append('S03 SKIP in a later pass replaced its answer: %s' % v['sys-ram-size'])
         with tempfile.TemporaryDirectory() as d:
             src = os.path.join(d, 'NXSUITE.TXT')
             open(src, 'wb').write(good)
