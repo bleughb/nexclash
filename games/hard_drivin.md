@@ -14,8 +14,10 @@ Checks: `python nexclash.py auto hard_drivin.z80 --rzx hard_drivin.rzx --quick 2
   COMPLETE. Prototype evidence (C:\1NEXT\harddrivin_work): whole-RZX verify PASS (3,112 checks), 18 / 18 mutants,
   JNext pace +3 frames / 178 updates.
 Pending user answers: none
-Start with: route 2a build (see "Probe 2" below: adaptive N 4 / 2, traffic once per N first); probe2.py is the
-  per-update check. Auto-resume after a session reset is allowed (user, 2026-11-23).
+Start with: route 2a build, stage 1 (exact integer spec + hook sites) running in a subagent (2026-11-23): brief
+  C:\1NEXT\harddrivin_work\step\STAGE1_BRIEF.md, progress stage1_results.md there; if incomplete, a subagent resumes from them. Then
+  stage 2: hook asm verified against spec.py; stage 3: pace (10 frames per original update), adaptive N, JNext.
+  Auto-resume after a session reset is allowed (user, 2026-11-23).
 Open: the first calibration interrupt's extra ~574 T (not subtracted, 0.06 %); sub-unit angle interpolation;
   the CALL at 0xA402 (time-out path, not in the recording); R not preserved (patch.preserve-r: the verify excludes
   R; no consumer of R found, not proven)
