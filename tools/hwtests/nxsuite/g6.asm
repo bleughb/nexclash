@@ -212,7 +212,9 @@ t_d01:  call g6_map
 ; clocks a cycle), 256 and 2048 bytes, at 3.5 and 28 MHz: 28 MHz clocks per byte = the slope (t2048 - t256)
 ; / 1792. Keys: m / p (memory / port), a / 3 / 4 / 2 (cycle length), 35 / 28. Builds up to 57d7b56 keyed
 ; the byte %11 as "3" and compared it with "absent": a test fault (board run 6: 8 against 6).
-; PASS if "absent" is the 3-cycle byte %01 within 0.10 clocks everywhere (dma-default-cycle-length);
+; PASS if "absent" is the 3-cycle byte %01 within 0.10 clocks at 28 MHz and 0.80 at 3.5 MHz, where every
+; value is 8 times larger and one timing step is 0.16 (CSpect 4.6.0.0: pa35 47.84 against p335 48 failed a
+; run at 0.10; a 3- against 4-clock cycle differs by 8 x 2 = 16 there) (dma-default-cycle-length);
 ; v = m a 28. A slope outside 0.5-100 clocks is a timing fault (method=fault, INFO, never FAIL). The
 ; transfers are continuous: the CPU is frozen, g6_run rebuilds the time (board run 5 of d99fbf8 lost
 ; the CTC3 wraps: 0 / 584 clocks).
@@ -252,7 +254,9 @@ t_d02:  call g6_map
 .n3:    cp 1 : jr nz,.c
         ld hl,(.v) : ld de,(.va) : or a : sbc hl,de : jr nc,.ab
         ex de,hl : ld hl,0 : or a : sbc hl,de
-.ab:    ld de,11 : or a : sbc hl,de : jr c,.c           ; |absent - 3| <= 0.10
+.ab:    ld de,11 : ld a,(.spd) : or a : jr nz,.tl       ; |absent - 3| <= 0.10 at 28 MHz,
+        ld de,81                                        ; <= 0.80 at 3.5 MHz (one T there = 8 clocks)
+.tl:    or a : sbc hl,de : jr c,.c
         xor a : ld (.ok),a
 .c:     jp .l
 .x:     call g6_unmap

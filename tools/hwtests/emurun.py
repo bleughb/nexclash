@@ -130,9 +130,13 @@ def run_cspect(a, d):
     cmd = [a.exe, '-zxnext', '-w2', '-mmc=%s\\' % d, '-mcp=%d' % a.port]
     if a.hz60:
         cmd.append('-60')
+    if a.sdspeed:
+        cmd.append('-sdspeed=%s' % a.sdspeed)
     cmd.append(os.path.join(d, 'nxsuite.nex'))
     log = open(os.path.join(d, 'emulator.log'), 'w')
-    p = subprocess.Popen(cmd, cwd=os.path.dirname(a.exe), stdout=log, stderr=subprocess.STDOUT)
+    # the run folder as working folder: CSpect 4.6 reads cspect.ini from there (else beside CSpect.exe) and
+    # saves menu changes there, so the owner's own settings are neither used from nor written to its folder
+    p = subprocess.Popen(cmd, cwd=d, stdout=log, stderr=subprocess.STDOUT)
     t0 = time.time()
     m = Mcp(a.port)
     status = 'timeout'
@@ -196,6 +200,7 @@ def main(argv=None):
     ap.add_argument('--card', help='JNext: a read-only SD image to boot with')
     ap.add_argument('--hz60', action='store_true', help='CSpect: start at 60 Hz')
     ap.add_argument('--port', type=int, default=8766, help='CSpect: MCP port of the instance this starts')
+    ap.add_argument('--sdspeed', help='CSpect 4.6+: SD card speed (unlimited, fast, normal, slowest)')
     a = ap.parse_args(argv)
     d = os.path.abspath(a.sd)
     os.makedirs(d, exist_ok=True)
