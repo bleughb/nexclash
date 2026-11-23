@@ -456,6 +456,7 @@ why_hung: db "hung-last-run",0
 why_ns: db "not-selected",0
 why_lo: db "left-out",0
 why_nobl: db "no-blitter",0
+why_deaf: db "dma-deaf",0
 
 ; the result of the test being run (tests set these; harness writes the line)
 R_st:   db 0

@@ -266,6 +266,9 @@ def invalid_why(r, res):
         x2 = [q for q in res['history'].get('XH2', []) if q['pass'] == r['pass']]
         if x2 and x2[0].get('extra', {}).get('before') == '$00':
             return 'the DMA was deaf in that pass (XH2 before=$00: no reset since an earlier XH2 lock)'
+    if r['id'] == 'XH2' and r['status'] in ('PASS', 'FAIL') and r.get('extra', {}).get('before') == '$00':
+        # builds up to e8cc11b sent the lock again to a DMA that was already deaf: "deaf" then says nothing
+        return 'the DMA was already deaf before the WR4 byte (before=$00: still locked from an earlier XH2)'
     return None
 
 
@@ -286,6 +289,16 @@ def pick_records(res):
             if r['status'] in FINAL:
                 best = r
         res['tests'][tid] = best or hist[-1]
+    # XH2: the lock pass (v deaf / copied) and its follow-ups after a reset (v reset-frees / still-locked)
+    # are two answers, both kept: the verdict uses the lock pass, the note states every follow-up
+    hist = res['history'].get('XH2', [])
+    if 'XH2' in res['tests'] and hist:
+        voided = {pas for t, pas, _ in res['voided'] if t == 'XH2'}
+        ok = [r for r in hist if r['status'] in FINAL and r['pass'] not in voided]
+        lock = [r for r in ok if r.get('v') in ('deaf', 'copied')]
+        follow = [r for r in ok if r.get('v') in ('reset-frees', 'still-locked')]
+        base = lock[-1] if lock else (follow[-1] if follow else res['tests']['XH2'])
+        res['tests']['XH2'] = dict(base, follow=follow)
 
 
 def num(v):
@@ -365,7 +378,8 @@ def verdicts(res, table):
             fixed.append(r)
         recs = fixed
         for r in recs:
-            ans = [(q['pass'], q.get('v')) for q in res['history'].get(r['id'], []) if q['status'] == 'OPERATOR']
+            ans = [(q['pass'], q.get('v')) for q in res['history'].get(r['id'], []) if q['status'] == 'OPERATOR'
+                   and r['id'] != 'XH2']                # XH2's follow-ups follow different resets: _xh2 states each
             if len({a for _, a in ans}) > 1:
                 v['notes'].append('%s: the answers differ between passes (%s); the verdict uses the latest' % (
                     r['id'], ', '.join('pass %d %s' % a for a in ans)))
@@ -581,7 +595,31 @@ def _v19(e, rec, src):
         '50.00 Hz lies outside that range: time it again with tenths to be sure.'))
 
 
-DERIVE = {('D02', 'dma-default-cycle-length'): _d02_default, ('D02', 'dma-cost-per-byte'): _d02_cost,
+RESETS = {'soft': 'an F4 soft reset', 'hard': 'a hard reset', 'power': 'power off and on'}
+
+
+def _xh2(e, rec, src):
+    fol = rec.get('follow') or []
+    parts = []
+    if rec.get('v') in ('deaf', 'copied'):
+        parts.append('lock pass: one DMA byte copied before the WR4 byte $91, %s after it' % (
+            'none' if rec['v'] == 'deaf' else 'still one'))
+    for f in fol:
+        how = RESETS.get(f.get('extra', {}).get('reset'), 'a reset the line does not name (build before the '
+                                                       'reset question)')
+        parts.append('after %s: %s' % (how, 'the DMA answered again' if f['v'] == 'reset-frees' else
+                                       'still locked (no byte copied at the next start)'))
+    if not fol:
+        parts.append('no follow-up yet: power off and on (or a hard reset), start again, press H')
+    st = None
+    if rec.get('v') == 'deaf':
+        st = 'PASS'
+    elif rec.get('v') == 'copied':
+        st = 'FAIL'
+    return st, 'board: %s.' % '; '.join(parts)
+
+
+DERIVE = {('XH2', 'dma-wr4-interrupt-lock'): _xh2, ('D02', 'dma-default-cycle-length'): _d02_default, ('D02', 'dma-cost-per-byte'): _d02_cost,
           ('D04', 'dma-prescaler-rate'): _d04, ('D05', 'dma-burst-cpu-share'): _d05,
           ('D13', 'dma-blitter-transparent-fill'): _d13, ('SP10', 'spr-line-limit'): _sp10,
           ('F06', 'frame-60hz-display-start'): _f06_60, ('V19', 'sys-video-timing-frame-rate'): _v19}

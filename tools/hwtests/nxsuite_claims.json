@@ -1903,7 +1903,7 @@
    "operator": false,
    "opt_in": true,
    "stage": 2,
-   "fields": "v = main-loop passes between $87 and the stop (the CPU had the bus that often); irq = handler runs (the handler stops the DMA at the second); bad = bytes of the 256-byte copy that differ. PASS if stopped and v <= 50. A machine that does not come back = the escape (hardware IM2 + $CC) failed: HANG-GUARD. JNext 1.3.0 hangs here (no $CC escape); CSpect PASS v=1."
+   "fields": "v = main-loop passes between $87 and the stop (the CPU had the bus that often); irq = handler runs (the handler stops the DMA at the second); bad = bytes of the 256-byte copy that differ. PASS if stopped and v <= 50. A machine that does not come back = the escape (hardware IM2 + $CC) failed: HANG-GUARD. JNext 1.3.0 hangs here (no $CC escape); CSpect PASS v=1. The DMA must answer one byte first: a DMA still locked by an earlier XH2 gives SKIP why=dma-deaf (board run 7 pass 2 printed FAIL v=15812 bad=254 that way)."
   },
   {
    "id": "XH2",
@@ -1917,7 +1917,7 @@
    "operator": false,
    "opt_in": true,
    "stage": 2,
-   "fields": "First pass: before / after = 1-byte DMA copies before and after the WR4 byte $91 (bit 4); v = deaf (PASS) or copied (FAIL). Then soft reset, start again, H: v = reset-frees or still-locked (the start's DMA byte, PRG_XH2), INFO."
+   "fields": "XH2: first pass: one DMA byte; if it does not arrive the DMA is already deaf: SKIP why=dma-deaf (nothing sent). Else before / after = 1-byte copies before and after the WR4 byte $91 (bit 4); v = deaf (PASS) or copied (FAIL). Then power off and on (or a hard reset), start again, H: a 1 / 2 / 3 question gives reset=soft / hard / power and v = reset-frees or still-locked (the start's DMA byte, PRG_XH2), OPERATOR. The verdict uses the lock pass; the note states each follow-up. Board run 7 (KS1, 3.03.00): pass 4 ran in the same run as the lock (no restart) and found the DMA still deaf; the files hold no start after a reset, so what F4 does is not yet shown."
   }
  ],
  "claims_not_tested": [

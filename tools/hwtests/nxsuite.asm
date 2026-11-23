@@ -115,6 +115,10 @@ gv_end:
         INCLUDE "nxsuite/gxh.asm"
 gxh_end:
         ASSERT $ <= G6P
+        ORG G6P+$48                     ; G6 uses $F700-$F747 only
+        INCLUDE "nxsuite/gxhtxt.asm"
+gxhtxt_end:
+        ASSERT $ <= XHT
         MMU 7,OVL_G1
         ORG $E000
         INCLUDE "nxsuite/g1.asm"
