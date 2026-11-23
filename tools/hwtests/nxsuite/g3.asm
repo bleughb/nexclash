@@ -140,19 +140,23 @@ i03r:   ds 14
 i03id:  db "ih.t1",0, "ih.t2",0, "ih.t3",0, "ih.t4",0, "ih.t5",0, "ih.t6",0, "ih.t7",0
 
 ; ---------------------------------------------------------------- I07 status bits $C8
-; pulse: one frame under DI, read $C8; write 0, read; write 1, read. Hardware IM2: one frame under DI,
+; pulse: a whole frame under DI (2 passes of line 150; a first build waited only to the next line 150,
+; which need not cross the ULA interrupt line), read $C8 (and $C0 / $C4 / $22 as they were); write 0, read; write 1, read. Hardware IM2: one frame under DI,
 ; read; write 1, read. PASS if the pulse-mode three have bit 0 = 1 / 1 / 0 (the hardware pair recorded:
 ; the claim's hardware-IM2 part is about interrupts on, which this does not reach).
 t_i07:  nextreg $07,3
         call g3_pulse
-        ld b,1 : call g3_fdi
+        ld b,2 : call g3_fdi                    ; 2: a whole frame (the ULA line) lies between the reads
+        ld a,$C0 : call rdreg : ld (.q),a
+        ld a,$C4 : call rdreg : ld (.q+1),a
+        ld a,$22 : call rdreg : ld (.q+2),a
         ld a,$C8 : call rdreg : ld (.r),a
         nextreg $C8,0
         ld a,$C8 : call rdreg : ld (.r+1),a
         nextreg $C8,1
         ld a,$C8 : call rdreg : ld (.r+2),a
         call g3_hw
-        ld b,1 : call g3_fdi
+        ld b,2 : call g3_fdi
         ld a,$C8 : call rdreg : ld (.r+3),a
         nextreg $C8,1
         ld a,$C8 : call rdreg : ld (.r+4),a
@@ -163,12 +167,19 @@ t_i07:  nextreg $07,3
         ld a,(hl) : ex de,hl : ld e,(hl) : inc hl : ld d,(hl) : ex de,hl : call ex_kh
         pop hl : pop de : pop bc
         inc hl : inc de : inc de : djnz .k
+        ld a,(.q) : ld hl,k_qc0 : call ex_kh
+        ld a,(.q+1) : ld hl,k_qc4 : call ex_kh
+        ld a,(.q+2) : ld hl,k_q22 : call ex_kh
         ld a,(.r) : and 1 : jr z,.f
         ld a,(.r+1) : and 1 : jr z,.f
         ld a,(.r+2) : and 1 : jr nz,.f
         ld a,ST_PASS : ld (R_st),a : ret
 .f:     ld a,ST_FAIL : ld (R_st),a : ret
 .r:     ds 5
+.q:     ds 3
+k_qc0:  db "c0",0
+k_qc4:  db "c4",0
+k_q22:  db "nr22",0
 i07k:   dw k_p1,k_p0w,k_p1w,k_h1,k_h1w
 k_p1:   db "pdi",0
 k_p0w:  db "pw0",0

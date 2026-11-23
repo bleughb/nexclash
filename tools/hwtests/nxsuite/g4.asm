@@ -14,7 +14,8 @@ fwrapmax:
         ld (.max),hl
 .n:     dec de : ld a,d : or e : jr nz,.l
         ld hl,0 : ret
-.w:     ld hl,(.max) : ret
+.w:     ld (.to),hl : ld hl,(.max) : ret
+.to:    dw 0                                     ; the line read just after the fall
 .prev:  dw 0
 .max:   dw 0
 
@@ -67,13 +68,17 @@ k_t256: db "ticks256",0
 
 ; ---------------------------------------------------------------- F03 the other refresh rate
 ; $05 bit 2 flipped (read-modify-write) at line 100: the frame in which it happened and the next one, then
-; lines per frame and the line length at the new rate; bit 2 put back the same way and two frames waited.
+; lines per frame and the line length at the new rate (f1 = from line 100 of the switch frame to its wrap,
+; f2-f4 the next frames; j2 = the line read just after f2's fall, so a short f2 shows where the count went); bit 2 put back the same way and two frames waited.
 ; The monitor may lose the picture for a moment (both switches).
 t_f03:  ld a,$05 : call rdreg : ld (.r5),a
         call frame_sync : ld a,100 : call sync_lsb
         ld a,(.r5) : xor 4 : nextreg $05,a
         call fwrapmax : ld (.f1),hl
         call fwrapmax : ld (.f2),hl
+        ld hl,(fwrapmax.to) : ld (.j2),hl
+        call fwrapmax : ld (.f3),hl
+        call fwrapmax : ld (.f4),hl
         ld a,$05 : call rdreg : ld (.n5),a
         ld a,10 : call flines_n
         ld a,h : or l : jr z,.z
@@ -93,11 +98,17 @@ t_f03:  ld a,$05 : call rdreg : ld (.r5),a
         ld a,(.n5) : ld hl,k_nr05 : call ex_kh
         ld de,(.f1) : ld hl,k_f1 : call ex_klen
         ld de,(.f2) : ld hl,k_f2 : call ex_klen
+        ld de,(.j2) : ld hl,k_j2 : call ex_kd
+        ld de,(.f3) : ld hl,k_f3 : call ex_klen
+        ld de,(.f4) : ld hl,k_f4 : call ex_klen
         ld hl,k_linet : call ex_k : ld hl,(.lt) : ld de,(.lt+2) : jp wfix
 .r5:    db 0
 .n5:    db 0
 .f1:    dw 0
 .f2:    dw 0
+.f3:    dw 0
+.f4:    dw 0
+.j2:    dw 0
 .lt:    ds 4
 w_to60: db "60",0
 w_to50: db "50",0
@@ -106,6 +117,9 @@ k_nr05: db "nr05",0
 k_f1:   db "f1",0
 k_f2:   db "f2",0
 k_linet: db "line_t",0
+k_j2:   db "j2",0
+k_f3:   db "f3",0
+k_f4:   db "f4",0
 
 ; ---------------------------------------------------------------- F04 raster read
 ; 100,000 LSB / MSB / LSB reads at 3.5 and at 28 MHz: a read is bad if it is above the largest line of

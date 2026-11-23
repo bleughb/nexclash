@@ -38,9 +38,11 @@ g1row_k:                                        ; (tr_k / tr_num set by the call
 .run:   ld a,(g1_spd) : ld (mshift),a
         nextreg $07,a
         call trow
+        ld a,$07 : call rdreg : ld (g1_rb),a          ; speed read back straight after the timed runs
         ld a,(spd0) : nextreg $07,a
         nextreg $53,11
         ret
+g1_rb:  db 0
 g1_body: dw 0
 g1_len: db 0
 g1_single: db 0
@@ -129,6 +131,7 @@ t_c01:  ld b,3 : call c01rows
         call res_g1nop
         ld hl,u_clocks : call res_unit
         ld hl,c01k : call g1keys
+        ld a,(g1_rb) : ld hl,k_nr07 : call ex_kh
         ; decide: every row within 0.2 of the 3.5 MHz T -> PASS no-wait; NOP 5 +- 0.2 -> wait; else other
         ld hl,g1r : ld de,c01t : ld b,5 : call within20
         ld hl,w_nowait : jr nc,.o
@@ -146,6 +149,7 @@ k_pop:  db "pop",0
 k_ldix: db "ldixn",0
 k_ldir: db "ldir",0
 k_choice: db "choice",0
+k_nr07: db "nr07",0
 w_nowait: db "no-wait",0
 w_wait: db "wait",0
 w_other: db "other",0
@@ -269,6 +273,7 @@ t_c07:  ld hl,zini : ld (mini),hl
         ld hl,1900*16 : ld (tr_num),hl
         xor a : ld (mshift),a : nextreg $07,0
         call trow
+        ld a,$07 : call rdreg : ld (g1_rb),a          ; speed read back straight after the timed runs
         ld a,(spd0) : nextreg $07,a
         call res_trow
         ld hl,u_t : jp res_unit

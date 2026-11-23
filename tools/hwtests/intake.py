@@ -1,6 +1,7 @@
 """Load an nxsuite result file (NXSUITE.TXT) into the repository's hardware results (GPL-3.0-or-later, part of nexclash).
 
-    python tools/hwtests/intake.py NXSUITE.TXT [--board NAME] [--out DIR] [--dry-run]
+    python tools/hwtests/intake.py NXSUITE.TXT [--board NAME] [--platform board|"JNext 1.3.0"|...] [--out DIR]
+                                   [--dry-run]
     python tools/hwtests/intake.py --compare A.json B.json
     python tools/hwtests/intake.py --selfcheck
 
@@ -17,12 +18,28 @@ HANG-GUARD the machine stopped in this test (the next start marked it); OPERATOR
 question screen (key=, means=); PENDING-OPERATOR a question not answered yet; VISUAL / VISUAL-SHOWN (kept
 for photographs). A file can hold several sessions (each starts with an `H suite=` line); for a test the
 last line written wins.
+
+Passes: one file can hold several passes (RUN ALL, then a group alone, ...). A pass starts at a `P pass=`
+line (builds from 2026-11-23 on), at a new `H suite=` session, or - for older files - where a group starts
+again that the current pass already ran, or
+any group that does not follow the previous one in table order. Every test keeps all its records; the verdict uses the LATEST
+pass that ran it, and the report lists every test whose passes disagree (status, value or an extra), so
+passes are never mixed silently.
+
+Platform: the program cannot tell a board from an emulator, so --platform says it: "board" (default) or the
+emulator's name and exact version ("JNext 1.3.0", "CSpect 3.0.x"). Emulator results are written to
+docs/kb/hardware/emulator/<platform>-<core>.json, apart from board results, and never count as hardware
+evidence; --compare marks a board-vs-emulator comparison.
+
+Sub-case claims: where a test's sub-cases answer different claims (Z01: zf.*), each claim is decided by its
+own cases (SUBCLAIMS), not by the parent test's overall status.
 """
 import argparse
 import datetime
 import hashlib
 import json
 import os
+import re
 import sys
 import tempfile
 
@@ -35,6 +52,14 @@ STATUSES = {'PASS', 'FAIL', 'INFO', 'SKIP', 'HANG-GUARD', 'VISUAL', 'VISUAL-SHOW
 CLAIM_KEYS = {('S01', 'sys-launch-7ffd-unlocked'): 'p7ffd',
               # I13's PASS is the polled status; the time-constant claim is its choice= word
               ('I13', 'irq-ctc-time-constant'): 'choice'}
+
+
+# claim -> (parent test, case-name pattern, F bits to ignore: bits the docs call unsure for those cases)
+SUBCLAIMS = {'z80n-func-suite': ('Z01', r'zf\.(?!LDPIRX)', 0),     # "all green except LDPIRX"
+             'z80n-ldix-flags': ('Z01', r'zf\.LD[ID]R?X[0F]', 0),
+             'z80n-ldpirx-fixed': ('Z01', r'zf\.LDPIRX', 0x28),     # NEXT_REGISTERS: LDPIRX F bits 5/3 unsure
+             'z80n-jpc-flags': ('Z01', r'zf\.JPC', 0),
+             'z80n-test-nf': ('Z01', r'zf\.TEST', 0)}
 
 
 class Refused(Exception):
@@ -96,8 +121,16 @@ def parse(data, table, check_crc=True):
     want = end.get('crc16', '')
     if check_crc and want.upper() != '$%04X' % crc16(body):
         raise Refused('CRC-16 %s, computed $%04X: the file is damaged' % (want, crc16(body)))
-    res = {'sessions': [], 'nextregs': {}, 'tests': {}, 'groups': {}, 'subtests': {}, 'comments': []}
+    res = {'sessions': [], 'nextregs': {}, 'tests': {}, 'groups': {}, 'subtests': {}, 'comments': [],
+           'passes': [], 'history': {}}
     cur = None
+    pas = None
+    gorder = {g['id']: i for i, g in enumerate(table['groups'])}
+
+    def new_pass(how, n, mode=None):
+        p = {'index': len(res['passes']) + 1, 'from_line': n, 'how': how, 'mode': mode, 'groups': []}
+        res['passes'].append(p)
+        return p
     for n, ln in enumerate(lines[1:-1], 2):
         if not ln:
             raise Refused('line %d: empty' % n)
@@ -110,6 +143,7 @@ def parse(data, table, check_crc=True):
             if 'suite' in f:
                 cur = {'header': {}}
                 res['sessions'].append(cur)
+                pas = new_pass('session', n, f.get('mode'))
             if cur is None:
                 raise Refused('line %d: H line before the first "H suite=" line' % n)
             cur['header'].update({k: v for k, v in f.items() if v is not True})
@@ -117,9 +151,23 @@ def parse(data, table, check_crc=True):
             if 'nr' not in f or 'v' not in f:
                 raise Refused('line %d: R line without nr= / v=' % n)
             res['nextregs'][f['nr'].upper()] = f['v'].upper()
+        elif rec == 'P':
+            if 'pass' not in f:
+                raise Refused('line %d: P line without pass=' % n)
+            if pas is not None and not pas['groups'] and pas['how'] == 'session':
+                pas['how'], pas['mode'] = 'marker', f.get('mode', pas['mode'])     # the session's first pass
+            else:
+                pas = new_pass('marker', n, f.get('mode'))
         elif rec == 'G':
             if 'id' not in f:
                 raise Refused('line %d: G line without id=' % n)
+            if 'end' not in f:
+                if pas is None:
+                    pas = new_pass('implied', n)
+                elif pas['groups'] and gorder.get(f['id'], 99) <= gorder.get(pas['groups'][-1], 99):
+                    # groups run in table order within a pass: one that does not follow starts a new pass
+                    pas = new_pass('implied', n, 'from %s' % f['id'])
+                pas['groups'].append(f['id'])
             g = res['groups'].setdefault(f['id'], {})
             if 'end' in f:
                 g['fails'] = int(f.get('fails', '0'))
@@ -137,15 +185,16 @@ def parse(data, table, check_crc=True):
                 parent = next((p for pre, p in table['prefixes'].items() if tid.startswith(pre)), None)
                 if parent is None:
                     raise Refused('line %d: unknown test id %r' % (n, tid))
-            r = {'id': tid, 'status': st, 'line': n}
+            r = {'id': tid, 'status': st, 'line': n, 'pass': pas['index'] if pas else 0}
             for k in ('v', 'u', 'n', 'min', 'max', 'why', 'exp', 'c'):
                 if k in f:
                     r[k] = f[k]
             r['extra'] = {k: v for k, v in f.items() if k not in r and k not in ('id', 'st') and v is not True}
+            res['history'].setdefault(tid, []).append(r)
             if parent:
                 res['subtests'].setdefault(parent, {})[tid] = r
             else:
-                res['tests'][tid] = r          # the last line written wins
+                res['tests'][tid] = r          # the latest pass wins (disagreements: passes_disagree)
         else:
             raise Refused('line %d: unknown record %r' % (n, rec))
     if not res['sessions']:
@@ -160,15 +209,54 @@ def num(v):
         return None
 
 
+def sub_records(res, cid):
+    """the sub-case records that decide claim cid (SUBCLAIMS); a FAIL that differs from the model only in the
+    ignored F bits is made a PASS with a note -> (records, notes); None if cid is not a sub-case claim"""
+    if cid not in SUBCLAIMS:
+        return None
+    parent, pat, ign = SUBCLAIMS[cid]
+    recs, notes = [], []
+    for tid, r in sorted(res['subtests'].get(parent, {}).items()):
+        if not re.match(pat, tid):
+            continue
+        f, fe = r['extra'].get('f'), r['extra'].get('fexp')
+        if r['status'] == 'FAIL' and ign and r['extra'].get('code') == 'F' and f and fe and \
+                (int(f.lstrip('$'), 16) ^ int(fe.lstrip('$'), 16)) & ~ign & 0xFF == 0:
+            r = dict(r, status='PASS')
+            notes.append('%s: F %s, model %s - differs only in bits the docs call unsure (mask $%02X); data right'
+                         % (tid, f, fe, ign))
+        recs.append(r)
+    return recs, notes
+
+
+def passes_disagree(res):
+    """tests run in more than one pass whose status, value or extras differ -> [(id, [(pass, summary)])]"""
+    out = []
+
+    def summ(r):
+        return '%s v=%s %s' % (r['status'], r.get('v', '-'),
+                               ' '.join('%s=%s' % kv_ for kv_ in sorted(r['extra'].items())))
+    for tid, hist in sorted(res['history'].items()):
+        if len({r['pass'] for r in hist}) < 2:
+            continue
+        if len({summ(r) for r in hist}) > 1:
+            out.append((tid, [(r['pass'], summ(r)) for r in hist]))
+    return out
+
+
 def verdicts(res, table):
-    """-> {claim: {verdict, value, spread, unit, choice, tests, why}}"""
+    """-> {claim: {verdict, value, spread, unit, choice, tests, why, notes}}"""
     out = {}
     for c in table['claims']:
         cid = c['id']
         tests = [x['id'] for x in table['tests'] if cid in x['claims']]
         recs = [res['tests'][t] for t in tests if t in res['tests']]
+        sub = sub_records(res, cid)
         v = {'verdict': 'not-run', 'tests': tests, 'value': None, 'spread': None, 'unit': c['unit'], 'choice': None,
-             'why': None, 'result_type': c['result_type']}
+             'why': None, 'result_type': c['result_type'], 'notes': []}
+        if sub and sub[0]:
+            recs, v['notes'] = sub
+            v['tests'] = sorted({r['id'] for r in recs})
         if not recs:
             v['why'] = 'not in the file'
             out[cid] = v
@@ -212,37 +300,62 @@ def verdicts(res, table):
     return out
 
 
+ISSUES = {'00': 'issue2', '01': 'issue3', '02': 'issue4'}     # NextReg $0F board id on a Next ($00 = $0A)
+
+
 def board_name(res, board=None):
+    """--board, else from NextReg $00 / $0F: a Next ($00 = $0A) -> next-issue2 / 3 / 4 (Issue 2 = the KS1
+    boards); anything else -> machine-xx-board-yy"""
     h = res['sessions'][0]['header']
     if board:
         return board
-    return 'board-%s' % h.get('board', 'nr0f:$00').split(':')[-1].lstrip('$').lower()
+    m = h.get('machine', 'nr00:$00').split(':')[-1].lstrip('$').lower()
+    b = h.get('board', 'nr0f:$00').split(':')[-1].lstrip('$').lower()
+    if m == '0a' and b in ISSUES:
+        return 'next-' + ISSUES[b]
+    return 'machine-%s-board-%s' % (m, b)
 
 
-def write_json(res, table, path_in, data, board=None, outdir=OUTDIR, dry=False):
+def slug(x):
+    return re.sub(r'[^a-z0-9.]+', '-', x.lower()).strip('-')
+
+
+def is_board(platform):
+    return platform is None or platform.lower() == 'board'
+
+
+def write_json(res, table, path_in, data, board=None, outdir=OUTDIR, dry=False, platform=None):
     h = res['sessions'][0]['header']
     core = h.get('core', 'unknown')
     for s in res['sessions'][1:]:
         if s['header'].get('core') not in (None, core):
             raise Refused('the file mixes cores %s and %s: run the intake per core' % (core, s['header']['core']))
-    name = '%s-%s' % (board_name(res, board), core)
-    path = os.path.join(outdir, name + '.json')
+    if is_board(platform):
+        path = os.path.join(outdir, '%s-%s.json' % (board_name(res, board), core))
+    else:
+        path = os.path.join(outdir, 'emulator', '%s-%s.json' % (slug(platform), core))
     old = json.load(open(path)) if os.path.exists(path) else {}
     sha = hashlib.sha256(data).hexdigest()
     hist = old.get('intakes', [])
     hist.append({'date': datetime.date.today().isoformat(), 'file_sha256': sha})
     v = verdicts(res, table)
-    doc = {'schema': 1,
-           'board': {'name': board_name(res, board), 'nr00': h.get('machine', ''), 'nr0f': h.get('board', ''),
-                     'ram': h.get('ram'), 'video': h.get('video')},
+    doc = {'schema': 2,
+           'platform': {'kind': 'board' if is_board(platform) else 'emulator',
+                        'name': 'board' if is_board(platform) else platform,
+                        'hardware_evidence': is_board(platform)},
+           'board': {'name': board_name(res, board) if is_board(platform) else slug(platform),
+                     'nr00': h.get('machine', ''), 'nr0f': h.get('board', ''),
+                     'ram': h.get('ram'), 'video': h.get('video'), 'geom': h.get('geom')},
            'core': core, 'intake_runs': len(hist), 'intakes': hist,
            'run': {'suite': h.get('suite'), 'src': h.get('src'), 'file': os.path.basename(path_in),
                    'file_sha256': sha, 'sessions': [s['header'] for s in res['sessions']],
                    'nextregs': res['nextregs'], 'tests': res['tests'], 'subtests': res['subtests'],
-                   'comments': res['comments']},
+                   'comments': res['comments'], 'passes': res['passes'],
+                   'passes_disagree': [{'id': t, 'records': [{'pass': p_, 'result': x} for p_, x in rs]}
+                                       for t, rs in passes_disagree(res)]},
            'claims': v}
     if not dry:
-        os.makedirs(outdir, exist_ok=True)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, 'w', newline='\n') as fh:
             json.dump(doc, fh, indent=1, sort_keys=False)
             fh.write('\n')
@@ -253,7 +366,18 @@ def report(doc, table, out=sys.stdout):
     v = doc['claims']
     order = {'disproved': 0, 'hung': 1, 'confirmed': 2, 'measured': 3, 'choice': 4, 'operator': 5,
              'pending-operator': 6, 'not-run': 7}
-    print('board %s  core %s  (intake run %d)' % (doc['board']['name'], doc['core'], doc['intake_runs']), file=out)
+    pf = doc.get('platform', {'kind': 'board', 'name': 'board'})
+    if pf['kind'] == 'board':
+        print('board %s  core %s  (intake run %d)' % (doc['board']['name'], doc['core'], doc['intake_runs']),
+              file=out)
+    else:
+        print('EMULATOR %s  core %s  (intake run %d)  - emulator results, not hardware evidence' % (
+            pf['name'], doc['core'], doc['intake_runs']), file=out)
+    ps = doc['run'].get('passes', [])
+    if len(ps) > 1:
+        print('passes: %s (each test: its latest pass)' % '; '.join(
+            '%d from line %d %s%s' % (p['index'], p['from_line'], p['how'], ' (%s)' % p['mode'] if p['mode'] else '')
+            for p in ps), file=out)
     for cid in sorted(v, key=lambda c: (order.get(v[c]['verdict'], 9), c)):
         x, c = v[cid], table['by_claim'][cid]
         if x['verdict'] == 'confirmed':
@@ -273,10 +397,19 @@ def report(doc, table, out=sys.stdout):
             vals = '; '.join('%s: %s' % (k, s) for k, s in c['values'].items())
             print('    expected  %s' % vals, file=out)
             print('    sources   %s' % ', '.join(c['sources']), file=out)
+            for nt in x.get('notes', []):
+                print('    note      %s' % nt, file=out)
     n = {}
     for x in v.values():
         n[x['verdict']] = n.get(x['verdict'], 0) + 1
     print('summary: ' + ', '.join('%s %d' % kv_ for kv_ in sorted(n.items())), file=out)
+    dis = doc['run'].get('passes_disagree', [])
+    if dis:
+        print('passes disagree (%d tests; the verdict used the latest pass):' % len(dis), file=out)
+        for d in dis:
+            print('  %s' % d['id'], file=out)
+            for r in d['records']:
+                print('    pass %d: %s' % (r['pass'], r['result']), file=out)
     print('(nothing was changed in lessons or docs: apply the results in a reviewed change)', file=out)
 
 
@@ -291,17 +424,22 @@ def compare(a, b, out=sys.stdout):
             diff += 1
             print('%-34s %s %s | %s %s' % (cid, kx[0], kx[1] if kx[1] is not None else kx[2] or '',
                                          ky[0], ky[1] if ky[1] is not None else ky[2] or ''), file=out)
-    print('%d claims differ between %s (%s %s) and %s (%s %s)' % (
-        diff, os.path.basename(a), A['board']['name'], A['core'], os.path.basename(b), B['board']['name'],
-        B['core']), file=out)
+    def who(D):
+        pf = D.get('platform', {'kind': 'board', 'name': 'board'})
+        return '%s %s' % ('board ' + D['board']['name'] if pf['kind'] == 'board' else 'emulator ' + pf['name'],
+                          D['core'])
+    print('%d claims differ between %s (%s) and %s (%s)' % (
+        diff, os.path.basename(a), who(A), os.path.basename(b), who(B)), file=out)
+    if A.get('platform', {}).get('kind', 'board') != B.get('platform', {}).get('kind', 'board'):
+        print('board vs emulator: the emulator side is what that emulator does, not hardware evidence', file=out)
     return diff
 
 
-def intake(path, board=None, outdir=OUTDIR, dry=False, out=sys.stdout, table=None):
+def intake(path, board=None, outdir=OUTDIR, dry=False, out=sys.stdout, table=None, platform=None):
     table = table or load_table()
     data = open(path, 'rb').read()
     res = parse(data, table)
-    p, doc = write_json(res, table, path, data, board, outdir, dry)
+    p, doc = write_json(res, table, path, data, board, outdir, dry, platform)
     report(doc, table, out)
     print(('would write ' if dry else 'wrote ') + p, file=out)
     return doc
@@ -327,10 +465,14 @@ def sample(table, fail=False):
              'T id=S03 st=INFO c=sys-ram-size v=wrap u=- n=1 min=wrap max=wrap',
              'T id=S07 st=HANG-GUARD c=sys-sd-write-rst8 v=- u=- n=0 min=- max=-',
              'G id=G0 end fails=0', 'G id=G4 name=FRAME start',
+             'T id=F01 st=INFO c=frame-lines-50 v=311 u=lines n=1 min=311 max=311',
+             'G id=G4 end fails=0', 'P pass=2 mode=G4', 'G id=G4 name=FRAME start',
              'T id=F01 st=INFO c=frame-lines-50 v=312 u=lines n=1 min=312 max=312',
              'T id=F02 st=INFO c=frame-line-length v=216.1 u=T n=5 min=216 max=216.2',
              'T id=Z01 st=SKIP c=z80n-func-suite v=- u=- n=0 min=- max=- why=not-built',
              'T id=zf.MUL st=PASS c=z80n-func-suite f=$A5 fexp=$A5',
+             'T id=zf.LDPIRX0 st=FAIL c=z80n-func-suite f=$00 fexp=$08 code=F',
+             'T id=zf.LDIX0 st=FAIL c=z80n-func-suite f=$00 fexp=$08 code=F',
              'G id=G4 end fails=0']
     return lines
 
@@ -346,7 +488,10 @@ def selfcheck():
         v = verdicts(res, table)
         want = {'sys-nextreg-keeps-select': 'confirmed', 'sys-launch-7ffd-unlocked': 'confirmed',
                 'sys-ram-size': 'choice', 'sys-sd-write-rst8': 'hung', 'frame-lines-50': 'measured',
-                'frame-line-length': 'measured', 'z80n-func-suite': 'not-run', 'copper-wait-max-h': 'not-run'}
+                'frame-line-length': 'measured', 'z80n-func-suite': 'disproved', 'copper-wait-max-h': 'not-run',
+                # sub-case claims: LDPIRX differs only in the unsure bits 5/3 -> confirmed with a note; the same
+                # difference on LDIX disproves the LDIX claim (bits 5/3 are what that claim is about)
+                'z80n-ldpirx-fixed': 'confirmed', 'z80n-ldix-flags': 'disproved', 'z80n-test-nf': 'not-run'}
         for c, w in want.items():
             if v[c]['verdict'] != w:
                 bad.append('good file: %s %s, want %s' % (c, v[c]['verdict'], w))
@@ -354,12 +499,16 @@ def selfcheck():
             bad.append('good file: values %s' % v['frame-line-length'])
         if 'zf.MUL' not in res['subtests'].get('Z01', {}):
             bad.append('good file: sub-test zf.MUL not kept under Z01')
+        if not v['z80n-ldpirx-fixed']['notes']:
+            bad.append('good file: no note for the LDPIRX bits-5/3-only difference')
+        if len(res['passes']) != 2 or [d[0] for d in passes_disagree(res)] != ['F01']:
+            bad.append('passes: %s, disagree %s' % (res['passes'], passes_disagree(res)))
         with tempfile.TemporaryDirectory() as d:
             src = os.path.join(d, 'NXSUITE.TXT')
             open(src, 'wb').write(good)
             p, doc = write_json(res, table, src, good, None, d)
             p2, doc2 = write_json(res, table, src, good, None, d)
-            if p != p2 or doc2['intake_runs'] != 2 or not os.path.basename(p).startswith('board-02-3.03.03'):
+            if p != p2 or doc2['intake_runs'] != 2 or not os.path.basename(p).startswith('next-issue4-3.03.03'):
                 bad.append('json: %s runs %s' % (p, doc2['intake_runs']))
             res_f = parse(make_file(sample(table, fail=True)), table)
             pf, docf = write_json(res_f, table, src, good, 'other', d)
@@ -368,6 +517,13 @@ def selfcheck():
             import io
             if compare(p, pf, out=io.StringIO()) != 1:
                 bad.append('--compare does not list exactly the one changed claim')
+            pe, doce = write_json(res, table, src, good, None, d, platform='JNext 1.3.0')
+            if os.path.dirname(pe) != os.path.join(d, 'emulator') or doce['platform']['hardware_evidence']:
+                bad.append('emulator results not kept apart: %s' % pe)
+            o = io.StringIO()
+            compare(p, pe, out=o)
+            if 'board vs emulator' not in o.getvalue():
+                bad.append('--compare does not mark board vs emulator')
     except Refused as e:
         bad.append('good file refused: %s' % e)
     cases = {'truncated': good[:len(good) - 30],
@@ -396,6 +552,8 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('file', nargs='?')
     ap.add_argument('--board', help='board name for the output file (default: from NextReg $0F)')
+    ap.add_argument('--platform', default='board',
+                    help='"board" (default) or the emulator name and exact version, e.g. "JNext 1.3.0"')
     ap.add_argument('--out', default=OUTDIR, help='output folder (default docs/kb/hardware)')
     ap.add_argument('--dry-run', action='store_true', help='report only, write nothing')
     ap.add_argument('--compare', nargs=2, metavar=('A', 'B'))
@@ -411,7 +569,7 @@ def main(argv=None):
     if not a.file:
         ap.error('give NXSUITE.TXT, --compare A B or --selfcheck')
     try:
-        intake(a.file, a.board, a.out, a.dry_run)
+        intake(a.file, a.board, a.out, a.dry_run, platform=a.platform)
     except Refused as e:
         print('REFUSED: %s' % e)
         return 2

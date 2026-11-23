@@ -192,6 +192,7 @@ ns_done2: db "NXSUITE.TXT to the PC.",0
 
 ; ---------------------------------------------------------------- running
 do_all: xor a : ld (mode),a
+        call pass_mark
         ld b,0
         jp run_from
 do_resume:
@@ -204,7 +205,8 @@ do_resume:
         ld hl,PRGB+PRG_GST : ld a,l : add a,b : ld l,a : ld (hl),GS_HUNG
         pop bc
         ld a,(PRGB+PRG_MODE) : or $80 : ld (mode),a
-        and $7F : jp z,run_from                     ; RUN ALL: on from the group it stopped in
+        push bc : call pass_mark : pop bc
+        ld a,(mode) : and $7F : jp z,run_from       ; RUN ALL: on from the group it stopped in
         dec a : ld b,a
         call run_group
         jp run_end
@@ -212,18 +214,19 @@ do_resume:
         ld a,(PRGB+PRG_GROUP) : ld b,a : ld (curg),a
         ld hl,PRGB+PRG_GST : ld a,l : add a,b : ld l,a : ld (hl),GS_HUNG
         ld a,(PRGB+PRG_MODE) : or $80 : ld (mode),a
-        call sess_header
+        call pass_mark
         call w_lb : ld hl,s_stopg : call wstr : call wgid : ld hl,s_stopg2 : call wstr
         call w_len : call txt_append
         ld a,(mode) : and $7F : jp nz,run_end
         ld a,(curg) : inc a : ld b,a : jp run_from
 do_group:
         ld b,a : inc a : ld (mode),a
+        push bc : call pass_mark : pop bc
         call run_group
         jp run_end
 do_hung:                                            ; the hung tests one by one, each PRG-marked
         ld a,$7F : ld (mode),a
-        call sess_header
+        call pass_mark
         ld hl,PRGB+PRG_HUNG : ld b,6
 .l:     push bc : push hl
         ld e,(hl) : inc hl : ld d,(hl)
@@ -604,6 +607,24 @@ stab_put:
 .t:     ds 4
 
 ; ---------------------------------------------------------------- session header (spec section 2)
+; " mode=ALL / G<n> / RESUME / HUNG" from (mode)
+wmode:  ld hl,h_mode : call wstr
+        ld a,(mode) : bit 7,a : jr z,.m1
+        ld hl,h_resume : jp wstr
+.m1:    and $7F : jr nz,.m2
+        ld hl,h_all : jp wstr
+.m2:    cp $7F : jr nz,.m2b
+        ld hl,h_hung : jp wstr
+.m2b:   push af : ld hl,h_group : call wstr : pop af : dec a : ld (curg),a : jp wgid
+; "P pass=<n> mode=..." at the start of every pass (RUN ALL, one group, resume, hung retry), after the
+; session's H lines: the intake keeps passes apart (README "nxsuite", passes)
+pass_mark:
+        call sess_header
+        ld hl,(passno) : inc hl : ld (passno),hl
+        call w_lb : ld hl,s_pass : call wstr : ld hl,(passno) : call wdec
+        call wmode : jp hend
+passno: dw 0
+s_pass: db "P pass=",0
 sess_header:
         ld a,(sess_done) : or a : ret nz
         inc a : ld (sess_done),a
@@ -616,15 +637,8 @@ sess_header:
         call w_lb : ld hl,h_suite : call wstr
         ld hl,srcstr : call wstr : ld hl,h_built : call wstr : ld hl,datestr : call wstr
         ld hl,h_run : call wstr : ld hl,(runno) : call wdec
-        ld hl,h_mode : call wstr
-        ld a,(mode) : bit 7,a : jr z,.m1
-        ld hl,h_resume : call wstr : jr .m3
-.m1:    and $7F : jr nz,.m2
-        ld hl,h_all : call wstr : jr .m3
-.m2:    cp $7F : jr nz,.m2b
-        ld hl,h_hung : call wstr : jr .m3
-.m2b:   push af : ld hl,h_group : call wstr : pop af : dec a : ld (curg),a : call wgid
-.m3:    ld hl,h_rf : call wstr
+        call wmode
+        ld hl,h_rf : call wstr
         ld hl,(PRGB+PRG_TIDX) : ld a,(mode) : bit 7,a : jr z,.nr
         ld a,h : and l : inc a : jr z,.nr
         ld a,l : call tent : call wtid : jr .rr
@@ -641,7 +655,7 @@ sess_header:
         ; H video
         call w_lb : ld hl,h_video : call wstr
         ld a,(NRSNAP+$11) : and 7 : cp 7 : ld hl,h_hdmi : jr z,.v
-        ld hl,h_vga
+        ld hl,h_vunk                                ; $11 = 0-6 does not tell which output the owner uses
 .v:     call wstr
         ld hl,h_nr11 : call wstr : ld a,(NRSNAP+$11) : call wdhex2
         ld hl,h_timing : call wstr : ld a,(NRSNAP+$03) : call wdhex2
@@ -651,6 +665,7 @@ sess_header:
         ld hl,h_nr05 : call wstr : ld a,(NRSNAP+$05) : call wdhex2
         ld hl,h_lines : call wstr : ld hl,(flines) : inc hl : call wdec
         ld hl,h_linet : call wstr : call wlinet_ctc
+        ld hl,h_geom : call wstr : call geom : call wstr
         call hend
         ; H speed
         call w_lb : ld hl,h_speed : call wstr : ld a,(NRSNAP+$07) : call wdhex2
@@ -694,7 +709,27 @@ h_board: db " board=nr0f:",0
 h_ram:  db " ram=",0
 h_video: db "H video=",0
 h_hdmi: db "HDMI",0
-h_vga:  db "VGA",0
+h_vunk: db "unknown",0
+h_geom: db " geom=",0
+; -> HL = the frame geometry the measurements match (line length in CTC ticks of 16 clocks, rounded, and the
+; frame length): 108 any = hdmi, 112 / 312 = vga48, 112 / 320 = pentagon, 114 / 311 = vga128, else other
+geom:   ld hl,(ctcpl) : ld de,(ctcpl+2) : ld bc,50 : add hl,bc : jr nc,.c
+        inc de
+.c:     ld bc,100 : call div32                     ; HL = ticks per line, rounded
+        ld a,l : ld de,(flines) : inc de
+        cp 108 : ld hl,g_hdmi : ret z
+        cp 114 : jr nz,.n4
+        ld a,e : cp 311 & 255 : ld hl,g_v128 : ret z
+        jr .o
+.n4:    cp 112 : jr nz,.o
+        ld a,e : cp 312 & 255 : ld hl,g_v48 : ret z
+        cp 320 & 255 : ld hl,g_pent : ret z
+.o:     ld hl,g_other : ret
+g_hdmi: db "hdmi",0
+g_v128: db "vga128",0
+g_v48:  db "vga48",0
+g_pent: db "pentagon",0
+g_other: db "other",0
 h_nr11: db " nr11=",0
 h_timing: db " timing=nr03:",0
 h_hz:   db " hz=",0

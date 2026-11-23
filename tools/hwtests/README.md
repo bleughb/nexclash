@@ -206,9 +206,10 @@ speed change) every CPU-only row at 3.5 MHz matches its T-state count within 0.7
 
 Sources: `nxsuite.asm` + `nxsuite/*.asm` (harness, timing core, one file per group), the test table and
 claims inventory `nxsuite_claims.json` (read by `nxsuite_gen.py` and by `intake.py`), `intake.py`.
-Stage 1 builds G0 SYS (S00-S07), G1 CPU (C01-C15), G2 Z80N (Z01, Z06, Z07), G3 IRQ (I01 I02 I03 I07 I09
-I11 I12 I13 I15 I16 I17 I21), G4 FRAME (F01-F05). Every other test of the table is written to the file as
-`SKIP why=not-built`, so the intake always knows the full list.
+Built: G0 SYS (S00-S07), G1 CPU (C01-C15), G2 Z80N (Z01-Z07), G3 IRQ (I01-I24), G4 FRAME (F01-F05).
+Every other test of the table is written to the file as `SKIP why=not-built`, so the intake always knows
+the full list. Group code that does not fit bank 0 runs from a slot-7 overlay page (40-42; a group may
+have a second page, flag 8 in the test table).
 
 Build (keep the .nex out of the repository):
 
@@ -222,12 +223,20 @@ says in plain words what to do next. Border during a group: blue running, then g
 (INFO only) or red (a FAIL).
 
 File (`NXSUITE.TXT`): plain ASCII, LF line ends. `NXSUITE 1`, then per session `H` lines (suite, core,
-video HDMI / VGA, timing, speed, calibration, DivMMC registers), `R` lines (every NextReg at the first
-start), per group `G id= start` / `G id= end fails=`, one `T` line per test:
+video, timing, speed, calibration, DivMMC registers), `R` lines (every NextReg at the first start), per
+pass a `P pass=<n> mode=<ALL|GROUP:Gn|RESUME|HUNG>` line, per group `G id= start` / `G id= end fails=`,
+one `T` line per test:
 `T id=<test> st=<status> c=<claims> v=<value> u=<unit> n=<runs> min= max= [why=] [key=value ...]`, and a
 last line `END lines=<n> crc16=$hhhh` (CRC-16/CCITT over every byte before it). Sub-test lines carry the
 parent's prefix: `zf.` (Z01 cases), `zt.` / `zu.` (Z06 / Z07), `ih.` (I03 = im2hold T1-T7). A later
-session appends to the same file (the last line for a test wins).
+session or pass appends to the same file. The intake keeps every pass: a test's verdict uses its latest
+pass, and every test whose passes disagree is listed (files from before the `P` line: a pass is inferred
+where a group starts that does not follow the previous one).
+
+`video=`: `HDMI` only when NextReg $11 bits 2:0 = 7; otherwise `unknown` - $11 = 0-6 does not say which
+output the owner watches (the first board file, KS1 3.03.00, read $11 = 0 on a machine the owner runs on
+HDMI). `geom=` is what the measurements match: line length in CTC ticks (16 clocks) and lines per frame:
+108 = hdmi, 112 / 312 = vga48, 112 / 320 = pentagon, 114 / 311 = vga128, else other.
 
 Statuses: PASS, FAIL (the claim's expectation is wrong on this machine), INFO (a number or a choice, no
 verdict), SKIP (`why=not-built`, `not-selected`, `hung-last-run`), HANG-GUARD (the machine stopped in this
@@ -241,13 +250,20 @@ run again from its start without it, and the run carries on. Nothing that persis
 Intake (on the PC):
 
     python tools/hwtests/intake.py NXSUITE.TXT [--board NAME]   # -> docs/kb/hardware/<board>-<core>.json
+    python tools/hwtests/intake.py NXSUITE.TXT --platform "JNext 1.3.0"
+                                          # emulator -> docs/kb/hardware/emulator/<platform>-<core>.json
     python tools/hwtests/intake.py --dry-run NXSUITE.TXT         # report only
     python tools/hwtests/intake.py --compare A.json B.json
     python tools/hwtests/intake.py --selfcheck                   # also run by selftest.py --tools
 
 It refuses a file that is cut short, damaged (CRC), not ASCII / LF, or names an unknown test or status.
 Per claim it reports CONFIRMED, DISPROVED, MEASURED value +- spread, CHOICE word or NOT ANSWERED (with the
-reason), with the claim's sources; it never edits lessons or docs.
+reason), with the claim's sources; it never edits lessons or docs. The board name defaults to
+`next-issue2` / `3` / `4` from NextReg $00 = $0A and $0F = 0 / 1 / 2 (Issue 2 = the KS1 boards). Emulator
+results (`--platform` other than `board`) are stored apart and never count as hardware evidence; `--compare`
+says when it compares a board with an emulator. Z01's cases decide their own claims (LDIX / LDPIRX / JP (C) /
+TEST cases; func-suite = every case but LDPIRX); an LDPIRX case that differs from the model only in F bits
+5 / 3 (documented as unsure) counts as right, with a note.
 
 Checklist for the owner:
 
