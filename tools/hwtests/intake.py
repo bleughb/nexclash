@@ -32,7 +32,9 @@ TABLE = os.path.join(HERE, 'nxsuite_claims.json')
 OUTDIR = os.path.join(ROOT, 'docs', 'kb', 'hardware')
 STATUSES = {'PASS', 'FAIL', 'INFO', 'SKIP', 'HANG-GUARD', 'VISUAL', 'VISUAL-SHOWN', 'OPERATOR', 'PENDING-OPERATOR'}
 # multi-claim tests: the extra key that decides one of their claims (the test's own status decides the rest)
-CLAIM_KEYS = {('S01', 'sys-launch-7ffd-unlocked'): 'p7ffd'}
+CLAIM_KEYS = {('S01', 'sys-launch-7ffd-unlocked'): 'p7ffd',
+              # I13's PASS is the polled status; the time-constant claim is its choice= word
+              ('I13', 'irq-ctc-time-constant'): 'choice'}
 
 
 class Refused(Exception):
@@ -194,14 +196,17 @@ def verdicts(res, table):
             else:
                 v['verdict'] = 'measured' if c['result_type'] == 'number' else 'choice' if c['result_type'] == 'choice' \
                     else 'measured'
+            words = [x for x in stt if x not in STATUSES]
+            if words and v['verdict'] not in ('disproved', 'confirmed'):
+                v['verdict'], v['choice'] = 'choice', ','.join(words)
             r0 = done[0]
             val, lo, hi = num(r0.get('v')), num(r0.get('min')), num(r0.get('max'))
             if val is not None:
                 v['value'] = val
                 if lo is not None and hi is not None:
                     v['spread'] = round((hi - lo) / 2, 2)
-            else:
-                v['choice'] = v['choice'] or r0.get('v')
+            elif not v['choice']:
+                v['choice'] = r0.get('v')
             v['unit'] = r0.get('u') if r0.get('u') not in (None, '-') else c['unit']
         out[cid] = v
     return out
@@ -256,7 +261,7 @@ def report(doc, table, out=sys.stdout):
         elif x['verdict'] == 'disproved':
             what = 'DISPROVED'
         elif x['verdict'] in ('measured', 'choice', 'operator'):
-            if x['value'] is not None:
+            if x['value'] is not None and not (x['verdict'] == 'choice' and x['choice']):
                 what = 'MEASURED %s%s %s' % (x['value'], '' if x['spread'] is None else ' +-%s' % x['spread'],
                                            x['unit'] or '')
             else:
