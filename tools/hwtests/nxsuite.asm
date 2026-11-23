@@ -18,7 +18,7 @@
 ;           $B000 timing blocks; $B800 result file parts code (txt2); $BC00-$BFFF stacks (SP $BE00; G2 timing $BFE0)
 ;   bank 0  $C000-$DFFF harness, menu, G0, test table; $F000-$F7FF scratch (page 1)
 ;   pages 40-43 + 60 + 63 slot 7 overlays (40 G2 extras + G4, 41-42 G3, 43 G5 + G8, 60 G1 below $F000 -
-;           C15 copies to $F000 -, 63 G6), $F800-$FFFF their own area; page 61 free;
+;           C15 copies to $F000 -, 61 G7, 63 G6), $F800-$FFFF their own area;
 ;           36-39 DMA / G9 scratch, 44-53 Layer 2, 54 sprites, 55 alt ROM image
 ;   pages 32-35 + 58-59 result text (48 KB), 56-57 G1 data / G2 slot 6-7 sandbox, 62 strings
 
@@ -47,6 +47,12 @@ wrongpc: ld a,$FF : jp (ix)
         INCLUDE "nxsuite/core.asm"
         INCLUDE "nxsuite/g2.asm"
         INCLUDE "nxsuite/g9.asm"
+; G7's two $7FFD rows (they page bank 0 into slots 6 / 7) and the way it measures them
+        INCLUDE "nb_far.inc"
+g7far:  call measure
+        nextreg $56,G7P6 : nextreg $57,OVL_G7
+        ret
+g7ret:  ret
 code2_end:
         ASSERT code2_end <= TBUF
         ORG CODE2B
@@ -75,6 +81,7 @@ OVL_G5  equ 43                  ; G5 COPPER (P08 keeps a palette copy at $F600)
 OVL_G8  equ 43                  ; G8 SPRITES shares page 43 with G5
 OVL_G6  equ 63                  ; G6 DMA (program buffer $F700)
 OVL_G1  equ 60                  ; G1 CPU (below SCRATCH: C15 copies 1 KB to $F000)
+OVL_G7  equ 61                  ; G7 BENCH (nextbench rows; slot 6 = page 38 during a row)
         MMU 7,OVL_G2
         ORG $E000
         INCLUDE "nxsuite/g2b.asm"
@@ -101,6 +108,10 @@ OVL_G1  equ 60                  ; G1 CPU (below SCRATCH: C15 copies 1 KB to $F00
         ORG $E000
         INCLUDE "nxsuite/g1.asm"
         ASSERT $ <= SCRATCH
+        MMU 7,OVL_G7
+        ORG $E000
+        INCLUDE "nxsuite/g7.asm"
+        ASSERT $ <= $10000
         MMU 7,HOMEP7
 
         ; bank 7 (pages 14 / 15) in the .nex, so tests C03 / C04 time code in pages the suite owns

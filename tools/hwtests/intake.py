@@ -59,7 +59,9 @@ STATUSES = {'PASS', 'FAIL', 'INFO', 'SKIP', 'HANG-GUARD', 'VISUAL', 'VISUAL-SHOW
 # multi-claim tests: the extra key that decides one of their claims (the test's own status decides the rest)
 CLAIM_KEYS = {('S01', 'sys-launch-7ffd-unlocked'): 'p7ffd',
               # I13's PASS is the polled status; the time-constant claim is its choice= word
-              ('I13', 'irq-ctc-time-constant'): 'choice'}
+              ('I13', 'irq-ctc-time-constant'): 'choice',
+              # N01 (nextbench table) is INFO; its DMA copy / fill rows at 3.5 MHz decide this claim
+              ('N01', 'dma-correct-3m5'): 'dma35'}
 
 
 # claim -> (parent test, case-name pattern, F bits to ignore: bits the docs call unsure for those cases)
@@ -320,6 +322,13 @@ def verdicts(res, table):
             v['why'] = ','.join('%s:%s' % (r['id'], r.get('why', r['status'].lower())) for r in recs)
         else:
             done = [r for r in recs if r['status'] in ('PASS', 'FAIL', 'INFO', 'OPERATOR')]
+            # a table test (N01) that only lists numbers does not outvote a test made for the claim
+            own = [r for r in done if not (r['id'] in TABLE_TESTS and r['status'] == 'INFO'
+                                           and (r['id'], cid) not in CLAIM_KEYS)]
+            if own and len(own) < len(done):
+                v['notes'].append('also: the %s* table of %s' % (TABLE_TESTS[[r for r in done if r not in own][0]['id']],
+                                                               [r for r in done if r not in own][0]['id']))
+                done = own
             stt = []
             for r in done:
                 key = CLAIM_KEYS.get((r['id'], cid))
@@ -346,8 +355,18 @@ def verdicts(res, table):
             elif not v['choice']:
                 v['choice'] = r0.get('v')
             v['unit'] = r0.get('u') if r0.get('u') not in (None, '-') else c['unit']
+            if r0['id'] in TABLE_TESTS and cid not in {k[1] for k in CLAIM_KEYS if k[0] == r0['id']}:
+                # a table test: its own v is a row count; the numbers are its sub-lines
+                pre = TABLE_TESTS[r0['id']]
+                v['value'], v['spread'], v['verdict'] = None, None, 'measured'
+                v['choice'] = 'table'
+                v['notes'].append('the numbers are the %d %s* lines (JSON "subtests" of %s)' % (
+                    len(res['subtests'].get(r0['id'], {})), pre, r0['id']))
         out[cid] = v
     return out
+
+
+TABLE_TESTS = {'N01': 'nb.'}       # tests whose answer is a table of sub-lines, not one value
 
 
 ISSUES = {'00': 'issue2', '01': 'issue3', '02': 'issue4'}     # NextReg $0F board id on a Next ($00 = $0A)

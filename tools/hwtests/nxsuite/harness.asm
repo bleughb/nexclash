@@ -559,9 +559,11 @@ emit_t: call w_lb
         ld hl,s_st : call wstr
         ld a,(R_st) : add a,a : ld l,a : ld h,0 : ld de,stnames : add hl,de
         ld a,(hl) : inc hl : ld h,(hl) : ld l,a : call wstr
+        ld hl,(subid) : ld a,h : or l : jr nz,.nc      ; sub-case lines: no c= (the parent's claims)
         ld hl,s_c : call wstr
         ld ix,(cure) : ld l,(ix+8) : ld h,(ix+9) : ld de,WORK : call far_copy
         ld hl,WORK : call wstr
+.nc:
         ld hl,s_v : call wstr : ld hl,R_v : call wval
         ld hl,s_u : call wstr : ld hl,(R_unit) : ld a,h : or l : jr nz,.u
         ld hl,s_dash

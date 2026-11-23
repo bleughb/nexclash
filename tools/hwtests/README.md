@@ -217,7 +217,7 @@ Build (keep the .nex out of the repository):
 
 Run: copy `nxsuite.nex` into a folder of its own on the SD card and start it from the Browser. The suite
 writes `NXSUITE.TXT` (results), `NXSUITE.PRG` (progress record, 64 bytes) and, when needed, parts
-`NXSUITE.001`, `NXSUITE.002`, ... into that folder and nothing anywhere else. Menu keys: A = all automatic tests (about 2.5 minutes, leave it alone), 0-9 = one group,
+`NXSUITE.001`, `NXSUITE.002`, ... into that folder and nothing anywhere else. Menu keys: A = all automatic tests (about 6 minutes - G7 BENCH alone is about 3 - leave it alone), 0-9 = one group,
 R = resume, U = answer the pending visual questions (later stages). The NEXT STEP line under the group list
 says in plain words what to do next. Border during a group: blue running, then green (no FAIL), yellow
 (INFO only) or red (a FAIL).
@@ -228,7 +228,10 @@ pass a `P pass=<n> mode=<ALL|GROUP:Gn|RESUME|HUNG>` line, per group `G id= start
 one `T` line per test:
 `T id=<test> st=<status> c=<claims> v=<value> u=<unit> n=<runs> min= max= [why=] [key=value ...]`, and a
 last line `END lines=<n> crc16=$hhhh` (CRC-16/CCITT over every byte before it). Sub-test lines carry the
-parent's prefix: `zf.` (Z01 cases), `zt.` / `zu.` (Z06 / Z07), `ih.` (I03 = im2hold T1-T7). A later
+parent's prefix: `zf.` (Z01 cases), `zt.` / `zu.` (Z06 / Z07), `ih.` (I03 = im2hold T1-T7), `nb.` (N01 =
+the nextbench table: `nb.<name>.<size>.<35|28>`, v = microseconds per call, mean of 5 runs, min / max,
+`R=` calls per measurement; FAIL only when a copy / fill check fails); they have no `c=` (the parent's
+claims). A later
 session or pass appends to the same file. The intake keeps every pass: a test's verdict uses its latest
 pass, and every test whose passes disagree is listed (files from before the `P` line: a pass is inferred
 where a group starts that does not follow the previous one).
