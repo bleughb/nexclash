@@ -201,3 +201,59 @@ docs/TECHNIQUES.md 1.0. Photos: specnext reference/hwtests/nextbench/.
 Checked before any board (2026-10-22): in SkoolKit + z80n with a modelled raster (no DMA, no CPU
 speed change) every CPU-only row at 3.5 MHz matches its T-state count within 0.7 % (e.g. LDI x256
 1251.3 for 1249.7 us, NEXTREGv 5.5 for 5.7, ULA CHAR 61.7 for 61.7).
+
+## nxsuite - one .nex that answers the open hardware claims, results in a text file
+
+Sources: `nxsuite.asm` + `nxsuite/*.asm` (harness, timing core, one file per group), the test table and
+claims inventory `nxsuite_claims.json` (read by `nxsuite_gen.py` and by `intake.py`), `intake.py`.
+Stage 1 builds G0 SYS (S00-S07), G1 CPU (C01-C15), G2 Z80N (Z01, Z06, Z07), G3 IRQ (I01 I02 I03 I07 I09
+I11 I12 I13 I15 I16 I17 I21), G4 FRAME (F01-F05). Every other test of the table is written to the file as
+`SKIP why=not-built`, so the intake always knows the full list.
+
+Build (keep the .nex out of the repository):
+
+    python tools/hwtests/build.py nxsuite -o OUTDIR          # --sym also writes nxsuite.sym
+
+Run: copy `nxsuite.nex` into a folder of its own on the SD card and start it from the Browser. The suite
+writes `NXSUITE.TXT` (results) and `NXSUITE.PRG` (progress record, 64 bytes) into that folder and nothing
+anywhere else. Menu keys: A = all automatic tests (about 2.5 minutes, leave it alone), 0-9 = one group,
+R = resume, U = answer the pending visual questions (later stages). The NEXT STEP line under the group list
+says in plain words what to do next. Border during a group: blue running, then green (no FAIL), yellow
+(INFO only) or red (a FAIL).
+
+File (`NXSUITE.TXT`): plain ASCII, LF line ends. `NXSUITE 1`, then per session `H` lines (suite, core,
+video HDMI / VGA, timing, speed, calibration, DivMMC registers), `R` lines (every NextReg at the first
+start), per group `G id= start` / `G id= end fails=`, one `T` line per test:
+`T id=<test> st=<status> c=<claims> v=<value> u=<unit> n=<runs> min= max= [why=] [key=value ...]`, and a
+last line `END lines=<n> crc16=$hhhh` (CRC-16/CCITT over every byte before it). Sub-test lines carry the
+parent's prefix: `zf.` (Z01 cases), `zt.` / `zu.` (Z06 / Z07), `ih.` (I03 = im2hold T1-T7). A later
+session appends to the same file (the last line for a test wins).
+
+Statuses: PASS, FAIL (the claim's expectation is wrong on this machine), INFO (a number or a choice, no
+verdict), SKIP (`why=not-built`, `not-selected`, `hung-last-run`), HANG-GUARD (the machine stopped in this
+test on the run before), OPERATOR (`key=` / `means=`, answered by the person at the machine),
+PENDING-OPERATOR (an operator question left for the U pass), VISUAL / VISUAL-SHOWN (later stages).
+
+After a hang: reset the Next, start `nxsuite.nex` again from the same folder. It finds the progress record,
+resumes by itself after 5 seconds (or press R): the test it stopped in is written HANG-GUARD, its group is
+run again from its start without it, and the run carries on. Nothing that persists across power is written.
+
+Intake (on the PC):
+
+    python tools/hwtests/intake.py NXSUITE.TXT [--board NAME]   # -> docs/kb/hardware/<board>-<core>.json
+    python tools/hwtests/intake.py --dry-run NXSUITE.TXT         # report only
+    python tools/hwtests/intake.py --compare A.json B.json
+    python tools/hwtests/intake.py --selfcheck                   # also run by selftest.py --tools
+
+It refuses a file that is cut short, damaged (CRC), not ASCII / LF, or names an unknown test or status.
+Per claim it reports CONFIRMED, DISPROVED, MEASURED value +- spread, CHOICE word or NOT ANSWERED (with the
+reason), with the claim's sources; it never edits lessons or docs.
+
+Checklist for the owner:
+
+1. Build the .nex (above) and copy it into a new folder on the SD card, e.g. `/nxsuite/`.
+2. Start it from the Browser. Wait for the menu; check the core and video lines at the top.
+3. Press A and leave the machine alone until the screen says DONE.
+4. If the machine stopped instead: reset, start `nxsuite.nex` again from the same folder; it resumes.
+5. Do what the NEXT STEP line says until it says ALL DONE.
+6. Copy `NXSUITE.TXT` to the PC and run `intake.py` on it; send the report.
