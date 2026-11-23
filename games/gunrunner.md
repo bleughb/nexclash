@@ -43,18 +43,18 @@ Nothing has run on a Next. Enhanced also: the window against the panel, no teari
 - patch.display-atomic-switch: used in Enhanced: two Layer 2 buffers, the flip outside the window's rows.
 
 ## Lessons
-- [local: frame-locked pace] A game that HALTs to the frame turns a small lateness into a whole frame: a window on target can cost 20 ms for stretches, depending on phase. A change of a few ms at the start of a run moved the slowest 20 updates from +2.6% to +20.9% with no slower code. Bias long windows fast and re-measure at every level after any byte change, however small.
-- [local: replay caught a real bug] The per-level replays found the canvas clear covering the wrong span, leaving stale pixels after a restart; the shorter recording had passed. Replay every level before calling a build frozen.
-- [local: stale builds] A pace script that builds its fixture only if the file is missing measured a build from hours earlier under a reused tag. Use a new tag per measurement and build once before the runs start.
-- [local: no-hook engine] A monochrome game needs no site; the checks that still mean something are the boot compare with R, rom_paths over the system ROM and the tail reads.
-- [local: rom_paths on test pokes] A recording with test pokes keeps sync when each poke starts a new segment from its own snapshot; rom_paths says so in its lines.
+- [kb lesson.frame-locked-pace: frame-locked pace] A game that HALTs to the frame turns a small lateness into a whole frame: a window on target can cost 20 ms for stretches, depending on phase. A change of a few ms at the start of a run moved the slowest 20 updates from +2.6% to +20.9% with no slower code. Bias long windows fast and re-measure at every level after any byte change, however small.
+- [kb lesson.recording-length-and-play-style: replay caught a real bug] The per-level replays found the canvas clear covering the wrong span, leaving stale pixels after a restart; the shorter recording had passed. Replay every level before calling a build frozen.
+- [kb lesson.identical-numbers-suspect-stale-cache: stale builds] A pace script that builds its fixture only if the file is missing measured a build from hours earlier under a reused tag. Use a new tag per measurement and build once before the runs start.
+- [kb lesson.monochrome-game-no-hook-engine: no-hook engine] A monochrome game needs no site; the checks that still mean something are the boot compare with R, rom_paths over the system ROM and the tail reads.
+- [kb lesson.rom-paths-test-pokes: rom_paths on test pokes] A recording with test pokes keeps sync when each poke starts a new segment from its own snapshot; rom_paths says so in its lines.
 - [local: R-reading game] Without a fixture a game that reads R leaves lockstep whatever the build does: the two arms start at another raster phase.
 - [local: palette input] The palette came from a hard-coded local emu256 path; `auto` needs every input beside the snapshot, so `Enhanced` now takes the table as a staged JSON file (same 256 values, same bytes).
 - [tool nexclash.survey] A survey key schedule at the title proved nothing: this game's menu needs a key to pass the picture, then one to pick the controls. Look at the screen first.
 
 ## Friction
 - reuse: [none: nextboot, jnext, soak, flicker and pace were enough]
-- retries: [local: start keys] Pokes on the game's menu were applied after the key that started the game, so the test level did not take.
+- retries: [kb lesson.title-key-sequences: start keys] Pokes on the game's menu were applied after the key that started the game, so the test level did not take.
 - environment: [none: the pilot venv and references were enough]
 - hand-rolled: [local: review scripts] Fixture, cheats and package scripts stay in the review run.
 - scratch: [local: review run] Its work folder stays in private evidence.

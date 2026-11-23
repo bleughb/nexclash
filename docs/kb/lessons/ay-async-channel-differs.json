@@ -1,12 +1,13 @@
 {
  "id": "lesson.ay-async-channel-differs",
  "kind": "pitfall",
- "claim": "Matching AY write rates is not proof of equal sound: music channels A/B can match while asynchronous channel C effects differ in interrupt phase.",
+ "claim": "Matching AY write rates is not proof of equal sound: music channels A and B can match while asynchronous channel C effects differ in interrupt phase.",
  "evidence": [
   {
    "game": "games/head_over_heels.md",
-   "text": "Music channels A and B match; asynchronous channel C effects differ in interrupt phase; hardware review pending.",
-   "shown_on": "unknown"
+   "text": "Music channels A/B match; asynchronous channel C effects differ in interrupt phase; channel C sound-effect phase differs after accelerated drawing; hardware review pending.",
+   "shown_on": "unknown",
+   "quote": "Music channelsA/B match; asynchronous channelC effects differ in interrupt phase."
   }
  ],
  "level": "observed",
@@ -22,6 +23,6 @@
   "interrupt phase",
   "proof"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

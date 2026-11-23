@@ -6,12 +6,14 @@
   {
    "game": "games/jetpac.md",
    "text": "No RZX yet: rocket build, take-off and levels 2+ are proven by unit tests on the game's own routines.",
-   "shown_on": "simulator"
+   "quote": "No RZX and a free run that never builds the rocket: the unit tests now run the game's own routines (26217 flames, 26419 sections) from a captured state",
+   "shown_on": "unknown"
   },
   {
    "game": "games/heartland.md",
-   "text": "Unit PASS: 119 cases in 24 groups, including the attribute copy's three ways.",
-   "shown_on": "simulator"
+   "text": "A wrapper hook must hand the routine the original's R: the attribute copy reads R on one of three ways; found by a unit case that forces each way, as the recordings only take the plain one.",
+   "quote": "leave the original's R after it: the attribute copy reads R on one of its three ways. Found by a unit case that forces",
+   "shown_on": "unknown"
   }
  ],
  "level": "demonstrated",
@@ -24,6 +26,6 @@
   "branch",
   "captured state"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

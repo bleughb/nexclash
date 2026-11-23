@@ -5,22 +5,26 @@
  "evidence": [
   {
    "game": "games/treasure_island_dizzy.md",
-   "text": "Bubbles read Dizzy's pixels: dedicated bubble virtual read; 7,436 bubble tests (340 Dizzy-dependent) identical.",
+   "text": "Bubbles read Dizzy's pixels: dedicated bubble virtual read; 7,436 bubble tests (340 Dizzy-dependent): all identical (docs/VERIFICATION.md).",
+   "quote": "7,436 bubble tests (340 Dizzy-dependent): all identical",
    "shown_on": "simulator"
   },
   {
    "game": "games/dizzy_ultimate_cartoon_adventure.md",
-   "text": "Collision reads ULA ^ objects ^ Dizzy through a virtual read; hooks compute the original's new byte from the virtual old one.",
+   "text": "Logic reads stay the original's: collision 60244 / 60251 read ULA ^ objects ^ Dizzy (virtual read); the attribute read 58712 reads ULA ^ shadow attributes.",
+   "quote": "collision 60244 / 60251 read ULA ^ objects ^ Dizzy (virtual",
    "shown_on": "unknown"
   },
   {
    "game": "games/fantasy_world_dizzy.md",
    "text": "No game logic reads the player's pixels: no virtual read, since boxes overwrite the player.",
+   "quote": "No game logic reads the player's pixels (no virtual read: boxes overwrite the player).",
    "shown_on": "unknown"
   },
   {
    "game": "games/magicland_dizzy.md",
-   "text": "Original leaves ghost pixels; nothing else reads that buffer, so no virtual read is needed.",
+   "text": "Original leaves ghost pixels; nothing else reads that buffer (no game logic reads the player's pixels), so no virtual read is needed.",
+   "quote": "ghost pixels; nothing else reads that buffer) (docs/VERIFICATION.md).",
    "shown_on": "unknown"
   }
  ],
@@ -37,6 +41,6 @@
   "screen reader",
   "ghost pixels"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

@@ -37,11 +37,11 @@ Built 2026-11-08 as review 1.1, published as .nxc 1.0 with the default: a menu o
 Boot and loading screen; the music on the menu and between levels; keys, Kempston, Interface 2; pause and quit; each cheat; the level end with Infinite time.
 
 ## Lessons
-- [local: 128K form] The archive's label 48K-128K is true only of the tape: the 48K .z80 lacks the music block. Check the loader's own paging before picking the target.
-- [local: registration] A 128K engine's `is_` must also read skoolkit's Snapshot (`memory.banks`), the form `nexclash.py auto` passes; checking only `banks` and `is128` left auto on the generic path. As army_moves.
+- [kb lesson.snapshot-intake-state: 128K form] The archive's label 48K-128K is true only of the tape: the 48K .z80 lacks the music block. Check the loader's own paging before picking the target.
+- [kb lesson.auto-snapshot-class-detector: registration] A 128K engine's `is_` must also read skoolkit's Snapshot (`memory.banks`), the form `nexclash.py auto` passes; checking only `banks` and `is128` left auto on the generic path. As army_moves.
 - [local: start-up flag] The stamp's ROM path check warns that the game reads 5B5C (the 128K paging flag that turns the music on) before writing it, a printer buffer byte the .nex leaves as NEXLOAD wrote it; the review run's real loader showed 0x10 there in play in every mode, so no keep_printer_buffer. The default runs the Next's own ROM3 (no alt ROM): 5 to 10 ROM bytes it uses differ from the recording's 128K ROM (0x0002-0x0013, 0x004B, 0x3882); lockstep in JNext showed no game difference.
-- [local: debt tick] The picture takes over a frame in one nest: without hlib_debt_tick a whole frame of debt was lost (one wrap allowed), and the run was 36% slow. Found by timing the hook's parts, not by reasoning.
-- [local: no clash] A monochrome play area needs no hooks; the build is the conversion, and its proof is the boot check plus lockstep runs against the original. R has no hook to be compared at, and the notes say so.
+- [kb lesson.pace-window-needs-tick: debt tick] The picture takes over a frame in one nest: without hlib_debt_tick a whole frame of debt was lost (one wrap allowed), and the run was 36% slow. Found by timing the hook's parts, not by reasoning.
+- [kb lesson.monochrome-game-no-hook-engine: no clash] A monochrome play area needs no hooks; the build is the conversion, and its proof is the boot check plus lockstep runs against the original. R has no hook to be compared at, and the notes say so.
 - [local: the nxc repo's make_nfo is outside this repo] jattree/nxc/tools/make_nfo.py always writes the clash-fix paragraph; a game with no clash needs it reworded by hand. Noted in the run's NOTES.md, not changed here.
 
 ## Technique use
@@ -51,7 +51,7 @@ Boot and loading screen; the music on the menu and between levels; keys, Kempsto
 ## Friction
 - reuse: [none: pace, soak, flicker and the real-loader script were enough]
 - retries: [local: lockstep negative] The immunity poke did not break lockstep in 500 updates (no collision came); the time poke does, at update 17.
-- environment: [local: a heavily loaded machine this run] tap2sna hit its first 200-second limit on a loaded machine; it also needs `--press 7:ENTER` for the tape's PAUSE.
+- environment: [kb lesson.tap2sna-slow-and-pause: a heavily loaded machine this run] tap2sna hit its first 200-second limit on a loaded machine; it also needs `--press 7:ENTER` for the tape's PAUSE.
 - hand-rolled: [local: review scripts] Packaging for a tape target and the boot check live in the review run.
 - scratch: [local: review run] Its work folder stays in private evidence.
 

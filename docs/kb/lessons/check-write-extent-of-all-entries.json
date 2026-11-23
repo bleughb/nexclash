@@ -1,11 +1,12 @@
 {
  "id": "lesson.check-write-extent-of-all-entries",
  "kind": "pitfall",
- "claim": "Measure the write extent of every dispatch entry, not only those a recording reaches: entries used by one figure kind can lose a column that replays never show.",
+ "claim": "Check the write extent of every dispatch entry, including ones only one figure kind uses: the boss spider's four-wide leftward entries lost a column until their E-3 offset was fixed.",
  "evidence": [
   {
    "game": "games/rainbow_islands.md",
-   "text": "Boss-spider fix: an earlier build had the spider column missing (hardware fault); the fix is recorded in the build list.",
+   "text": "Dispatch entries 59906/59951/59996/60041 (4-wide leftward, write E-3) are used by the boss spider only; an earlier build had the spider column missing, the fix ran on hardware (runs, better).",
+   "quote": "leftward entries are used by the boss spider (Insect Island round 4) only.",
    "shown_on": "hardware"
   }
  ],
@@ -19,6 +20,6 @@
   "missing column",
   "hardware"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

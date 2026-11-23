@@ -5,23 +5,27 @@
  "evidence": [
   {
    "game": "games/solomons_key.md",
-   "text": "Player frames 48-58 are mirrored in place at 43209 when he turns; a graphics diff between frames found 43209.",
-   "shown_on": "analysis"
+   "text": "Player frames 48-58 are mirrored in place at 43209 when he turns, toggling (43300); a diff of the graphics between frames found 43209.",
+   "shown_on": "analysis",
+   "quote": "Player: 43209 mirrors frames 48-58 in place when he turns, toggling (43300)."
   },
   {
    "game": "games/scooby_doo.md",
-   "text": "The first look's 61.5% byte match came from sprites mirrored at run time; real match 100%.",
-   "shown_on": "unknown"
+   "text": "The first look's 61.5% byte match came from sprites the game mirrors in place at run time (8F1D); real match 100%: 71 sprites stored the same, 50 mirrored.",
+   "shown_on": "unknown",
+   "quote": "The first look's 61.5% came from sprites the game mirrors in place at run time (8F1D, table FC00, flag in bit 7 of the entry's last byte)."
   },
   {
    "game": "games/three_weeks.md",
-   "text": "Wally's frames mirror on a turn, the spear carrier mirrors in place, and frame 0 differs from its snapshot bytes; found by a census by plot.",
-   "shown_on": "unknown"
+   "text": "Wally 0xB75C mirrors all 18 frames on a turn and 0xB52E mirrors the spear carrier in place; frame 0 differs from its snapshot bytes in 27 bytes; a census by plot found both.",
+   "shown_on": "unknown",
+   "quote": "0xB52E mirrors the spear carrier (0xD680, 384 bytes) when his direction (35669) changes sign;"
   },
   {
    "game": "games/el_capitan_trueno.md",
-   "text": "Writing the catalogue's graphic over a mirrored frame paired it with a mirrored mask (frame 98: 55 mask pixels on the wrong side); fixed by building shapes from one consistent state.",
-   "shown_on": "simulator"
+   "text": "Writing the catalogue's graphic over a state where the frame was mirrored paired it with a mirrored mask (frame 98: 55 mask pixels on the wrong side); shapes must be captured from one consistent state.",
+   "shown_on": "simulator",
+   "quote": "the frame was mirrored paired it with a mirrored mask (frame 98: 55 mask pixels on the wrong side ->"
   }
  ],
  "level": "observed",
@@ -35,6 +39,6 @@
   "consistent state",
   "sprite table"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

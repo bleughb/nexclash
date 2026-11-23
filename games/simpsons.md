@@ -99,7 +99,7 @@ scrolls; no figure left behind after a screen change; music unchanged; Enhanced:
 - 2026-11-18: the figures stay in the bitmap under their sprites (as Heartland): nothing of the game changes.
 
 ## Lessons
-- [local: this game's hooks] A wait per figure cost about 1,600 T of 3.5 MHz time each (the limiter's own polls and the
+- [kb lesson.hook-call-overhead-at-28mhz: this game's hooks] A wait per figure cost about 1,600 T of 3.5 MHz time each (the limiter's own polls and the
   speed changes), more than the 28 MHz saved on a small figure: the first build was slower than the original with no
   wait at all. One window around the whole draw pass, with each figure adding its time to the target, fixed it.
 - [local: this game's hooks] The game's stack pointer is its data pointer inside the draw routine: a hook there has no
@@ -109,9 +109,9 @@ scrolls; no figure left behind after a screen change; music unchanged; Enhanced:
 - [local: this game's colours] The original's top clip steps 6 bytes a row whatever the shape's width and draws one row
   past a clipped shape's end: a painted strip there would be the wrong rows. Those figures and rows are left as the
   game draws them. Found only by whole recordings (3 of 5 levels), never in the first 1,500 frames.
-- [local: this game's colours] Three 8-bit keys (sum, sum of sums, rotate and XOR) gave two of level 2's striped poles
+- [kb lesson.graphic-keys-collide-or-move: this game's colours] Three 8-bit keys (sum, sum of sums, rotate and XOR) gave two of level 2's striped poles
   the same keys; a sum and a 16-bit hash (x 3 + byte + 1) with the size has no clash in 1,239 shapes.
-- [local: this game's verifier] Byte patterns for site search go through re.escape: 0x2A, 0x28 and 0x5B are regex
+- [kb lesson.byte-pattern-regex-escape: this game's verifier] Byte patterns for site search go through re.escape: 0x2A, 0x28 and 0x5B are regex
   syntax, and a bare pattern failed only on the levels whose code differs.
 - [backlog C2 #15] `nexclash.py new` stopped on this 128K snapshot ('Machine' object has no attribute 'ay': the 48K-only
   analysis); the work went on with scan, isr, preview and a trace script.
@@ -123,7 +123,7 @@ scrolls; no figure left behind after a screen change; music unchanged; Enhanced:
 - retries: [local: this game's hooks] the per-figure wait, dropped for one window a pass; three painted rules found by
   whole-recording runs.
 - hand-rolled: [local: this game's module] a 128K memory view, a per-frame check at the interrupt's entry.
-- environment: [local: this machine] five full runs in parallel take about 25 minutes; `auto` prints nothing until it ends.
+- environment: [kb lesson.long-job-background-no-limit: this machine] five full runs in parallel take about 25 minutes; `auto` prints nothing until it ends.
 - scratch: [local: private run folder] NOTES.md with the session's facts; the trace and fit scripts were session scratch.
 
 ## Technique use

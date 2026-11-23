@@ -5,12 +5,14 @@
  "evidence": [
   {
    "game": "games/lunar_jetman.md",
-   "text": "Standard colours: black outline on, toggle 'Outline off'. Painted (Enhanced): none, and it excludes that toggle.",
+   "text": "Standard colours: black outline on; toggle 'Outline off'. Painted (Enhanced): no outline, and it excludes that toggle.",
+   "quote": "toggle \"Outline off\" (`_nooutline.nex`). Painted (Enhanced): none, excludes that toggle.",
    "shown_on": "unknown"
   },
   {
    "game": "games/renegade.md",
    "text": "Owner: outline off with painted sprites; on with the standard ones, with a way to turn it off or black; outline on per the owner's standing preference.",
+   "quote": "the owner: off with painted sprites; on, built in, with the standard ones, with a way to turn it off or black",
    "shown_on": "unknown"
   }
  ],
@@ -24,6 +26,6 @@
   "painted sprites",
   "default"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

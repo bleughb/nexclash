@@ -5,7 +5,8 @@
  "evidence": [
   {
    "game": "games/lunar_jetman.md",
-   "text": "A message screen printed over the play area wipes figures without the clear routine; find every routine that overwrites the play area and hide sprites there.",
+   "text": "A message screen printed over the play area wipes figures without the clear routine: find every routine that overwrites the play area (screen writers per frame) and hide sprites there.",
+   "quote": "A message screen printed over the play area wipes figures without the clear routine: find every",
    "shown_on": "unknown"
   }
  ],
@@ -22,6 +23,6 @@
   "clear routine",
   "play area"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

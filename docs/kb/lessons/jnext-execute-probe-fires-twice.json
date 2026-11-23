@@ -44,5 +44,6 @@
   "pace script"
  ],
  "review": "source-checked",
- "as_of": "0.1.7"
+ "as_of": "0.1.7",
+ "next_check": "In the pace script log the cycle count with each probe hit and warn on a second hit within a few T of the first."
 }

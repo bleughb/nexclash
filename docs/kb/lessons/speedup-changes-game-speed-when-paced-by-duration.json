@@ -5,12 +5,20 @@
  "evidence": [
   {
    "game": "games/cisco_heat.md",
-   "text": "Sprite fast path without its saving added back to the pace ran 14% fast in the simulator (7.41 frames an update against 8.59); with the credit 8.47 against 8.59 plain.",
+   "text": "Sprite fast path: without its saving added back to the pace (spr_credit) the simulator's pace ran 14% fast (7.41 frames an update against 8.59); with it 8.47 (fast) against 8.59 (plain).",
+   "quote": "without it the simulator's pace ran 14% fast (7.41 frames an update against 8.59).",
    "shown_on": "simulator"
   },
   {
    "game": "games/trap_door.md",
-   "text": "48K, IM 1, interrupts off through the whole recording (0 accepted): no frame sync, pace = CPU time; any added time changes game speed (unpaced game).",
+   "text": "48K, IM 1, interrupts off through the whole recording (0 accepted): no frame sync, pace = CPU time.",
+   "quote": "48K, IM 1, interrupts off through the whole recording (0 accepted): no frame sync, pace = CPU time.",
+   "shown_on": "analysis"
+  },
+  {
+   "game": "games/trap_door.md",
+   "text": "Any added time changes game speed (unpaced game).",
+   "quote": "any added time changes game speed (unpaced game).",
    "shown_on": "analysis"
   }
  ],
@@ -25,6 +33,6 @@
   "per update",
   "28 MHz"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

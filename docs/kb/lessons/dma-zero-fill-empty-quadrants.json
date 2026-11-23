@@ -5,7 +5,8 @@
  "evidence": [
   {
    "game": "games/r_type.md",
-   "text": "Ordinary-DMA zero fill avoids per-cell blank writes: live 23-sprite preparation 47.687 ms, down from 66.915 ms.",
+   "text": "Ordinary-DMA zero fill avoids per-cell blank writes; live23-sprite preparation47.687ms including native IRQs, down from66.915ms.",
+   "quote": "Demonstrated: ordinary-DMA zero fill avoids per-cell blank writes; live23-sprite preparation47.687ms including native IRQs, down from66.915ms.",
    "shown_on": "unknown"
   }
  ],
@@ -18,6 +19,6 @@
   "blank writes",
   "sprite preparation"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

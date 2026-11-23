@@ -6,37 +6,49 @@
  "evidence": [
   {
    "game": "games/into_the_eagles_nest.md",
-   "text": "HLIB_SPEED_IN latched a line number as the clock. Fix: pace held in every interrupt and NR 7 selected again before it returns.",
-   "shown_on": "unknown"
+   "text": "An interrupt between a hook's OUT 0x243B and IN 0x253B leaves another register selected, so HLIB_SPEED_IN latched a line number as the clock. Fix: pace held in every interrupt and NR 7 selected again before it returns.",
+   "shown_on": "unknown",
+   "quote": "leaves another register selected. `HLIB_SPEED_IN` then latched a line number as the clock."
   },
   {
    "game": "games/silkworm.md",
-   "text": "Same race showed as a lone 175 ms update once in about 1,500; found via pace tables. The replay now checks the latched clock.",
-   "shown_on": "unknown"
+   "text": "The same race showed as a lone 175 ms update once in about 1,500; the wrapper now holds the pace in every interrupt and selects NR 7 again before it returns, and the replay checks that.",
+   "shown_on": "unknown",
+   "quote": "Here it showed as a lone 175 ms update once in about 1,500."
   },
   {
    "game": "games/new_zealand_story.md",
-   "text": "An interrupt left NR 0x53 selected and its page was latched as the speed, so the game ran at 28 MHz until reset.",
-   "shown_on": "unknown"
+   "text": "An interrupt between OUT 0x243B and IN 0x253B left NR 0x53 selected, its page was latched as the speed, and the game ran at 28 MHz until reset.",
+   "shown_on": "unknown",
+   "quote": "an interrupt between ENTER's or draw_enter's OUT 0x243B and IN 0x253B left NR 0x53 selected, its page numbers read as the"
   },
   {
    "game": "games/head_over_heels.md",
-   "text": "The mutation selector is now latched inside the entry DI window; boundary injection caught the old version while register/R and RAM still matched.",
-   "shown_on": "simulator"
+   "text": "The mutation selector is now latched during the existing entry DI window; boundary injection caught the old version even though register/R and game RAM still matched.",
+   "shown_on": "simulator",
+   "quote": "boundary injection caught the old version even though register/R and game RAM still matched."
   },
   {
    "game": "games/knight_tyme.md",
-   "text": "The lockstep verifier fed port reads from the recording, so IN 0x253B returned a game input; it now answers 0x253B from its NextREG model.",
-   "shown_on": "simulator"
+   "text": "The lockstep verifier fed every port read from the recording, so IN (0x253B) took a game input and the replay failed at once; it now answers 0x253B from its NextREG model.",
+   "shown_on": "simulator",
+   "quote": "IN (0x253B) took a game input and the replay failed at once; it now answers 0x253B from its NextREG model."
   },
   {
    "game": "games/castle_master.md",
-   "text": "The race check m3b_race covers MMU register reads under DI.",
-   "shown_on": "simulator"
+   "text": "The race check m3b_race.py covers MMU register reads under DI; 18 / 18 mutants.",
+   "shown_on": "simulator",
+   "quote": "m3b_race.py (MMU reads under DI); 18 / 18 mutants (O-X, Y-f)."
   }
  ],
  "level": "demonstrated",
  "area": "platform",
+ "facts": {
+  "interrupts": "on"
+ },
+ "enforced_by": [
+  "asm/lib/hlib_pace.asm"
+ ],
  "words": [
   "NextREG",
   "0x243B",
@@ -46,6 +58,6 @@
   "select port",
   "DI"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

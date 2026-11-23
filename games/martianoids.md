@@ -149,10 +149,10 @@ beeper sound and each trainer; report any failure with a recording.
 
 - [local: actor transitions can redispatch within one player update] A8E1 jumps back to 9970 after collisions; use the unique outer-loop boundary 9967, not every player-record dispatch at 9974, for pace measurements.
 
-- [local: the supported snapshot resumes BASIC before USR] The generic ROM-path check rejected a full code overlay that collided with the calculator. Keep the original ROM and tiny audited map-to-RAM veneers; test the actual archive startup, not only in-game fixtures.
+- [kb lesson.snapshot-taken-in-loader: the supported snapshot resumes BASIC before USR] The generic ROM-path check rejected a full code overlay that collided with the calculator. Keep the original ROM and tiny audited map-to-RAM veneers; test the actual archive startup, not only in-game fixtures.
 
 - [local: the original initializer changes stored graphics once] Decode the mask/XOR initializer before painting; treating the archive's raw second byte as runtime ink inverts details.
-- [local: the original renderer allows linear right-edge spill] Clip against the 192-pixel original buffer before translating to the 256-pixel display. Reject x beyond the viewport before an 8-bit x+width test can wrap.
+- [kb lesson.eightbit-x-wrap-clipping: the original renderer allows linear right-edge spill] Clip against the 192-pixel original buffer before translating to the 256-pixel display. Reject x beyond the viewport before an 8-bit x+width test can wrap.
 - [local: colours must retain independent original bitmap state] Carry the original bit separately from colour so XOR-only source pixels still toggle correctly after owner painting.
 - [local: archive trainers are not an execution proof] The sector RET consumed saved HL instead of a return address; use the existing protected-sector branch and test its stack.
 - [tool martianoids.verify] Hook preludes rejoin the untouched original body with exact registers, R and 48K RAM. Keep hook state and both display pages persistent between calls.
@@ -169,7 +169,7 @@ beeper sound and each trainer; report any failure with a recording.
 ## Friction
 
 - reuse: [tool martianoids.recolour] Use the existing colour-map read-back and NEX bank splicing; only original-art source pages are rewritten.
-- retries: [local: native capture must finish its final frame] Immediate exit after requesting a screenshot returned an error despite valid timing data; allow frame completion and compare only completed update intervals.
+- retries: [kb lesson.native-capture-frame-completion: native capture must finish its final frame] Immediate exit after requesting a screenshot returned an error despite valid timing data; allow frame completion and compare only completed update intervals.
 - environment: [none: the private headless emulator and readonly base card worked] No desktop configuration or shared-card changes were needed.
 - hand-rolled: [tool martianoids.verify] The replay harness is engine-specific; opcode emulation, Z80N, pace and DMA models remain shared.
 - scratch: [local: disposable game analysis is retained as release evidence] Surveys, original-code disassemblies and trainer captures stay outside the contribution, with commands and status logs.

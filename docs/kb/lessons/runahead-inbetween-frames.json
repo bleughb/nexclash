@@ -6,8 +6,9 @@
  "evidence": [
   {
    "game": "games/cisco_heat.md",
-   "text": "Exact in 159 of 159 recording cases (511 in-between frames, none late) in v1.0 and 754 frames in the final build; about 25 pictures a second was the practical rate because each in-between frame's work and copy took more than a frame.",
-   "shown_on": "simulator"
+   "text": "The next update is run ahead with part of its movement, its picture presented, then every byte the update writes is put back; exact in 159 of 159 recording cases (511 in-between frames, none late; 754 in the final build); about 25 pictures a second.",
+   "shown_on": "simulator",
+   "quote": "the next update run ahead with f = C / frames of its step (h_step at 0x8AB6 stores step x f / 256;"
   }
  ],
  "level": "demonstrated",
@@ -21,6 +22,6 @@
   "25 fps",
   "interpolation"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

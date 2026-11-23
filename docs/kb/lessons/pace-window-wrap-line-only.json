@@ -5,7 +5,8 @@
  "evidence": [
   {
    "game": "games/nodes_of_yesod.md",
-   "text": "pace_now's frame count and line wrap are not in step, so windows (all under a frame) use the line wrap alone and the serial only to say an interrupt came.",
+   "text": "A window that reads line + frame serial needs the two in step at the wrap; a window under a frame needs only the wrap. The mismatch read as 164 lines of false time per interrupt.",
+   "quote": "A window that reads line + frame serial needs the two in step at the wrap; a window under a frame needs only the wrap.",
    "shown_on": "unknown"
   }
  ],
@@ -19,6 +20,6 @@
   "interrupt",
   "limiter"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

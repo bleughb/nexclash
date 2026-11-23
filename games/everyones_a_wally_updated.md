@@ -218,8 +218,8 @@ quiet +0.40..+3.99, busy +1.59..+2.45, slowest stretch of 20 updates +5.7.
   Enhanced colour map now run in auto, and main gives both published .nex byte for byte.
 - [local: this engine] A window with the commit inside it ran over a frame: 21 ms lost on each of the first updates (+21 ms, a whole frame, every time). hlib_pace_tick's "at least once a
   frame in a long window" is in the card; the fix was tk in clearbox's and drawall's loops. A fixed-looking +20 ms at one update reads as this wrap, not as a slow hook.
-- [local: this engine] Hooks that replace a plot rather than add to it need the plot's original time back in the wait (V_CR), or the pace still moves with the plot count.
-- [local: the pace check] The audit's input at the probe depends on the frame boundary here: three reads of row 0xEFFE come within 2 ms after the probe, so a build whose phase
+- [kb lesson.fast-draw-must-pad-to-original-time: this engine] Hooks that replace a plot rather than add to it need the plot's original time back in the wait (V_CR), or the pace still moves with the plot count.
+- [kb lesson.pace-input-timing: the pace check] The audit's input at the probe depends on the frame boundary here: three reads of row 0xEFFE come within 2 ms after the probe, so a build whose phase
   differs can see a key one update off (Enhanced seed 3 parted at update 31). Keys given at the game's reads (profile inject) hold lockstep on every run.
 - [card patch.restore-speed §Use / do not use] Exits that hand back the plotter's A and flags restore the speed through
   a page byte (the card's A-saving form); the .pass exits restore before POP AF.

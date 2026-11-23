@@ -5,7 +5,8 @@
  "evidence": [
   {
    "game": "games/r_type.md",
-   "text": "Four flash colours times three graphics filled the pattern cache and restarts drew figures natively; one conversion plus the palette offset per graphic fixed it.",
+   "text": "Four flash colours x three graphics filled the cache; its restarts drew figures natively in 8x8. One conversion + palette offset per graphic fixed it.",
+   "quote": "restarts drew figures natively in 8x8. One conversion + palette offset per graphic fixed it.",
    "shown_on": "unknown"
   }
  ],
@@ -20,6 +21,6 @@
   "attribute flash",
   "conversion"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

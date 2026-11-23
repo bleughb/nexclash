@@ -1,12 +1,13 @@
 {
  "id": "lesson.survey-cost-and-reuse",
  "kind": "pitfall",
- "claim": "A survey of a long recording is very slow (every scan command replays it), so run a short first look and rely on stored results where possible.",
+ "claim": "A survey of a long recording is very slow (64 minutes for a 63-minute recording); the tool now warns and reuses a stored result.",
  "evidence": [
   {
    "game": "games/trap_door.md",
-   "text": "Survey took 64 minutes on a 63-minute recording (189,333 frames); the survey's counts and disassembly gave the findings.",
-   "shown_on": "simulator"
+   "text": "A 64-minute survey of a 63-minute recording (189,333 frames); the survey tool now warns and reuses a result; the findings came from survey counts and disassembly.",
+   "quote": "a 64-minute survey of a 63-minute recording; it now warns and reuses a result.",
+   "shown_on": "unknown"
   }
  ],
  "level": "observed",
@@ -19,6 +20,6 @@
   "scan writers",
   "long recording"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

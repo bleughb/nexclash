@@ -911,8 +911,11 @@ def tools_check(src):
            tracker.calls[0x8200][0x8100] == 1 and tracker.parents[0x8200][0x8100] == 1 and
            tracker.pix[0x8200] == 1 and tracker.pix[0x8100] == 1,
            (dict(tracker.calls[0x8200]), dict(tracker.pix)))
-        _, r = survey.survey(ez, [er], os.path.join(work, 'survey'), stop=600, log=lambda m: None, full=True)
+        smd, r = survey.survey(ez, [er], os.path.join(work, 'survey'), stop=600, log=lambda m: None, full=True)
         rt = {x['routine']: x for x in r['routines']}
+        ok('survey.md lists the shared lessons that fit the measured facts (docs/kb/lessons)',
+           '## Shared lessons that fit (draw one-routine, interrupts on, machine 48K)' in smd and smd.count('- lesson.') == 10,
+           [l for l in smd.splitlines() if 'lesson' in l][:3])
         ok('survey (600 frames): engine chuckie, plain boot OK, 43899 x1059 calls on top, 40000 x814 from 6 callers at 665 T',
            r['engine'] == 'chuckie' and r['plain']['boot'].startswith('OK') and r['routines'][0]['routine'] == 43899 and
            rt[43899]['calls'] == 1059 and rt.get(40000, {}).get('calls') == 814 and

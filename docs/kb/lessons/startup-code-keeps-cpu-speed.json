@@ -5,7 +5,8 @@
  "evidence": [
   {
    "game": "games/cisco_heat.md",
-   "text": "Merged engine rules: boot restores the caller's speed (patch.restore-speed).",
+   "text": "Main merge: boot restores the caller's speed (patch.restore-speed); desync fails replay.",
+   "quote": "boot restores the caller's speed (patch.restore-speed); desync fails replay.",
    "shown_on": "unknown"
   }
  ],
@@ -18,6 +19,6 @@
   "restore speed",
   "engine rules"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

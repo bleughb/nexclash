@@ -5,7 +5,8 @@
  "evidence": [
   {
    "game": "games/winter_sports.md",
-   "text": "Patched menu versus original menu loading each event from tape: after 900 frames memory outside the hook agreed; a negative control (pages shifted by one) fails all 6 data cases.",
+   "text": "Patched menu versus original menu loading each event from tape, same keys: after 900 frames 0x4000-0xFFFF agree outside the hook, its variables, the system variables 0x5C00-0x5C7F and the stack 0x5F80-0x5FFF; I, IM, IFF agree; a negative control (pages shifted by one) fails all 6 data cases.",
+   "quote": "original menu (loads answered at ROM 0x0562 from the tape) run from the snapshot with the same keys; after 900 frames 0x4000-0xFFFF agree",
    "shown_on": "simulator"
   }
  ],
@@ -19,6 +20,6 @@
   "negative control",
   "side by side"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

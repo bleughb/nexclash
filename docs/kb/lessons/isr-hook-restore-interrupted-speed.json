@@ -11,6 +11,9 @@
  ],
  "level": "demonstrated",
  "area": "method",
+ "facts": {
+  "interrupts": "on"
+ },
  "words": [
   "ISR hook",
   "restore speed",

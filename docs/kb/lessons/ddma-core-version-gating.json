@@ -5,8 +5,9 @@
  "evidence": [
   {
    "game": "games/chase_hq.md",
-   "text": "Enhanced uses plain zxnDMA; no core 3.03.00 DDMA or blitter path evaluated (pilot predates the rule); the review (docs/DDMA.md) is open.",
-   "shown_on": "unknown"
+   "text": "Enhanced uses the plain zxnDMA; no core 3.03.00 DDMA or blitter path was evaluated for this engine (the pilot predates the rule); the review (docs/DDMA.md) is open.",
+   "shown_on": "unknown",
+   "quote": "no core 3.03.00 DDMA or blitter path was evaluated for this engine (the pilot predates that rule)"
   }
  ],
  "level": "observed",
@@ -19,6 +20,6 @@
   "zxnDMA",
   "fallback"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

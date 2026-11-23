@@ -120,8 +120,8 @@ Pilot only (JNext 1.1.104; not rerun in the repo, the build is the same bytes):
 - [tool nextboot.load_nex] demonstrated: the boot model read a .nex with a header loading screen (byte 10 = 2) as banks from offset 512 and failed to find the tail; it now skips the screen as NEXLOAD does (nex_screen_size). This is the first build with one.
 - [tool nextboot.boot_restores] demonstrated: a tail that jumps to the build's own boot code, which puts 0x5B00-0x5BFF back, was reported as read before written; the ROM path check now boots on to the game's PC and credits bytes back to the snapshot's. Builds whose tail jumps to the game are unchanged.
 - [tool asm/lib/hlib_pace.asm] observed: main's pace library moved this engine's bytes; DEFINE HLIB_PACE_V1 keeps the verified build (as Cobra, Gryzor and Cauldron 1.1).
-- [local: this archive's mismatched trainer addresses] Match instructions and control flow before importing a release-labelled POK; all five translations are behaviour-tested.
-- [local: this game's original effects read R] The particle and damage routines require R preservation even inside rendering.
+- [kb lesson.archive-poke-translation: this archive's mismatched trainer addresses] Match instructions and control flow before importing a release-labelled POK; all five translations are behaviour-tested.
+- [kb lesson.r-register-checks-local-vs-global: this game's original effects read R] The particle and damage routines require R preservation even inside rendering.
 - [local: this game's 32-row signed edge arithmetic] Use a 16-bit height test; treating positive Y=232 as negative created phantom pixels at the top.
 - [local: this game's long preparation can cross a whole video frame] Sampling the pace timer after each object avoids missed wraps and busy-scene slowdown.
 

@@ -5,13 +5,15 @@
  "evidence": [
   {
    "game": "games/pac_mania.md",
-   "text": "scan --writers on the first recording missed a run-time graphic; the second writer (ghost score) showed only after six recordings.",
-   "shown_on": "simulator"
+   "text": "The first recording showed no writer in the graphics; a later one showed the score frame rewritten; a chase bot found the second one (ghost score) only after six recordings had passed. Treat 'static graphics' as provisional until every recording has passed.",
+   "quote": "a chase bot found the second one (ghost score) only after six recordings had passed. Treat \"static graphics\" as provisional until every recording has passed.",
+   "shown_on": "unknown"
   },
   {
    "game": "games/nemesis_the_warlock.md",
-   "text": "A quick 2000-frame run covered 34 graphics and was used only as a quick check.",
-   "shown_on": "simulator"
+   "text": "Quick runs: 2000 frames missed two rare cases that 20000 found (XOR effect under a figure, column-31 wrap): run 20000 before stage 3 when the verifier is fast.",
+   "quote": "Quick runs: 2000 frames missed two rare cases that 20000 found (XOR effect under a figure, column-31 wrap)",
+   "shown_on": "unknown"
   }
  ],
  "level": "observed",
@@ -24,6 +26,6 @@
   "frames",
   "static graphics"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

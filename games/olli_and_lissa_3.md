@@ -133,18 +133,18 @@ painted colours.
 - 2026-11-20: the figures stay in the bitmap under their sprites (as the first game): nothing of the game changes.
 
 ## Lessons
-- [local: this game's hooks] Building 4-bit patterns from the game's bytes at run time (two table lookups a byte)
+- [kb lesson.pattern-upload-cost: this game's hooks] Building 4-bit patterns from the game's bytes at run time (two table lookups a byte)
   cost 113 T a byte at 28 MHz: more than the displaced routine's time when the player's picture changes every pass.
   Made once and kept in spare pages, then OTIR: the hooks fit and the pace came out within 0.07%.
-- [local: this game's hooks] A list the game fills and then plays gives the display switch for nothing: stage at the
+- [kb lesson.staged-sprite-list-switch: this game's hooks] A list the game fills and then plays gives the display switch for nothing: stage at the
   add, switch on at the play, and a pass that adds nothing clears the sprites. No hook at room changes, no stale
   sprite to look for (the first game needed both).
 - [local: this game's verifier] A hook with no window of its own (the player's) makes single calls run long and the
   next windows short: a per-call limit fails though the game keeps time. The check is the recording's whole drift
   and the largest excursion beside it.
-- [local: this game's verifier] The first pace check counted a steady drift of 0.07% as "13 frames ahead": steady
+- [kb lesson.pace-averages-hide-scene-types: this game's verifier] The first pace check counted a steady drift of 0.07% as "13 frames ahead": steady
   drift and bursts are two numbers.
-- [local: this game's analysis] The game's own routines run on an empty and a full screen gave the layout (byte order
+- [kb lesson.exact-silhouette-from-plotter-run: this game's analysis] The game's own routines run on an empty and a full screen gave the layout (byte order
   in a row, the empty rows, the mask's corner) at the first try: the model matched at every shift.
 - [backlog C2 #15] The toolkit's recorder writes its automatic recordings in parts from reloaded states; for this
   game the replay loses sync at the first part's end, and the parts cannot be joined (each starts from another
@@ -157,7 +157,7 @@ painted colours.
   what the patterns hold; the tile cache) before the pace held.
 - hand-rolled: [local: private run folder] explore.py (the unbroken explorer), shots.py (what the Next shows, from
   the verifier's state), adds.py, cap.py, exp.py.
-- environment: [local: this machine] OverSpec's scripted keys reach it only while its window has the focus; with the
+- environment: [kb lesson.overspec-scripting: this machine] OverSpec's scripted keys reach it only while its window has the focus; with the
   owner's desktop in use neither the patch menu nor the game took a key (the first game's known-good patch the
   same), so play was shown from the verifier's state instead.
 - scratch: [local: private run folder] NOTES.md and tools/.

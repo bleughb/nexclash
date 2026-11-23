@@ -6,33 +6,39 @@
  "evidence": [
   {
    "game": "games/pac_mania.md",
-   "text": "Removing only the plotter's stores kept every register and all timing equal at each frame boundary, bar A and F inside the plot and blit loops that follow the bytes read.",
-   "shown_on": "simulator"
+   "text": "Removing only the store instructions made the patched run equal the original in every register at each frame boundary, bar A and F inside the plot and blit loops, which follow the bytes read.",
+   "quote": "Removing only the store instructions made the patched run equal the original in every register at each frame boundary",
+   "shown_on": "unknown"
   },
   {
    "game": "games/sabre_wulf.md",
-   "text": "Paint site LD (HL),D became CP (HL) not NOP: 7 T and one cell access; the NOP was 3 T a cell faster. Build stayed in lockstep for 600 rounds.",
-   "shown_on": "simulator"
+   "text": "Paint site LD (HL),D became CP (HL), not NOP: 7 T and one access of the cell (the NOP was 3 T a cell faster); a build with only the screen sites stays in lockstep with the plain build for 600 rounds.",
+   "quote": "Paint site LD (HL),D -> CP (HL), not NOP: 7 T and one access of the cell, as the write (the NOP was 3 T a cell faster).",
+   "shown_on": "unknown"
   },
   {
    "game": "games/pssst.md",
-   "text": "A routine whose store is a read instead of a write takes the same time to the T-state.",
-   "shown_on": "simulator"
+   "text": "A store read instead of written takes the same time to the T state: no pace cost.",
+   "quote": "store read instead of written takes the same time to the T state",
+   "shown_on": "unknown"
   },
   {
    "game": "games/spellbound_magic_knight.md",
-   "text": "Replacing a store with NOP keeps instruction counts and the lockstep; a watch at the site still checks the store's would-be effect.",
-   "shown_on": "simulator"
+   "text": "Replacing one store with NOP keeps instruction counts and the lockstep; a watch at the site still checks the store's would-be effect.",
+   "quote": "Replacing one store with NOP keeps instruction counts and the lockstep; a watch at the site still checks the store's would-be effect.",
+   "shown_on": "unknown"
   },
   {
    "game": "games/chuckie_egg.md",
-   "text": "Only screen pixel and attribute write instructions were removed; the plotters keep running so all game state stays the original's.",
+   "text": "Only screen pixel and attribute write instructions were removed (39697, 39827, 37646, 37653, 37707); the plotters keep running, so all game state stays the original's.",
+   "quote": "The plotters keep running, so all game state stays the original's.",
    "shown_on": "unknown"
   },
   {
    "game": "games/starquake.md",
-   "text": "NOPing the painter dropped a write the game reads: the paint ran past the attribute area into 0x5B00, read by collision.",
-   "shown_on": "analysis"
+   "text": "The paint ran past the attribute area into 0x5B00, read by collision; save and restore the attributes round the painter instead of removing its stores. A full-memory lockstep found it (b1 frame 5398).",
+   "quote": "The paint ran past the attribute area into 0x5B00, read by collision:",
+   "shown_on": "simulator"
   }
  ],
  "level": "demonstrated",
@@ -46,6 +52,7 @@
   "lockstep",
   "paint removal"
  ],
- "review": "extracted",
- "as_of": "0.1.7"
+ "review": "source-checked",
+ "as_of": "0.1.7",
+ "next_check": "A site check that the replacement bytes at a paint site have the length, T states and memory accesses of the original instruction."
 }

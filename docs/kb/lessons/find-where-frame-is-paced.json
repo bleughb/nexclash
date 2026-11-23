@@ -1,16 +1,18 @@
 {
  "id": "lesson.find-where-frame-is-paced",
  "kind": "method",
- "claim": "Before optimising hooks in a CPU-paced game, find where the frame is paced; a limiter at the pacing point plus 28 MHz for the work can make hook cost irrelevant.",
+ "claim": "Before optimising hooks in a CPU-paced game, find where the frame is paced; a limiter at that point plus 28 MHz for the work ran very smooth on hardware in one game.",
  "evidence": [
   {
    "game": "games/rainbow_z80n.md",
-   "text": "The game frame runs inside the IM2 handler with interrupts off, one per LIMIT = 3 interrupts.",
+   "text": "The game frame runs inside the IM2 handler with interrupts off, one per LIMIT = 3 interrupts (the original runs one frame per 3 interrupts, 4 when busy).",
+   "quote": "interrupts off, at 28 MHz, one per LIMIT = 3 interrupts (rainbow_islands.md \"Pacing\").",
    "shown_on": "unknown"
   },
   {
    "game": "games/rainbow_islands.md",
-   "text": "Frame limiter plus turbo build was very smooth on hardware; a speed build without a limiter is listed separately.",
+   "text": "Frame limiter plus turbo build was very smooth on hardware (minor tearing noted).",
+   "quote": "FRAME LIMITER + TURBO cbb5a1d4 (hardware: very smooth; minor tearing /",
    "shown_on": "hardware"
   }
  ],
@@ -26,6 +28,6 @@
   "turbo",
   "pace"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

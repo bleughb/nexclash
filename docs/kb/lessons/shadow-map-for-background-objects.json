@@ -5,8 +5,9 @@
  "evidence": [
   {
    "game": "games/rainbow_islands.md",
-   "text": "The prototype's 58 mismatches included 16 stale records from a full-tile drawer (60839) it did not track; hooks at the three cell drawers feed a shadow map built at render start.",
-   "shown_on": "simulator"
+   "text": "The prototype's 58 mismatches (rainbow.rzx 2500 frames) included 16 stale records from a full-tile drawer (60839) it did not track; with it tracked 446 ok / 36 figure / 0 other; hooks at the three cell drawers feed a shadow map built at render start.",
+   "shown_on": "simulator",
+   "quote": "item had been overwritten by the full-tile drawer 60839, which the prototype did not track;"
   }
  ],
  "level": "demonstrated",
@@ -19,6 +20,6 @@
   "hooks",
   "scroll"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

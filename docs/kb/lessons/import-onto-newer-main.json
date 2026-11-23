@@ -42,5 +42,6 @@
   "stub"
  ],
  "review": "source-checked",
- "as_of": "0.1.7"
+ "as_of": "0.1.7",
+ "next_check": "After an import, compare the rebuild byte for byte with the MD5 recorded before it and name each shared file that differs."
 }

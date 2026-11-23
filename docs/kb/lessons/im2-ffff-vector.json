@@ -16,6 +16,9 @@
  ],
  "level": "observed",
  "area": "platform",
+ "facts": {
+  "interrupts": "on"
+ },
  "when": [
   "exec.isr_calls_routine"
  ],

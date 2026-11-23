@@ -5,8 +5,9 @@
  "evidence": [
   {
    "game": "games/rainbow_z80n.md",
-   "text": "Game shifts frame k in place (shift 0/2/4/6); resolved nibbles use each key bit's role in the unshifted picture; painted pieces use sprite palette offset 15.",
-   "shown_on": "analysis"
+   "text": "The game shifts frame k in place (shift 0/2/4/6); resolved nibbles use each key bit's role in the unshifted picture; painted pieces use sprite palette offset 15.",
+   "shown_on": "analysis",
+   "quote": "Resolved nibbles (build time, Python): per key bit its role in the unshifted picture is fixed"
   }
  ],
  "level": "observed",
@@ -20,6 +21,6 @@
   "sprite palette",
   "per-pixel colour"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

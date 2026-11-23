@@ -41,16 +41,16 @@ Nothing has run on a Next. To check: title and tune, keyboard and Kempston (the 
 - verify.update-locked-pace: used: state in lockstep at every update, input applied before the render.
 
 ## Lessons
-- [local: input in a game with many key reads] This game reads the keys at a dozen places through each update, not one. Input applied just after one read still raced the frame boundary in the next read; applying it just before the render gives every arm over a frame before the next read, and lockstep held for 800 updates.
-- [local: the tail's memory] An untouched span in a 2,500-frame scan is not free memory: game data at 5B10 is first read later. Write-first variables, confirmed over longer recordings, are the place. The sign was a lockstep difference in a build that passed every hook comparison.
-- [local: reads the first pass did not see] The first LD A,R list came from code that ran; a scan of the whole snapshot found a third read. A pace fixture has to cover all of them.
-- [local: flicker] Writing clean attributes after the game's copy looked safe with the beam wait, but memory at a frame boundary and the unsynchronised wipe copies showed painted cells. Never putting them on the screen is simpler than timing round them.
-- [local: hook temporaries] `hlib_debt_open` loses HL: a hook that needs the game's HL takes it from its saved copy.
-- [local: upstream naming] The default is a hook build, so auto names it NAME_sprites.nex and the loading variant NAME_sprites_loading.nex, which nxcout packages as the default.
+- [kb lesson.pace-input-timing: input in a game with many key reads] This game reads the keys at a dozen places through each update, not one. Input applied just after one read still raced the frame boundary in the next read; applying it just before the render gives every arm over a frame before the next read, and lockstep held for 800 updates.
+- [kb lesson.prove-free-memory-by-access-scan: the tail's memory] An untouched span in a 2,500-frame scan is not free memory: game data at 5B10 is first read later. Write-first variables, confirmed over longer recordings, are the place. The sign was a lockstep difference in a build that passed every hook comparison.
+- [kb lesson.pace-lockstep-fixture: reads the first pass did not see] The first LD A,R list came from code that ran; a scan of the whole snapshot found a third read. A pace fixture has to cover all of them.
+- [kb lesson.flicker-no-clean-attributes-on-screen: flicker] Writing clean attributes after the game's copy looked safe with the beam wait, but memory at a frame boundary and the unsynchronised wipe copies showed painted cells. Never putting them on the screen is simpler than timing round them.
+- [kb lesson.hlib-pace-library-changes: hook temporaries] `hlib_debt_open` loses HL: a hook that needs the game's HL takes it from its saved copy.
+- [kb lesson.auto-naming-hook-build: upstream naming] The default is a hook build, so auto names it NAME_sprites.nex and the loading variant NAME_sprites_loading.nex, which nxcout packages as the default.
 
 ## Friction
 - reuse: [none: Game Over's hook structure and the shared libraries were enough]
-- retries: [local: start keys] The title takes its key only once its tune has started: a key too early never reaches the menu. Look at the screen first.
+- retries: [kb lesson.title-key-sequences: start keys] The title takes its key only once its tune has started: a key too early never reaches the menu. Look at the screen first.
 - environment: [none: the pilot venv and references were enough]
 - hand-rolled: [local: review scripts] Fixture, cheats and package scripts stay in the review run.
 - scratch: [local: review run] Its work folder stays in private evidence.

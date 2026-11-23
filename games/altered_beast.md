@@ -85,10 +85,10 @@ attract mode (hi-scores, credits, menu) and the smoke pass (dirty start, intro, 
 - [doc BRIEFING A1] A handler that enables interrupts within ~40 T of the acknowledge runs twice per
   frame on the Next core; a 128K's 36 T /INT hides it, and emulators that take one interrupt per frame never show it.
 - [local: coloursheet.choose picks figures by key, so pixels under a second part are on no painting sheet] The painting sheet left pixels of bodies under their head parts unpainted: JNext showed a half-painted standing pose. Painting the whole-figure sheet with `recolour --layout` covers them.
-- [local: the blit-from-clean-copy needs a clean copy that exists in memory at blit time and a game that reads neither buffer nor screen] Keeping the back buffer intact and redirecting only the blit's source gave identical game memory with one small hook; check for a clean copy first in any composer.
-- [local: 128K recording stays outside the toolkit in this pilot; BRIEFING C2 #15 already lists analyse / recorder as 48K-only] work/m128.py is 90 lines: Machine with 7FFD paging, banks in save / load. Replays cleanly through rzxplay.
-- [local: a snapshot's empty banks show the limit of the game before any design] Check which banks are zero at intake: a multiload game on a snapshot is one level.
-- [local: a verifier's model against the real buffer finds what the eye misses] The plot model is compared with the game's own buffer every game frame: it found the level-end curtain, an effect that writes attributes outside the plotters, and the 8-bit attribute address glitch.
+- [kb lesson.clean-buffer-composers: the blit-from-clean-copy needs a clean copy that exists in memory at blit time and a game that reads neither buffer nor screen] Keeping the back buffer intact and redirecting only the blit's source gave identical game memory with one small hook; check for a clean copy first in any composer.
+- [kb lesson.recorder-128k-not-in-toolkit: 128K recording stays outside the toolkit in this pilot; BRIEFING C2 #15 already lists analyse / recorder as 48K-only] work/m128.py is 90 lines: Machine with 7FFD paging, banks in save / load. Replays cleanly through rzxplay.
+- [kb lesson.snapshot-intake-state: a snapshot's empty banks show the limit of the game before any design] Check which banks are zero at intake: a multiload game on a snapshot is one level.
+- [kb lesson.compare-final-frame-with-original: a verifier's model against the real buffer finds what the eye misses] The plot model is compared with the game's own buffer every game frame: it found the level-end curtain, an effect that writes attributes outside the plotters, and the 8-bit attribute address glitch.
 - [local: JNext boot-state tests from a mid-game snapshot] A cheat-run state saved as .z80 and built as a test .nex put the boss on screen in JNext in seconds, which key presses alone would not reach.
 
 ## Friction

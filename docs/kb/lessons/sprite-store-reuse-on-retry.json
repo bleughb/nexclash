@@ -5,7 +5,8 @@
  "evidence": [
   {
    "game": "games/inferno.md",
-   "text": "Stage-2 driver installed with loading bars; sprite build skipped on a same-level restart.",
+   "text": "The stage-2 driver that builds the store is installed with loading bars and skipped on a same-level restart.",
+   "quote": "Installed, with loading bars; skipped on a same-level restart.",
    "shown_on": "unknown"
   }
  ],
@@ -19,6 +20,6 @@
   "level restart",
   "cache"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

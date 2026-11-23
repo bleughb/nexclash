@@ -6,26 +6,31 @@
   {
    "game": "games/r_type.md",
    "text": "Return (8F4E) maps the hook page back because a 7FFD write maps ROM over slot 1.",
+   "quote": "return (8F4E) maps the hook page back (7FFD maps ROM over slot 1)",
    "shown_on": "unknown"
   },
   {
    "game": "games/lode_runner.md",
-   "text": "An IM 2 handler that writes 7FFD resets MMU 0, 1, 6 and 7; a hook window into another bank must use another slot (slot 2 used).",
+   "text": "A hook window into another bank uses MMU slot 2, because the music handler's 7FFD write resets MMU 0, 1, 6 and 7.",
+   "quote": "Window: MMU slot 2, because the music handler's 7FFD write resets",
    "shown_on": "unknown"
   },
   {
    "game": "games/head_over_heels.md",
-   "text": "7FFD writes replace MMU1 so a private stack there is lost; a stack in a spare page in MMU2 survived.",
+   "text": "The original's paging writes replace MMU1, so a forwarded music ISR cannot retain a private stack in MMU1; a separate stack in spare page 25 / MMU2 survives those writes.",
+   "quote": "cannot retain a private stack at3Exx. A separate stack in spare page25/MMU2 survives those writes;",
    "shown_on": "unknown"
   },
   {
    "game": "games/into_the_eagles_nest.md",
    "text": "A wrapper mapping slot 1 to ROM crashed when the hook stack was in slot 1; restore what was found.",
+   "quote": "A wrapper that mapped slot 1 to ROM during the interrupt crashed when a hook's stack was in slot 1. It now restores what it found.",
    "shown_on": "unknown"
   },
   {
    "game": "games/cisco_heat.md",
-   "text": "A 7FFD write inside w_go put ROM back into MMU slot 0: 51 characters printed for 18 and updates ran 3 frames long; the verifier now models the reset.",
+   "text": "A 7FFD write inside w_go (paging bank 1 for a W range) put ROM back into MMU slot 0: 51 characters printed for 18 and each update ran 3 frames long; the verifier's NextMem models the reset now.",
+   "quote": "A 7FFD write inside w_go (paging bank 1 for a W range) put ROM back into MMU slot 0, so the save went to ROM and the restore read ROM",
    "shown_on": "simulator"
   }
  ],
@@ -43,6 +48,7 @@
   "paging",
   "reset"
  ],
- "review": "extracted",
- "as_of": "0.1.7"
+ "review": "source-checked",
+ "as_of": "0.1.7",
+ "next_check": "A hook-boundary check in the verifier model: MMU slots, 7FFD and the ROM select are equal at the entry and exit of every hook."
 }

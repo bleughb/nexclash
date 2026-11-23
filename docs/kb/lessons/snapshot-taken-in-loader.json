@@ -6,21 +6,25 @@
   {
    "game": "games/into_the_eagles_nest.md",
    "text": "The (128K) dump is a BASIC loader that would page ROM 0; its [a][a] twin is the same game already running.",
+   "quote": "The (128K) dump is a BASIC loader that would page ROM 0; its [a][a] twin is the same game already running.",
    "shown_on": "unknown"
   },
   {
    "game": "games/head_over_heels.md",
    "text": "PC 0x0051 with SP FFDA is a captured ROM interrupt, not a BASIC loader.",
+   "quote": "PC0051/SPFFDA is a captured ROM interrupt, not a BASIC loader",
    "shown_on": "unknown"
   },
   {
    "game": "games/heartland.md",
-   "text": "The snapshot holds the code 0x6AC higher; the game moves itself down at 0xE436, so sites are addressed in play.",
+   "text": "The snapshot is the tape's BASIC start; it holds the code 0x6AC higher and the game moves itself down at 0xE436, so sites are addressed in play.",
+   "quote": "the snapshot holds them 0x6AC higher, the game moves itself down at 0xE436",
    "shown_on": "unknown"
   },
   {
    "game": "games/martianoids.md",
-   "text": "The supported snapshot resumes BASIC before USR; test the actual archive startup, not only in-game fixtures.",
+   "text": "The generic ROM-path check rejected a full code overlay that collided with the calculator; test the actual archive startup, not only in-game fixtures.",
+   "quote": "Keep the original ROM and tiny audited map-to-RAM veneers; test the actual archive startup, not only in-game fixtures.",
    "shown_on": "unknown"
   }
  ],
@@ -35,6 +39,6 @@
   "inspect",
   "128K"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

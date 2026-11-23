@@ -6,12 +6,14 @@
   {
    "game": "games/inferno.md",
    "text": "Apply eight-bit x wrap before clipping (255+1=0).",
-   "shown_on": "unknown"
+   "shown_on": "unknown",
+   "quote": "Apply eight-bit x wrap before clipping (255+1=0);"
   },
   {
    "game": "games/martianoids.md",
-   "text": "Renderer allows linear right-edge spill: clip against the 192-pixel original buffer before translating to the 256-pixel display; reject x beyond the viewport before an 8-bit x+width test can wrap.",
-   "shown_on": "unknown"
+   "text": "The original renderer allows linear right-edge spill: clip against the 192-pixel original buffer before translating to the 256-pixel display; reject x beyond the viewport before an 8-bit x+width test can wrap.",
+   "shown_on": "unknown",
+   "quote": "Clip against the 192-pixel original buffer before translating to the 256-pixel display. Reject x beyond the viewport before an 8-bit x+width test can wrap."
   }
  ],
  "level": "observed",
@@ -25,6 +27,6 @@
   "viewport",
   "width"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

@@ -224,14 +224,14 @@ card_test10.img): default, Enhanced, Enhanced + Infinite Lives MD5 exact with ap
   from the tape beside the snapshot, a model run of the stub.
 - [local: Nightshade's verifiers ran from work/ scripts] The clone had no `auto` / `unit_tests`; the negatives were
   replays of broken builds, so `unit_tests` here runs them (1500 frames each, the margin one the whole recording).
-- [deferred Open: reconsider when the end-to-end run reaches the ROM path stage] The ROM path check reports 192-231 ROM
+- [deferred Open: reconsider when the end-to-end run reaches the ROM path stage] [kb lesson.alt-rom-patch-location] The ROM path check reports 192-231 ROM
   bytes per recording that differ on NextZXOS's ROM3 (0x0550-0x06A7) in a build with no alt ROM image.
 
 - [none: rounds 7-11 (games/nightshade_rounds7-11.md) were ported onto main unchanged; their findings are in that file]
 
-- [deferred Open: reconsider when card patch.pace-limiter has room under its 600-word budget] (2026-11-08) A limiter that only waits cannot repay a debt larger than its window. Check its capacity against the worst update: here 240 lines a blit against 560 of hooks.
-- [deferred Open: reconsider when card patch.pace-limiter has room under its 600-word budget] A catch-up gap must be measurable: credit by line count only over gaps under a frame, and end it before any longer stretch.
-- [local: Nightshade's blit hook] A clock read once a frame or less often loses frames silently: count the worst case of every long hook. Enhanced's figures took 582 lines before the first tick.
+- [deferred Open: reconsider when card patch.pace-limiter has room under its 600-word budget] [kb lesson.pace-debt-capacity] (2026-11-08) A limiter that only waits cannot repay a debt larger than its window. Check its capacity against the worst update: here 240 lines a blit against 560 of hooks.
+- [deferred Open: reconsider when card patch.pace-limiter has room under its 600-word budget] [kb lesson.pace-catch-up-credit] A catch-up gap must be measurable: credit by line count only over gaps under a frame, and end it before any longer stretch.
+- [kb lesson.pace-clock-worst-case-hooks: Nightshade's blit hook] A clock read once a frame or less often loses frames silently: count the worst case of every long hook. Enhanced's figures took 582 lines before the first tick.
 
 ## Technique use
 - patch.display-atomic-switch: used: the blit hook runs the game's blits and switches the sprites with them (round 3)

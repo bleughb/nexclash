@@ -6,17 +6,20 @@
  "evidence": [
   {
    "game": "games/quazatron.md",
-   "text": "JNext 28 MHz ran routines only 5 to 6.5 times as fast; BE38 5.0 to 6.0 by strip, E656 about 6.2, C05A about 6.6.",
+   "text": "JNext 28 MHz ran routines only 5 to 6.5 times as fast as 3.5 MHz; BE38 5.0 to 6.0 by strip, E656 about 6.2, C05A about 6.6.",
+   "quote": "JNext's 28 MHz runs this game's routines only 5 to 6.5 times as fast as 3.5 MHz (wait states at 28 MHz; contention at 3.5 MHz)",
    "shown_on": "jnext"
   },
   {
    "game": "games/castle_master.md",
-   "text": "K 6.75 was calibrated on JNext only; the hardware value is still open.",
+   "text": "K 6.75 is the JNext value; K on hardware is open.",
+   "quote": "K on hardware (6.75 = JNext)",
    "shown_on": "jnext"
   },
   {
    "game": "games/rainbow_z80n.md",
-   "text": "Simulated 28 MHz T times 8/6.5 turned 13 simulated overruns into 128 hardware ones in 1,043 frames (inferred from board figures, not measured on this game).",
+   "text": "Simulated 28 MHz T x 8/6.5 (wait states) turned 13 simulated overruns into 128 hardware ones in 1,043 frames (inferred from board figures, not measured on this game).",
+   "quote": "Simulated 28 MHz T x 8/6.5 (wait states) turned 13 simulated overruns into",
    "shown_on": "analysis"
   }
  ],
@@ -31,6 +34,6 @@
   "contention",
   "pace window"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

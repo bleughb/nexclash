@@ -1,17 +1,13 @@
 {
  "id": "lesson.test-hygiene-compare-runs",
  "kind": "pitfall",
- "claim": "Do not edit the tree while a selftest or compare runs: the stamp hashes the tree at start, and a half-edited layout gave a false slowdown.",
+ "claim": "Do not edit the tree while a compare runs: it rebuilds each level from the current files, and a half-edited layout gave a false slowdown.",
  "evidence": [
   {
-   "game": "games/three_weeks.md",
-   "text": "A selftest's stamp hashes the tree at its start, so no edits while it runs (full verify about 45 min detached).",
-   "shown_on": "simulator"
-  },
-  {
    "game": "games/r_type.md",
-   "text": "A half-edited layout gave a false slowdown on levels 2-8, cleared by a worktree bisect.",
-   "shown_on": "simulator"
+   "text": "Compare rebuilds each level from the current files; a half-edited layout gave a false slowdown on levels 2-8, cleared by a worktree bisect.",
+   "quote": "half-edited layout gave a false slowdown on levels 2-8, cleared by a worktree bisect.",
+   "shown_on": "unknown"
   }
  ],
  "level": "observed",
@@ -24,6 +20,6 @@
   "edits",
   "bisect"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

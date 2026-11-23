@@ -1,11 +1,12 @@
 {
  "id": "lesson.cheaper-beats-repaid",
  "kind": "method",
- "claim": "When the loop budget is the problem, make the loop cheaper (for example by compiling known sprites to code) before tuning how the overage is repaid.",
+ "claim": "In a game with no frame wait, make the loop cheaper (for example by compiling known sprites to Z80 code); time saved in the game's own logic pays for Layer 2 work.",
  "evidence": [
   {
    "game": "games/jillys_farm.md",
-   "text": "The game has no frame wait, so its time is its pace; every known sprite is compiled to Z80 code, with two K windows at 28 MHz.",
+   "text": "The game has no frame wait, so its time is its pace; every known sprite is compiled to Z80 code, with a table walk for any other source; two K windows run at 28 MHz (8692-8374, the draw from A2C3 to A605).",
+   "quote": "Every known sprite is compiled to Z80 code (`compiled()`), with a table walk for any other source.",
    "shown_on": "unknown"
   }
  ],
@@ -19,6 +20,6 @@
   "compile sprites",
   "cost"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

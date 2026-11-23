@@ -11,6 +11,9 @@
  ],
  "level": "observed",
  "area": "design",
+ "facts": {
+  "draw": "back-buffer"
+ },
  "words": [
   "grid",
   "blocks",

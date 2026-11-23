@@ -5,19 +5,21 @@
  "evidence": [
   {
    "game": "games/silkworm.md",
-   "text": "A stack wipe under DI lost 6% of the interrupts; interrupts on between rows fixed it.",
-   "shown_on": "unknown"
+   "text": "A stack wipe under DI lost 6% of the interrupts, so the game's clock and music would have run slow with the update pace in range; interrupts on between the wipe's rows, and shorter plots, brought them back.",
+   "shown_on": "unknown",
+   "quote": "The stack wipe under DI lost 6% of the interrupts, so the game's clock and music would have run slow with the update pace in range."
   },
   {
    "game": "games/rainbow_z80n.md",
-   "text": "A turbo limiter running the game frame with interrupts off loses the interrupt a long frame spans; recovered from raster wraps and credited to the limiter (verify, 9 unit cases, control; not on hardware).",
-   "shown_on": "simulator"
+   "text": "A turbo limiter running the game frame with interrupts off loses the interrupts a long frame spans; recovered from raster wraps sampled by the hooks and credited to the limiter (verify + 9 unit cases + control; hardware not yet).",
+   "shown_on": "simulator",
+   "quote": "A turbo limiter running the game frame with interrupts off loses the"
   }
  ],
  "level": "demonstrated",
  "area": "method",
  "facts": {
-  "interrupts": "off"
+  "interrupts": "on"
  },
  "when": [
   "exec.isr_must_run_on_time"
@@ -31,6 +33,6 @@
   "music",
   "limiter"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

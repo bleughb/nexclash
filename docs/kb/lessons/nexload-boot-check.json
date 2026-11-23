@@ -16,6 +16,9 @@
  ],
  "level": "observed",
  "area": "method",
+ "enforced_by": [
+  "nexclash.nextboot.nexload_check"
+ ],
  "words": [
   "NEXLOAD",
   "boot check",

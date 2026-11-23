@@ -5,8 +5,9 @@
  "evidence": [
   {
    "game": "games/castle_master.md",
-   "text": "div32 and proj1 by 8-bit steps with the divisor negated: 1,967 to 970 T; PUSH run starts from an end of either parity.",
-   "shown_on": "simulator"
+   "text": "div32 and proj1 by 8-bit steps with the divisor negated: 1,967 to 970 T; the PUSH run starts from an end of either parity.",
+   "quote": "div32 and proj1 by 8-bit steps with the divisor negated (1,967 -> 970 T)",
+   "shown_on": "unknown"
   }
  ],
  "level": "observed",
@@ -19,6 +20,6 @@
   "PUSH fill",
   "Z80"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

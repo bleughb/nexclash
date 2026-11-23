@@ -5,7 +5,8 @@
  "evidence": [
   {
    "game": "games/rainbow_islands.md",
-   "text": "Hardware showed tearing and ghosting; fixed by a render-end commit (pattern by OUTI, then attributes), sprites hidden on non-play screens.",
+   "text": "Tearing and ghosting: sprites were changed piece by piece during the render while the beam was drawing them; fixed by a render-end commit (pieces staged, then pattern OTIR and attributes in one burst), sprites hidden on non-play screens (hardware: smooth, runs).",
+   "quote": "Tearing/ghosting cause: sprites were changed piece by piece during the render while the beam",
    "shown_on": "hardware"
   }
  ],
@@ -22,6 +23,6 @@
   "render end",
   "flicker"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

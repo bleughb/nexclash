@@ -1,0 +1,27 @@
+{
+ "id": "lesson.int-pulse-length-unsettled",
+ "kind": "open",
+ "claim": "The /INT pulse length is not settled: the book gives 32 T (48K, +3 timing) and 36 T (128K, Pentagon) in CPU clocks at every speed; a board test here saw re-entry 38 T after the acknowledge. Keep handlers longer than 42 T before EI.",
+ "limit": "The 38 T may be the 36 T pulse plus the acknowledge offset rather than a longer pulse; not separated by a test. docs/TECHNIQUES.md also says about 30 T.",
+ "evidence": [
+  {
+   "game": "reference",
+   "source": "I. Novak, Unraveling the ZX Spectrum Next, Vol 1 (2026; core 3.03.03), chapter 4",
+   "text": "/INT in pulse mode goes low for a fixed count of CPU clocks, so at 28 MHz the pulse is eight times shorter in real time than at 3.5 MHz; one pulse serves every enabled source.",
+   "shown_on": "documentation"
+  }
+ ],
+ "level": "inferred",
+ "area": "platform",
+ "words": [
+  "interrupt",
+  "pulse",
+  "INT",
+  "re-entry",
+  "EI",
+  "handler",
+  "28MHz"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

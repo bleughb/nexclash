@@ -6,7 +6,8 @@
  "evidence": [
   {
    "game": "games/castle_master.md",
-   "text": "Views shown by the dissolve (drawbridge) stayed in the original look because the dissolve 0xB66E turned Layer 2 and sprites off; now drawn hidden, the passes repeated on Layer 2 (h_dpass), then flipped; 18 of 18 such views checked in m3_sim.",
+   "text": "Views shown by the dissolve (the drawbridge) stayed in the original look because the dissolve 0xB66E turns Layer 2 and sprites off; now drawn hidden, 0xB66E's passes repeated on Layer 2 (h_dpass), then flipped; m3_sim 18 / 18 such views.",
+   "quote": "passes repeated on Layer 2 (site 0xB6E4 h_dpass), then flipped: +3 frames. m3_sim: 18 / 18 such views.",
    "shown_on": "simulator"
   }
  ],
@@ -22,6 +23,6 @@
   "non-view screen",
   "passes"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

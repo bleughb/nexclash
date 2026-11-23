@@ -11,6 +11,9 @@
  ],
  "level": "inferred",
  "area": "platform",
+ "facts": {
+  "interrupts": "on"
+ },
  "words": [
   "slot 0",
   "interrupts",

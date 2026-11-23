@@ -6,6 +6,7 @@
   {
    "game": "games/inferno.md",
    "text": "Hooks shift the game, so a wall-time IRQ meets other instructions; compare against the original IRQ at the same game instruction (RZX semantics) where code reads R.",
+   "quote": "Hooks shift the game, so a wall-time IRQ meets other instructions;",
    "shown_on": "simulator"
   }
  ],
@@ -23,6 +24,6 @@
   "model",
   "wall time"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

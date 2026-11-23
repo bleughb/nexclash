@@ -42,5 +42,6 @@
   "READY"
  ],
  "review": "source-checked",
- "as_of": "0.1.7"
+ "as_of": "0.1.7",
+ "next_check": "After the start sequence require the probe count to rise and a game-state byte to change within N frames (as scripted-keys-must-reach-game)."
 }

@@ -82,11 +82,11 @@ and off); a new life redraws the backdrop; title music and sound unchanged.
 - Reference files: the start state and both tape sets go in specnext/reference/new_zealand_story/ (record paths).
 
 ## Lessons
-- [local: this game's windows] Fit the original's update against the drawing routines' own time before writing a limiter: residual 0.4 ms of 70 here, so a simple
+- [kb lesson.original-time-by-running-it: this game's windows] Fit the original's update against the drawing routines' own time before writing a limiter: residual 0.4 ms of 70 here, so a simple
   K + constant follows the game; a fixed cap can only be right on average.
-- [local: this game's speed reads] An interrupt handler that selects NextREGs breaks any main-line OUT 0x243B / IN 0x253B: it latched NR 0x53's page as the speed, and the
+- [kb lesson.nextreg-select-shared-state: this game's speed reads] An interrupt handler that selects NextREGs breaks any main-line OUT 0x243B / IN 0x253B: it latched NR 0x53's page as the speed, and the
   game ran at 28 MHz until reset. Look for it when logic time drops mid-run: split an update's time into windows, wait and the rest.
-- [local: this game's probe] The probe at 0xA385 has interrupts on: an execute rule fires twice when an interrupt lands on it, a false update parts lockstep. Guarded in the pace profile.
+- [kb lesson.jnext-execute-probe-fires-twice: this game's probe] The probe at 0xA385 has interrupts on: an execute rule fires twice when an interrupt lands on it, a false update parts lockstep. Guarded in the pace profile.
 - [doc docs/ENGINE_CONTRACT.md §Module names] A game whose build reads its tapes: snapshot = the emulator start
   state, tapes = inputs.tapes alternative sets in order; `auto --tape`; every set must rebuild the same outputs.
 - [tool nexclash.tapeset] Tape reading (.tap / .tzx data blocks as the .nxc format counts them) and set matching are

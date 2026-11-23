@@ -1,11 +1,18 @@
 {
  "id": "lesson.nested-hook-sites-and-rom-hooks",
  "kind": "pitfall",
- "claim": "A hook that runs a routine to the caller's return nests the sites inside it, so replays skip them until the span ends; scan the ROM for jumps into the replaced bytes before hooking ROM routines.",
+ "claim": "Before hooking ROM routines, scan the ROM for jumps into the replaced bytes; an entry hook can CALL the routine's body when no exit JP fits.",
  "evidence": [
   {
    "game": "games/cauldron.md",
-   "text": "ROM routines CL-LINE 0x0E44 and CL-SCROLL 0x0E00 are hooked by JPs in the build's own alt ROM image; PO-ATTR 0x0BE4 is a ROM routine used by the plot.",
+   "text": "ROM routines (CL-LINE, CL-SCROLL, PO-ATTR) hooked by JPs in the build's own image; scan the ROM for jumps into the replaced bytes first (PO-SCR CALLs 0x0E00 inside CL-SCROLL).",
+   "quote": "CL-SCROLL, PO-ATTR) hooked by JPs in the build's own image; scan the ROM for jumps into the",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/cauldron.md",
+   "text": "An entry hook can CALL the routine's body when no exit JP fits (0x63DB starts right after the RET): show at entry, hide after the body.",
+   "quote": "exit JP fits (0x63DB starts right after the RET): show at entry, hide after the body.",
    "shown_on": "unknown"
   }
  ],
@@ -19,6 +26,6 @@
   "alt ROM",
   "JP hook"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

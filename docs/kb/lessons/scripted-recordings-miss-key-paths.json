@@ -5,8 +5,9 @@
  "evidence": [
   {
    "game": "games/arc_of_yesod.md",
-   "text": "Ten scripted recordings missed a second colour path beside the paint that a human recording released within minutes.",
-   "shown_on": "simulator"
+   "text": "A second colour path beside the paint: a human recording released the sphere within three minutes and showed a figure in the wrong colour; ten scripted recordings never did.",
+   "quote": "three minutes and showed a figure in the wrong colour; ten scripted recordings never did.",
+   "shown_on": "unknown"
   }
  ],
  "level": "observed",
@@ -18,6 +19,6 @@
   "key input",
   "colour path"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

@@ -5,7 +5,8 @@
  "evidence": [
   {
    "game": "games/phantis.md",
-   "text": "A graphic search over the whole snapshot finds 1,028 matches; only those the code points at, or that a replay plots, are graphics: 166.",
+   "text": "A graphic search over the whole snapshot finds 1,028 matches; only those the code points at, or that a replay really plots, are graphics: 166.",
+   "quote": "A graphic search over the whole snapshot finds 1,028 matches; only those the code points at, or that a replay really plots, are graphics: 166.",
    "shown_on": "unknown"
   }
  ],
@@ -19,6 +20,6 @@
   "replay",
   "census"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

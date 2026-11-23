@@ -11,6 +11,9 @@
  ],
  "level": "observed",
  "area": "emulator",
+ "facts": {
+  "interrupts": "on"
+ },
  "words": [
   "C simulator",
   "interrupts",

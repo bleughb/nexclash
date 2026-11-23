@@ -5,8 +5,9 @@
  "evidence": [
   {
    "game": "games/cauldron.md",
-   "text": "Other writers on figure bits: ROM PO-CHAR 15,777, tile writer 0xB378, CLS and clears 0xB2A6, bottom-third scroll 0xDED2/0xDEEA; XOR overlay with figures in front chosen.",
-   "shown_on": "analysis"
+   "text": "Other writers on figure bits: ROM PO-CHAR 0x0BBC 15,777; tile writer 0xB378 1,204; ROM CLS 0x0E59 6; clear 0xB2A6 1; bottom-third scroll 0xDED2/0xDEEA. XOR overlay with figures in front chosen.",
+   "quote": "other writers on figure bits | ROM PO-CHAR 0x0BBC 15,777; tile writer 0xB378 1,204; ROM CLS 0x0E59 6; clear 0xB2A6 1.",
+   "shown_on": "unknown"
   }
  ],
  "level": "observed",
@@ -19,6 +20,6 @@
   "scroll",
   "overlay"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

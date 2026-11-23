@@ -6,7 +6,8 @@
  "evidence": [
   {
    "game": "games/r_type.md",
-   "text": "Build uses whole-figure sprites that glide; the recording averages 4.35 frames per update (28% 3, 34% 4, 22% 5).",
+   "text": "Build uses filled whole-figure sprites that glide; the recording averages 4.35 frames per update (28% 3, 34% 4, 22% 5).",
+   "quote": "The recording averages 4.35 frames per update (28% 3, 34% 4, 22% 5);",
    "shown_on": "unknown"
   }
  ],
@@ -21,6 +22,6 @@
   "update rhythm",
   "sprites"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }
