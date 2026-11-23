@@ -55,6 +55,7 @@ PRG_GROUP   equ 17
 PRG_FLAGS   equ 18
 PRG_MODE    equ 19              ; 0 RUN ALL, 1 + group = one group
 PRG_HUNG    equ 20              ; 6 words, $FFFF = free
+PRG_FLEN    equ 48              ; word: NXSUITE.TXT's length at its last good write (read back exactly that)
 PRG_GST     equ 32              ; 16 bytes: per group 0 not run, 1 done, 2 done with a FAIL, 3 operator
                                 ; questions pending, 4 hung, 5 running
 GS_NOTRUN   equ 0

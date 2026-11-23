@@ -329,7 +329,10 @@ txt_flush:
         ex de,hl : or a : sbc hl,bc : ex de,hl     ; written = asked?
         jr nz,.errs
         add hl,bc : jr .p
-.cl:    ld a,(.h) : call f_close
+.cl:    ld hl,(txtlen) : ld (PRGB+PRG_FLEN),hl      ; the file's length (END included), for txt_load
+        ld a,(.h) : call f_close
+        call prg_write
+        or a
         jr .out
 .errs:  scf
 .err:   push af : ld a,(.h) : call f_close : pop af : scf
@@ -371,16 +374,29 @@ txt_load:
         ld hl,txtname : ld b,$01 : call f_open
         ld a,0 : ret c
         ld (.h),a
+        ; read exactly the length the progress record holds, 256 bytes at a time into WORK (bank 5) and
+        ; copied to the text page: JNext's esxDOS refused (error 5, nothing read) a read past the end of
+        ; the file and also an 8K read into slot 6, so the suite asks only for what is there, in small reads
         ld hl,0
-.p:     push hl
-        call txt_map : push hl : pop ix
-        ld bc,$2000 : ld a,(.h) : call f_read
-        nextreg $56,HOMEP6
-        pop hl
+.p:     ld de,(PRGB+PRG_FLEN) : ex de,hl : or a : sbc hl,de : ex de,hl : jr z,.cl   ; DE = remaining
         jr c,.cl
-        add hl,bc : ld (txtlen),hl
-        ld a,b : cp $20 : jr nz,.cl                  ; a short read: end of file
-        ld a,h : cp $E0 : jr c,.p                    ; at most 7 pages read back
+        ld a,h : cp $E0 : jr nc,.cl                  ; at most 7 pages read back
+        ld a,d : or a : jr z,.lt
+        ld de,256
+.lt:    push hl : push de
+        ld ix,WORK : ld b,d : ld c,e : ld a,(.h) : call f_read
+        pop de : pop hl
+        jr c,.cl
+        ld a,b : cp d : jr nz,.cl                    ; fewer bytes than asked: stop
+        ld a,c : cp e : jr nz,.cl
+        push de : push hl
+        ld b,e : ld de,WORK                          ; B = count (256 = 0)
+.cp:    push hl : call txt_map : ld a,(de) : ld (hl),a : pop hl
+        inc hl : inc de : djnz .cp
+        nextreg $56,HOMEP6
+        pop hl : pop de
+        add hl,de : ld (txtlen),hl
+        jr .p
 .cl:    ld a,(.h) : call f_close
         ; scan: CRC and lines over the text up to "END " at a line start
         ld hl,$FFFF : ld (crc),hl

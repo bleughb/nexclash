@@ -372,8 +372,10 @@ t_c12:  nextreg $7F,$55
         db $ED,$71                                   ; OUT (C),0
         ld a,$7F : call rdreg
         call res_hex
-        ld a,(R_v) : or a : ret nz
-        ld a,ST_PASS : ld (R_st),a
+        ld a,(R_v) : or a
+        ld a,ST_PASS : jr z,.s
+        ld a,ST_FAIL                                ; the claim: OUT (C),0 writes 0
+.s:     ld (R_st),a
         ret
 
 ; ---------------------------------------------------------------- C13: block I/O flags on port (B,$FE)
