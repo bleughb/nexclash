@@ -6,8 +6,8 @@ Inputs: TOSEC `Jack the Nipper (1986)(Gremlin Graphics Software).z80` (md5 adcdb
 `[a]` (4c5398b8bcfd88ebd83656f01c3aca21); rzxarchive `j/jacknipper.rzx` (108,043 frames, 36 min; its own start
 snapshot md5 903c092495784d308cf03899b80d7110)    Branch: add-jack-the-nipper
 Checks: survey (GATE OK), inspect    Pending user answers: none yet (the stage-1 question comes with the preview)
-Start with: `python nexclash.py scan jtn1_start.z80 --rzx jacknipper.rzx --stop 15000 --range 0x7D00-0x7EFF --writers`
-(who composes what 0x86F9 copies)    Read: PLAYBOOK 2-3, 3d (an unknown engine: feasibility first)
+Start with: disassemble the shadow writers 0x80E0-0x8400 and 0x8760 ("Stage 1 analysis" below), then `cost --at` each
+(who composes what 0x86F9 copies: answered)    Read: PLAYBOOK 2-3, 3d (an unknown engine: feasibility first)
 Open: the figure plotter(s) behind the copier; where the figures' colours come from; a short recording (3-5 min) for
 the design runs (the 36-minute one stays for the full verification)
 
@@ -25,6 +25,15 @@ RAMTOP 0x7C60, border 0. No loader to run.
   (PLAYBOOK 4 "no frame sync"; card detect.pacing-structure).
 - Coverage: GATE OK (every CALL site to the top plot routines in code that ran was reached).
 - Plain conversion: boots in the simulator; no proven-safe tail yet (prove with `scan --range`).
+
+## Stage 1 analysis (2026-11-22, first 15,000 frames)
+- 0x86F9 is a dirty-cell copier, not a plotter: 512 cell counters at 0x7D00-0x7EFF (32 x 16 cells = the 256 x 128
+  play area); for each marked cell it copies eight pixel rows from a shadow screen at 0x6000-0x6FFF to the display.
+- The shadow is written by read-modify-write code at 0x80E5 / 0x80FD, 0x8199 / 0x81D4, 0x8299 / 0x82B7, 0x838B,
+  0x865D (it reads each byte back first: masked sprite drawing, several variants), which marks cells at 0x812C,
+  0x8209, 0x82F6, 0x845F; 0x8760-0x877C writes eight rows a call (x202,775: most likely the background restore).
+- Model so far: shadow screen + dirty cells + masked sprites; figures take the room's attributes (0x7F84 sets them
+  per room). Next: the plotters' entry points and inputs (x, y, frame), the restore's source, figures per room.
 
 ## Stage log
 - 2026-11-22: stage 0, ~1.5 h wall (both games' surveys in parallel), ~20 tool calls, no user rounds.
