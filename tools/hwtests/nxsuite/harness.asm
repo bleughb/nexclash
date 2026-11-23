@@ -41,12 +41,13 @@ entry:  ld sp,MSTACK
         ld a,1 : ld (crow),a : xor a : ld (ccol),a : ld hl,m_nokeep2 : call puts
         di : halt
 .kept:  ld hl,0 : ld (txtlen),hl
-.st:    ld a,(PRGB+PRG_STATE) : cp 1 : jr nz,.menu
+.st:    ld hl,q_ask : call ovcall                   ; first start: the operator's questions (gq.asm)
+        ld a,(PRGB+PRG_STATE) : cp 1 : jr nz,.menu
         ld a,1 : ld (resume_pending),a
 .menu:  ld a,(PRGB+PRG_XH2) : or a : jp nz,do_xh2f  ; XH2's reset: its follow-up at once (board run 9)
         jp menu
 
-m_start: db "nxsuite: measuring...",0
+m_start: db "measuring...",0
 
 ; a fresh progress record
 prg_new:
@@ -245,6 +246,7 @@ run_end:
         call prg_write
         call txt_flush : sbc a,a : ld (flushfail),a     ; $FF = not saved (carry; A itself is not a status)
         ld a,$A5 : ld (DONEFLAG),a
+        ld hl,ps_show : call ovcall                 ; not saved: the results as pages to photograph
         call cls
         xor a : ld (crow),a : ld (ccol),a
         ld hl,m_done : call puts
@@ -703,7 +705,7 @@ sess_header:
         ld hl,h_nrb9 : call wstr : ld a,(NRSNAP+$B9) : call wdhex2
         ld hl,h_nrba : call wstr : ld a,(NRSNAP+$BA) : call wdhex2
         ld hl,h_nrbb : call wstr : ld a,(NRSNAP+$BB) : call wdhex2
-        call hend
+        call q_hdr                                  ; + the H operator line
         ; R lines, only in a new file
         ld a,(fstate) : cp 1 : ret z
         ld e,0

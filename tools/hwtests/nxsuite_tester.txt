@@ -1,0 +1,82 @@
+NXSUITE - HARDWARE TEST SUITE FOR THE ZX SPECTRUM NEXT
+Build {BUILD} ({DATE}). Part of nexclash, GPL-3.0-or-later.
+
+WHAT IT IS
+nxsuite.nex is one program that measures how a Spectrum Next core really
+behaves: CPU timing, interrupts, frame timing, copper, DMA, sprites,
+memory, and a set of pictures you look at and answer about. Each test
+writes one line of results. Your results tell us which documented
+behaviours hold on your machine and which do not; we compare machines,
+cores and emulators with them. It needs a Spectrum Next core (a Next
+board, or a machine or FPGA running the Next core). It cannot run on
+other machines (ZXnano, MSXnano and A800nano are not Next cores).
+
+WHAT IT CHANGES
+It writes only files named NXSUITE.* in the folder you start it from:
+NXSUITE.TXT (the results), NXSUITE.PRG (a 64-byte progress record) and,
+when the results grow large, NXSUITE.001, .002 ... It changes no saved
+settings and writes nothing that survives switching off. Every register
+it changes is put back after each test.
+
+GETTING READY
+1. Make a new folder on the SD card, for example /nxsuite/.
+2. Copy nxsuite.nex into it. Nothing else is needed.
+3. Start the Next, open the Browser, go to that folder and start
+   nxsuite.nex.
+
+FIRST START: A FEW QUESTIONS (OPTIONAL)
+The first time, it asks what the machine is (type the two-key code from
+the list, for example K1), how the display is connected, what kind of
+display it is, how much RAM you believe is fitted, whether a Pi /
+accelerator is fitted, and a machine label of up to 8 letters or digits.
+The label is a NICKNAME FOR THE MACHINE, not your name. S skips; if no
+key is pressed for 20 seconds the questions are skipped. Your answers are
+kept in NXSUITE.PRG and are not asked again from that folder.
+
+THE PASSES (keys on the menu)
+A  All automatic tests. About 6 minutes. Leave the machine alone.
+   The border is blue while a group runs. The picture may blink once or
+   twice (two tests switch between 50 and 60 Hz for a moment).
+V  The visual pass. About 8 minutes. Each screen shows a picture and asks
+   a question: answer Y / N or a number. S = ask later. One question
+   needs a watch that shows seconds.
+T  Timing (optional). A few minutes. It changes the machine timing and
+   puts it back after each test.
+D  DivMMC (optional). A few minutes. It does not write to the SD card
+   beyond the NXSUITE files.
+H  DMA hazards (optional). A few minutes. One test can freeze the
+   machine; another leaves the DMA unusable until you reset.
+T, D and H are never part of A. Each risky test first shows what it
+risks and what to do if the machine does not come back: Y runs it, N
+skips it. The NEXT STEP line on the menu says what to do next.
+
+WHAT THE HAZARDS MEAN
+"may hang": the machine may stop. Reset (or switch off and on), start
+nxsuite.nex again from the same folder. It finds where it stopped, marks
+that test HANG-GUARD and carries on by itself after 5 seconds.
+"timing": the machine timing (48K / 128K) is changed for the test. If the
+machine stops, the next start puts it back before anything else.
+"DMA deaf": the DMA stops answering on purpose. Let the group finish,
+reset, start the suite again: it asks at once which reset you used.
+
+AFTER A HANG OR A RED SCREEN
+Hang: reset, start nxsuite.nex from the same folder; it resumes.
+Red border at DONE with "FILE WRITE FAILED": the results could not be
+saved. The program then shows the results as pages: photograph every
+page, then send the photographs.
+A red screen with a message and no menu: photograph it, switch off and
+on, start again.
+
+WHAT TO SEND BACK
+When the menu's NEXT STEP says NOTHING OUTSTANDING (or when you have done
+as much as you want), copy every NXSUITE.* file of that folder (the TXT,
+the PRG and any .001, .002 parts) and send them, with the build number
+above. Please say which board or machine it is and which core version
+the menu showed, unless you answered the first-start questions.
+
+WHAT THE ANSWERS ARE USED FOR
+The results are added to the project's hardware records, labelled with
+the machine, its core and the label you chose. They are used to check
+the project's documented hardware facts and to decide what game builds
+may rely on. Nothing personal is needed or kept: please do not put your
+name in the label.

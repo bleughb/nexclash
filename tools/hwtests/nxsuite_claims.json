@@ -115,6 +115,148 @@
    "stage": 2
   }
  ],
+ "platforms": {
+  "about": "The machine list of the first-start questionnaire (gq.asm, model=): a two-key code and a name of at most 26 characters, shown in this order (at most 17). Adding a platform is a change here only: nxsuite_gen.py puts the list in the string page and checks it. What the operator says is a claim about the machine, not a measurement; the intake shows it beside the measured identity. The names come from the owner's platform summary, not from a register source. ZXnano / MSXnano / A800nano are not Next cores: the suite cannot run there.",
+  "list": [
+   {
+    "code": "K1",
+    "name": "KS1 Next (Spartan-6)"
+   },
+   {
+    "code": "K2",
+    "name": "KS2 Next (Artix-7 15T)"
+   },
+   {
+    "code": "K3",
+    "name": "KS3 Next (Artix-7 35T)"
+   },
+   {
+    "code": "NG",
+    "name": "N-GO"
+   },
+   {
+    "code": "XB",
+    "name": "Xberry Pi"
+   },
+   {
+    "code": "ZD",
+    "name": "ZXDOS / ZXDOS+"
+   },
+   {
+    "code": "ZT",
+    "name": "ZXTRES"
+   },
+   {
+    "code": "MI",
+    "name": "MiSTer DE10-Nano"
+   },
+   {
+    "code": "KG",
+    "name": "Karabas-Go / Mini"
+   },
+   {
+    "code": "TN",
+    "name": "Tang Nano 20K NextNano"
+   },
+   {
+    "code": "NT",
+    "name": "NextTang"
+   },
+   {
+    "code": "EM",
+    "name": "emulator: MAME"
+   },
+   {
+    "code": "EC",
+    "name": "emulator: CSpect"
+   },
+   {
+    "code": "EJ",
+    "name": "emulator: JNext"
+   },
+   {
+    "code": "EZ",
+    "name": "emulator: ZEsarUX"
+   },
+   {
+    "code": "EO",
+    "name": "emulator: other"
+   },
+   {
+    "code": "OO",
+    "name": "other / don't know"
+   }
+  ],
+  "answers": {
+   "conn": [
+    "HDMI",
+    "VGA",
+    "RGB / SCART",
+    "don't know"
+   ],
+   "disp": [
+    "monitor",
+    "TV",
+    "capture device",
+    "don't know"
+   ],
+   "ramq": [
+    "1 MB",
+    "2 MB",
+    "other",
+    "don't know"
+   ],
+   "pi": [
+    "yes",
+    "no",
+    "don't know"
+   ]
+  }
+ },
+ "planned_groups": {
+  "about": "Reserved, NOT built: ids, menu keys and stage for peripheral groups. Each is left out as 'planned: needs hardware the first board lacks / a write-capable probe design'. Only reads a cited source documents as safe may ever be built without a hazard screen; anything that transmits, joins a network, or writes an RTC or flash is opt-in with its own hazard screen; WiFi credentials are never stored or printed. nxsuite_gen.py does not read this list (no menu row, no table entry).",
+  "room": "Menu: NGROUPS = 14 fills rows 3-16; NEXT STEP is at rows 18-20 and the key lines at 22-23, so three more groups need the group list in two columns (or the NEXT STEP text moved up a row each). Bank 0 (harness + test table) has about 20 bytes left: three gtab entries (8 bytes each) and their test-table rows (12 bytes a test) do not fit without moving code out of bank 0. Overlay room (2026-11-24): page 40 $EDD8-$EFFF (~550 bytes), page 42 $F6EC-$F7FF (~270), page 43 after G5 / G8 / V up to G5PAL, page 61 $FEAA-$FFFF (~340), page 63 $FFAC- (~80), page 41 $F7AB-$F7FF (~80), string page 62 ~200 bytes after the questionnaire; each group needs its own overlay page of code, so a new page would have to come from the suite's 32-63 range by giving up one of the Layer 2 pages 44-53 (V tests draw 320 x 256 there).",
+  "groups": [
+   {
+    "id": "XP",
+    "key": "P",
+    "name": "PI-LINK",
+    "stage": 3,
+    "kind": "opt-in",
+    "what": "the accelerator link to the Raspberry Pi Zero on the Pi header (NOT the SD card's SPI)",
+    "sources": "none: the repository's sources (docs/NEXT_REGISTERS.md, TECHNIQUES.md, the book notes) do not document the SPI / GPIO method to the Pi. No registers are guessed.",
+    "safe_reads": "none documented",
+    "platforms": "boards with a Pi fitted (KS2 / KS3 accelerator option per the owner's platform list)",
+    "left_out": "planned: needs hardware the first board lacks / a write-capable probe design"
+   },
+   {
+    "id": "XU",
+    "key": "E",
+    "name": "UART-ESP",
+    "stage": 3,
+    "kind": "opt-in",
+    "what": "the UART to the ESP WiFi module",
+    "sources": "book notes (Ch4 L3539-3545, L3824-3831, L3907-3918): UART0 / UART1 Rx and Tx interrupt positions, NextReg $C6 enable bits 0-2 / 4-6, status bits set even with interrupts off (polled), Rx near-full at 384 of 512 bytes. The UART port numbers and baud registers are not in the cited sources.",
+    "safe_reads": "the interrupt status bits only (already covered by G3 reads); no transmit",
+    "platforms": "boards with an ESP fitted",
+    "hazard": "transmit / joining a network: opt-in with its own hazard screen; never store or print WiFi credentials",
+    "left_out": "planned: needs hardware the first board lacks / a write-capable probe design"
+   },
+   {
+    "id": "XR",
+    "key": "C",
+    "name": "I2C-RTC",
+    "stage": 3,
+    "kind": "opt-in",
+    "what": "the real-time clock on I2C",
+    "sources": "none: the cited sources do not document the I2C ports or the RTC registers.",
+    "safe_reads": "none documented",
+    "platforms": "boards with an RTC fitted",
+    "hazard": "an RTC write changes the time kept across power: opt-in with its own hazard screen",
+    "left_out": "planned: needs hardware the first board lacks / a write-capable probe design"
+   }
+  ]
+ },
  "tests": [
   {
    "id": "S00",
@@ -127,7 +269,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "Does NEXLOAD change the 48K printer buffer ($5B00-$5BFF) after it has loaded bank 5 of a .nex, and which bytes?",
+   "method": "The .nex image fills $5B00-$5BFF with a known pattern (byte i = i*7+$11). The very first thing the program does after setting its stack is compare those 256 bytes with the pattern: it counts the bytes that differ and notes the offset of the first and last changed byte. Nothing is written. Result in bytes.",
+   "expect": "docs/BRIEFING.md:391 and :435, lesson.nexload-printer-buffer: NEXLOAD overwrites the whole printer buffer $5B00-$5BFF (NextZXOS paging routines and system variables) after loading bank 5. Claim text: NextZXOS 2.10 wrote only $5B00-$5B65.",
+   "needs": "The .nex started by NEXLOAD from NextZXOS (the result is the state NEXLOAD leaves).",
+   "hazard": "none",
+   "fields": "S00: v = number of bytes in $5B00-$5BFF that differ from the loaded pattern (bytes); first = offset ($hh) of the first changed byte; last = offset ($hh) of the last changed byte (first and last are written only when v > 0). Always INFO."
   },
   {
    "id": "S01",
@@ -144,7 +292,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "What state does NextZXOS / NEXLOAD leave the NextRegs in when a .nex starts: DivMMC automap registers, the 7FFD lock, the Layer 2 banks, the tilemap bases and the rest?",
+   "method": "As the second action at start (before any NextReg write) every NextReg $00-$FF is read through ports $243B/$253B into a 256-byte copy. The whole copy goes to the file header as R lines (R nr=$hh v=$hh) plus an H divmmc line; this test's line repeats the registers the claims name. Raw values, no timing.",
+   "expect": "docs/BRIEFING.md:373/:381: NEXLOAD is asked to reset NextRegs, list unconfirmed. docs/NEXT_REGISTERS.md:34: NextZXOS leaves $0A = $11 (automap on); claim: $B8 = $82; :35: $BB = $CD at reset (bit 7 set). docs/BRIEFING.md:117, docs/LEARNINGS.md:882: paging unlocked at launch ($08 bit 7 reads 1). lesson.loader-clears-turbosound-bit: loader clears $08 bit 1. book ch 14 (D-N1): $12 = 8, $13 = 11 at reset; docs/LEARNINGS.md:128: NextZXOS moves Layer 2 to 9-11, shadow 11-13. book ch 15 (D-N7): $6E = $2C, $6F = $0C at reset.",
+   "needs": "The .nex started by NEXLOAD from NextZXOS (the values are the launch state).",
+   "hazard": "none (reads only)",
+   "fields": "S01: v = NextReg $08 at launch ($hh); nr0a, nrb8, nrb9, nrba, nrbb, nr8c, nr12, nr13, nr6e, nr6f, nr05, nr07, nrc0, nrc4 = that NextReg's launch value ($hh); p7ffd = PASS if $08 bit 7 was 1 (7FFD paging unlocked), FAIL if 0. The line itself is always INFO; the 7ffd-unlocked verdict is the p7ffd key. Every NextReg's launch value is also in the header R lines (R nr=$hh v=$hh) and H divmmc line."
   },
   {
    "id": "S02",
@@ -158,7 +312,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "Which core version and board does the machine report: NextReg $01 / $0E as a.b.cc, machine id $00 and board id $0F?",
+   "method": "From the launch snapshot (S01): $01 high nibble = major, low nibble = minor, $0E = sub-minor (decimal), printed a.b.cc; $00 and $0F recorded raw. Sets the core >= 3.03 flag ($01 >= $33) that later groups use for SKIPs. No timing.",
+   "expect": "book ch 1 (report D, 3.02 vs 3.03 L1533): $01 = $33 and $0E = $03 on core 3.03.03. docs/NEXT_REGISTERS.md:17: lists the core behind each register source. book ch 3 (report D-N17, B-N22): $0F identifies the board issue (3 on an Issue 5; the Issue 2 value is not stated); $00 is the machine id.",
+   "needs": "nothing special",
+   "hazard": "none",
+   "fields": "S02: v = core version a.b.cc from $01 / $0E (word); nr00 = NextReg $00 machine id ($hh); nr0f = NextReg $0F board id ($hh); core303 = 1 if $01 >= $33 (core 3.03 or later), else 0. Always INFO."
   },
   {
    "id": "S03",
@@ -171,7 +331,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "On this board, is 8K RAM page 96 ($60) real separate memory, or does it wrap onto other memory (ROM / page 0)? Tells whether the board has more than 1 MB.",
+   "method": "Read-only, done once in the start-up preamble at 3.5 MHz: page $60 is mapped into slot 6 (NextReg $56) and a CRC-16/CCITT of its 8K taken; the same for the suite's page 0 in slot 6, and for ROM 0's first 8K read at $0000 (ports 1FFD = $00, 7FFD = $00, slot 0 = ROM). Slot 6 and ROM 3 (1FFD $04 / 7FFD $10) are put back. Page 96 is never written.",
+   "expect": "docs/LEARNINGS.md:127: an unexpanded Next has 1024K = pages 0-95; 2048K = pages 0-223. book ch 3 (report D-N17), ch 5 (report B-N22): Issue 2 has 1 MB (2 MB expanded), Issue 4 drops address bit 21 so high pages wrap at 2 MB, Issue 5 has 4 MB. What page 96 shows on an unexpanded Issue 2 is not stated in the sources.",
+   "needs": "nothing special",
+   "hazard": "none (read-only)",
+   "fields": "S03: v = choice: wrap (page 96 CRC equals ROM 0's first 8K), alias0 (equals page 0), distinct (neither); crc96 = CRC-16 of page 96 ($hhhh); crc0 = CRC of page 0 ($hhhh); crcrom0 = CRC of ROM 0's first 8K ($hhhh). Always INFO; the same choice is in the header (ram=)."
   },
   {
    "id": "S04",
@@ -184,7 +350,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "What bytes does the ROM 3 that NextZXOS provides hold, in particular in the spare area $386E-$3CFF that Sinclair's 48K ROM fills with $FF?",
+   "method": "At start the program selects ROM 3 (port 1FFD = $04, 7FFD = $10, slots 0/1 as at launch). In the preamble it takes CRC-16/CCITT (init $FFFF) of $0000-$3FFF and of $386E-$3CFF; the test then reads the bytes $0038-$0050 (IM 1 entry) and $386E-$3880. No writes.",
+   "expect": "lesson.alt-rom-patch-location and lesson.whole-alt-rom-image: the area $386E-$3CFF of the Next's ROM 3 is NextZXOS's, not Sinclair's all-$FF block (its IM 1 handler calls $386E, other code uses $387E, $3B00-$3CFF hold data). docs/LEARNINGS.md:1023: MAME models the alt ROM as a copy of ROM 3 with data at $3B00-$3CFF.",
+   "needs": "The .nex started from NextZXOS (the ROM is the one NextZXOS provides).",
+   "hazard": "none",
+   "fields": "S04: v = CRC-16/CCITT of ROM 3 $0000-$3FFF ($hhhh); crc386e = CRC of $386E-$3CFF ($hhhh); b0038 = the 25 bytes $0038-$0050 as one hex string; b386e = the 19 bytes $386E-$3880 as one hex string. Always INFO (no FAIL)."
   },
   {
    "id": "S05",
@@ -197,7 +369,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "Does a NEXTREG instruction (both the n,v and the n,A forms) leave the NextReg selected on port $243B unchanged, so a following IN from $253B still reads the register that was selected?",
+   "method": "NEXTREG $7F,$5A; OUT $243B = $7F; NEXTREG $56,<slot 6's current page> (harmless); IN $253B. Again with LD A,page : NEXTREG $56,A. Done at the start speed (normally 3.5 MHz), then again at 28 MHz (NextReg $07 = 3); speed restored. Each IN must return $5A (NextReg $7F), not slot 6's page.",
+   "expect": "docs/NEXT_REGISTERS.md:101: NEXTREG does not change the register selected on port $243B, so hook NEXTREGs never disturb a game's own $243B/$253B access. lesson.nextreg-select-shared-state relies on the same rule.",
+   "needs": "nothing special (the test sets 28 MHz itself)",
+   "hazard": "none",
+   "fields": "S05: v = how many of the four reads were not $5A (count); r35n = read after NEXTREG n,v at the start speed ($hh); r35a = after NEXTREG n,A at the start speed; r28n / r28a = the same at 28 MHz. PASS if all four are $5A, else FAIL."
   },
   {
    "id": "S06",
@@ -210,7 +388,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "Does reading NextReg $07 give the actual CPU speed in bits 5:4 and the programmed speed in bits 1:0?",
+   "method": "For each value 0, 1, 2, 3: NEXTREG $07 = value, read $07 at once through $243B/$253B, wait for the next frame start (raster line 0), read $07 again. The start speed is restored afterwards.",
+   "expect": "docs/NEXT_REGISTERS.md:36: read $07 gives bits 5:4 = actual speed, bits 1:0 = programmed speed (core zxnext.vhd; JNext composes the same).",
+   "needs": "nothing special",
+   "hazard": "none",
+   "fields": "S06: v = number of speeds whose after-a-frame read did not have bits 1:0 and bits 5:4 both equal to the value written (count, 0-4); i0..i3 = $07 read straight after writing 0..3 ($hh); f0..f3 = $07 read after one frame ($hh). PASS if v = 0, else FAIL; the immediate reads (i0..i3) are information only."
   },
   {
    "id": "S07",
@@ -223,7 +407,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "Can a .nex started from NextZXOS create, write, close, reopen and read back a file on the SD card through the esxDOS RST 8 calls?",
+   "method": "After the group, the result file NXSUITE.TXT is written (RST 8 F_OPEN $9A with mode $0E create/truncate, F_WRITE $9E per 8K page, F_CLOSE $9B) with interrupts off, MMU slots 0/1 = $FF (ROM) and a stack outside slots 0/1. It is then opened read-only (mode $01), the first 64 bytes read (F_READ $9D), closed, and compared with the text still in memory.",
+   "expect": "asm/inferno_hooks.asm:7553: the RST 8 call convention used (F_OPEN / F_WRITE / F_CLOSE, slots 0/1 = $FF, interrupts off, own stack). games/inferno.md:260: such esxDOS saves work in JNext; hardware to confirm. Prediction: the file is written and reads back equal.",
+   "needs": "The .nex started from a writable SD card folder (files go to the current drive and folder); DivMMC automap on as NextZXOS leaves it.",
+   "hazard": "Writes to the SD card: it rewrites the suite's own result file NXSUITE.TXT in the start folder (claim: could corrupt SD or settings; writes one file only). Not opt-in.",
+   "fields": "S07: v = 64 when the file was written, reopened read-only and its first 64 bytes equal the text in memory, else 0 (count of bytes compared). PASS if they match, FAIL if any step failed (write, open, short read or a differing byte); a FAIL means the result file may be missing, so the screen shows it (photograph)."
   },
   {
    "id": "C01",
@@ -236,7 +426,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "At 28 MHz, do instructions running from ordinary SRAM take extra wait states on memory reads (core 3.02) or the same CPU clocks as at 3.5 MHz (core 3.03)?",
+   "method": "At NextReg $07 = 3 (28 MHz), code in bank 2 ($B000), data in RAM page 56 in slot 3 ($6000): blocks of NOP, LD A,($6000), POP BC (SP = $6000), LD (IX+5),$AA, and one LDIR of 2048 bytes ($6000 -> $6800). Timed with the raster line counter over 2048 x 8 instructions, minus an empty block, scaled by the 3.5 MHz calibration; 5 runs. Result: 28 MHz clocks per instruction (per byte for LDIR). $07 read back after the runs.",
+   "expect": "book ch 2 (report D L1861, L1921, L5172): core 3.03 has no wait at 28 MHz: NOP 4, LD A,(nn) 13, POP BC 10, LD (IX+d),n 19 clocks (spec: LDIR 21 per byte); core 3.02: 5 / 17 / 13 / 23. lesson.core-302-read-wait-state-gone-in-303: the read wait belongs to 3.02. docs/TECHNIQUES.md:57: each memory read adds a wait state, 28 MHz is ~6.3-7x 3.5 MHz (written from 3.02 measurements).",
+   "needs": "nothing special (the test sets 28 MHz itself)",
+   "hazard": "none",
+   "fields": "C01: v = NOP clocks at 28 MHz (mean of 5 runs, with min / max); nop, lda, pop, ldixn, ldir = mean 28 MHz clocks per NOP, LD A,(nn), POP BC, LD (IX+d),n and per LDIR byte; nr07 = NextReg $07 read back after the runs ($hh); choice = no-wait / wait / other. PASS (choice no-wait) if all five rows are within 0.2 of 4 / 13 / 10 / 19 / 21; otherwise INFO with choice wait if NOP is 5 +- 0.2, else other."
   },
   {
    "id": "C02",
@@ -249,7 +445,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "At 28 MHz, do code fetches and data reads in bank 5 (block RAM, pages $0A/$0B) take a wait state?",
+   "method": "At 28 MHz ($07 = 3): a NOP block (256 copies) built at $6800 in bank 5 and its empty block at $6B00, timed with the raster line counter (2048 x 8 NOPs, 4 passes, minus empty, scaled by the 3.5 MHz calibration, 5 runs). Then LD A,(HL) with HL = $4000 (bank 5) from a block in bank 2. Result: 28 MHz clocks per instruction.",
+   "expect": "book ch 2 (report D L1921, L2543): on 3.02 reads from bank 5 waited like SRAM; 3.03 is not measured by the book. lesson.core-302-read-wait-state-gone-in-303: no read wait on 3.03. Claim: on 3.03 no wait state in bank 5 (NOP 4 clocks).",
+   "needs": "nothing special (the test sets 28 MHz itself)",
+   "hazard": "none",
+   "fields": "C02: v = NOP clocks at 28 MHz with the code in bank 5 ($6800) (mean of 5 runs, min / max); ldhl = mean 28 MHz clocks per LD A,(HL) with HL = $4000 in bank 5 and the code in bank 2. Always INFO."
   },
   {
    "id": "C03",
@@ -262,7 +464,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "At 28 MHz, do code fetches and data reads in page $0E (block RAM, first half of bank 7) take a wait state?",
+   "method": "Page $0E is mapped into slot 3 ($6000-$7FFF). At 28 MHz a NOP block is built at $6000 in that page (empty block at $6300) and timed with the raster line counter (2048 x 8 NOPs, 4 passes, minus empty, scaled by the 3.5 MHz calibration, 5 runs); then LD A,(HL) with HL = $6000 in that page from a block in bank 2. Slot 3 restored. Result: 28 MHz clocks per instruction.",
+   "expect": "book ch 2 (report D L1921, L2543): reads from page $0E never had the 28 MHz wait, on 3.02 and on 3.03 (NOP 4 clocks).",
+   "needs": "nothing special (page $0E belongs to bank 7, which is in the .nex)",
+   "hazard": "none",
+   "fields": "C03: v = NOP clocks at 28 MHz with the code in page $0E (mean of 5 runs, min / max); ldhl = mean 28 MHz clocks per LD A,(HL) reading page $0E, code in bank 2. Always INFO."
   },
   {
    "id": "C04",
@@ -275,7 +483,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "At 28 MHz, do code fetches and data reads in page $0F (second half of bank 7, ordinary SRAM) take a wait state?",
+   "method": "As C03 with page $0F in slot 3: at 28 MHz a NOP block at $6000 in page $0F (empty block at $6300), timed with the raster line counter (2048 x 8 NOPs, 4 passes, minus empty, scaled by the 3.5 MHz calibration, 5 runs); then LD A,(HL) with HL = $6000 in that page, code in bank 2. Slot 3 restored. Result: 28 MHz clocks per instruction.",
+   "expect": "book ch 2 (report D L2543): page $0F is ordinary SRAM: it waited at 28 MHz on 3.02 (NOP 5), no wait on 3.03 (NOP 4).",
+   "needs": "nothing special (page $0F belongs to bank 7, which is in the .nex)",
+   "hazard": "none",
+   "fields": "C04: v = NOP clocks at 28 MHz with the code in page $0F (mean of 5 runs, min / max); ldhl = mean 28 MHz clocks per LD A,(HL) reading page $0F, code in bank 2. Always INFO."
   },
   {
    "id": "C05",
@@ -288,7 +502,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "At 28 MHz, do memory writes and I/O instructions take the extra wait state that 3.02 put on reads?",
+   "method": "At 28 MHz, code in bank 2: blocks of LD (HL),A (HL = $6000 in RAM page 56), OUT (C),A with BC = $243B and A = $7F (selects NextReg $7F), and IN A,(C) with BC = $253B, each timed with the raster line counter (2048 x 8, 4 passes, minus an empty block, scaled by the 3.5 MHz calibration, 5 runs). Result: 28 MHz clocks per instruction, to compare with the instruction's 3.5 MHz T.",
+   "expect": "book ch 2 (report D L1921): the 3.02 28 MHz wait applied to memory reads only (opcode, operand, data), not to writes or I/O. lesson.core-302-read-wait-state-gone-in-303: no read wait at all on 3.03. Clock numbers per instruction are not stated in the sources.",
+   "needs": "nothing special (the test sets 28 MHz itself)",
+   "hazard": "none",
+   "fields": "C05: v = 28 MHz clocks per LD (HL),A (mean of 5 runs, min / max); outc = mean clocks per OUT (C),A to port $243B; inc = mean clocks per IN A,(C) from port $253B. Always INFO."
   },
   {
    "id": "C06",
@@ -301,7 +521,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "At 7 and 14 MHz, do instructions take the same number of CPU clocks as at 3.5 MHz?",
+   "method": "The C01 rows (NOP, LD A,(nn), POP BC, LD (IX+d),n, LDIR per byte; code in bank 2, data in RAM page 56 at $6000) run at NextReg $07 = 1 (7 MHz) and then $07 = 2 (14 MHz), each timed with the raster line counter (block called 8 x 2^speed times, 4 passes, minus empty, scaled by the 3.5 MHz calibration, 5 runs). Result: clocks of that speed per instruction.",
+   "expect": "book ch 2 (report D L1915), ch 3 (report D-N21): at 7 and 14 MHz instructions take the same CPU clocks as at 3.5 MHz (contention is gone above 3.5 MHz); the book gives about 8x over the four speeds on 3.03 and about 6.5x on 3.02.",
+   "needs": "nothing special (the test sets the speeds itself)",
+   "hazard": "none",
+   "fields": "C06: v = NOP clocks at 7 MHz (mean of 5 runs, min / max); nop7, lda7, pop7, ldixn7, ldir7 = mean 7 MHz clocks per NOP, LD A,(nn), POP BC, LD (IX+d),n and per LDIR byte; nop14, lda14, pop14, ldixn14, ldir14 = the same at 14 MHz. Always INFO."
   },
   {
    "id": "C07",
@@ -314,7 +540,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "How much time does a NEXTREG $07 speed switch cost, and does the new speed take effect at once?",
+   "method": "From 3.5 MHz: a block of 64 x (NEXTREG $07,3 ; NEXTREG $07,0) called twice (128 pairs) is timed against a block of 64 x (NEXTREG $07,0 ; NEXTREG $07,0) called twice, with the raster line counter (4 passes, 5 runs, scaled by the 3.5 MHz calibration). Result: extra time per pair in 3.5 MHz T. A difference below zero is recorded as 0 (the timing core clamps it).",
+   "expect": "lesson.speed-switch-cost-calibrate-at-boot: timing constants that include a speed switch need the machine's own figure (calibrated at boot in Inferno; the repo value is unknown). docs/NEXT_REGISTERS.md:36: $07 bits 1:0 set the speed. Claim: the switch takes effect at once and costs only its own 20 T.",
+   "needs": "nothing special",
+   "hazard": "none",
+   "fields": "C07: v = extra 3.5 MHz T per (NEXTREG 7,3 ; NEXTREG 7,0) pair compared with a (NEXTREG 7,0 ; NEXTREG 7,0) pair (mean of 5 runs, min / max; T; a pair faster than the reference reads 0). Always INFO."
   },
   {
    "id": "C08",
@@ -327,7 +559,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "At 3.5 MHz, are reads from bank 5 slowed (contended) during the display, does NextReg $08 bit 6 = 1 turn that off, and is it gone at 7 MHz?",
+   "method": "LD A,(HL) x 2048 from a block in bank 2, started at raster line 0 (inside the display), HL = $4000 (bank 5) against HL = $8000 (bank 2); raster-line timing scaled by the 3.5 MHz calibration, 5 runs. Repeated with $08 bit 6 set (read-modify-write, bit 7 written 0, restored after), and again at 7 MHz. Result: extra T per access (bank 5 minus bank 2).",
+   "expect": "book ch 3 (report D-N21), ch 5 (report B-N2): at 3.5 MHz in 48K/128K timing bank 5 is contended during the display (claim: up to 6 T per access); not at 7 MHz and above; 48K: bank 5, 128K: banks 1,3,5,7, +3: 4-7, only pages $00-$0F. docs/NEXT_REGISTERS.md:37: $08 bit 6 = 1 disables contention. docs/LEARNINGS.md:30, lesson.beeper-contention: contention matters for beam racing and beeper timing.",
+   "needs": "nothing special; the result is for the machine timing in use (the claim is about 48K/128K timing)",
+   "hazard": "none (NextReg $08 bit 6 is changed and restored)",
+   "fields": "C08: v = extra T per LD A,(HL) access, bank 5 minus bank 2, at 3.5 MHz during the display (difference of the 5-run means; n = 5, min = max = v; T; can be negative); off = the same with $08 bit 6 = 1 (contention off); c7 = the same at 7 MHz (in 7 MHz clocks). Always INFO."
   },
   {
    "id": "C09",
@@ -341,6 +579,11 @@
    "operator": false,
    "opt_in": false,
    "stage": 1,
+   "purpose": "After a write to NextReg $08 bit 6 (contention off), when does reading $08 back show the new bit: at once, or only from dot 256 of the line?",
+   "method": "At 3.5 MHz, interrupts off: at the start of raster line L (L = 20..27, one sample each) the program writes $08 with bit 6 flipped (bit 7 written 0), then reads $08 through $253B 24 times, 23 T apart (unrolled IN), then restores bit 6. A sample = T from the NEXTREG to the first read that shows the new bit (999 if none of the 24 does). Result in T.",
+   "expect": "book ch 3 (report D-N21): the ULA samples NextReg $08 bit 6 only from dot 256 of each line, and $08 reads back the old bit until then.",
+   "needs": "nothing special",
+   "hazard": "none (NextReg $08 bit 6 is changed and restored)",
    "fields": "8 samples (lines 20-27, the write at the start of the line): T from the NEXTREG $08 write to the first read (reads 23 T apart) that shows the new bit 6; v = max, min, t0 = how many were 0. Board run 5: v=23 min=0 t0=2 - the new bit is read back by the first or the second read every time (two populations = which side of the change the first read lands): the read-back follows the write within 23 T, it does not keep the old bit until dot 256 of the line."
   },
   {
@@ -354,7 +597,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "At 3.5 MHz, is an IN from an even port (the ULA's $FE) slowed (I/O-contended) during the display compared with the border?",
+   "method": "At 3.5 MHz: 1024 x IN A,($FE) with A = $FF (port $FFFE) in a block in bank 2, timed with the raster line counter (4 passes, minus empty, scaled by the 3.5 MHz calibration, 5 runs), started at line 0 (display) and again started at line 193 (border, ending before line 243). Result: T per IN.",
+   "expect": "book ch 3 (report D-N21): in 48K/128K timing every even port (and $7FFD in 128K timing) is I/O-contended at 3.5 MHz, so the display figure should be larger than the border figure. Exact T values are not stated in the sources.",
+   "needs": "nothing special; the result is for the machine timing in use (the claim is about 48K/128K timing)",
+   "hazard": "none",
+   "fields": "C10: v = T per IN A,($FE) started at line 0, inside the display (mean of 5 runs, min / max; T); border = mean T per IN started at line 193, in the border. Always INFO."
   },
   {
    "id": "C11",
@@ -367,7 +616,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "How long do undocumented opcodes take: an unlisted ED opcode (ED 00), the ED forms of LD (nn),HL / LD HL,(nn) (ED 63 / ED 6B), and a DD prefix before an instruction that does not use HL?",
+   "method": "At 3.5 MHz, code in bank 2, timed with the raster line counter (256 copies x 8 calls, 4 passes, minus empty, scaled by the calibration, 5 runs): blocks of ED 00, ED 63 $6000, ED 6B $6000 (address in RAM page 56) and DD 00 (DD + NOP). Result: T per instruction.",
+   "expect": "book ch 2 (report D-N29): every unlisted ED opcode is an 8 T NOP; ED 63 / ED 6B take 4 T more than LD (nn),HL / LD HL,(nn) (spec: 20 T, LD (nn),HL being 16); a DD/FD prefix before a non-HL instruction costs 4 T (DD 00 = 8 T). docs/LEARNINGS.md:50: on the Next 29 ED opcodes are Z80N instructions, the rest NOPs.",
+   "needs": "nothing special",
+   "hazard": "none",
+   "fields": "C11: v = T per ED 00 (mean of 5 runs, min / max; T); ed63 = mean T per ED 63 nn; ed6b = mean T per ED 6B nn; dd00 = mean T per DD 00 (DD prefix + NOP). Always INFO."
   },
   {
    "id": "C12",
@@ -380,7 +635,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "Does the undocumented OUT (C),0 (ED 71) output 0 on the Next?",
+   "method": "NEXTREG $7F,$55; select NextReg $7F on port $243B; BC = $253B; execute ED 71 (OUT (C),0), which writes to NextReg $7F through port $253B; read $7F back through $243B/$253B.",
+   "expect": "docs/LEARNINGS.md:48: OUT (C),0 outputs 0 on the Next (NMOS behaviour; CMOS Z80s output $FF). book ch 2 (report D-N29): 0.",
+   "needs": "nothing special",
+   "hazard": "none",
+   "fields": "C12: v = NextReg $7F read back after OUT (C),0 ($hh). PASS if $00, else FAIL."
   },
   {
    "id": "C13",
@@ -393,7 +654,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "What flags do the block I/O instructions OUTI, OUTD, INI, IND and OTIR leave on the Next?",
+   "method": "Each of OUTI, OUTD, INI, IND runs once with B = 1, $80, $81, 0, $10, $11, each from F = 0 and from F = $FF (A = 0), C = $FE so the port is (B,$FE) (the ULA; the byte sent is 0: black border, silent; INI/IND read the keyboard into scratch RAM); OTIR runs with B = 2 from F = 0 and $FF. F after each is recorded. Border restored.",
+   "expect": "book ch 2 (report D-N25): flags from the decremented B: N = 1, S/Z from B, H on borrow, P/V if B was $80, C if B was 0. docs/NEXT_REGISTERS.md:107, docs/LEARNINGS.md:16, docs/BRIEFING.md:112: on the Next only ZF is reliable after block I/O; guide r3, wiki errata and Ped7g's table disagree on the rest.",
+   "needs": "nothing special",
+   "hazard": "none (writes 0 to the ULA port: border black, then restored)",
+   "fields": "C13: v = 50 (number of F values recorded); outi, outd, ini, ind = 12 hex pairs each (no $): F after the instruction for B = 1, $80, $81, 0, $10, $11 in that order, each first from F = 0 then from F = $FF; otir2 = 2 hex pairs: F after OTIR with B = 2 from F = 0 and from F = $FF. Always INFO (the intake compares with the book formula and Zilog)."
   },
   {
    "id": "C14",
@@ -406,7 +673,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "How are the undocumented flag bits 5 and 3 (Y/X) set by BIT n,(HL), SCF, CCF, CPI, IN r,(C) and LD A,I on the Next?",
+   "method": "Each instruction runs from (A, F) = ($28,$00), ($28,$FF), ($D7,$00), ($D7,$FF), interrupts off: BIT 0,(HL) with (HL) = $28; SCF; CCF; CPI with (HL) = $28, BC = 2; IN A,(C) from $253B with NextReg $7F = A; LD A,I with I = A. F after each is recorded. The high byte of the BIT routine's address is also written (BIT n,(HL) may take bits 5/3 from the internal WZ register, here that address).",
+   "expect": "book ch 2 (report D-N25): departures from Zilog: BIT n,(HL) clears bits 5/3, SCF / CCF copy them from A, CPI / CPD copy them from the compared byte, IN r,(C) and LD A,I/R keep them.",
+   "needs": "nothing special",
+   "hazard": "none",
+   "fields": "C14: v = 24 (number of F values recorded); bit, scf, ccf, cpi, inc (IN A,(C)), ldai = 4 hex pairs each (no $): F after the instruction from (A,F) = ($28,$00), ($28,$FF), ($D7,$00), ($D7,$FF) in that order; wz = high byte of the BIT 0,(HL) routine's address ($hh), the value WZ held. Always INFO."
   },
   {
    "id": "C15",
@@ -419,7 +692,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "Does a visible Layer 2 picture slow the CPU at 28 MHz (does Layer 2 display fetching ever make the CPU wait)?",
+   "method": "At 28 MHz, started at raster line 0: LDIR of 1K from $8000 (bank 2) to $F000 (bank 0), 8 times, timed with the raster line counter (4 passes, minus empty, scaled by the 3.5 MHz calibration, 5 runs) with Layer 2 off, then with a 320x256 Layer 2 visible (NextReg $12 = 22, $70 = $10, $69 bit 7 set). $12, $70, $69 restored to the launch values. Result: 28 MHz clocks per byte.",
+   "expect": "book ch 14 (report D-N5): Layer 2 display never makes the CPU wait (it fetches one dot ahead with lower priority than the CPU); no contention at any speed.",
+   "needs": "nothing special (uses suite bank 22 for the picture)",
+   "hazard": "none (Layer 2 is shown briefly; registers restored)",
+   "fields": "C15: v = 28 MHz clocks per LDIR byte with 320x256 Layer 2 visible (mean of 5 runs, min / max); off = mean clocks per byte with Layer 2 off. PASS if the two differ by no more than 0.05 clock, else INFO."
   },
   {
    "id": "Z01",
@@ -437,7 +716,13 @@
    "operator": false,
    "opt_in": false,
    "stage": 1,
-   "sub_prefix": "zf."
+   "sub_prefix": "zf.",
+   "purpose": "Do the Z80N instructions give the register, memory and flag results that the toolkit's model (nexclash/z80n.py) predicts, including LDIX-family flags, LDPIRX, JP (C) and TEST n's N flag?",
+   "method": "At 3.5 MHz, interrupts off, slots 6/7 = sandbox pages: the 46 z80ntest FUNC cases. Each runs one Z80N instruction from known A F BC DE HL, SP = $6200 and a 1 KB window at $6000; flag-changing ones from F = 0 and F = $FF, others from F = $A5. A..L, SP, F and a Fletcher checksum of the window are compared with values generated from nexclash/z80n.py. NEXTREG / OUTINB cases read NextReg $7F back; JP (C) uses a slot table at $C000.",
+   "expect": "tools/hwtests/README.md:59/:82, docs/NEXT_REGISTERS.md:115: expected values are z80n.py's (from core 3.02.05 VHDL). docs/NEXT_REGISTERS.md:131: LDIX family flags change like LDI/LDIR incl. bits 5/3 (CSpect keeps 5/3: docs/LEARNINGS.md:1005). :133: LDPIRX wrong on 3.02.00, fixed in 3.02.02. :117: JP (C) leaves flags unchanged (also book D-C3); :135 calls them undefined; CSpect sets IN-style flags. :136: TEST n = AND flags, A kept; NF 0 in Ped7g's table, unknown elsewhere.",
+   "needs": "nothing special (LDPIRX cases need core 3.02.02 or later to match)",
+   "hazard": "none",
+   "fields": "Z01: v = number of FUNC cases that matched in full (count, of 46). PASS if all 46 match, else FAIL. One sub-line per case, id zf.<case> (name without spaces; a last character 0 / F = run from F = 0 / $FF): v = F after ($hh); f = F after ($hh); fexp = F expected ($hh); code = R (a register or SP differs), M (memory checksum differs) or F (only F differs), written only when the case did not match. Sub-line PASS if everything matches, else FAIL."
   },
   {
    "id": "Z02",
@@ -450,7 +735,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "Does ADD HL/DE/BC,A always clear the carry flag (even when the add wraps) and keep the other flags, and does ADD HL,nn leave the flags alone?",
+   "method": "Each case runs once at the start speed from code in bank 5, interrupts off, F recorded: ADD HL,A with HL = $1000, A = $20 (no wrap); HL = $FFF0, A = $20 (wrap); ADD DE,A and ADD BC,A with $FFF0 + $20 (wrap); ADD HL,$1234 with HL = $F000 (wrap); every case from F = 0 and from F = $FF.",
+   "expect": "lesson.z80n-add-rr-a-and-ldws-carry-unsettled and docs/NEXT_REGISTERS.md:117 (from the core VHDL): ADD rr,A sets CF = 0. docs/NEXT_REGISTERS.md:126: carry not preserved (undefined/reset per the wiki). book ch 2 (report D-C1): clears CF. docs/LEARNINGS.md:1005: CSpect keeps CF. Claim: ADD rr,nn leaves all flags.",
+   "needs": "nothing special",
+   "hazard": "none",
+   "fields": "Z02: v = how many of the 8 ADD rr,A cases had CF set after (count); f1..fA = F after each case ($hh): f1/f2 ADD HL,A no wrap from F = 0 / $FF, f3/f4 ADD HL,A wrap, f5/f6 ADD DE,A wrap, f7/f8 ADD BC,A wrap, f9/fA ADD HL,$1234 (recorded, not judged); choice = clears-CF (CF 0 after all 8), keeps-CF (CF after = CF before in all 8), other. PASS if clears-CF, else INFO."
   },
   {
    "id": "Z03",
@@ -463,7 +754,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "Which flags does LDWS set: those of ADD D,1 (carry set when D was $FF) or those of INC D (carry kept)?",
+   "method": "LDWS (ED A5) runs once per case at the start speed from code in bank 5, interrupts off, with HL = $F000, E = $10 and D = $7F or $FF, each from F = 0 and from F = $FF (the copy lands at $7F10 / $FF10). F after is recorded. The carry after the cases D = $7F from F = $FF and D = $FF from F = 0 decides.",
+   "expect": "docs/NEXT_REGISTERS.md:134: flags of ADD D,1 (CF = D was $FF); z80n.py expects $94 (D = $7F from F = $FF) and $51 (D = $FF from F = 0) per tools/hwtests/README.md. book ch 2 (report D-C2): INC D flags (carry kept). docs/LEARNINGS.md:1005: CSpect uses INC D flags ($95 / $50). lesson.z80n-add-rr-a-and-ldws-carry-unsettled: do not rely on carry after LDWS.",
+   "needs": "nothing special",
+   "hazard": "none",
+   "fields": "Z03: v = choice: ADD-D-1 (no carry for D = $7F from F = $FF and carry for D = $FF from F = 0), INC-D (carry kept: the reverse), other; f1..f4 = F after ($hh) for D = $7F from F = 0, D = $7F from F = $FF, D = $FF from F = 0, D = $FF from F = $FF; choice = the same word. Always INFO."
   },
   {
    "id": "Z04",
@@ -476,7 +773,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "What does the unlisted opcode ED B6 do on the Next: the same as LDIRX, nothing, or something else?",
+   "method": "In a guarded scratch area in the suite's own page ($F000-$F1FF filled with $AA): source $F010 = 11 22 E3 44 55 66 77 88, destination $F110 = 8 zeros; HL = $F010, DE = $F110, BC = 8, A = $E3, F = 0, alternate registers 0, interrupts off. ED B6 is executed once (from bank 5 code); HL, DE, BC and $F100-$F127 are saved. The area is reset and LDIRX (ED B4) run the same way for comparison.",
+   "expect": "book ch 2 (report D-C5): ED B6 behaves exactly like LDIRX. docs/LEARNINGS.md:647: the repo treats it as unknown (an unfinished LDIRSCALE): z80n.py raises Z80NError on ED B6 and it is never executed in builds.",
+   "needs": "nothing special",
+   "hazard": "none (the claim notes it could corrupt memory inside the guarded sandbox only)",
+   "fields": "Z04: v = choice: same-as-LDIRX (HL, DE, BC and the 40 bytes $F100-$F127 equal LDIRX's), NOP (HL, DE, BC unchanged and the 8 destination bytes still 0), other; hl, de, bc = the registers after ED B6 ($hhhh); dst = the 8 destination bytes after ED B6 as one hex string; choice = the same word. Always INFO."
   },
   {
    "id": "Z05",
@@ -489,7 +792,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "What do PIXELDN and PIXELAD return at the edges of the ULA screen: PIXELDN past the last pixel row, PIXELAD with a row number of 192 or more?",
+   "method": "Each case runs once at the start speed from code in bank 5, interrupts off, and HL after is recorded: PIXELDN (ED 93) from HL = $57FF and $57E0; PIXELAD (ED 94) with D = 192, 200, 255 and E = 0 and 255.",
+   "expect": "book ch 2 (report D-N27): PIXELDN past row 191 runs on into the attribute area. docs/NEXT_REGISTERS.md:130: PIXELAD is undefined for D >= 192 (it always returns a $4000-based address).",
+   "needs": "nothing special",
+   "hazard": "none",
+   "fields": "Z05: v = 8 (number of cases, count); dn57ff, dn57e0 = HL after PIXELDN from $57FF / $57E0 ($hhhh); ad192_0, ad192_255, ad200_0, ad200_255, ad255_0, ad255_255 = HL after PIXELAD with D = 192 / 200 / 255 and E = 0 / 255 ($hhhh). Always INFO."
   },
   {
    "id": "Z06",
@@ -503,7 +812,13 @@
    "operator": false,
    "opt_in": false,
    "stage": 1,
-   "sub_prefix": "zt."
+   "sub_prefix": "zt.",
+   "purpose": "Does every Z80N instruction take the T-states of the documented table at 3.5 MHz?",
+   "method": "At 3.5 MHz, slots 6/7 = sandbox pages (reads $D0xx, writes $E0xx, stack $F000): the 31 z80ntest TIME cases (Z80 controls NEG, LDI, LDIR first). Each block is 256 copies called 8 times (or one repeating instruction with BC = 2048), timed with the raster line counter against its base block, 4 passes a quarter line apart, 5 runs, scaled by the calibration (2048 x LD A,(IX+0) = 19 T each). Result: T per instruction.",
+   "expect": "docs/NEXT_REGISTERS.md:121 table (also z80n.OPCODES), tools/hwtests/README.md:82: e.g. LDWS 14, PUSH nn 23, NEXTREG 20 / 17, TEST 11, LDIX 16, repeats 21 / 16; controls NEG 8, LDI 16, LDIR 21. book ch 2 (report D-N30): all 29 agree with the table. docs/LEARNINGS.md:1005: CSpect takes 19 T for PUSH nn.",
+   "needs": "nothing special",
+   "hazard": "none",
+   "fields": "Z06: v = number of TIME cases within 0.5 T of the table (count, of 31). PASS if all 31; FAIL otherwise; if one of the controls NEG / LDI / LDIR failed the line also says method=fail (the method, not the Z80N rows, failed). One sub-line per case, id zt.<name> (spaces removed): v = mean T per instruction over 5 runs with min / max (written with unit clocks; at 3.5 MHz these are T); exp = expected T from the table. Sub-line PASS if within 0.5 of exp, else FAIL."
   },
   {
    "id": "Z07",
@@ -517,7 +832,13 @@
    "operator": false,
    "opt_in": false,
    "stage": 1,
-   "sub_prefix": "zu."
+   "sub_prefix": "zu.",
+   "purpose": "At 28 MHz, do the Z80N instructions take the same number of CPU clocks as at 3.5 MHz (no read wait state, core 3.03)?",
+   "method": "The Z06 blocks (31 TIME cases, same sandbox pages) run at NextReg $07 = 3 (28 MHz); each block is called 8 times as often as at 3.5 MHz (4 passes, 5 runs) against its base block, and the raster lines are converted with the 3.5 MHz calibration. Result: 28 MHz clocks per instruction.",
+   "expect": "book ch 2 (report D, 3.02 vs 3.03 L1921): on 3.03 the same clocks as at 3.5 MHz (the docs/NEXT_REGISTERS.md table); 3.02 adds one clock per memory read. lesson.core-302-read-wait-state-gone-in-303: the read wait belongs to 3.02 only.",
+   "needs": "nothing special (the test sets 28 MHz itself)",
+   "hazard": "none",
+   "fields": "Z07: v = number of TIME cases within 0.5 clock of the 3.5 MHz table (count, of 31). PASS if all 31, else INFO (a number, not a verdict; no method=fail here). One sub-line per case, id zu.<name> (spaces removed): v = mean 28 MHz clocks per instruction over 5 runs with min / max (clocks); exp = the 3.5 MHz T from the table. Sub-line PASS if within 0.5 of exp, else INFO."
   },
   {
    "id": "I01",
@@ -530,7 +851,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "In pulse interrupt mode, which byte does the CPU read from the data bus when it accepts an interrupt? The claim is $FF, so IM 2 takes its handler address from I*256+$FF.",
+   "method": "28 MHz, pulse mode, ULA frame interrupt only. IM 2 with I = $FA and a 257-byte table at $FA00-$FB00 filled with $F9 except $FAFF/$FB00 = $F8: a bus byte of $FF reaches handler A at $F8F8, any other byte reaches handler B at $F9F9 (the spec's I = $90 layout moved to a free page). Interrupts on for 5 frames (counted by polling the raster at line 150); each handler counts its runs. Result in runs (count).",
+   "expect": "lesson.pulse-mode-im2-bus-reads-ff: the acknowledge reads $FF, IM 2 vector = I*256+$FF, IM 0 acts as IM 1; a device on an enabled expansion bus can put its own byte there. docs/BRIEFING.md:434: unconfirmed on every core, but relied on. docs/BRIEFING.md:424: context (Cyclone's I = $3A table). book ch 4 (report A-N, D-N22): the FPGA drives $FF (the expansion bus may override).",
+   "needs": "nothing special",
+   "hazard": "none",
+   "fields": "I01: v = runs of handler A, the $FF-bus handler, over 5 frames (count); b = runs of handler B (any other bus byte). PASS if b = 0 and v is 4-6, else FAIL."
   },
   {
    "id": "I02",
@@ -543,7 +870,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "Does the undocumented opcode ED 7E switch the CPU into interrupt mode 2?",
+   "method": "Same set-up as I01 (28 MHz, pulse mode, I = $FA table where a $FF bus byte reaches counting handler A). The CPU is put in IM 1, then ED 7E is executed instead of IM 2. Interrupts on for 5 frames. If ED 7E did not select IM 2, the ROM handler at $0038 runs instead and handler A never counts. Result in runs (count).",
+   "expect": "docs/LEARNINGS.md:46: ED 7E sets IM 2 only from core 3.01.08 on (core changelog); older cores misbehave with games that use it.",
+   "needs": "nothing special",
+   "hazard": "none",
+   "fields": "I02: v = runs of handler A over 5 frames (count); b = runs of handler B (a bus byte other than $FF). PASS if b = 0 and v is 4-6, else FAIL."
   },
   {
    "id": "I03",
@@ -557,7 +890,13 @@
    "operator": false,
    "opt_in": false,
    "stage": 1,
-   "sub_prefix": "ih."
+   "sub_prefix": "ih.",
+   "purpose": "Repeats the earlier im2hold board test inside the suite: does hardware IM2 mode hold an interrupt until RETI, lose it in pulse mode, and block later interrupts after a handler that ends with plain RET?",
+   "method": "28 MHz. Seven sub-tests in the order T1 T2 T3 T5 T6 T4 T7: T1 ULA vector read from I*256+$16 (hardware table I = $FC); T2 an interrupt during 3 frames of DI is taken at EI (hardware IM2); T3 the same in pulse mode is lost; T5 a RETI trampoline to a game-style EI;RET handler; T6 a uniform 257-byte table (I = $FD); T4 a handler ending EI;RET (never acknowledged); T7 one dummy RETI with interrupts off, then 5 frames. Results are handler run counts.",
+   "expect": "tools/hwtests/README.md:19 (im2hold table): T1 vector I*256+$16; T2 held and taken at EI; T3 lost in pulse mode; T4 info; T5, T6, T7 4-6 runs in 5 frames. docs/BRIEFING.md:415 and docs/TECHNIQUES.md:596: hardware IM2 holds each interrupt until a RETI acknowledges it. lesson.frame-overrun-lost-interrupts: an interrupt spanned with interrupts off is missed (pulse mode). Book (claim values): agrees, held, RET blocks.",
+   "needs": "hardware IM2 mode (set by the test)",
+   "hazard": "Could hang: T4 leaves an interrupt unacknowledged, blocking later ones until T7's dummy RETI. The progress record is marked first: if the machine stops, the next start resumes and marks the test HANG-GUARD. Interrupt state is restored after.",
+   "fields": "I03: v = number of sub-tests that passed (count); one extra line per sub-test, ids ih.t1 .. ih.t7, each v = im2hold's detail byte: t1 = 1 on pass, else runs of a wrong-vector handler; t2 = interrupts taken after the EI; t3 = interrupts taken (0 = lost); t4 = runs of the EI;RET handler (1 = RET does not acknowledge, up to 200 = re-fires); t5, t6, t7 = handler runs in 5 frames. Sub status: t1 PASS if no wrong handler ran and the right one ran; t2 PASS if > 0; t3 PASS if 0; t4 always INFO; t5-t7 PASS if 4-6. Main line FAIL if any sub-test failed, else PASS."
   },
   {
    "id": "I04",
@@ -570,7 +909,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "How long does the pulse-mode /INT signal stay low at 3.5 MHz, measured as how soon after the acknowledge a handler may re-enable interrupts without being entered a second time?",
+   "method": "3.5 MHz, pulse mode IM 2. The handler is built in RAM: INC IX (10 T, counts runs), k T of padding (NOP, INC DE, LD D,0, LD R,A mixes), EI, 4 NOPs, RET. k is swept 0 and 4..60 T (k = 1-3 and 5 cannot be built). 5 frames per k; 7 or more runs in 5 frames = re-entry. Part 2: a handler of 9 IN reads of NextReg $22 (12 T apart from its first instruction) counts how many leading reads see bit 7 (/INT low) set. Result in T.",
+   "expect": "book ch 4 (report A-C2): 32 T in 48K/+3 timing, 36 T in 128K/Pentagon. docs/TECHNIQUES.md:251: the ULA pulse lasts ~30 T at 3.5 MHz. docs/BRIEFING.md:111 and lesson.interrupt-handler-runs-twice-next-core: /INT outlasts a 128K's 36 T; an instruction after EI ending 38 T after the acknowledge re-enters, 42 T does not. lesson.int-pulse-length-unsettled: open question; keep handlers longer than 42 T before EI.",
+   "needs": "nothing special",
+   "hazard": "Could hang: an early-EI handler is re-entered; sources switched off after 2047 runs. The progress record is marked first: if the machine stops, the next start resumes and marks the test HANG-GUARD. Interrupt state is restored after.",
+   "fields": "I04: v = the largest padding k (T at 3.5 MHz, after the 10 T INC IX) for which the handler re-entered (-1 = no k re-entered) (T); reentered = how many k values re-entered; hi22 = the most leading NextReg $22 reads (of 9, 12 T apart from the handler's first instruction) with bit 7 set, over 5 frames; skip = k1-3,5 (padding values that cannot be built). Always INFO."
   },
   {
    "id": "I05",
@@ -583,7 +928,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "Is the pulse-mode /INT length a fixed number of CPU clocks at every CPU speed (so 8x shorter in real time at 28 MHz)?",
+   "method": "The I04 re-entry sweep repeated at NextReg $07 = 1, 2 and 3 (7, 14, 28 MHz), handler and foreground at that speed: padding k from 0 to 60 x 2^speed clocks in steps of 2^speed; 7+ runs in 5 frames = re-entry. Part 2 at each speed: 9 handler reads of NextReg $22, how many leading reads see bit 7 set. Results in CPU clocks of that speed.",
+   "expect": "book ch 4 (report A-C2): the pulse is counted in CPU clocks, the same number at every speed (32 / 36 by timing, as I04). lesson.int-pulse-length-unsettled: the length is an open question (book 32 / 36 T; a board saw re-entry 38 T after the acknowledge).",
+   "needs": "7, 14 and 28 MHz (set by the test)",
+   "hazard": "Could hang: an early-EI handler is re-entered; sources switched off after 2047 runs. The progress record is marked first: if the machine stops, the next start resumes and marks the test HANG-GUARD. Interrupt state is restored after.",
+   "fields": "I05: v = the largest re-entering padding k at 28 MHz (clocks of 28 MHz, after the INC IX; -1 = none) (clocks); k7 / k14 = the same at 7 and 14 MHz (clocks of that speed); hi22_7 / hi22_14 / hi22_28 = the most leading NextReg $22 reads (of 9) with bit 7 set at each speed. Always INFO."
   },
   {
    "id": "I06",
@@ -596,7 +947,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "In hardware IM2 mode, which vector byte does each interrupt source put on the bus: $C0 bits 7:5, then the 4-bit source index, then 0?",
+   "method": "28 MHz, hardware IM2 with $C0 = $E1 (vector bits 7:5 = 111, bit 3 kept as found), I = $FC, 16 distinct handlers at $FCE0-$FCFF (the rest of the table points to a 'wrong' handler). Three runs, one source each, 3 frames: the ULA frame interrupt; the line interrupt at line 100 ($22/$23, $C4 bit 1); CTC0 as a timer with time constant 255 and its interrupt on ($C5 bit 0). The handler that ran gives the vector offset (a byte).",
+   "expect": "book ch 4 (report A-N): line $E0, CTC0 $E6, ULA $F6 (CTC 4-7 reserved, never fire). lesson.pulse-mode-im2-bus-reads-ff: context (pulse mode reads $FF). docs/NEXT_REGISTERS.md:86: vectors line 0 (highest), CTC 3-10, ULA 11. tools/hwtests/README.md:27: with bits 7:5 = 000 the ULA handler is read from I*256+$16.",
+   "needs": "hardware IM2 mode (set by the test)",
+   "hazard": "none",
+   "fields": "I06: v = vector offset of the handler the ULA interrupt ran ($hh; $FF = none ran); line = the offset for the line interrupt; ctc0 = the offset for CTC0; wrong = runs of handlers outside $FCE0-$FCFF during the last (CTC0) run. PASS if v = $F6, else INFO."
   },
   {
    "id": "I07",
@@ -609,7 +966,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "Does NextReg $C8 record a ULA interrupt even when it was missed under DI, is it cleared by writing 1 and left alone by writing 0?",
+   "method": "28 MHz. Pulse mode: a whole frame with interrupts off (two passes of line 150), read $C8 (and $C0, $C4, $22 as they were), write $C8 = 0 and read, write $C8 = 1 and read. Hardware IM2: a whole frame under DI, read $C8, write 1, read. Results are raw register bytes.",
+   "expect": "docs/LEARNINGS.md:185 and :193: $C8 bit 0 records the ULA interrupt since cleared; clear it and read it back. docs/NEXT_REGISTERS.md:56: bit 0 ULA, bit 1 line; writing 1 clears. book ch 4 (report A-N): agrees; the bit is set even if the pulse was missed under DI; in hardware IM2 with interrupts on a write cannot clear before RETI (not reached by this test).",
+   "needs": "nothing special",
+   "hazard": "none",
+   "fields": "I07: v = $C8 after a pulse-mode frame under DI ($hh); pdi = the same; pw0 = $C8 after writing 0; pw1 = $C8 after writing 1; hdi = $C8 after a hardware-IM2 frame under DI; hw1 = after writing 1 there; c0 / c4 / nr22 = NextRegs $C0, $C4, $22 at the time of the pulse-mode read. PASS if bit 0 of pdi / pw0 / pw1 is 1 / 1 / 0, else FAIL (the hardware pair is recorded only)."
   },
   {
    "id": "I08",
@@ -622,7 +985,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "How long does NextReg $22 bit 7 (/INT asserted) read 1 in pulse mode, for the frame interrupt and for a line interrupt?",
+   "method": "28 MHz, pulse mode, interrupts off. $22 is selected once; wait for bit 7 = 0 then = 1 (a read every ~49 clocks), then 128 unrolled reads 23 clocks apart are stored; high time = (1 + leading reads with bit 7 set) x 23 clocks. 5 pulses of the ULA frame interrupt, then 5 of a line interrupt at line 100 ($C4 bit 1). Results in clocks of 28 MHz (resolution 23).",
+   "expect": "docs/NEXT_REGISTERS.md:85: $22 bit 7 (read) = /INT asserted. docs/LEARNINGS.md:193: poll $22 bit 7 to see the INT signal drop. book ch 4 (report A-N): set while /INT is low, from any source. The length itself is not stated in these sources (see I04 / I05).",
+   "needs": "28 MHz (set by the test)",
+   "hazard": "none",
+   "fields": "I08: v = the longest time $22 bit 7 read 1 for the ULA interrupt over 5 pulses (clocks of 28 MHz, steps of 23); min / max = shortest / longest of the 5; n = 5; line = the longest for the line-100 interrupt; linemin = its shortest. 0 = bit 7 never seen set. Always INFO."
   },
   {
    "id": "I09",
@@ -635,7 +1004,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "On which raster line does the ULA frame interrupt arrive, and is it the same line every frame?",
+   "method": "28 MHz, pulse mode IM 2. CTC3 runs free (prescaler 16, constant 256). For 250 frames the handler reads the raster line ($1F, $1E, $1F: LSB, MSB, LSB) and then the CTC3 count, a few clocks after the acknowledge; the smallest and largest of each are kept. Line in raster lines; CTC phase in raw CTC3 counts.",
+   "expect": "docs/TECHNIQUES.md:284: line 248 (48K / 128K VGA 50 Hz), 239 (Pentagon), 256 (HDMI 50 Hz). docs/LEARNINGS.md:165: near line 248. lesson.line-clock-frame-multiple: the same line every frame. book ch 10 (report A-N): 128K: line 1 dot 128 in its own count; +3 one T earlier.",
+   "needs": "nothing special",
+   "hazard": "none",
+   "fields": "I09: v = the smallest raster line read in the handler (lines); min / max = smallest / largest line over the run; n = handler runs (about 250); ctcmin / ctcmax = smallest / largest CTC3 count read just after the line (phase within the line). Always INFO."
   },
   {
    "id": "I10",
@@ -649,6 +1024,11 @@
    "operator": false,
    "opt_in": false,
    "stage": 1,
+   "purpose": "Where exactly is the line interrupt for line N raised: on line N-1, how many T before line N starts?",
+   "method": "3.5 MHz, hardware IM2, line interrupt only, CTC3 free running (prescaler 16: one tick = 2 T). Interrupts off, wait for line N-2, poll the line LSB until it reads N-1 and read CTC3; then EI and wait until the handler (first thing: read CTC3) has run. The CTC difference, corrected for fixed instruction costs and minus the line length, gives the interrupt position against the start of line N in T. 5 samples each at N = 0, 100, 191 and the last line - 2.",
+   "expect": "lesson.line-interrupt-fires-on-previous-line: raised on line n-1 at dot 243 of its display area, a little over 100 T before line n at 3.5 MHz. docs/NEXT_REGISTERS.md:85: it fires as the previous line's pixels end. book ch 10 (report A-N): line n-1 dot 243.",
+   "needs": "hardware IM2 mode (set by the test)",
+   "hazard": "none",
    "fields": "pN = T at 3.5 MHz from the line interrupt for line N to the moment the raster counter ($1E / $1F) reads N (negative = before), mean of 5; sN = spread of the 5 raw readings (above ~24 T = not repeatable). Board run 5: mid-frame p100=-150 s100=0 and p191=-149 s191=2 - the interrupt comes 150 T (+-12) before the counter reads N, i.e. 78 T after the counter read N-1 (a 228 T line), repeatable; near the frame end it moves and spreads (p0=-7 s0=88, plast2=-122 s50): those two lines sit next to the counter's wrap at the frame end, where this test's own sync waits cross the frame boundary - read them as 'not constant there', not as a position."
   },
   {
@@ -662,7 +1042,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "How are line-interrupt numbers counted at the end of the frame: does one past the last line act as line 0, and do higher values never fire?",
+   "method": "28 MHz, pulse mode IM 2, ULA interrupt off, line interrupt on ($22 bit 1 and bit 0 = MSB, $23 = LSB, $C4 = 2). Three runs of 5 frames: line = last+1, last+2 and 511, where last = the largest raster line measured at start-up. The handler counts runs and records the smallest raster line it read. Result in runs (count).",
+   "expect": "book ch 4/10 (report A-N): numbers follow the raster count ($64 = 0: display row 0 = line 0, through the border to the frame end); a value one past the last line acts as line 0; higher values never fire; 9 bits ($22 bit 0 + $23). lesson.line-interrupt-fires-on-previous-line: line n is raised on line n-1.",
+   "needs": "nothing special",
+   "hazard": "none",
+   "fields": "I11: v = handler runs over 5 frames with the line interrupt set to last+1 (count); line = the smallest raster line read in that handler (65535 = never ran); last2 / line2 = the same for last+2; l511 / line3 = the same for 511; at = the line number used for last+1. PASS if last+2 and 511 never fire and last+1 fires 4-6 times at line 0 or at the last line (raised on the line before), else FAIL."
   },
   {
    "id": "I12",
@@ -675,7 +1061,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "Does the CTC count at a fixed rate from the 28 MHz clock, whatever the CPU speed?",
+   "method": "Interrupts off. At NextReg $07 = 0, 1, 2, 3 in turn: CTC3 free running with prescaler 256 and constant 256; count its ticks (wraps tracked by polling) over 8 frames, from one fall of the raster line MSB to the 8th. Result in CTC ticks per frame.",
+   "expect": "lesson.ctc-polled-clock: CTC3 ticks of 32 T. asm/exolon_hooks.asm:1040: 28 MHz / 256, one tick = 32 T of 3.5 MHz. docs/TECHNIQUES.md:636: rate = clk28 / (prescaler x constant). book ch 6 (report A-N): independent of CPU speed.",
+   "needs": "all four CPU speeds (set by the test)",
+   "hazard": "none",
+   "fields": "I12: v = CTC3 ticks per frame at 3.5 MHz (prescaler 256, 8-frame average) (ticks); s7 / s14 / s28 = the same at 7, 14 and 28 MHz. PASS if the four 8-frame totals are within 8 ticks of each other (1 tick per frame), else INFO."
   },
   {
    "id": "I13",
@@ -689,7 +1081,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "What period does a CTC timer have for a given time constant (16 x tc with 0 = 256, or 16 x (1 + tc))? And does a CTC channel set its status bit with its interrupt off?",
+   "method": "28 MHz, interrupts off. CTC0 as a timer, prescaler 16, interrupt disabled ($C5 = 0), time constant 109, then 219, then 0. For 50 frames NextReg $C9 bit 0 (CTC0 status) is polled and cleared by writing 1 each time it is seen; the sightings are counted. The ratio count(219) x 10000 / count(0) separates the formulas: 11690 for 16 x tc, 11682 for 16 x (1 + tc). Results in counts. The ULA-off part of the claim is not measured here.",
+   "expect": "docs/TECHNIQUES.md:634: rate = clk28 / (prescaler x time constant), constant 0 = 256 (RustyPixelsUK); Next Point's comment writes (1 + time constant); the two are ~1 % apart, not checked. book ch 4 (report A-N): CTC channels set their status bits even with their interrupt disabled; the ULA and line interrupt raise nothing when switched off.",
+   "needs": "28 MHz (set by the test)",
+   "hazard": "none",
+   "fields": "I13: v = $C9 bit 0 sightings with time constant 109 over 50 frames (count); c219 = with 219; c256 = with 0 (256); r = c219 x 10000 / c256; choice = 16xtc if r >= 11686, else 16x1+tc. PASS (status bit works while polled) if v > 0, else INFO."
   },
   {
    "id": "I14",
@@ -702,7 +1100,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "How many T does it cost to accept a hardware-IM2 interrupt (acknowledge plus the handler's RETI), at 3.5 and at 28 MHz?",
+   "method": "Hardware IM2, ULA enabled, every vector points to a bare RETI. At line 150, 64 times: clear status, raise the ULA request with NEXTREG $20,$40, read CTC3 (prescaler 16, free running), EI, NOP, (handler), read CTC3, DI. The same 64 times without the $20 write; the difference per repeat is the acknowledge + RETI. At NextReg $07 = 0 and 3. Result in T at 3.5 MHz and clocks at 28 MHz. IM 1 is not measured (it needs the ROM handler).",
+   "expect": "book ch 2 (report D-N28, L2100): accepting an interrupt costs 19 T in IM 2 on 3.03 at every speed (21 T on 3.02 at 28 MHz), 13 T in IM 1, NMI 11 T. book ch 4 (report A, latency): the same source. The spec adds the handler's RETI (14 T) to the measured difference.",
+   "needs": "hardware IM2 mode; 3.5 and 28 MHz (set by the test)",
+   "hazard": "none",
+   "fields": "I14: v = extra T per repeat at 3.5 MHz with the interrupt against without (acknowledge + RETI) (T); c28 = the same in clocks at 28 MHz; s1 / s0 = sums of the 64 CTC3 differences (ticks) with and without the request, from the last speed run (28 MHz); im1 = skipped-needs-rom. Always INFO."
   },
   {
    "id": "I15",
@@ -715,7 +1119,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "Does LD A,I report P/V = 0 when an interrupt is accepted during it (the NMOS Z80 quirk), even though interrupts are enabled?",
+   "method": "28 MHz, pulse mode IM 2 with a counting handler, interrupts on. A tight loop runs LD A,I then JP PO (taken when P/V = 0) until the handler has counted 500 frames (with a loop guard). Each P/V = 0 is counted. Result in count.",
+   "expect": "docs/BRIEFING.md:123 and docs/LEARNINGS.md:14: the NMOS quirk applies (P/V reads 0 if an interrupt is accepted during LD A,I; JNext too), so read I twice. book ch 2 (report D-N25): LD A,I / LD A,R P/V is correct on the Next. The claim: 0 = no bug, more than 0 = bug present.",
+   "needs": "nothing special",
+   "hazard": "none",
+   "fields": "I15: v = times LD A,I gave P/V = 0 with interrupts on (count); runs = handler runs during the loop (about 500). Always INFO (0 = no quirk, more = the quirk is present)."
   },
   {
    "id": "I16",
@@ -728,7 +1138,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "In pulse mode, does an enabled line interrupt raise the same /INT as the frame interrupt, so a game's handler runs twice per frame?",
+   "method": "28 MHz, pulse mode IM 2 counting handler, ULA interrupt and line interrupt at line 100 both on ($22 bit 1, $23 = 100, $C4 = 3). Count handler runs over 50 frames. Result in runs (count).",
+   "expect": "docs/TECHNIQUES.md:372: the line interrupt raises the same /INT in pulse mode, so the game's handler runs a second time per frame; never enable it under a game. book ch 4 (report A): agrees. Both: 100 runs in 50 frames.",
+   "needs": "nothing special",
+   "hazard": "none",
+   "fields": "I16: v = handler runs over 50 frames with the ULA and line-100 interrupts on (count). PASS if 99-101, else FAIL."
   },
   {
    "id": "I17",
@@ -741,7 +1157,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "Is the ULA interrupt enable one switch shared by NextReg $22 bit 2 (1 = off) and $C4 bit 0 (1 = on), so the last write wins?",
+   "method": "28 MHz, pulse mode IM 2 counting handler. Case a: write $22 bit 2 = 1 (off), then $C4 bit 0 = 1 (on); count runs over 5 frames and read $22 and $C4 back. Case b: clear $22 bit 2, write $C4 bit 0 = 1, then $22 bit 2 = 1; count over 5 frames and read both back. Port $FF is not written. Result in runs (count).",
+   "expect": "book ch 4 (report A-N): one flip-flop shared by $22 bit 2 and $C4 bit 0 (also port $FF bit 6), the last write wins; the line enable is shared by $22 bit 1 and $C4 bit 1. docs/BRIEFING.md:374: names $22 bit 2 / $C4 bit 0 as the ULA-interrupt-off state a stub must not leave; no prediction about sharing.",
+   "needs": "nothing special",
+   "hazard": "none",
+   "fields": "I17: v = runs over 5 frames in case a ($22 off then $C4 on) (count); b = runs in case b ($C4 on then $22 off); nr22a / nrc4a = $22 and $C4 read back after case a; nr22b / nrc4b = after case b. PASS if v is 4-6 and b = 0 (last write wins), else FAIL."
   },
   {
    "id": "I18",
@@ -754,7 +1176,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "With hardware IM2 enabled but the CPU still in IM 1, do non-ULA requests wait, and then all fire in priority order once IM 2 is selected?",
+   "method": "28 MHz. $C0 bit 0 = 1 (vector bits 7:5 = 000), CPU in IM 1 with interrupts off, line ($C4 bit 1) and CTC0 ($C5 bit 0) enabled, CTC0 not counting. At line 150, NEXTREG $20,$81 requests line + CTC0 in software. Then IM 2 (I = $FC, 16 indexed handlers at $FC00), EI, a short loop, DI. The handlers log the vector offsets in the order they ran; $C8 and $C9 are read after. Result in runs (count).",
+   "expect": "book ch 4 (report A-N): in IM 1 only the ULA interrupt falls back to a pulse; other sources wait and all fire, in priority order, when IM 2 is executed. The spec reads this as: line ($00) first, then CTC0 ($06).",
+   "needs": "hardware IM2 mode (set by the test)",
+   "hazard": "none",
+   "fields": "I18: v = handler runs after IM 2 + EI (count); o1 / o2 / o3 = vector offsets in the order the handlers ran ($hh; $FF = no run; line = $00, CTC0 = $06 with bits 7:5 = 000); c8 / c9 = NextRegs $C8 and $C9 after. Always INFO."
   },
   {
    "id": "I19",
@@ -767,7 +1195,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "In hardware IM2 mode, does only RETI release the in-service source (RETN releases nothing), and do $C0 bits 2:1 read back the CPU's interrupt mode?",
+   "method": "28 MHz, hardware IM2, ULA source only; the handler counts and ends with EI ; RETN. Interrupts on for 5 frames (raster polling). Then, under DI, $C0 is read in IM 1 and in IM 2. Recovery: pulse mode and a dummy RETI with interrupts off. Result in runs (count).",
+   "expect": "book ch 4 (report A-N): only RETI (ED 4D) releases the in-service source and only in IM 2; RETN releases nothing; $C0 bits 2:1 read back the mode. docs/TECHNIQUES.md:606: a handler ending plain RET leaves the interrupt unacknowledged and no later interrupt arrives until a RETI runs. Expected: 1 run in 5 frames.",
+   "needs": "hardware IM2 mode (set by the test)",
+   "hazard": "Could hang: the RETN handler leaves the interrupt unacknowledged; a dummy RETI recovers. The progress record is marked first: if the machine stops, the next start resumes and marks the test HANG-GUARD. Interrupt state is restored after.",
+   "fields": "I19: v = handler runs over 5 frames with a RETN-ended handler (count); im1 = $C0 read in IM 1 ($hh); im2 = $C0 read in IM 2. PASS if v = 1 and $C0 bits 2:1 read 01 in IM 1 and 10 in IM 2, else INFO."
   },
   {
    "id": "I20",
@@ -781,6 +1215,11 @@
    "operator": false,
    "opt_in": false,
    "stage": 1,
+   "purpose": "Does an interrupt source keep only one outstanding request, so CTC ticks that arrive while it waits fold into one?",
+   "method": "28 MHz. CTC0 timer, prescaler 16, constant 175 (~10 kHz). Periods per frame counted by polling $C9 bit 0. Then hardware IM2, CTC0 only: (old part) a handler busy for 3 CTC0 periods counts its runs over one frame. Deciding part, 8 times: interrupts off for 5 CTC0 wraps (5 requests), EI just after the 5th wrap, DI half a period later; a handler that only counts. Result in runs (count).",
+   "expect": "book ch 4 (report A-N): a source has one outstanding request; ticks arriving while it is pending or in service fold into it, only the status bit records them. So 1 run per window.",
+   "needs": "hardware IM2 mode (set by the test)",
+   "hazard": "none",
    "fields": "v = the most handler runs in one interrupts-on window after 5 CTC0 wraps with interrupts off (1 = the requests folded into one, 2-5 = they queued); least = the fewest; runs / periods = the old busy-handler ratio (board runs 4 / 5: 0.24-0.25), which cannot decide fold against queue."
   },
   {
@@ -794,7 +1233,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "Does writing NextReg $20 raise an interrupt request in software, whatever the source's enable, in pulse mode and in hardware IM2 mode?",
+   "method": "28 MHz. At line 150 with interrupts on: NEXTREG $20,$40 (ULA request), four NOPs, DI; count handler runs and read $C8. Four cases: pulse mode IM 2 with the ULA enable ($C4 bit 0) on and off, hardware IM2 (I = $FC, every vector to the counter) with the enable on and off. Result in runs (count).",
+   "expect": "book ch 4 (report A-N): NextReg $20 raises a request in software (bit 7 line, bit 6 ULA, bits 3:0 CTC) whatever the enables, in either mode.",
+   "needs": "nothing special",
+   "hazard": "none",
+   "fields": "I21: v = handler runs in pulse mode with the ULA enable on (count); poff = pulse mode, enable off; hon / hoff = hardware IM2 with the enable on / off; c8pon / c8poff / c8hon / c8hoff = NextReg $C8 after each case ($hh). Always INFO."
   },
   {
    "id": "I22",
@@ -807,7 +1252,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "Does a continuous zxnDMA transfer that covers the pulse-mode frame interrupt make the CPU lose that interrupt?",
+   "method": "Pulse mode IM 2 counting handler, interrupts on. A continuous 16K memory-to-memory DMA copy (bank 5 $4000 into suite pages mapped at $0000) is started 20 lines before the measured ULA interrupt line at 3.5 MHz, and 5 lines before at 28 MHz. Runs are counted from the start to the end of the transfer; $C8 is read after and the copy checked. Result in runs (count).",
+   "expect": "docs/TECHNIQUES.md:250: the CPU cannot see a pulse-mode interrupt while the DMA owns the bus, so a transfer across it loses the frame interrupt (DI does not help). lesson.dma-copy-loses-interrupt: a DMA job holds the bus and can hide the frame interrupt. book ch 5 (report B-N19): lost in pulse mode (a 16K copy at 6 T/byte costs one).",
+   "needs": "3.5 and 28 MHz (set by the test)",
+   "hazard": "none",
+   "fields": "I22: v = handler runs during the 16K transfer at 3.5 MHz (count); r28 = the same at 28 MHz; c8 / c8_28 = NextReg $C8 after each ($hh); bad / bad28 = copied bytes that are wrong. PASS if no run at either speed (the pulse was lost), else INFO."
   },
   {
    "id": "I23",
@@ -820,7 +1271,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "Does a burst-mode DMA with a prescaler hand the bus back between bytes, so a pulse-mode interrupt is still seen during a slow transfer?",
+   "method": "28 MHz, pulse mode IM 2 counting handler, interrupts on. Burst-mode DMA, prescaler 100, 2K copy from $4000 to suite memory at $0000, started at line 150. The CPU waits (up to 40 frames) until the last byte is copied, counting handler runs meanwhile; the copy is checked. Result in runs (count).",
+   "expect": "docs/TECHNIQUES.md:256: burst mode + prescaler hands the bus back to the CPU between bytes, so the pulse interrupt is seen (hardware to confirm). book ch 5 (report B-N15): the CPU keeps more than 95 % at P = 100.",
+   "needs": "28 MHz (set by the test)",
+   "hazard": "none",
+   "fields": "I23: v = handler runs during the burst transfer (count); frames = frames waited until the last byte was copied (40 = did not finish); bad = copied bytes that are wrong. PASS if v > 0 and the transfer finished within 40 frames, else INFO."
   },
   {
    "id": "I24",
@@ -834,6 +1291,11 @@
    "operator": false,
    "opt_in": false,
    "stage": 1,
+   "purpose": "In hardware IM2 mode with the DMA interrupt enables ($CC-$CE) set, does a running DMA let an enabled interrupt in and then resume after RETI? And what happens with interrupts off?",
+   "method": "28 MHz, hardware IM2, ULA source, $CC = $01, interrupts on: continuous 16K copy ($4000 to suite memory at $0000, destination pre-filled with the inverse) started 5 lines before the ULA line. The handler records the raster line and how many bytes were copied (binary search of the destination). 3 frames are waited, then the copy is checked. Then the same transfer with interrupts off. Any request already waiting is taken first. Result in bytes.",
+   "expect": "docs/TECHNIQUES.md:259: hardware IM2 mode ($C0 bit 0 + $CC-$CE) can let interrupts break into a DMA. docs/DDMA.md:35: with hardware IM2 and enabled pending sources, the DMA may wait indefinitely under DI. book ch 4/5 (report A-C3, B-N19): the DMA releases the bus per byte while a source requests; the transfer resumes after RETI.",
+   "needs": "hardware IM2 mode (set by the test)",
+   "hazard": "Could hang: with interrupts off the DMA may wait for an acknowledge that never comes. The progress record is marked first: if the machine stops, the next start resumes and marks the test HANG-GUARD. Interrupt state is restored after.",
    "fields": "v = bytes the DMA had copied when the handler ran; line = where; bad = wrong bytes after the EI run; dbad = wrong bytes after the interrupts-off run; pend = requests already waiting before the start (taken first); di = completes / returned-not-copied / paused-at-request. Board run 5: 1212 bytes at line 248, bad=0; dbad=15203 = 1181 bytes copied: with interrupts off the DMA stops at the ULA request at the same place and, with no acknowledge, does not restart - the CPU runs on (no hang)."
   },
   {
@@ -847,7 +1309,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "How many raster lines does a 50 Hz frame have at the video timing in use?",
+   "method": "At the start speed, read the raster line ($1F, $1E, $1F: LSB, MSB, LSB, retried if the second LSB is lower) in a tight loop for 10 frames and keep the largest value; lines per frame = largest + 1. The expected value comes from the timing: HDMI ($11 bits 2:0 = 7) 312; otherwise $03 bits 6:4: 48K 312, 128K / +3 311, Pentagon 320. Other timings are in the opt-in TIMING group. Result in lines.",
+   "expect": "docs/TECHNIQUES.md:281: 48K 312 lines, 128K 311, Pentagon 320 on VGA; HDMI 312 whatever the machine timing. book ch 10 (report A, AGREES): 312 / 311 / 320.",
+   "needs": "nothing special",
+   "hazard": "none",
+   "fields": "F01: v = lines per frame, the largest raster line over 10 frames + 1 (0 = no wrap seen) (lines); exp = the expected count for the timing in use (0 = no reference); nr03 = NextReg $03 ($hh). PASS if v = exp, else INFO."
   },
   {
    "id": "F02",
@@ -860,7 +1328,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "How long is one raster line, in T of 3.5 MHz?",
+   "method": "At 28 MHz, CTC3 runs free with prescaler 16 (one tick = 16 clocks of 28 MHz = 2 T of 3.5 MHz). The ticks are counted (wraps tracked by polling) over 256 line changes of the raster LSB ($1F). T per line = ticks x 2 / 256. Measured at the refresh rate in use. Result in T (2 decimals).",
+   "expect": "docs/TECHNIQUES.md:282: 896 clocks of 28 MHz a line (48K, Pentagon) = 224 T, 912 (128K) = 228 T, 864 (HDMI 50 Hz), 858 (HDMI 60 Hz). docs/LEARNINGS.md:33: 224 T (48K), 228 T (128K). book ch 10 (report A-N): 456 dots a line at 128K.",
+   "needs": "nothing special",
+   "hazard": "none",
+   "fields": "F02: v = line length in T of 3.5 MHz (CTC3 ticks x 2 / 256 lines) (T); ticks256 = raw CTC3 ticks (prescaler 16) over the 256 lines. Always INFO."
   },
   {
    "id": "F03",
@@ -874,7 +1348,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "How many lines does a frame have at the other refresh rate (60 Hz, or 50 Hz if the machine started at 60), and when does a write to NextReg $05 bit 2 take effect?",
+   "method": "Read $05; at line 100 flip bit 2 (read-modify-write). The frames are then measured by the line number falling: f1 from line 100 of the switch frame to its wrap, f2-f4 the next three; $05 is read once after them. Then lines per frame over 10 frames and the line length (CTC3, as F02) at the new rate. Bit 2 is put back the same way and two frames waited. Results in lines.",
+   "expect": "lesson.frame-lines-at-60hz-unsettled: open; book 264, docs 262 / 261. docs/TECHNIQUES.md:282: 60 Hz 262 (48K, HDMI) / 261 (128K VGA). docs/TECHNIQUES.md:425: zxnext-copper-samples notes give 264 at 60 Hz. book ch 10 (report A-C1): 264, display from line 40. docs/NEXT_REGISTERS.md:32: the new rate takes effect at the next frame, $05 reads the old rate until then; book silent on the read-back.",
+   "needs": "nothing special",
+   "hazard": "The refresh rate is switched twice (to the other rate and back), so the monitor may lose the picture for a moment. The start rate is always put back, even if a measurement fails.",
+   "fields": "F03: v = lines per frame at the other rate, largest line over 10 frames + 1 (lines); to = the rate switched to (60 or 50); nr05 = NextReg $05 read after 4 frames at the new rate ($hh); f1 = lines from line 100 of the switch frame to its wrap (+1); f2 / f3 / f4 = frame lengths of the next three frames; j2 = the line read just after f2's wrap; line_t = line length at the new rate (T of 3.5 MHz). Always INFO (the intake decides). Note: $05 is read once, not every line as the spec planned."
   },
   {
    "id": "F04",
@@ -887,7 +1367,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "Does reading the raster line as LSB, MSB, LSB (retrying when the second LSB is lower) always give a correct, steadily rising value?",
+   "method": "100,000 reads at 3.5 MHz and 100,000 at 28 MHz, in a tight loop, each by the house method ($1F, $1E, $1F with a retry if the second LSB is lower). A read is bad if it is above the largest line of the frame (measured at start-up) or lower than the one before other than at the frame wrap (from within 4 of the last line to within 4 of 0). Result in bad reads (count). The pair-until-agree lag in the spec is not measured.",
+   "expect": "docs/TECHNIQUES.md:332: a board with core 3.01.00 at 3.5 MHz sometimes read a wrong $1F; crossing line 255 -> 256 between the $1E and $1F reads gives a value 256 lines off; read LSB, MSB, LSB for timing; a pair read until two agree returns a late line (0-3 lines late at 3.5 MHz, docs/LEARNINGS.md). book ch 10 (report A-N): read $1E, $1F, $1E.",
+   "needs": "3.5 and 28 MHz (set by the test)",
+   "hazard": "none",
+   "fields": "F04: v = bad raster reads at both speeds together (count); bad35 = bad reads at 3.5 MHz; bad28 = at 28 MHz; maxline = the largest line of the frame used as the limit. PASS if v = 0, else FAIL."
   },
   {
    "id": "F05",
@@ -900,7 +1386,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 1
+   "stage": 1,
+   "purpose": "Does NextReg $64 offset the raster counter, the line interrupt and the copper alike, and when does a new value take effect?",
+   "method": "At line 100 write $64 = 32 and read the line straight after; measure the length of that frame and the next by the line number falling; put $64 back. Then with $64 = 0 and = 32: the raster line read in a line-interrupt-32 handler (pulse IM 2, ULA off), and the line at which the CPU first sees a copper WAIT 32 + MOVE $7F,$5A take effect (28 MHz). $64 restored and two frames waited. Results in lines.",
+   "expect": "docs/TECHNIQUES.md:279: $64 offsets $1E/$1F, the line interrupt and the copper WAIT alike. docs/TECHNIQUES.md:293: with 32, line 32 = ULA row 0; a new value takes effect when the ULA reaches row 0 (up to a frame late). docs/BRIEFING.md:383: a developer's note and the register text say 32 (demos use 33 for the Layer 2 top). book ch 10 (report A, AGREES): 32.",
+   "needs": "nothing special",
+   "hazard": "none (NextReg $64 is put back to its start value and two frames waited, before any later raster wait)",
+   "fields": "F05: v = the raster line read straight after writing $64 = 32 at line 100 (lines); before = 100 (the line of the write); f1 = length of that frame (largest line + 1); f2 = length of the next frame; li0 / li32 = the line read in a line-interrupt-32 handler with $64 = 0 / 32 (65535 = never ran); cp0 / cp32 = the line where the copper WAIT 32 + MOVE was first seen with $64 = 0 / 32 (65535 = never); parts = raster,line-int,copper. Always INFO."
   },
   {
    "id": "F06",
@@ -914,6 +1406,11 @@
    "operator": false,
    "opt_in": false,
    "stage": 2,
+   "purpose": "Side-by-side frame numbers at 50 and 60 Hz; for the claim: at 60 Hz, how many lines before the display does the frame interrupt come?",
+   "method": "At the start rate and then the other ($05 bit 2, read-modify-write, put back after even if a number is missing, two frames waited): lines per frame over 4 frames; line length (CTC3 prescaler 16 over 256 lines at 28 MHz, T of 3.5 MHz); and the raster line at which $C8 bit 0 (ULA interrupt status) is first seen set, polled at 28 MHz with interrupts off. Results in lines.",
+   "expect": "lesson.frame-lines-at-60hz-unsettled: the 60 Hz frame is open; the book gives 264 lines with the display from line 40, docs/TECHNIQUES.md 262 / 261. book ch 10 (report A-N): at 60 Hz the frame interrupt comes only 40 lines before the display, and there is no border above / below the wide area.",
+   "needs": "nothing special (a warning line is shown on screen)",
+   "hazard": "The test entry lists none, but it switches the refresh rate (to the other rate and back), so the picture may blink; the screen says to reset and restart if no picture returns within 10 s. The start rate is always put back.",
    "fields": "The same numbers at both rates ($05 bit 2 switched and put back): l50 / l60 lines per frame, t50 / t60 line length in T (3.5 MHz), i50 / i60 the raster line at which the ULA interrupt status ($C8 bit 0) was first seen. v = l60. The intake prints them side by side."
   },
   {
@@ -927,7 +1424,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "Does a copper WAIT for a raster line the beam has already passed this frame hold the rest of the list until that line comes round in the next frame?",
+   "method": "28 MHz ($07 = 3). List (uploaded by NextReg $60 after $61 / $62 = 0): MOVE $7F,1; WAIT line 150; MOVE $7F,2; WAIT line 50; MOVE $7F,3; HALT, started in mode 01 ($62 = $40) at raster line 10. The CPU polls NextReg $7F and the $1E / $1F raster line in one loop for up to 3 frames and logs, for values 1-3, the frame of the first sighting and the raster lines read just before and just after that $7F read. The result is a choice word.",
+   "expect": "lesson.copper-wait-line-equality (wiki copper page: WAIT is an equality match), docs/TECHNIQUES.md:203 and docs/BRIEFING.md:383: a WAIT for a line already passed holds the rest of the list until the next frame (the repo marks this as inferred from the guide, not tested); so 3 should appear at line 50 of the frame after the one where 2 appeared.",
+   "needs": "nothing special",
+   "hazard": "none (the harness stops the copper afterwards and puts NextRegs $7F and $43 back)",
+   "fields": "P01: v = holds (3 first seen at line 50 in a later frame than 2), no-wait (3 in the same frame as 2, within 2 lines after line 150) or other; l1 / l2 / l3 = the raster line read just before the $7F read that first saw 1 / 2 / 3 ('-' = never seen); l1n / l2n / l3n = the line read just after it, written only when it differs; frames23 = frame of 3 minus frame of 2. INFO always (the intake judges the choice)."
   },
   {
    "id": "P02",
@@ -940,7 +1443,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "Does a copper WAIT for a horizontal position already passed on the current line go straight on (a >= compare), rather than wait for the next frame?",
+   "method": "28 MHz. List: WAIT (line 100, h 50); MOVE $7F,1; WAIT (line 100, h 10); MOVE $7F,2; HALT, started in mode 01 at line 10. The second WAIT asks for an h already passed on the same line. The CPU polls $7F and the raster line (the same log as P01) until it sees 2 or 3 frames pass. v = the raster line at which 2 was first seen.",
+   "expect": "docs/TECHNIQUES.md:324: WAIT compares the horizontal position as >= on the current line, so a WAIT for an h already passed on the same line does not wait (no roll-over into the next frame); docs/BRIEFING.md:384 says the same. Both MOVEs should take effect on line 100.",
+   "needs": "nothing special",
+   "hazard": "none (the harness stops the copper afterwards and puts NextRegs $7F and $43 back)",
+   "fields": "P02: v = the raster line read just before the $7F read that first saw 2 (lines); l1 / l2 / l3 = the line before the first sighting of 1 / 2 / 3 ('-' = never; l1 '-' is normal when 2 followed within the same poll; 3 is not used here); l1n / l2n / l3n = the line after, only when different. PASS if the line just before or just after the first sighting of 2 is 100, else FAIL."
   },
   {
    "id": "P03",
@@ -953,7 +1462,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "What is the largest horizontal position h a copper WAIT can still match on a line? The last part of every line is said never to match.",
+   "method": "28 MHz. For h = 48 to 63: $7F = 0, list WAIT (line 100, h); MOVE $7F,h; HALT, started in mode 01 at line 10; NextReg $7F read at line 101 of the following frame. h counts as matched when $7F = h. WAIT h is in steps of 16 clocks of 28 MHz (docs/TECHNIQUES.md:418).",
+   "expect": "docs/TECHNIQUES.md:418 (zxnext-copper-samples, varmfskii's tables): the last ~128 dots of a line are never matched by a WAIT (it waits until that line next frame); the largest h a WAIT can match is 52 (HDMI), 54 (48K and Pentagon timing), 55 (128K timing).",
+   "needs": "nothing special",
+   "hazard": "none (the harness stops the copper afterwards and puts NextRegs $7F and $43 back)",
+   "fields": "P03: v = the largest h (48-63) whose MOVE ran on line 100, in hex ($FF = none ran); hits = a 16-bit mask written as a decimal number, bit n set = h 48 + n matched. INFO always."
   },
   {
    "id": "P04",
@@ -967,6 +1482,11 @@
    "operator": false,
    "opt_in": false,
    "stage": 2,
+   "purpose": "Do copper line numbers equal the $1E / $1F raster line, and how far apart in time are the copper's line change and the raster counter's change?",
+   "method": "28 MHz, CTC3 free-running /16 (a tick = 16 clocks of 28 MHz = 2 T at 3.5 MHz). For L = 0, 120, 191, 250: list WAIT (L, h 0); MOVE $7F,$AA; HALT, started in mode 01 at frame start. One loop reads CTC3, then $1F, then $7F, keeping the CTC value at the first sight of line L and of $7F = $AA, then reads the line. Each L runs in 3 frames; offset in T (3.5 MHz) = ticks x 2, median and spread reported. PASS if every line read equals L.",
+   "expect": "lesson.copper-wait-line-equality and docs/TECHNIQUES.md:110: copper line numbers = the $1E / $1F raster line (WAIT 120 -> 120). The claim (wiki copper page) adds that the horizontal count starts 12 dots before the display, so the copper counts the left border of line n+1 as line n. Claim tolerance: line exact, offset +-8 T. docs/LEARNINGS.md:596 is also cited; the text at that line is not about the copper.",
+   "needs": "nothing special",
+   "hazard": "none (the harness stops the copper afterwards and puts NextRegs $7F and $43 back)",
    "fields": "lL = the line read after the copper's MOVE showed; oL = T (3.5 MHz) from the raster counter change to the MOVE's effect (negative = the MOVE first), median of 3 frames; sL = spread. Board runs 4 and 5: o191 = -62 / -60 with s191 = 0 and 0 at lines 0, 120, 250: a WAIT for line 191 - the last display line - takes effect about 60 T (a quarter line) before the counter reads 191, every frame; the other lines coincide within the poll step. The copper line number still equals the counter (l191 = 191)."
   },
   {
@@ -980,7 +1500,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "How many 28 MHz clocks does the copper take per MOVE and per WAIT instruction?",
+   "method": "28 MHz, CTC3 /16 (a tick = 16 clocks of 28 MHz). List: WAIT (100, 0); MOVE $7F,1; 1000 x MOVE $7F,1; MOVE $7F,$AA; HALT, started at line 90. The CPU polls $7F and counts CTC3 ticks (wraps counted) from its first sight of 1 to its first sight of $AA = 1001 instructions. Again with 1000 x WAIT (100, 0) (already matched) in place of the 1000 MOVEs. Clocks per instruction = ticks x 16 / 1001.",
+   "expect": "lesson.copper-clock-and-instruction-time (wiki copper page: MOVE 2, WAIT 1): the copper runs at 28 MHz; a MOVE takes 2 copper clocks and a WAIT 1; the register holds the new value 2 clocks after the MOVE. Claim tolerance +-0.1 clock.",
+   "needs": "nothing special",
+   "hazard": "none (the harness stops the copper afterwards and puts NextRegs $7F and $43 back)",
+   "fields": "P05: v = 28 MHz clocks per MOVE, 2 decimals (clocks; -1 when 1 or $AA was never seen); wait = the same per already-matched WAIT; mt / wt = the raw CTC3 tick counts (16 clocks each) of the MOVE run and the WAIT run, 65535 = timed out. INFO always."
   },
   {
    "id": "P06",
@@ -993,7 +1519,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "In copper mode 11 (restart every frame), at which raster line does the list start again?",
+   "method": "28 MHz. Mode 11 ($62 = $C0) list: MOVE $7F,9; WAIT line 200; MOVE $7F,1; HALT. At raster line 210 the CPU writes $7F = 0, then polls $7F (up to 65536 reads) and reads the $1E / $1F raster line when 9 appears again, i.e. when the list has restarted. Result in lines.",
+   "expect": "lesson.copper-wait-offsets and docs/TECHNIQUES.md:423 (raster counters and the top border: the border lines above ULA line 0 count as the end of the previous frame): the claim says mode 11 restarts every frame at line 0 of the copper count, after the top border, not at the frame's first line; the claim records CSpect restarting after the top border.",
+   "needs": "nothing special",
+   "hazard": "none (the harness stops the copper afterwards and puts NextRegs $7F and $43 back)",
+   "fields": "P06: v = the raster line at which $7F = 9 was first seen after it was cleared at line 210 (lines); $FF (hex) when 9 never came back within the poll limit. INFO always."
   },
   {
    "id": "P07",
@@ -1006,7 +1538,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "Do two copper MOVEs to NextReg $44 write one 9-bit palette entry, as two CPU writes to $44 do?",
+   "method": "CPU speed as found (not set). Layer 2 first palette entry 200 saved ($43 = $10, $40 = 200, read $41 and $44). List: MOVE $43,$10; MOVE $40,200; MOVE $44,$A5; MOVE $44,$01; HALT, run in mode 01 for a 256-pass DJNZ delay, then stopped. The CPU selects entry 200 again and reads $41 (8-bit value) and $44 (9th-bit byte). Entry 200, $43 and $40 are put back.",
+   "expect": "lesson.copper-wait-offsets and docs/TECHNIQUES.md:207: per-line copper bars use MOVE $44 twice (9-bit colour) to recolour one entry, so the pair should leave entry 200 = $A5 with the 9th bit from $01. The claim records that this failed in CSpect while copper-bar demos use it.",
+   "needs": "nothing special",
+   "hazard": "none (the harness stops the copper afterwards and puts NextRegs $7F and $43 back); palette entry 200 restored",
+   "fields": "P07: v = NextReg $41 read for Layer 2 palette entry 200 after the copper ran (hex); b9 = NextReg $44 read for that entry (the 9th-bit byte, hex). PASS if v = $A5, else FAIL."
   },
   {
    "id": "P08",
@@ -1019,7 +1557,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "Can the CPU write and read palette entries by NextReg while the copper loops MOVEs to another register, and what happens when the copper writes the palette index the CPU uses?",
+   "method": "At 3.5 and 28 MHz. The copper loops 1024 x MOVE $7F,$55 (APART) or 1024 x MOVE $40,0 (SHARE) in mode 01 while the CPU selects sprite palette 2 ($43 = %01100000), writes 256 entries by NEXTREG $41 (value i xor $5A), then reads each back ($40 = i, $41 through $243B / $253B) and counts wrong entries (shown up to 255). Sprite palette 2 is saved first and written back. The LDIR+COP timing row runs in G7 N01, not here.",
+   "expect": "docs/TECHNIQUES.md:125: the copper looping MOVEs does not slow CPU memory work and does not disturb CPU NEXTREG / port-pair access to other registers (CP APART 0); never drive one register pair from both (claim: CP SHARE 255 wrong). docs/LEARNINGS.md:594 is also cited; the text at that line is about frame limiters, not the copper.",
+   "needs": "nothing special",
+   "hazard": "none (the harness stops the copper afterwards and puts NextRegs $7F and $43 back); sprite palette 2 saved and written back",
+   "fields": "P08: v = wrong palette entries (of 256) with the copper looping MOVE $7F, at 28 MHz; a35 / a28 = the same (MOVE $7F, APART) at 3.5 / 28 MHz; s35 / s28 = with the copper looping MOVE $40 (SHARE: the CPU's own index register) at 3.5 / 28 MHz; each shown up to 255. PASS if a35 = 0 and a28 = 0, else FAIL; s35 / s28 are information only (wrong entries expected)."
   },
   {
    "id": "P09",
@@ -1032,7 +1576,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "When the CPU writes a NextReg while the copper is writing NextRegs, does the CPU wait, and how much does each NEXTREG cost?",
+   "method": "28 MHz, CTC3 /256 (a tick = 256 clocks of 28 MHz). 2048 x NEXTREG $7F,0 (8 per DJNZ pass) timed three ways: copper stopped; copper looping 1024 x MOVE $7F,$55 (same register); copper looping MOVE $40,0 (another register; $40 put back). Clocks per NEXTREG = ticks x 256 / 2048, the DJNZ share (13 / 8 a NEXTREG) included. Raster lines elapsed are kept as a cross-check against a CTC wrap.",
+   "expect": "book ch 3 (report D-N23): when the copper and the CPU write a NextReg in the same 28 MHz tick the copper wins and the CPU waits one tick; the copper writes at most every other tick. Claim tolerance +-0.2 clock. No per-NEXTREG clock figure is stated in the sources.",
+   "needs": "nothing special",
+   "hazard": "none (the harness stops the copper afterwards and puts NextRegs $7F and $43 back)",
+   "fields": "P09: v = 28 MHz clocks per NEXTREG with the copper stopped, 2 decimals (clocks); mv = the same with the copper looping MOVE $7F; mp = with it looping MOVE $40; t0 / t1 / t2 = raw CTC3 ticks (256 clocks each) of the three runs; l0 / l1 / l2 = raster lines elapsed in each run (a wrap past 256 ticks would show as a small t with many lines). INFO always."
   },
   {
    "id": "P10",
@@ -1045,7 +1595,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "Does rewriting $61 / $62 with the same copper mode (11) only move the index, without restarting a running list?",
+   "method": "28 MHz. Mode 11 list: MOVE $7F,9; WAIT line 150; MOVE $7F,2; HALT, running. At raster line 100 the CPU writes $7F = 0, then $61 = 0 and $62 = $C0 (mode 11 again, index 0) and reads $7F at line 110 of the same frame. A restart would have run MOVE $7F,9 again.",
+   "expect": "docs/TECHNIQUES.md:326: rewriting $61 / $62 with the same mode bits does not disturb a running list; docs/NEXT_REGISTERS.md:82: same mode again = index change only. So $7F should still read 0 at line 110.",
+   "needs": "nothing special",
+   "hazard": "none (the harness stops the copper afterwards and puts NextRegs $7F and $43 back)",
+   "fields": "P10: v = NextReg $7F read at line 110 (hex): 0 = no restart, 9 = the list restarted. PASS if 0, else FAIL."
   },
   {
    "id": "D01",
@@ -1058,7 +1614,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "Does the zxnDMA copy and fill memory correctly at 3.5 MHz as well as at 28 MHz?",
+   "method": "Scratch pages 38 / 39 in slots 0 / 1, interrupts off; port $6B, nextbench program shape: $C3, then $83; WR0 $7D + A address + length; WR1 / WR2 (bit 6 + timing byte 2); WR4 $AD (continuous) + B address; $82; $CF; $87. At 3.5 MHz ($07 = 0) and 28 MHz ($07 = 3): a 2048-byte copy $0000 -> $2000 (destination first set to NOT the source) and a 256-byte fill from one fixed source byte $55 (WR1 $24) into $2000. Every byte checked.",
+   "expect": "docs/TECHNIQUES.md:49, tools/hwtests/README.md:196 and docs/LEARNINGS.md:553: on core 3.02.00 DMA gave wrong copies at 3.5 MHz (fixed in 3.02.02 per the core changelog) and right ones at 28 MHz. The claim expects correct copies at 3.5 MHz on core 3.03.",
+   "needs": "nothing special",
+   "hazard": "none",
+   "fields": "D01: v = how many of the four transfers had wrong bytes (0-4); c35 / f35 = wrong bytes of the 2K copy / the 256-byte fill at 3.5 MHz; c28 / f28 = the same at 28 MHz. PASS if all four are 0, else FAIL."
   },
   {
    "id": "D02",
@@ -1073,7 +1635,12 @@
    "operator": false,
    "opt_in": false,
    "stage": 2,
-   "fields": "keys <m|p><a|3|2><35|28> = clocks of 28 MHz per byte (memory / port $5B; timing byte absent / 3 / 2; 3.5 / 28 MHz), slope (t2048 - t256) / 1792. Board run 5 (d99fbf8): 0 / 584 / 0.32 were a timing fault - in continuous mode the CPU is frozen and the CTC3 wraps were lost; the board's own nb.DMA rows predict about 4.99 clocks (28 MHz) and 32 (3.5 MHz) at timing byte 2. method=fault marks a slope outside 0.5-100 (INFO, never FAIL)."
+   "purpose": "How many 28 MHz clocks does a zxnDMA byte cost, memory to memory and memory to port, with no timing byte and with each timing byte, and does 'no timing byte' mean 3-clock cycles?",
+   "method": "Pages 38 / 39 in slots 0 / 1. Continuous transfers on $6B from $0000 to $2000 (memory) or to port $5B (sprite patterns from slot 63; WR2 $28 = fixed I/O), timing byte absent or WR1 and WR2 bit 6 + byte %01 / %10 / %11, 256 and 2048 bytes, at 3.5 and 28 MHz. The CPU is frozen during the transfer, so the time is rebuilt from the raster line, CTC0 (/256) and CTC3 (/16) read before and after. 28 MHz clocks per byte = (t2048 - t256) / 1792.",
+   "expect": "docs/DDMA.md:62 / :88 (3.03.00 guide): after $C3 3 + 3 cycles = 6 a byte; fastest 2 + 2 = 4, about 12 % faster. docs/TECHNIQUES.md:232-233: ~4 cycles a byte at length 2 only with the timing byte sent for both ports; without it standard Z80 cycle timing. book ch 5 (B-N1, N2, N31, B-C1): 6 / 4 clocks, 7 at 28 MHz on 3.02; 3-clock cycles after reset; timing byte 00 = 4, 01 = 3, 10 = 2, 11 = 4 clocks a cycle (as quoted in g6.asm).",
+   "needs": "nothing special",
+   "hazard": "none (it writes sprite pattern memory from pattern 63 on; not restored, nothing displays it)",
+   "fields": "keys <m|p><a|3|4|2><35|28> = clocks of 28 MHz per byte (memory / port $5B; timing byte absent / 3 / 4 / 2; 3.5 / 28 MHz), slope (t2048 - t256) / 1792. Board run 5 (d99fbf8): 0 / 584 / 0.32 were a timing fault - in continuous mode the CPU is frozen and the CTC3 wraps were lost; the board's own nb.DMA rows predict about 4.99 clocks (28 MHz) and 32 (3.5 MHz) at timing byte 2. method=fault marks a slope outside 0.5-100 (INFO, never FAIL)."
   },
   {
    "id": "D03",
@@ -1086,7 +1653,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "How many bytes does a DMA transfer of programmed length 0, 1 and 16 move on port $6B (zxnDMA) and on port $0B (Zilog mode)?",
+   "method": "Pages 38 / 39 in slots 0 / 1, CPU speed as found. Source $0000 = 1, 2, 3, ...; destination $2000 = 32 bytes of $AA. Programs of length 0, 1 and 16 (timing byte 2, continuous) are sent and started through $6B, then the same through $0B; after each transfer $C3 is written to $6B and $6B is read (zxnDMA mode back). Bytes no longer $AA are counted.",
+   "expect": "lesson.zxn-dma-length-exact-zilog-plus-one (wiki: since core 3.1.2) and book ch 5 (report B-N7): port $6B moves exactly the programmed length, port $0B moves length + 1, length 0 moves one byte on both; the mode sticks to the last port touched (book: reset restores zxnDMA).",
+   "needs": "nothing special",
+   "hazard": "none (zxnDMA mode is restored by a $6B access after each $0B pass)",
+   "fields": "D03: v = bytes written by the length-16 transfer through $6B (bytes); p6b0 / p6b1 / p6b16 = bytes written through $6B for length 0 / 1 / 16; p0b0 / p0b1 / p0b16 = the same through $0B. PASS if $6B wrote 1, 1, 16, else FAIL; the $0B counts are information only."
   },
   {
    "id": "D04",
@@ -1100,6 +1673,11 @@
    "operator": false,
    "opt_in": false,
    "stage": 2,
+   "purpose": "With prescaler P in burst mode, how many 28 MHz clocks pass per DMA byte at 3.5 and at 28 MHz?",
+   "method": "Pages 38 / 39 in slots 0 / 1. Burst mode (WR4 $CD), 256 bytes $0000 -> $2000, WR2 timing byte 2 with bit 5 + prescaler byte P, for P = 0, 1, 12, 55, 100, 144 at 3.5 and 28 MHz. The CPU polls the last destination byte (first set to NOT the source) for the end while counting CTC3 /16 ticks (wraps counted). 28 MHz clocks per byte = ticks x 16 / 256; -1 when it timed out.",
+   "expect": "book ch 5 (B-N14): a byte every 4P+3 T at 3.5 MHz and every 32P+3 clocks at 28 MHz; P = 0 is off, P = 1 at 3.5 MHz has no effect. docs/TECHNIQUES.md:257 / :631 and docs/DDMA.md (prescaler row, cited as :90): rate = 875 kHz / P, scaled by NextReg $11, the same at every CPU speed (about 32 x P clocks of 28 MHz a byte).",
+   "needs": "nothing special",
+   "hazard": "none",
    "fields": "pP_<35|28> = clocks of 28 MHz per byte in burst mode with prescaler P. Board run 5 (d99fbf8): 16 for every P was a test fault (the tick count was overwritten before use); JNext after the fix: about 32 x P (875 kHz / P)."
   },
   {
@@ -1114,6 +1692,11 @@
    "operator": false,
    "opt_in": false,
    "stage": 2,
+   "purpose": "How much of the bus does the CPU keep during a burst-mode DMA with prescaler 100, and during a continuous one with the same prescaler?",
+   "method": "28 MHz, pages 38 / 39. A 2048-byte $0000 -> $2000 transfer with prescaler 100 (timing byte 2), once burst (WR4 $CD) and once continuous ($AD), while the CPU runs a polling loop (reads CTC3 /16, waits for the last destination byte). The same loop then runs with no DMA for about as many CTC wraps. Share (%) = loop passes per 16 ticks with the DMA / passes per 16 ticks without x 100.",
+   "expect": "book ch 5 (B-N15): in burst mode with a prescaler the CPU keeps most of the bus (> 95 % at P = 100); continuous mode with a prescaler freezes the CPU for the whole block. docs/TECHNIQUES.md:241: continuous mode holds the bus to the end.",
+   "needs": "nothing special",
+   "hazard": "none",
    "fields": "v = the CPU's polling-loop rate during a burst (P = 100) against the same loop with no DMA, %; cont = the same during a continuous transfer. Board run 5 (d99fbf8): 104 % came from comparing loop counts over different lengths; rates are compared now."
   },
   {
@@ -1127,7 +1710,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "What does the DMA status byte read when the DMA is idle and after a finished block, and does the read sequence follow the read mask?",
+   "method": "28 MHz, pages 38 / 39. $C3, then $BF (read status) and IN from $6B -> v. A 16-byte continuous copy is programmed and run, then $BF and IN -> s1. Then $BB with read mask $7F, $A7 (start the read sequence) and 7 reads from $6B -> r0-r6.",
+   "expect": "book ch 5 (B-N18): the status byte reads $3A idle and $1A after a finished block; the read sequence follows the read mask. docs/NEXT_REGISTERS.md:80 documents $BB + mask / $BF / $A7 for reading status, with no values.",
+   "needs": "nothing special",
+   "hazard": "none",
+   "fields": "D06: v = status byte read after $C3, $BF (hex); s1 = status after the finished 16-byte copy (hex); r0-r6 = the seven bytes read after $BB $7F, $A7, in order (hex). PASS if v = $3A and s1 = $1A, else FAIL."
   },
   {
    "id": "D07",
@@ -1140,7 +1729,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "Does $C3 (reset) keep the programmed addresses and length, so that $CF, $87 alone repeats the same copy, and at what speed does it then run?",
+   "method": "28 MHz, pages 38 / 39. A 64-byte continuous copy $0000 -> $2000 with timing byte 2 is programmed, run and timed. The destination is cleared, then only $C3, $CF (load) and $87 (enable) are written; the copy is checked and timed again (CTC3 /16 with raster / CTC0 rebuild, the CPU being frozen). 28 MHz clocks per byte = ticks x 16 / 64, timing-loop overhead included.",
+   "expect": "book ch 5 (B-N12, N26): $C3 keeps start addresses, length and modes but clears the timing (to 3), the prescaler, auto-restart and the blitter settings; so the second run should copy the same block at the reset timing (claim measure: 6 clocks a byte).",
+   "needs": "nothing special",
+   "hazard": "none",
+   "fields": "D07: v = 28 MHz clocks per byte of the second run, after $C3 (clocks); first = the same for the first run (timing byte 2); bad1 / bad2 = destination bytes that differ from the source after the first / second run. PASS if bad2 = 0, else FAIL; the clock values are information."
   },
   {
    "id": "D08",
@@ -1153,7 +1748,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "Does a forward DMA copy with destination = source + 1 fill the block with the first byte, like the LDIR fill idiom?",
+   "method": "28 MHz, pages 38 / 39. $0000 = $5A, $0001-$0100 = NOT of a pattern; a 256-byte continuous copy $0000 -> $0001 (timing byte 2). Bytes $0001-$0100 that are not $5A are counted. (The claim's measure names 3.5 and 28 MHz; the code runs at 28 MHz only.)",
+   "expect": "docs/TECHNIQUES.md:213 and lesson.overlapping-dma-shift: memory to memory with destination = source + 1 fills a block (so a forward DMA cannot do an overlapping right shift).",
+   "needs": "nothing special",
+   "hazard": "none",
+   "fields": "D08: v = bytes of $0001-$0100 not equal to $5A after the copy (bytes). PASS if 0 (the copy filled), else FAIL."
   },
   {
    "id": "D09",
@@ -1166,7 +1767,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "Is the zxnDDMA blitter present? Probe: on a DMA without it the extended command bytes are dropped and their data bytes act as ordinary register bytes.",
+   "method": "28 MHz, pages 38 / 39 in slots 0 / 1; byte 0 of pages 56 / 57 saved, set to 0 / $22, written back after. To $6B: $C3; $D7,$0B; $DB,$0B; $DF,$01 (physical; every data byte below $80); eight $83; a 1-byte copy $2000 -> $0000 ($7D,$00,$20,$01,$00,$14,$10,$AD,$00,$00,$82,$CF,$87); $C3. A blitter copies physical $0B2000 (page 57 byte 0) to $0B0000 (page 56 byte 0); an old DMA copies $2000 (page 39, $11) to $0000 (page 38).",
+   "expect": "docs/DDMA.md:25 and docs/NEXT_REGISTERS.md:80: zxnDDMA commands on port $6B from core 3.03.00; on older cores and on $0B they are ignored but their parameter bytes can be taken as DMA writes; gate on core version. book ch 5 (B-N27, D1-D4): present on every board in 3.03; the probe after $C3 with data below $80 then eight $83 is safe.",
+   "needs": "nothing special (it decides FAIL from the core version, NextReg $01)",
+   "hazard": "none (byte 0 of pages 56 and 57 is saved and written back)",
+   "fields": "D09: v = blitter (page 56 byte 0 became $22), none (the byte at logical $0000 became $11, an old-DMA copy) or other; old = the byte at logical $0000 (page 38) after the probe (hex); phys = byte 0 of page 56 (hex). FAIL if v = none and the core is 3.03 or later (NextReg $01 >= $33); otherwise INFO."
   },
   {
    "id": "D10",
@@ -1179,7 +1786,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "Are blitter physical addresses SRAM addresses, with 8K RAM page n at $40000 + n x $2000, and does an address carry across a 64K boundary into the extended byte?",
+   "method": "28 MHz. Physical mode ($DF bit 0), $D7 / $DB extended bytes $08, no timing byte. 16 bytes $08C100 -> $08E100 (page 38 +$100 to page 39 +$100), read through the MMU (slots 0 / 1), with 16 guard bytes before and 32 after checked still $AA. Cross: 16 bytes from $08FFF8 (the last 8 of page 39, then 8 more where the address carries) to page 38 +$200, compared with page 39 and page 40 through slot 1.",
+   "expect": "lesson.blitter-sram-aperture-offset, lesson.jnext-ram-dump-offset, book ch 5 (B-N21) and book ch 3 (D-N15): RAM page n at $40000 + n x $2000 (16K bank n at $40000 + n x $4000), 22 bits via $D7 / $DB (repo: the $040000 aperture offset).",
+   "needs": "the blitter seen by D09's probe this session (D09 not run this session: core 3.03 or later, NextReg $01 >= $33), else SKIP why=no-blitter (g6.asm: JNext has no blitter, CSpect 4.5.9 has one)",
+   "hazard": "none",
+   "fields": "D10: v = wrong bytes of the first copy, the 16 guard bytes before and 32 after included (bytes); cross = wrong bytes of the copy from $08FFF8 (page 39's last 8 bytes, then page 40's first 8). PASS if v = 0 and cross = 0, else FAIL; SKIP why=no-blitter when D09 found no blitter."
   },
   {
    "id": "D11",
@@ -1192,7 +1805,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "Can blitter physical-mode writes reach the block-RAM pages (bank 5 page $0A, page $0E), or do they land in an invisible SRAM twin, while page $0F is ordinary SRAM?",
+   "method": "28 MHz. For pages $0A, $0E, $0F at physical $054000 / $05C000 / $05E000 (extended byte $05): the 16 bytes there saved by a physical copy (to page 38 +$300) and through the MMU (slot 1, to +$320); a 16-byte pattern copied there physically; read back through the MMU and by a physical copy (to +$360); then the saved bytes put back both ways. shows = the MMU read sees the pattern; twin = only the physical read-back does.",
+   "expect": "docs/DDMA.md:54: banks 5 / 7 screen storage is block RAM and cannot be reached through their physical SRAM addresses. book ch 5 (B-N22) and book ch 3 (D-N16): the write lands in an invisible twin SRAM ($054000 / $05C000); page $0F is SRAM and shows.",
+   "needs": "the blitter seen by D09's probe this session (D09 not run this session: core 3.03 or later, NextReg $01 >= $33), else SKIP why=no-blitter (g6.asm: JNext has no blitter, CSpect 4.5.9 has one)",
+   "hazard": "none (it writes 16 bytes at the start of the ULA screen, page $0A, and of pages $0E / $0F, and puts the saved bytes back physically and through the MMU)",
+   "fields": "D11: v = the word for page $0A: shows (the MMU read sees the pattern), twin (only the physical read-back sees it) or other; p0e / p0f = the same for page $0E / $0F. PASS if $0A = twin, $0E = twin and $0F = shows, else FAIL; SKIP why=no-blitter when D09 found no blitter."
   },
   {
    "id": "D12",
@@ -1205,7 +1824,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "Does blitter 2D mode move row length x rows bytes with strides measured from row start to row start, and does a row length or row count of 0 still move one byte?",
+   "method": "28 MHz. Physical + 2D ($DF = 3), no timing byte; $E3 row length, $E7 rows, $EB / $EF A / B stride. Page 38 = a sheet 256 wide (byte = row x 13 + column); page 39 set to $AA before each case. a: 32 x 32 from column 16, strides 256 / 80, to +4; b: 64 x 20 (Rainbow shape), strides 64 / 80, to +488; z0l: row length 0, 1 row; z0r: row length 1, 0 rows (strides 1, to +$100). Copies checked against the sheet; other bytes must stay $AA.",
+   "expect": "docs/DDMA.md:52: 2D length and row count are actual values, not minus one; zero still transfers one byte; strides are distances between row starts. book ch 5 (B-N23) states the same.",
+   "needs": "the blitter seen by D09's probe this session (D09 not run this session: core 3.03 or later, NextReg $01 >= $33), else SKIP why=no-blitter (g6.asm: JNext has no blitter, CSpect 4.5.9 has one)",
+   "hazard": "could hang or overwrite: were a length or row count of 0 to mean 65536 the copy would run on past page 39 into pages 40-47 (40-43 hold suite code). The progress file is written first, so after a reset a restart resumes and marks it HANG-GUARD. Not opt-in.",
+   "fields": "D12: v = a + b (bytes); a / b = wrong bytes of the 32 x 32 and the 64 x 20 cases (copied bytes that differ plus bytes of page 39 written outside the rectangle); z0l / z0r = bytes of page 39 written by the row-length-0 and the rows-0 case. PASS if a = b = 0 and z0l = z0r = 1, else FAIL; SKIP why=no-blitter when D09 found no blitter."
   },
   {
    "id": "D13",
@@ -1218,7 +1843,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "Does blitter transparent mode still spend the write cycle on skipped bytes, and does fill mode take half the time of a fixed-source copy (no read cycle)?",
+   "method": "28 MHz. Physical, page 38 -> page 39 (extended byte $08), no timing byte. op: opaque copy of a source whose even bytes are $E3; tr: the same with $E3 the transparent colour ($DF bit 2, $F3 = $E3); fi: fill $5A ($DF bit 3, $F7 = $5A); fx: plain copy from one fixed source byte $5A (WR1 $24). 256- and 2048-byte runs timed by CTC3 /16; 28 MHz clocks per byte = (t2048 - t256) / 1792. The 2048-byte results are checked.",
+   "expect": "docs/DDMA.md:90: fill ($DF bit 3, $F7) has no read phase, twice as fast as a fixed-source fill. book ch 5 (B-N20) and lesson.blitter-hardware-benchmark: transparent mode skips bytes equal to $F3's value but still spends the write cycle (same time as opaque); fill has no read cycle (half the time of a fixed-source copy). The claim also notes CSpect fill at 0.07 us a byte.",
+   "needs": "the blitter seen by D09's probe this session (D09 not run this session: core 3.03 or later, NextReg $01 >= $33), else SKIP why=no-blitter (g6.asm: JNext has no blitter, CSpect 4.5.9 has one)",
+   "hazard": "none",
+   "fields": "D13: v = fi (clocks); op / tr / fi / fx = 28 MHz clocks per byte of the opaque copy, the transparent copy, the fill and the fixed-source copy (2 decimals); bad = wrong bytes in the 2048-byte runs (op: copy; tr: even bytes still $AA, odd copied; fi / fx: all $5A). PASS if bad = 0, |tr - op| <= 0.10 and |2 x fi - fx| <= 0.20, else FAIL; SKIP why=no-blitter when D09 found no blitter."
   },
   {
    "id": "D14",
@@ -1231,7 +1862,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "In blitter Layer 2 X,Y mode, where do bytes land: row-major in 256x192 with only X's low byte counted, column-major in 320x256, from the bank in NextReg $12, destination stride forced to 256?",
+   "method": "28 MHz. NextReg $12 = 22 (Layer 2 from page 44; Layer 2 stays off). Source bytes 1-16 at page 38 +$400; a 4 x 4 2D copy, A stride 4: $C3; $D7,$08; $E3 / $E7 / $EB = 4; WR0 / WR1 / WR2 / WR4; then $DF,$13 (physical, 2D, X,Y), X low, X high, Y; $82; $CF; $87. Cases: r256 ($70 = 0) at (10,10), x266 ($70 = 0) at (266,11), c320 ($70 = $10) at (300,10). The target page is cleared first and read back through slot 1.",
+   "expect": "docs/DDMA.md:57: X,Y needs physical mode; the destination is row-major in 256x192 and column-major in 320x256 (640 mode X is a byte column); X,Y sets destination stride 256; send the command after the WR4 address. book ch 5 (B-N24): only X's low byte is added (in 256x192); the bank comes from $12, or $13 with the hidden-screen flag; $70 selects the mode.",
+   "needs": "the blitter seen by D09's probe this session (D09 not run this session: core 3.03 or later, NextReg $01 >= $33), else SKIP why=no-blitter (g6.asm: JNext has no blitter, CSpect 4.5.9 has one); the suite's Layer 2 pages 44-53",
+   "hazard": "none (it writes the suite's own Layer 2 pages 44-53 with Layer 2 off; $12 and $70 are put back from the launch snapshot)",
+   "fields": "D14: v = r256 + x266 + c320 (bytes); r256 = wrong bytes for 256x192 at (10,10), block expected at page 44 +$0A0A; x266 = 256x192 at (266,11), expected at page 44 +$0B0A (X high byte ignored); c320 = 320x256 at (300,10), expected at page 53 +$0C0A; each = misplaced bytes of the 4 x 4 block plus other bytes of that page not 0. PASS if v = 0, else FAIL; SKIP why=no-blitter when D09 found no blitter."
   },
   {
    "id": "D15",
@@ -1277,7 +1914,13 @@
    "operator": false,
    "opt_in": false,
    "stage": 2,
-   "sub_prefix": "nb."
+   "sub_prefix": "nb.",
+   "purpose": "The nextbench v3 table run inside the suite: what common Next techniques (copies, fills, DMA, sprite uploads, NextReg and paging writes, palette, copper) cost per call at 3.5 and 28 MHz, plus three copper function checks.",
+   "method": "The 88 nextbench rows of tools/hwtests/nextbench_gen.py plus 2 suite-only (DMA cont, DMA arm), SRC $C000 / DST $C800 in slot 6 = page 38, each at $07 = 0 and 3. Per row and speed: set-up; repeat count R from a probe so a measurement fills ~140 raster lines; 5 runs of R calls minus R calls of an empty routine on the raster line counter (4 passes, quarter-line apart); microseconds per call via the start-up calibration (2048 x LD A,(IX+0) at 3.5 MHz = 38,912 T); tear-down; copy / fill check.",
+   "expect": "docs/TECHNIQUES.md:57: 28 MHz is ~6.3-7x 3.5 MHz, not 8x (book ch 2: ~8x on 3.03). TECHNIQUES.md:45 / :117, BRIEFING.md:406 (3.02.00 figures): full DMA program ~14.5 us, addresses + length ~10.3, LOAD + ENABLE ~3.5, then 0.179 us a byte; 5-OUT re-arm ~87 T; :338 $D3 re-run not measured. TECHNIQUES.md:49: DMA wrong at 3.5 MHz on 3.02.00, fixed 3.02.02. TECHNIQUES.md:110 / :125: CP WAIT = raster line 120; CP APART 0; LDIR+COP = LDIR alone.",
+   "needs": "nothing special (about 4 minutes; leave the machine alone)",
+   "hazard": "none",
+   "fields": "N01: own line v = rows run (count); fails = sub-lines whose copy / fill check failed; cal = the start-up calibration (raster lines); dma35 = PASS / FAIL for the DMA and FILL DMA rows at 3.5 MHz (claim dma-correct-3m5); INFO. Sub-lines T id=nb.<name>.<size>.<35|28>, inner spaces of the name as _ (nb.LDI_unr.256.28, nb.FILL_DMA.16.35, nb.DMA_cont.1.35, nb.DMA_arm.256.28; size 0 = none): v = mean microseconds per call over 5 runs (us), min / max, n = 5, R = calls per measurement; v = long when one call does not fit a frame. Copper function rows CP_WAIT.120 / CP_APART.256 / CP_SHARE.256: v = a number (count), the line where the MOVE was seen / wrong palette entries of 256, mean of 5; flag = 1 when CP APART read wrong entries (INFO). Rows with a check PASS / FAIL, others INFO; no c= on sub-lines."
   },
   {
    "id": "SP01",
@@ -1291,6 +1934,11 @@
    "operator": false,
    "opt_in": false,
    "stage": 2,
+   "purpose": "Is the port $303B collision flag exact to the dot, still raised outside the clip window and with sprites switched off, and cleared by reading it?",
+   "method": "One-dot sprites 10 and 11 (pattern 1) on display line 80 (Y 112). Control: sprite 10 alone. Then side by side (X 100 / 101); on the same dot (100 / 100); a second $303B read right after that hit; the same dot with the sprite clip window X 200-255 ($1C, $19); the same dot with $15 bit 0 = 0 (sprites off). Collision oracle: $303B read at line 0 (clears it), read again at line 200 (bit 0 collision).",
+   "expect": "lesson.sprite-collision-is-per-dot-in-line-buffer and book ch 16 (C-S12, S14): collision is exact to the dot (opaque over opaque in the line buffer); dots outside the clip window, overlaps hidden by $15 bit 6 and sprites switched off by $15 bit 0 still collide; reading clears both bits. docs/NEXT_REGISTERS.md:63: the read clears bits 1 and 0.",
+   "needs": "a working sprite collision flag (g8.asm notes that CSpect 4.5.9 sets it for one sprite alone and JNext 1.3.0 never sets it)",
+   "hazard": "none (sprites show on display lines 80-120 meanwhile; all 128 hidden afterwards, $15 / $09 / $4B put back, the sprite clip window set to full; sprite pattern memory is left written)",
    "fields": "side = two opaque dots side by side (0 = no collision), same = on the same dot (1), clip = an overlap outside the clip window (1 = still collides), off = with $15 bit 0 = 0 (1 = still collides), second = a second $303B read (0 = the first read cleared it), alone = control, one sprite by itself (must be 0). Board run 5 (KS1 3.03.00): 0 1 1 1 0 0 = the claim exactly."
   },
   {
@@ -1304,7 +1952,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "Does one write to port $303B set both the pattern-upload slot for port $5B and the sprite index for attribute bytes on port $57?",
+   "method": "Pattern 5 filled $E3 (transparent); $303B = 5 and 64 bytes of $01 to $5B (rows 0-3 of pattern 5 opaque); $303B = 7 and 5 bytes to $57 (X 100, Y 112, 0, $85 = visible + pattern 5, 0). A full 16x16 probe sprite 64 (pattern 0) at X 100 set by NextRegs $34-$39. Collision oracle: $303B read at line 0 (clears it), read again at line 200 (bit 0 collision).",
+   "expect": "lesson.port-303b-shared, docs/NEXT_REGISTERS.md:63 and docs/TECHNIQUES.md:134: a $303B write sets the pattern slot for $5B and, from the same write, the attribute index for $57, so sprite 7 shows pattern 5's rows at X 100.",
+   "needs": "a working sprite collision flag (port $303B bit 0); SP01's alone / same answers show whether it works",
+   "hazard": "none (sprites show on display lines 80-120 meanwhile; all 128 hidden afterwards, $15 / $09 / $4B put back, the sprite clip window set to full; sprite pattern memory is left written)",
+   "fields": "SP02: v = the collision bit after a frame (hex; $01 = sprite 7 drew the new pattern 5 rows at X 100). PASS if 1, else FAIL."
   },
   {
    "id": "SP03",
@@ -1317,7 +1971,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "Are NextReg $34 and port $303B separate sprite indices unless NextReg $09 bit 4 (lockstep) is set, when a $34 write also moves the port index?",
+   "method": "$303B = 3, then NEXTREG $34,9, then 5 attribute bytes to $57 (X 100, Y 112, 0, $80 visible pattern 0, 0); probe sprite 64 at X 100, oracle (h1); then sprite 3 hidden by NEXTREG ($34 = 3, $38 = 0) and the oracle again (h2). Answer 9 if h2 still hits, 3 if only h1 hit, else none. Repeated with $09 bit 4 set (read-modify-write; the harness puts $09 back). Collision oracle: $303B read at line 0 (clears it), read again at line 200 (bit 0 collision).",
+   "expect": "docs/TECHNIQUES.md:218, docs/NEXT_REGISTERS.md:77, lesson.sprite-selector-aliasing and book ch 16 (C-S9): separate indices unless $09 bit 4 is set; with lockstep a $34 write also moves the pattern pointer. So the $57 bytes reach sprite 3 without lockstep, sprite 9 with it.",
+   "needs": "a working sprite collision flag (port $303B bit 0); SP01's alone / same answers show whether it works",
+   "hazard": "none (sprites show on display lines 80-120 meanwhile; all 128 hidden afterwards, $15 / $09 / $4B put back, the sprite clip window set to full; sprite pattern memory is left written)",
+   "fields": "SP03: v = which sprite the $57 bytes reached with $09 bit 4 = 0: 3, 9 or none; bit4 = the same with $09 bit 4 = 1. PASS if v = 3 and bit4 = 9, else FAIL."
   },
   {
    "id": "SP04",
@@ -1330,7 +1990,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "On port $57, does a sprite whose byte 3 bit 6 is 0 take only 4 bytes (the index then steps on), and does the index wrap from 127 to 0?",
+   "method": "$303B = 126, then 14 bytes to $57: sprite 126 four bytes (X 40, Y 112, 0, $81 = visible + pattern 1, bit 6 = 0), sprite 127 five bytes (X 60, Y 112, 0, $C1, 0), sprite 0 five bytes (X 80). Pattern 1 = one opaque dot at (0,0). A one-dot probe sprite 64 at X 40, 60 and 80 in turn. Collision oracle: $303B read at line 0 (clears it), read again at line 200 (bit 0 collision).",
+   "expect": "docs/NEXT_REGISTERS.md:65, docs/TECHNIQUES.md:131 / :186 and book ch 16 (C-S8): 4 or 5 bytes per sprite, 4 when byte 3 bit 6 = 0; the index advances after each sprite and wraps 127 -> 0 (NEXT_REGISTERS marks the port-57 behaviour as simulated, hardware to confirm).",
+   "needs": "a working sprite collision flag (port $303B bit 0); SP01's alone / same answers show whether it works",
+   "hazard": "none (sprites show on display lines 80-120 meanwhile; all 128 hidden afterwards, $15 / $09 / $4B put back, the sprite clip window set to full; sprite pattern memory is left written)",
+   "fields": "SP04: v = the three hits ANDed (hex; $01 = all three sprites at their X); x40 / x60 / x80 = 1 if the probe at that X collided (sprite 126 / 127 / 0). PASS if all three are 1, else FAIL."
   },
   {
    "id": "SP05",
@@ -1343,7 +2009,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "Do NextRegs $75-$79 write like $35-$39 and then advance the sprite number?",
+   "method": "Sprites 10 and 11 shown as one-dot sprites (pattern 1) at X 0, Y 112. NEXTREG $34,10; NEXTREG $75,100; NEXTREG $75,150. A one-dot probe sprite 64 at X 100, then at X 150. Collision oracle: $303B read at line 0 (clears it), read again at line 200 (bit 0 collision).",
+   "expect": "docs/TECHNIQUES.md:221 and docs/NEXT_REGISTERS.md:78 (from nextreg.txt): $75-$79 = $35-$39 with the sprite number incremented after each write, so sprite 10 moves to X 100 and sprite 11 to X 150.",
+   "needs": "a working sprite collision flag (port $303B bit 0); SP01's alone / same answers show whether it works",
+   "hazard": "none (sprites show on display lines 80-120 meanwhile; all 128 hidden afterwards, $15 / $09 / $4B put back, the sprite clip window set to full; sprite pattern memory is left written)",
+   "fields": "SP05: v = both hits ANDed (hex); x100 / x150 = 1 if the probe at X 100 / 150 collided. PASS if both are 1, else FAIL."
   },
   {
    "id": "SP06",
@@ -1356,7 +2028,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "For a 4-bit anchor sprite, does attr4 $80 use bytes 0-127 of the 256-byte pattern slot and $C0 bytes 128-255 (N6 = lowest bit of the 4-bit pattern number)?",
+   "method": "$4B = $E3 (4-bit: nibble 3 transparent). 8-bit slot 2: bytes 0-7 $11 (row 0 opaque), 8-127 $33, 128-247 $33, 248-255 $11 (row 15 of the second half opaque). 4-bit sprite 10 (pattern 2) at X 100 with attr4 $80, then $C0; a one-row probe (pattern 3: row 0 opaque) at row 0 (Y 112) and then row 15 (Y 127). Collision oracle: $303B read at line 0 (clears it), read again at line 200 (bit 0 collision).",
+   "expect": "lesson.sprite-pattern-and-attribute-facts and docs/LEARNINGS.md:137: attr4 $80 = slot bytes 0-127, $C0 = 128-255 (the guide's relative-sprite table reads the other way). book ch 16 (C-S1): N6 is the lowest bit of the 4-bit pattern number.",
+   "needs": "a working sprite collision flag (port $303B bit 0); SP01's alone / same answers show whether it works",
+   "hazard": "none (sprites show on display lines 80-120 meanwhile; all 128 hidden afterwards, $15 / $09 / $4B put back, the sprite clip window set to full; sprite pattern memory is left written)",
+   "fields": "SP06: v = the attr4 $80 result (hex): bit 0 = row-0 probe hit, bit 1 = row-15 probe hit; a80 = the same value (hex); ac0 = the result with attr4 $C0 (hex). PASS if a80 = $01 and ac0 = $02, else FAIL."
   },
   {
    "id": "SP07",
@@ -1369,7 +2047,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "Is sprite transparency tested on the pixel index before the palette offset is added, so 4-bit index 0 stays transparent under a non-zero offset?",
+   "method": "Slot 6 all $00 = a 4-bit pattern of index 0. $4B = 0 (index 0 transparent). Sprite 10: 4-bit (attr4 $80), pattern 6, palette offset 3 (NextReg $37 = $30), at X 100 over a full 16x16 probe sprite 64. Collision oracle: $303B read at line 0 (clears it), read again at line 200 (bit 0 collision).",
+   "expect": "book ch 16 (C-S2): transparency is tested before the offset (8-bit: whole byte vs $4B; 4-bit: low nibble). docs/NEXT_REGISTERS.md:50: $4B = the transparent index, 4-bit uses the low nibble. docs/LEARNINGS.md:1019 (and docs/BRIEFING.md:113): MAME 0.289 draws index 0 under a non-zero offset opaque; not checked on hardware.",
+   "needs": "a working sprite collision flag (port $303B bit 0); SP01's alone / same answers show whether it works",
+   "hazard": "none (sprites show on display lines 80-120 meanwhile; all 128 hidden afterwards, $15 / $09 / $4B put back, the sprite clip window set to full; sprite pattern memory is left written)",
+   "fields": "SP07: v = the collision bit (hex): $00 = index 0 stayed transparent, $01 = drawn opaque. PASS if 0, else FAIL."
   },
   {
    "id": "SP08",
@@ -1383,6 +2067,11 @@
    "operator": false,
    "opt_in": false,
    "stage": 2,
+   "purpose": "Does an 8-bit-pattern sprite whose byte 4 bits 7:6 = 01 become a relative sprite of the previous anchor?",
+   "method": "Sprites over the border ($15 bit 1). Anchor sprite 10: 8-bit, one dot, X 150, Y 112, attr4 0 (5-byte record). Sprite 11 by NextRegs: $35 = 10, $36 = 0, $37 = 0, $38 = $C1 (visible, pattern 1), $39 = $40. A one-dot probe at X 160 (where a relative would be: anchor + 10) and at X 10 (absolute). Collision oracle: $303B read at line 0 (clears it), read again at line 200 (bit 0 collision).",
+   "expect": "book ch 16 (C-S4): it becomes a relative sprite of the previous anchor. docs/TECHNIQUES.md:224: relatives are marked by byte 4 bits 7:6 = 01 and hold 8-bit offsets from the anchor.",
+   "needs": "a working sprite collision flag (port $303B bit 0); SP01's alone / same answers show whether it works",
+   "hazard": "none (sprites show on display lines 80-120 meanwhile; all 128 hidden afterwards, $15 / $09 / $4B put back, the sprite clip window set to full; sprite pattern memory is left written)",
    "fields": "x160 = a probe at the anchor X + byte 0 (relative place), x10 = a probe at byte 0 alone (absolute place); 1 = it collided. Board run 5: x160=1 x10=0 = relative (byte 4 bits 7:6 = 01 makes an 8-bit sprite relative)."
   },
   {
@@ -1396,7 +2085,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "Are sprite X positions 9 bits wide and wrapping at 512, so a sprite at X 500 also covers X 0-3?",
+   "method": "Sprites over the border ($15 bit 1). Sprite 10: full 16x16 (pattern 0) at X 500 (X8 set in $37 bit 0), Y 112. A one-dot probe sprite 64 at X 0, 1, 2, 3, 4 in turn. Collision oracle: $303B read at line 0 (clears it), read again at line 200 (bit 0 collision).",
+   "expect": "book ch 16 (C-S3): positions are 9-bit and wrap at 512 (X 500 = -12); a 4-byte (E = 0) sprite has no Y8. docs/BRIEFING.md:119 is also cited (claim: coordinates = screen + 32); the text at that line is about the alt ROM.",
+   "needs": "a working sprite collision flag (port $303B bit 0); SP01's alone / same answers show whether it works",
+   "hazard": "none (sprites show on display lines 80-120 meanwhile; all 128 hidden afterwards, $15 / $09 / $4B put back, the sprite clip window set to full; sprite pattern memory is left written)",
+   "fields": "SP09: v = the five probe results as bits (hex), bit n = the probe at X n collided. PASS if v = $0F (X 0-3 hit, X 4 not), else FAIL."
   },
   {
    "id": "SP10",
@@ -1410,6 +2105,11 @@
    "operator": false,
    "opt_in": false,
    "stage": 2,
+   "purpose": "How many sprites fit on one line before the sprite engine drops the rest and sets port $303B bit 1, at each X scale, and how many must leave the line to clear it?",
+   "method": "For k = 1..128: k full 16x16 sprites (pattern 0) on the same line (Y 112, X = 2 x i), X scale 1x / 2x / 4x / 8x (attr4 bits 4:3); $303B bit 1 read after a frame (line 0 read clears, line 200 read); the smallest k that sets it. Then all 128 shown with sprites 0..k-1 moved 40 lines down: the smallest k that clears bit 1. About 15 s.",
+   "expect": "lesson.sprite-line-time-budget and book ch 16 (C-S13): 1,824 clocks a line (1,792 at 48K timing); a sprite off the line costs 1, one on it 1 + its drawn width (17 unscaled, 129 at 8x); later sprites are dropped and bit 1 set; book: 75 when all 128 stack, 102 when moved off. docs/LEARNINGS.md:153: at least 100 unscaled guaranteed (fewer when magnified).",
+   "needs": "a working sprite line-overflow flag (port $303B bit 1)",
+   "hazard": "none (sprites show on display lines 80-120 meanwhile; all 128 hidden afterwards, $15 / $09 / $4B put back, the sprite clip window set to full; sprite pattern memory is left written)",
    "fields": "v = the smallest number k of unscaled sprites on one line that sets $303B bit 1 (k-1 fit); s2 / s4 / s8 = the same at X scale 2 / 4 / 8; moved = with all 128 shown, how many must leave the line to clear the flag. Board run 5: 106 / moved 23 (105 fit whether the other 23 are hidden or shown on another line): fits 17 clocks a sprite in a 1,785-1,801 clock budget (the claim's 1,792 for 48K), not 18 in 1,824. s2-s8 = 60 there only meant 'below 60' (the sweep started at 60; it now starts at 1)."
   },
   {
@@ -1423,7 +2123,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "Do ports $57 and $5B decode only the low address byte, so OUTI reaches them whatever B holds?",
+   "method": "$303B = 7, then 256 x (B = $13; OUTI) of byte $01 to C = $5B (OUTI decrements B first: port $125B): pattern 7 fully opaque. $303B = 12, then 4 attribute bytes by OUTI with B = $35 (port $3457): X 100, Y 112, 0, $87 (visible, pattern 7, 4-byte record). A full probe sprite 64 at X 100. Collision oracle: $303B read at line 0 (clears it), read again at line 200 (bit 0 collision).",
+   "expect": "docs/LEARNINGS.md:121 / :173 and docs/NEXT_REGISTERS.md:64: ports 0x57 and 0x5B decode the low byte only, so OUTI works with any B (the repo's evidence, the Rainbow build, is marked simulated; hardware to confirm).",
+   "needs": "a working sprite collision flag (port $303B bit 0); SP01's alone / same answers show whether it works",
+   "hazard": "none (sprites show on display lines 80-120 meanwhile; all 128 hidden afterwards, $15 / $09 / $4B put back, the sprite clip window set to full; sprite pattern memory is left written)",
+   "fields": "SP11: v = the collision bit (hex; $01 = sprite 12 drew pattern 7 at X 100). PASS if $01, else FAIL."
   },
   {
    "id": "M01",
@@ -1436,7 +2142,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "Does an unlocked write to port $7FFD remap MMU slots 0/1 to the ROM and slots 6/7 to the selected bank, leaving slots 2-5 alone, and does a later NextReg MMU write win?",
+   "method": "Interrupts off, code in slots 4/5. NextRegs $50-$53 / $56-$57 = pages 40-43 / 46-47; OUT $7FFD,$13 (bank 3, ROM bit 4 set, unlocked); MMU $50-$57 read back; then NEXTREG $57,47 and MMU 7 read again. Everything is put back (MMU from the launch snapshot, 1FFD = $04, 7FFD = $10, $08 bit 7 = 1). Result: page numbers (hex).",
+   "expect": "docs/NEXT_REGISTERS.md:66 and docs/BRIEFING.md:116-117: an unlocked 7FFD write sets MMU0/1 = $FF (ROM) and MMU6/7 to the selected bank; legacy and MMU paging are interchangeable, the most recent change wins. lesson.legacy-paging-remap-order, lesson.7ffd-write-maps-rom-over-slot-1, lesson.paging-write-hides-hook-code: the same remap of slots 0/1 and 6/7. book ch 3 (report D-N24): agrees.",
+   "needs": "nothing special",
+   "hazard": "none (interrupts off, code and stack in slots 4/5; MMU, 1FFD / 7FFD, the $08 lock bit and any NextReg written are put back after the test)",
+   "fields": "M01: v = MMU 6 after OUT $7FFD,$13 (hex page); m0-m7 = MMU 0-7 read after that write (hex); after57 = MMU 7 after NEXTREG $57,47 (hex). PASS if m0 = m1 = $FF, m2 / m3 = $2A / $2B (untouched), m4 / m5 = their launch values, m6 / m7 = $06 / $07 and after57 = $2F (47: the latest write wins); else FAIL."
   },
   {
    "id": "M02",
@@ -1449,7 +2161,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "While port $7FFD bit 5 locks the legacy paging, are further 7FFD writes ignored (no MMU remap)? Does NextReg $08 bit 7 = 0 leave the lock alone and bit 7 = 1 clear it?",
+   "method": "OUT $7FFD,$30 (bank 0 and lock); OUT $7FFD,$13 (should be ignored); MMU $50-$57 read. NextReg $08 bit 7 written 0 (read-modify-write), $08 read; OUT $7FFD,$13 again and MMU 6 read. $08 bit 7 written 1, $08 read; OUT $7FFD,$13 and MMU 6 read (now unlocked: 6). Paging and the lock put back. Result: page numbers and register values (hex).",
+   "expect": "docs/BRIEFING.md:117 (VHDL reading, core 3.01.09): while 7FFD bit 5 locks, writes to 7FFD / 1FFD / DFFD are ignored and trigger no MMU remap; NextReg $08 bit 7 write 1 clears the lock, write 0 has no effect, read 1 = unlocked; hardware still to confirm. lesson.legacy-paging-lock-semantics: the same VHDL reading, not confirmed on hardware.",
+   "needs": "nothing special",
+   "hazard": "none (interrupts off, code and stack in slots 4/5; MMU, 1FFD / 7FFD, the $08 lock bit and any NextReg written are put back after the test); the lock is cleared at the end",
+   "fields": "M02: v = MMU 6 after the locked OUT $7FFD,$13 (hex); m0-m7 = MMU 0-7 then; nr08w0 = NextReg $08 read after bit 7 was written 0; m6w0 = MMU 6 after OUT $7FFD,$13 that follows (0 = still locked); nr08w1 = $08 read after bit 7 was written 1; m6w1 = MMU 6 after OUT $7FFD,$13 that follows (6 = unlocked). PASS if m6 = 0, m7 = 1 (the lock write's own bank 0 kept), m6w0 = 0 and m6w1 = 6; else FAIL."
   },
   {
    "id": "M03",
@@ -1463,7 +2181,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "With NextReg $0A bit 4 = 0, does DivMMC stay unmapped on fetches at $3D00 and $0038? And does the alt ROM ($8C) follow the ROM select and ignore writes in read-only mode?",
+   "method": "$0A bit 4 cleared (read-modify-write). Alt ROM: $8C = $80 to save 6 bytes, $8C = $C0 (write mode) to plant LD A,$38 : RET at $0038 and LD A,$3D : RET at $3D00, $8C = $80 (enabled, read-only). Interrupts off: CALL $3D00 and RST $38, A recorded each time; $AA written to $0038 and read back; $0038 read with 7FFD bit 4 = 0 (the other image). Saved bytes, $8C and $0A put back. Results: bytes (hex).",
+   "expect": "docs/BRIEFING.md:108, docs/NEXT_REGISTERS.md:33-34, docs/LEARNINGS.md:198: from core 3.01.10 the DivMMC automap enable is $0A bit 4 ($06 bit 4 no longer controls it), so with it 0 no automap at $3Dxx / $0008 / $0038 (official nextreg.txt). docs/BRIEFING.md:118: alt ROM verified on hardware 2026-09-27: write-mode copy, read-only, image 0 / 1 chosen by 1FFD bit 2 + 7FFD bit 4.",
+   "needs": "nothing special",
+   "hazard": "none (interrupts off, code and stack in slots 4/5; MMU, 1FFD / 7FFD, the $08 lock bit and any NextReg written are put back after the test); $8C, $0A and the six alt ROM bytes are put back",
+   "fields": "M03: v = a3d00 = A after CALL $3D00 ($3D = the alt ROM code ran: no automap); arst38 = A after RST $38 ($38 = no automap); altw = the byte at $0038 after writing $AA with the alt ROM read-only ($3E = the write was ignored); other38 = the byte at $0038 with 7FFD bit 4 = 0 (the other image; recorded only). PASS if a3d00 = $3D and arst38 = $38; else FAIL. altw and other38 do not decide the status."
   },
   {
    "id": "M04",
@@ -1476,7 +2200,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "Does a Layer 2 write-only mapping (port $123B) over $0000-$3FFF take the CPU's writes even when the alt ROM ($8C) is on, while reads still come from the ROM image?",
+   "method": "Page 44 offset $1000 cleared. Alt ROM on ($8C = $80, image as found); NextReg $12 = 22 (Layer 2 bank 22 = pages 44/45, not shown); $1000 read; OUT $123B,$01 (write map, segment 0); LD ($1000),$5A; $1000 read again; $123B = 0; page 44 mapped into slot 6 and its offset $1000 read. $8C, $12 and MMU put back. Results: bytes (hex).",
+   "expect": "docs/BRIEFING.md:402 (C2 #30): write-mapping over RAM in slots 0/1 is proven, over the alt ROM not yet; to prove that it wins over $8C at 0x0000-0x3FFF while reads stay on the ROM image. docs/TECHNIQUES.md:164: a candidate, not tested. book ch 3 (report D-N18): Layer 2 mapping ranks above MMU and ROM / alt ROM.",
+   "needs": "nothing special",
+   "hazard": "none (interrupts off, code and stack in slots 4/5; MMU, 1FFD / 7FFD, the $08 lock bit and any NextReg written are put back after the test); $8C, $12 and $123B are put back",
+   "fields": "M04: v = the byte at offset $1000 of Layer 2 page 44 after the write ($5A = the write went to Layer 2); before / after = the byte read at $1000 before and after the write (equal = reads stayed on the ROM image). PASS if before = after and v = $5A; else FAIL."
   },
   {
    "id": "M05",
@@ -1489,7 +2219,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "What happens when a page number above the RAM ($E0) is mapped into slot 6: does a write vanish, and what does a read return?",
+   "method": "The offset-0 bytes of suite pages 32-63 are saved. NextReg $56 = $E0; $C000 read (r0); $5A written to $C000; $C000 read back. The suite pages are compared again to find a page that changed (an alias). The first byte is written back through the same mapping; MMU put back. Result: bytes (hex), recorded only.",
+   "expect": "book ch 3 (report D-N14): pages >= $E0 in slots 2-7: writes vanish and reads are undefined; in slots 0/1 they read ROM. No repo doc gives a prediction.",
+   "needs": "nothing special",
+   "hazard": "none (interrupts off, code and stack in slots 4/5; MMU, 1FFD / 7FFD, the $08 lock bit and any NextReg written are put back after the test)",
+   "fields": "M05: v = the byte read at $C000 after writing $5A with page $E0 in slot 6 (hex; book: undefined, so recorded only); r0 = the byte read there before the write; alias = the first suite page (32-63) whose offset-0 byte changed ($FF = none: the write went nowhere in suite RAM). INFO always."
   },
   {
    "id": "M06",
@@ -1502,7 +2238,13 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "When the CPU fetches an instruction across $FFFF, does it continue at $0000 in whatever page slot 0 holds (an IM 2 JR at $FFFF taking its offset from $0000)?",
+   "method": "Interrupts off. Slot 0 = page 36 with $05 at $0000 and LD A,$77 : RET at $0006; slot 7 = page 37 with $18 (JR) at $FFFF. CALL $FFFF: the JR's offset byte is fetched from $0000, so it should jump to $0006. MMU put back. Result: A (hex).",
+   "expect": "lesson.im2-ffff-vector: the IM 2 JR at $FFFF reads its offset from $0000, so the slot-0 page owns the interrupt (repo: analysis).",
+   "needs": "nothing special",
+   "hazard": "none (interrupts off, code and stack in slots 4/5; MMU, 1FFD / 7FFD, the $08 lock bit and any NextReg written are put back after the test)",
+   "fields": "M06: v = A after CALL $FFFF (hex; $77 = the JR at $FFFF took its offset $05 from $0000 and reached the marker at $0006). PASS if v = $77; else FAIL."
   },
   {
    "id": "V01",
@@ -1517,6 +2259,11 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
+   "purpose": "Which units does the sprite clip window ($19) use with and without sprites over the border ($15 bits 1 and 5)? And does a sprite attribute change made on a line show one line later?",
+   "method": "Part u: clip X 64-127; three bands of red sprites at y 112 / 136 / 160; the copper sets $15 per band: not over the border, over the border without bit 5, over the border with bit 5; white lines at display 63 / 128 and yellow at 95 / 224 in a 256 x 192 Layer 2. Part l: sprite 31 shown by the copper at line 157 and hidden at 158, beside white Layer 2 rows 156 / 158. The operator counts squares per band (keys 1-3), then says where the red dash sits (keys 1-4).",
+   "expect": "lesson.sprite-clip-window-units-follow-over-border and book ch 9/16 (report C-C1): display pixels (+32) when not over the border; over the border the window is ignored unless bit 5, then X in 2-dot units across the wide area (u = book). docs/NEXT_REGISTERS.md:39: screen pixels, default 0,255,0,191 (no over-border case). docs/TECHNIQUES.md:329: an attribute change shows one scanline later (core 3.00.07+); book ch 16 (report C-N16, S10): same, inferred for $15 bit 6 (l = late).",
+   "needs": "an operator answer by eye (keys 1-3, then 1-4); S = ask later (PENDING-OPERATOR); only from the menu key V",
+   "hazard": "none (only the picture changes; the harness puts back the NextRegs, palette entries, clip windows and sprites it used)",
    "fields": "V01: u / l = two answers. u (sprite rows of 7 over three bands, clip window X 64-127; the question gives the counts): book (top band 2 squares between the white lines at display 63 / 128, middle band all 7 with the sprites over the border, bottom band 4 between the yellow lines at 95 / 224: 2-dot units across the wide area), one-dot (bottom band 2, between the white lines) or other. l (sprite 31 at display rows 146-161, shown by the copper at line 157 and hidden at 158; white 256 x 192 Layer 2 rows 156 and 158; copper line = display row with $64 = 0, NEXT_REGISTERS.md:84, $00 at launch on the board; P04: the copper line number equals the raster counter): same-line (the dash fills the gap, row 157), late (it covers row 158: one line later, the claim) or two-late (row 159, just below the lower line: two lines later; board run 8 answered other and described this; TECHNIQUES.md:331 already says to write a sprite at WAIT(line N-2) for line N). means=<u>-<l>. The copper writes the clip window again after each $15 MOVE (V17's claim). The copper $15 bit 6 part of the claim is not asked."
   },
   {
@@ -1530,7 +2277,13 @@
    "auto": false,
    "operator": true,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "Which of two overlapping sprites is drawn on top with NextReg $15 bit 6 = 0 and with bit 6 = 1?",
+   "method": "Sprite 1 red at X 128 Y 112 and sprite 2 green at X 136 Y 120 (16 x 16, overlapping 8 x 8). Shown first with $15 bit 6 = 0, then with bit 6 = 1 (written by the CPU); each time the operator says which colour is on top where they overlap (Y = green, N = red). Sprites hidden after.",
+   "expect": "lesson.sprite-order-and-layers and docs/LEARNINGS.md:157: with $15 bit 6 = 0 (reset) the higher sprite number is drawn on top; LEARNINGS.md:157 adds that 1 flips it (guide r3, hardware to confirm). book ch 16 (report C-S11): bit 6 = 1 puts sprite 0 on top. So: green, then red (means green-red).",
+   "needs": "an operator answer by eye (Y / N, twice); S = ask later (PENDING-OPERATOR); only from the menu key V",
+   "hazard": "none (only the picture changes; the harness puts back the NextRegs, palette entries, clip windows and sprites it used)",
+   "fields": "V02: v = the second answer (bit 6 = 1): green or red; b0 / b1 = the colour on top with $15 bit 6 = 0 / 1 (green = the higher number, sprite 2, on top; red = the lower number on top); means=<b0>-<b1>. The claim: green-red. OPERATOR (the intake compares); S = PENDING-OPERATOR."
   },
   {
    "id": "V03",
@@ -1544,6 +2297,11 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
+   "purpose": "Is sprite scaling applied after rotation (a rotated sprite with X scale 4 stays wide), and is rotation applied before mirroring?",
+   "method": "Sprite 0: solid green, rotated, X scale 4, beside white Layer 2 rows 114 / 133; the operator says if it is wide (between the lines) or tall (keys 1-3). Sprite 1: green with a red top-left quarter, rotated and X-mirrored; the operator says where the red corner is (top left / bottom right / other, keys 1-3).",
+   "expect": "book ch 16 (report C-S7): scale is applied after rotation (a 4 x 1 sprite stays wide when rotated); rotation first, then mirror, so the corner ends top left. Expected: wide-tl. No repo doc gives a prediction.",
+   "needs": "an operator answer by eye (keys 1-3, twice); S = ask later (PENDING-OPERATOR); only from the menu key V",
+   "hazard": "none (only the picture changes; the harness puts back the NextRegs, palette entries, clip windows and sprites it used)",
    "fields": "V03: s / o = two answers. s (a green sprite rotated with X scale 4, white rows 114 / 133): wide (it lies between them: scale after rotation, the claim) or tall. o (a green sprite with a red top-left quarter, rotate + X mirror): tl (the corner stays top left: rotate first, then mirror, the claim) or br (mirror first). means=<s>-<o>."
   },
   {
@@ -1558,6 +2316,11 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
+   "purpose": "Which layers are made transparent by colour (after the palette, vs $14) and which by index (before the palette, vs $4B for sprites and $4C for the tilemap)?",
+   "method": "Order SUL; four 16-line bands from line 112: A the ULA grey paper given $14's colour by the copper over Layer 2 stripes; B tiles of index 15 (= $4C) whose palette colour is red; C sprites of index $E3 (= $4B) whose palette colour is green; D the paper transparent again over a Layer 2 index given $14's colour, fallback $4A yellow. Black tiles / sprites show each layer is on. The operator answers 1-3.",
+   "expect": "lesson.border-colour-equal-to-transparency-is-transparent and book ch 17 (report C-N1): ULA, LoRes and Layer 2 by colour after the palette vs $14; sprites and tilemap by index before the palette vs $4B / $4C. docs/NEXT_REGISTERS.md:55: $14 is a colour compared with the top 8 bits of the 9-bit colour. docs/TECHNIQUES.md:369, lesson.transparent-paper-layer2-backdrop: a paper colour equal to $14 shows the layer behind. Expected: claim.",
+   "needs": "an operator answer by eye (keys 1-3); S = ask later (PENDING-OPERATOR); only from the menu key V",
+   "hazard": "none (only the picture changes; the harness puts back the NextRegs, palette entries, clip windows and sprites it used)",
    "fields": "V04: v = claim (four bands from line 112: Layer 2 stripes through the ULA paper given the $14 colour by the copper; grey through tiles of index 15 = $4C whose palette entry is red; grey through sprites of index $E3 = $4B whose entry is green; the $4A yellow through the ULA paper and a Layer 2 index whose colour is $14's), differ, or other. $4B / $4C are written to their reset values $E3 / $0F; the tilemap text-mode and LoRes cases are not asked here (text mode: V12)."
   },
   {
@@ -1572,6 +2335,11 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
+   "purpose": "Is a ULA border whose colour equals the global transparency colour $14 transparent, showing the layers below it?",
+   "method": "320 x 256 Layer 2 of red / yellow stripes under the ULA (order ULS); border colour 1 (ULA palette entry 17). The copper sets entry 17 to $14's colour at line 96 and back at line 192, so only the side borders of lines 96-191 should be transparent; fallback colour $4A set green for the test. The operator says what shows in those side borders (keys 1-5). Entry 17 put back.",
+   "expect": "lesson.border-colour-equal-to-transparency-is-transparent: a border whose colour after the palette equals $14 is transparent and shows the layers below (from the book, not measured). book ch 17 (report C-N2, N15): as stated, and the ULA clip window never clips the border (not asked). Expected: stripes in the lower side borders (lower; lower-green or lower-black tell what lies beyond the 320 x 256 area).",
+   "needs": "an operator answer by eye (keys 1-5); S = ask later (PENDING-OPERATOR); only from the menu key V",
+   "hazard": "none (only the picture changes; the harness puts back the NextRegs, palette entries, clip windows and sprites it used)",
    "fields": "V05: v = lower (Layer 2 stripes show in the side borders of lines 96-191, where the copper made the border colour equal $14, out to the screen edge; plain elsewhere: the claim), lower-green (stripes, then a green strip to the screen edge: the fallback colour $4A, set green for this test, shows where the screen has border beyond the 320 x 256 Layer 2), lower-black (stripes, then black: nothing is drawn beyond the 320 x 256 wide area, book N14), none (plain or black there), or other. Board run 8 (older build, fallback $00 black at launch) answered lower with a black strip beyond the stripes in the lower half: border transparent (the claim), the black strip being either the black fallback or the end of the wide area - green now tells them apart. The claim's second part (the ULA clip window never clips the border) is not asked."
   },
   {
@@ -1586,6 +2354,11 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
+   "purpose": "Does a Layer 2 palette entry with the priority bit draw above every layer, sprites included, also in a blend mode, and only where its dot is not transparent?",
+   "method": "Blue Layer 2 blocks in two rows: left index $10 plain, middle $11 with the priority bit (bit 7 of the second $44 write), right $12 with the priority bit and $14's colour. Red sprite bars (X scale 8) cross them; order SLU above line 136, blend mode 110 below it. The operator answers 1-3.",
+   "expect": "docs/TECHNIQUES.md:363: a Layer 2 colour with priority bit 7 (second $44 write) draws above all layers, sprites included, whatever $15 says. lesson.layer2-priority-bit-foreground: chosen Layer 2 pixels above sprites (seen in MAME only). book ch 17 (report C-N5): adds that it holds in blend modes and only where the Layer 2 dot is not transparent. Expected: claim (red, blue, red) in both rows.",
+   "needs": "an operator answer by eye (keys 1-3); S = ask later (PENDING-OPERATOR); only from the menu key V",
+   "hazard": "none (only the picture changes; the harness puts back the NextRegs, palette entries, clip windows and sprites it used)",
    "fields": "V06: v = claim (red sprite bars over a plain Layer 2 block, under the block whose colour has the priority bit, and through the priority block whose colour is $14's; the same above line 136 in order SLU and below it in blend mode 110), no-prio (red over every block), or other."
   },
   {
@@ -1600,6 +2373,11 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
+   "purpose": "In 320 x 256 Layer 2, does the reset clip window (X 0-255, Y 0-191) hide the bottom 64 rows until X 0-159 / Y 0-255 is written to $18?",
+   "method": "320 x 256 Layer 2, transparent except green bands at rows 0-15 (reference) and 224-255 (bottom border). Shown with the Layer 2 clip window written to its reset value 0-255 / 0-191, then to 0-159 / 0-255; each time the operator says both bands or the top one only (keys 1-3).",
+   "expect": "lesson.layer2-wide-mode-clip-and-shadow-defaults and book ch 9/14 (report C-N15, D-N2): in 320 x 256 / 640 x 256 the reset clip 0-255 / 0-191 hides the bottom 64 lines until 0-159 / 0-255 is written ($18 X in 2-dot units, 4 in 640). Expected: top-both. No repo doc beyond the lesson.",
+   "needs": "an operator answer by eye (keys 1-3, twice); S = ask later (PENDING-OPERATOR); only from the menu key V",
+   "hazard": "none (only the picture changes; the harness puts back the NextRegs, palette entries, clip windows and sprites it used)",
    "fields": "V07: c0 / c1 = the answer with the Layer 2 clip window at its reset value 0-255 / 0-191, then at 0-159 / 0-255: both (green bands at rows 0-15 and 224-255) or top (the bottom band hidden). means=<c0>-<c1>; the claim: top-both. The window is written to its reset value, not read: what NextZXOS leaves at launch is not asked. The 640 x 256 X unit is not asked."
   },
   {
@@ -1614,6 +2392,11 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
+   "purpose": "Does 640 x 256 Layer 2 scroll only in 2-dot steps (whole 320-resolution pixels), so one scroll step equals one tilemap dot?",
+   "method": "640 x 256 Layer 2 (on top, LSU): white blocks 16 dots wide with 16-dot transparent gaps in the border strips (rows 0-31, 224-255); under it a 40 x 32 tilemap with red tiles under the blocks and blue under the gaps. Screen 1: no scroll. Screen 2: Layer 2 X scroll ($16) 1 and tilemap X scroll 1. Each time the operator says if red shows at the block edges (keys 1-4).",
+   "expect": "lesson.layer2-640-half-pixel: 640 x 256 scrolls only whole pixels; a half-pixel scroll needs two screens. book ch 14 (report D-N3, N4): X 0-319 in steps of 2 dots. Expected: s1 = none when s0 = none.",
+   "needs": "an operator answer by eye (keys 1-4, twice); S = ask later (PENDING-OPERATOR); only from the menu key V",
+   "hazard": "none (only the picture changes; the harness puts back the NextRegs, palette entries, clip windows and sprites it used)",
    "fields": "V08: s0 / s1 = two answers on the 640 x 256 Layer 2 white blocks (16 dots, transparent 16-dot gaps, border strips rows 0-31 and 224-255) over a 40 x 32 tilemap with red tiles exactly under the blocks and blue under the gaps: none (no red at any edge), left / right (a thin red line on that edge of every block: the layers one dot apart), or other. s0: no scroll (do the layers line up); s1: Layer 2 X scroll 1 and tilemap X scroll 1 (one 7 MHz dot = 2 dots). means=<s0>-<s1>; v = s1. The claim (a 640 scroll step is 2 dots): s1 = none when s0 = none; a red line in s1 only = a 1-dot step. Only the scroll step is asked: a half-pixel scroll by two screens is not."
   },
   {
@@ -1628,6 +2411,11 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
+   "purpose": "Where does the Layer 2 scroll wrap: at X 256 / Y 192 in 256 x 192 mode and at X 320 / Y 256 in 320 x 256 mode?",
+   "method": "A red stripe at picture x 0-7 and a green one at y 0-7 in Layer 2, on top of a white sprite square at display (120-135, 88-103). 256 x 192 scrolled X 128 / Y 96, then 320 x 256 scrolled X 160 / Y 128 ($71 bit 0 = 0): if the wraps are as claimed the stripes cross on the square. The operator answers 1-3 each time.",
+   "expect": "docs/TECHNIQUES.md:174: the 320 x 256 buffer wraps X 0-319 ($16 + $71 bit 0) and Y 0-255 ($17). book ch 14 (report D-N3): all modes, 256 x 192 wrapping X 256 / Y 192. Expected: on-on.",
+   "needs": "an operator answer by eye (keys 1-3, twice); S = ask later (PENDING-OPERATOR); only from the menu key V",
+   "hazard": "none (only the picture changes; the harness puts back the NextRegs, palette entries, clip windows and sprites it used)",
    "fields": "V09: a / w = two answers, the red (picture x 0-7) and green (picture y 0-7) Layer 2 stripes crossing a white sprite square at display (120-135, 88-103). a: 256 x 192 scrolled X 128 / Y 96; w: 320 x 256 scrolled X 160 / Y 128: on (they cross on the square: wraps 256 / 192 and 320 / 256, the claim) or off. means=<a>-<w>. $71 bit 0 (X bit 8) is 0 in both: the X range above 255 is not asked."
   },
   {
@@ -1641,7 +2429,13 @@
    "auto": false,
    "operator": true,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "Does a write to NextReg $12 (Layer 2 bank) take effect mid-frame, so one frame can show the top of one buffer and the bottom of the other?",
+   "method": "256 x 192 Layer 2 on top (LSU); pages 44-47 red, 48-53 blue. $12 = 22 shows red rows 0-127 then blue; $12 = 24 shows all blue. Every frame the CPU polls the raster and writes $12 = 24 at line 96 and $12 = 22 at line 200, until a key. The operator says: red top half and blue bottom half with a clean edge (1), the same with an edge that steps or jitters (2), or no split at half (3).",
+   "expect": "docs/BRIEFING.md:114 (Wally double buffering, hardware to confirm): the $12 switch is not raster-synced; a frame may show the top of one buffer and the bottom of the other. Expected: a split at line 96 (answer 1 or 2).",
+   "needs": "an operator answer by eye (keys 1-3); S = ask later (PENDING-OPERATOR); only from the menu key V",
+   "hazard": "none (only the picture changes; the harness puts back the NextRegs, palette entries, clip windows and sprites it used)",
+   "fields": "V10: v = split-clean (red top half, blue bottom half, a straight edge: the switch took effect mid-frame, the claim), split-jitter (the same split, the edge stepping part-way along a line or flickering: still mid-frame, the CPU write landing inside the line it polled) or no-split (no change at half: taken at the frame start, or other); key = the key pressed (1-3); means = the answer word. OPERATOR (the intake compares); S = PENDING-OPERATOR."
   },
   {
    "id": "V11",
@@ -1655,6 +2449,11 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
+   "purpose": "Does a tile-definition offset in bank 7 count only 13 bits, so past 8K it wraps to the start of page 14 instead of reaching page 15?",
+   "method": "Tilemap in bank 7 page 14; definitions base $1F00 so tile 8 sits at offset $2000. Page 14 offset 0 painted green, page 15 offset 0 painted red; a bar of tile 8 at display rows 136-151. The operator says the bar's colour (keys 1-3).",
+   "expect": "docs/TECHNIQUES.md:523: a bank-7 address wraps within its 8K (inference from code, not tested). docs/NEXT_REGISTERS.md:46: $6E / $6F bit 7 = bank 7, first 8K only = page 14 (recent core). book ch 15 (report D-N8): as stated. Expected: wrap (green).",
+   "needs": "an operator answer by eye (keys 1-3); S = ask later (PENDING-OPERATOR); only from the menu key V",
+   "hazard": "none (only the picture changes; the harness puts back the NextRegs, palette entries, clip windows and sprites it used)",
    "fields": "V11: v = wrap (a green bar: tile 8 at definition base $1F00 read page 14's first bytes - the bank 7 offset wraps at 8K, the claim), page15 (a red bar: page 15 was read), or other."
   },
   {
@@ -1669,6 +2468,11 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
+   "purpose": "Is tilemap text mode ($6B bit 3) transparent by colour (vs $14), and does $6B bit 0 force the whole tilemap over the ULA despite the per-tile bit 0?",
+   "method": "Part t: text mode, tile 1 (checks) with attribute $20: background index $20 given $14's colour, ink $21 green; the operator says the background is grey (transparent) or pink. Part f: 4-bit tiles with attribute bit 0 = 1 (ULA over the tile); the copper sets $6B bit 0 from line 152; two bars, the upper above line 152; the operator says which bars show over the grey ULA paper. Keys 1-3 each.",
+   "expect": "docs/TECHNIQUES.md:307: $6B bit 0 = 1 forces the whole tilemap over the ULA, overriding per-tile bit 0 (expect f = lower). docs/TECHNIQUES.md:313: text mode = 1-bit 8-byte tiles, attribute bits 7:1 a 7-bit palette offset (not tested); the repo states $4C before the offset for tilemaps, text-mode transparency not stated. book ch 15 (report D-N11): text mode uses $14 (t = grey).",
+   "needs": "an operator answer by eye (keys 1-3, twice); S = ask later (PENDING-OPERATOR); only from the menu key V",
+   "hazard": "none (only the picture changes; the harness puts back the NextRegs, palette entries, clip windows and sprites it used)",
    "fields": "V12: t / f = two answers. t (text mode, attribute $20: checks of index $21 green and $20 whose colour is $14's): grey (the background is transparent: colour vs $14, the claim) or pink. f (4-bit tiles with attribute bit 0 = 1, $6B bit 0 set by the copper from line 152): lower (only the bar below line 152 shows over the ULA, the claim) or none. means=<t>-<f>. The 7-bit palette offset is used ($20) but not asked on its own."
   },
   {
@@ -1683,6 +2487,11 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
+   "purpose": "With layer order %110 and $68 bits 6:5 = %01, are ULA and tilemap in front of the sprites, with a tile whose attribute bit 0 is set behind them?",
+   "method": "$15 order %110, $68 bits 6:5 = %01. Green tile blocks at display x 32-79 (attribute bit 0 = 0) and 128-175 (bit 0 = 1); red sprites (X scale 8) cross both at y 140; the ULA paper is given $14's colour so it does not hide the sprites. The operator answers 1-3.",
+   "expect": "docs/TECHNIQUES.md:349 (from a developer's post, NOT tested): %110 with $68 bits 6:5 = %01 gives (U|T) S (T|U): a tile with bit 0 = 0 in front of sprites, bit 0 = 1 behind. docs/BRIEFING.md:408: should put ULA + tilemap in front of the sprites and bit-0 tiles behind. book ch 17 (report C-N7, N8): the full blend-mode stack, Layer 2 at the bottom. Expected: claim.",
+   "needs": "an operator answer by eye (keys 1-3); S = ask later (PENDING-OPERATOR); only from the menu key V",
+   "hazard": "none (only the picture changes; the harness puts back the NextRegs, palette entries, clip windows and sprites it used)",
    "fields": "V13: v = claim (order %110 with $68 bits 6:5 = %01: a green tile block with attribute bit 0 = 0 over the red sprite bar, one with bit 0 = 1 under it; the ULA paper given $14's colour), red-top (the sprites over both), or other. Layer 2 is not shown: its place at the bottom is not asked."
   },
   {
@@ -1697,6 +2506,11 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
+   "purpose": "Do blend modes 110 (add, clamp at 7) and 111 (add, then minus 5) and the stencil mode ($68 bit 0, ULA AND tilemap) give the colours the rules compute?",
+   "method": "Band 1 (lines 112-127, mode 110) and band 2 (128-143, mode 111): a Layer 2 block of colour $24 over the ULA grey paper ($68 bits 6:5 = 00); band 3 (144-159, stencil, SLU): a yellow tile block. Beside each, a sprite square in the colour the rule gives, computed from the grey read back from the ULA palette. The operator says whether each pair is one colour (keys 1-3).",
+   "expect": "book ch 17 (report C-N9, N10): mode 110 adds per channel clamped at 7; 111 adds then takes 5; stencil shows ULA AND tilemap where both are opaque (the book's 5,2,0 + 5,5,0 example is not shown). docs/TECHNIQUES.md:318: stencil pixel = ULA AND tilemap colour, transparent if either is. Expected: match.",
+   "needs": "an operator answer by eye (keys 1-3); S = ask later (PENDING-OPERATOR); only from the menu key V",
+   "hazard": "none (only the picture changes; the harness puts back the NextRegs, palette entries, clip windows and sprites it used)",
    "fields": "V14: v = match (three pairs, each one colour: blend 110 and 111 of the ULA grey and Layer 2 colour $24, and the stencil AND of the grey and a yellow tile, each beside a sprite square in the colour computed from the grey read back from the ULA palette), differ, or other. $68 bits 6:5 = 00 (the ULA as the blend source); the book's 5,2,0 + 5,5,0 example itself is not shown."
   },
   {
@@ -1710,7 +2524,13 @@
    "auto": false,
    "operator": true,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "Does the ULA always read its screen from bank 5, so a different page mapped over $4000-$7FFF is invisible to it?",
+   "method": "A checkerboard and text are drawn in bank 5 (slot 2 = page 10). Then page 36 is mapped into slot 2 and its screen area filled white (pixels 0, attributes $3F) while the operator looks; slot 2 put back. The operator says whether the checkerboard and words stayed (Y) or the screen went white (N).",
+   "expect": "lesson.ula-reads-bank5-directly and docs/LEARNINGS.md:99: the ULA reads bank 5 directly; remapping MMU slot 2/3 changes the CPU view only, so pages mapped over 0x4000-0x7FFF are invisible to it. Expected: stays.",
+   "needs": "an operator answer by eye (Y / N); S = ask later (PENDING-OPERATOR); only from the menu key V",
+   "hazard": "none (only the picture changes; the harness puts back the NextRegs, palette entries, clip windows and sprites it used)",
+   "fields": "V15: v = stays (the checkerboard and words stayed: the ULA reads bank 5, the claim) or white (the screen went white: the ULA showed the page mapped in slot 2); key = the key pressed (Y / N); means = the answer word. OPERATOR (the intake compares); S = PENDING-OPERATOR."
   },
   {
    "id": "V16",
@@ -1723,7 +2543,13 @@
    "auto": false,
    "operator": true,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "purpose": "Does a write to port $FF select a Timex screen mode on the Next, changing the picture (as a 128K game writing it would)?",
+   "method": "A ULA picture (stripes in the top third and text). After a key: OUT ($FF),2 (Timex high colour), held for 150 frames (3 s), then OUT ($FF),0; $69 put back by the harness. The operator says if the picture changed during the 3 s (1), stayed the same (2), or something else (3).",
+   "expect": "lesson.port-ff-timex (seen in JNext): a write to port $FF selects Timex hi-colour on the Next and scrambles the picture. docs/LEARNINGS.md:123: port $FF (Timex) decodes the low byte only, so an OUT to any address ending in $FF reaches the hardware. Expected: changed.",
+   "needs": "an operator answer by eye (keys 1-3); S = ask later (PENDING-OPERATOR); only from the menu key V",
+   "hazard": "none (port $FF is written back to 0 and $69 restored by the harness)",
+   "fields": "V16: v = changed (the picture changed while port $FF = 2: Timex mode selected, the claim), same (no change) or other (blank, did not come back, ...); key = the key pressed (1-3); means = the answer word. OPERATOR (the intake compares); S = PENDING-OPERATOR."
   },
   {
    "id": "V17",
@@ -1737,6 +2563,11 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
+   "purpose": "Does a copper MOVE to NextReg $15 (even with the value it already has) reset the clip windows?",
+   "method": "Red 16 x 16 sprites in two rows (y 116 and 148). Every frame the copper narrows the sprite clip window to X 96-159 at line 0 (white lines at x 95 and 160), then at line 132 MOVEs $15 with its own value. If the MOVE resets the window, the lower row runs past the lines. The operator answers 1-3.",
+   "expect": "docs/TECHNIQUES.md:215: an UNVERIFIED claim in a demo's Copper.asm that copper MOVEs to $15 reset the clipping values; not in the core spec; test before relying on it. If true: lower. No other source predicts.",
+   "needs": "an operator answer by eye (keys 1-3); S = ask later (PENDING-OPERATOR); only from the menu key V",
+   "hazard": "none (only the picture changes; the harness puts back the NextRegs, palette entries, clip windows and sprites it used)",
    "fields": "V17: v = lower (the copper narrows the sprite clip window to X 96-159 from line 0 and MOVEs $15 with its own value at line 132: the upper sprite row stays between the white lines, the lower one runs past them - the MOVE reset the window, the claim), inside (both rows stay inside), or other. Only the sprite window is looked at."
   },
   {
@@ -1751,6 +2582,11 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
+   "purpose": "Which NextReg $64 value (33 or 32) makes a copper change at copper line 0 line up with row 0 of 320 x 256 Layer 2?",
+   "method": "320 x 256 Layer 2, transparent except row 0 = index 1 and row 4 = white (the reference). Index 1 is black, made white by the copper only during its line 0 (WAIT line 0: white; WAIT line 1: black). Shown with $64 = 33, then 32; each time the operator says two lines, one line, row 0 lit on its left or right part only, or other (keys 1-5).",
+   "expect": "docs/TECHNIQUES.md:211 and docs/BRIEFING.md:385: demos use $64 = 33 to align copper line 0 with the 320 x 256 Layer 2 top (claim: two-one); the register text says 32. docs/TECHNIQUES.md:295: register text (varmfskii): with offset 32 line 0 = the first tilemap / sprite row; 33 perhaps makes up for a copper change showing one line late. BRIEFING.md:385: test both.",
+   "needs": "an operator answer by eye (keys 1-5, twice); S = ask later (PENDING-OPERATOR); only from the menu key V",
+   "hazard": "none (only the picture changes; the harness puts back the NextRegs, palette entries, clip windows and sprites it used)",
    "fields": "V18: o33 / o32 = the answer with $64 = 33, then 32: two (Layer 2 row 0 turned white by the copper at its line 0, plus the reference row 4), one (only the reference), part-left / part-right (row 0 white on its left / right part only, black on the rest: the colour change came part-way along the row, so the copper's line 0 ends (part-left) or starts (part-right) inside that Layer 2 row, not at its left edge) or other. means=<o33>-<o32>; the claim: two-one. Board run 8 (older build) answered other-other: with both values the upper line was part white, part black. JNext 1.3.0 lights row 0 with $64 = 32 and not with 33 (one-two): an emulator answer only."
   },
   {
@@ -1765,6 +2601,11 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
+   "purpose": "How many frames per second does the machine really produce at its current video timing ($11), timed against a stopwatch and against the CTC?",
+   "method": "First the operator says which cable carries the picture (1-3). Then SPACE starts the frame count (border green) and the watch together; SPACE again after 2 minutes or more stops both. Frames are counted from the raster line; CTC channel 3 (prescaler 256, time constant 256, 28 MHz clock) times the same interval. The operator types the watch's seconds and tenths. Result: frames / seconds (Hz); NextRegs $05 and $11 read.",
+   "expect": "docs/TECHNIQUES.md:639: clk28 = 28.0-33 MHz for VGA timings 0-6 (27 MHz HDMI); a '50 Hz' frame is 50.00, 51.02, 52.61, 53.57, 55.36, 57.14, 58.93 Hz on VGA 0-6, 50.00 on HDMI. docs/BRIEFING.md:108: '50 Hz' is exact only at VGA 0 and HDMI; up to 58.93 Hz on VGA 1-6; not measured on a board.",
+   "needs": "an operator: a cable answer (keys 1-3), a stopwatch showing tenths, 2+ minutes, the seconds and tenths typed in; S asks later",
+   "hazard": "none (only the picture changes; the harness puts back the NextRegs, palette entries, clip windows and sprites it used)",
    "fields": "V19: v = frames / watch seconds (Hz). cable = hdmi / vga / other; frames, secs, tenths (typed off the watch), tol (+-0.3 s as % of the time), r05 / r11. ctcw / c0 / c1: the same interval timed by CTC channel 3 (prescaler 256, time constant 256; the CTC clock is 28 MHz whatever the CPU speed, book ch 6): ticks = 256 x ctcw + c0 - c1, CTC time = ticks x 256 / 28,000,000 s. The intake gives the rate by both: a watch time unlike the CTC time is a timing error at the watch (or a 28 MHz clock that is off, which only the watch can show). Board run 8: 49.29 Hz +-0.19 by the watch (7592 frames / 154.0 s, HDMI; no CTC count in that build). The same file's F01 / F02 (311 lines of 228.02 T, T measured by the CTC as 8 clocks of 28 MHz) give 28,000,000 / (311 x 1824.2) = 49.36 Hz, inside the watch's range; 50.02 Hz is what the same 311 x 228 T give with the 128K's 3.5469 MHz clock instead."
   },
   {
@@ -1780,6 +2621,11 @@
    "operator": false,
    "opt_in": true,
    "stage": 2,
+   "purpose": "For each machine timing (48K, 128K, +3, Pentagon), how many lines does a 50 Hz frame have and on which raster line does the ULA interrupt come?",
+   "method": "For timings 1-4, NextReg $03 = bit 7 + timing in bits 6:4 + %011, then 3 frames waited. Lines per frame = the largest raster line over 4 frames + 1; the ULA interrupt line = the raster line when NextReg $C8 bit 0 (ULA interrupt status) is first seen set, polled at 28 MHz with no interrupt taken; $03 read back. The start timing is then put back. Results in lines.",
+   "expect": "docs/TECHNIQUES.md:281: 48K 312, 128K 311, Pentagon 320 on VGA; HDMI 312 whatever the timing. docs/TECHNIQUES.md:284: ULA interrupt at line 248 (48K / 128K VGA 50 Hz), 239 (Pentagon), 256 (HDMI 50 Hz). book ch 10 (report A, A-N): 312 / 311 / 320, and the +3 interrupt 1 T earlier than 128K. A +3 frame length is not stated in the docs (the test expects 311).",
+   "needs": "opt-in group T (its hazard screen, Y); if the machine does not come back: reset or power-cycle and start again (HANG-GUARD)",
+   "hazard": "changes the machine timing (NextReg $03), which survives a soft reset; the test puts the start timing back and the start value is kept in the progress record so a hang is undone on the next start. The picture may roll or blank briefly. Opt-in for that reason",
    "fields": "Per timing t = 1 48K, 2 128K, 3 +3, 4 Pentagon: l<t> = lines per frame, i<t> = the raster line at which NextReg $C8 bit 0 (ULA interrupt status) was first seen (polled at 28 MHz, no interrupt taken), r<t> = $03 read back; v = how many l<t> are the claims' frame lengths (VGA 312 / 311 / 311 / 320). Builds up to e8cc11b also wrote out=vga/hdmi from $11: no source says $11 shows the output (board run 7: HDMI cable, $11 = $00); ignore it - the header geom= and the V19 cable answer say which frame was measured. JNext: 312/311/311/320, i 248/248/248/239."
   },
   {
@@ -1794,6 +2640,11 @@
    "operator": false,
    "opt_in": true,
    "stage": 2,
+   "purpose": "When NextReg $03 (machine timing) is written mid-frame, do the video counters take the new timing only at the end of that frame?",
+   "method": "From the start timing to Pentagon (or to 48K if already Pentagon): $03 written at raster line 100; then the length of that frame (from line 100 until the line number falls), the line read just after the fall, and the lengths of the next two frames are measured; the timing is put back. Results in lines.",
+   "expect": "book ch 10 (report A-N): a machine-timing change is taken by the video counters only at the end of a frame (so that frame keeps the old length and the next has the new one). No repo doc gives a prediction.",
+   "needs": "opt-in group T (its hazard screen, Y); if the machine does not come back: reset or power-cycle and start again (HANG-GUARD)",
+   "hazard": "changes the machine timing (NextReg $03), which survives a soft reset; the test puts the start timing back and the start value is kept in the progress record so a hang is undone on the next start. The picture may roll or blank briefly. Opt-in for that reason",
    "fields": "$03 written at line 100 of a frame: v = that frame's length (counted from line 100 to its fall), j1 = the line read just after the fall, f2 / f3 the next frames, exp0 / exp1 the old and new lengths. v = exp0 and f2 = exp1: taken at the frame end (the claim). JNext gives v = 247, j1 = 239 (the counter jumped at once): an emulator answer only."
   },
   {
@@ -1808,6 +2659,11 @@
    "operator": false,
    "opt_in": true,
    "stage": 2,
+   "purpose": "Which 16K banks are contended at each machine timing: 128K banks 1, 3, 5, 7; +3 banks 4-7; Pentagon none?",
+   "method": "$08 bit 6 = 0 (contention on; put back). For each timing 1-4: 1024 reads of $C000 at 3.5 MHz from raster line 8 with slot 6 = the first page of bank 0, 1, 3, 4, 5, 7 (read only); the raster lines taken are counted, and the extra lines against bank 0 are recorded per bank (1 line = 228 T, so ~0.22 T a read). 3 or more lines counts as contended. Timing put back.",
+   "expect": "book ch 3 (report D-N21): contended banks follow the machine timing: 128K banks 1, 3, 5, 7; +3 banks 4-7; Pentagon none. No list for 48K timing (shown, not compared). No repo doc gives a prediction.",
+   "needs": "opt-in group T (its hazard screen, Y); if the machine does not come back: reset or power-cycle and start again (HANG-GUARD)",
+   "hazard": "changes the machine timing (NextReg $03), which survives a soft reset; the test puts the start timing back and the start value is kept in the progress record so a hang is undone on the next start. The picture may roll or blank briefly. Opt-in for that reason",
    "fields": "c<t> = extra raster lines (1024 reads of the bank from $C000 at 3.5 MHz, against bank 0) for banks 1,3,4,5,7; one line = 228 T, so 1 line ~ 0.22 T a read; lim = 3 lines = contended. nr08 = $08 at the start (bit 6 written 0 for the test, put back). v = book when 128K = 1 3 5 7, +3 = 4 5 7, Pentagon = none."
   },
   {
@@ -1822,6 +2678,11 @@
    "operator": false,
    "opt_in": true,
    "stage": 2,
+   "purpose": "With 48K machine timing, does port $7FFD still page memory, and does $3FFD (A14 = 0) decode as $7FFD?",
+   "method": "$03 = 48K timing. OUT $7FFD,$13 and MMU 6 / 7 read; paging put back; OUT $3FFD,$13 and MMU 6 / 7 read; put back (code in bank 2, since the write moves slots 6 / 7). $3FFD is not written when NextReg $D8 bit 0 was set at launch (the +3 disk ports trapped). Start timing put back. Results: page numbers (hex).",
+   "expect": "docs/BRIEFING.md:109 and lesson.legacy-paging-lock-semantics (VHDL reading, not confirmed on hardware): 48K timing does not stop 7FFD / 1FFD decoding; with 48K / 128K timing 7FFD decodes on A15 = 0, A1:0 = 01, A14 ignored. docs/NEXT_REGISTERS.md:26: 128K timing ignores A14 (VHDL); with +3 timing A14 must be 1. Expected: 6 / 7 both times.",
+   "needs": "opt-in group T (its hazard screen, Y); if the machine does not come back: reset or power-cycle and start again (HANG-GUARD)",
+   "hazard": "changes the machine timing (NextReg $03), which survives a soft reset; the test puts the start timing back and the start value is kept in the progress record so a hang is undone on the next start. The picture may roll or blank briefly. Opt-in for that reason",
    "fields": "48K timing: a6 / a7 = MMU 6 / 7 after OUT $7FFD,$13, b6 / b7 after OUT $3FFD,$13 ($FF $FF: not written, NextReg $D8 bit 0 set at launch = the +3 disk ports trapped); nrd8 = $D8 at launch. PASS if both gave 6 / 7. p3ffd=skipped: NextReg $D8 bit 0 was set at launch (the +3 disk ports trapped), so $3FFD was not written and b6 / b7 = $FF mean nothing (board run 7: nrd8=$01)."
   },
   {
@@ -1836,6 +2697,11 @@
    "operator": false,
    "opt_in": true,
    "stage": 2,
+   "purpose": "With 128K machine timing, does port $1FFD bit 2 still select the ROM pair together with $7FFD bit 4 (four different ROMs)?",
+   "method": "$03 = 128K timing; at 28 MHz, for ($1FFD bit 2, $7FFD bit 4) = 00, 01, 10, 11 a CRC of $0000-$3FFF (slots 0 / 1 = ROM) is taken; then $1FFD = $04, $7FFD = $10 again and the start timing put back. The CRCs are compared with the ROM 3 CRC taken at the suite start (S04). Results: CRC values (hex).",
+   "expect": "docs/NEXT_REGISTERS.md:68: $1FFD bit 2 + $7FFD bit 4 select the ROM (ROM3 = 48K = alt image 1). docs/BRIEFING.md:381: OUT $1FFD in 128K timing is unconfirmed on hardware. Expected: four different ROMs, 11 = ROM 3.",
+   "needs": "opt-in group T (its hazard screen, Y); if the machine does not come back: reset or power-cycle and start again (HANG-GUARD)",
+   "hazard": "changes the machine timing (NextReg $03), which survives a soft reset; the test puts the start timing back and the start value is kept in the progress record so a hang is undone on the next start. The picture may roll or blank briefly. Opt-in for that reason",
    "fields": "128K timing: r0-r3 = CRC of $0000-$3FFF for ($1FFD bit 2, $7FFD bit 4) = 00, 01, 10, 11; s04 = S04's CRC of ROM 3 at the start. PASS if r3 = s04 and the four differ."
   },
   {
@@ -1848,6 +2714,11 @@
    "operator": false,
    "opt_in": true,
    "stage": 2,
+   "purpose": "After the X-T tests, is the start machine timing really back (a check of the suite's own restore, no claim)?",
+   "method": "NextReg $03 written again with the start timing, 3 frames waited; lines per frame measured (largest raster line over 4 frames + 1) and compared with the frame length measured at the suite start; $03 read back and its timing bits 6:4 compared with the start value; the progress record's timing flag cleared. Result in lines.",
+   "expect": "No claim and no source: it checks the suite's own restore (the frame length and $03 timing bits should equal the start's).",
+   "needs": "opt-in group T (its hazard screen, Y); if the machine does not come back: reset or power-cycle and start again (HANG-GUARD)",
+   "hazard": "changes the machine timing (NextReg $03), which survives a soft reset; the test puts the start timing back and the start value is kept in the progress record so a hang is undone on the next start. The picture may roll or blank briefly. Opt-in for that reason",
    "fields": "v = lines per frame after $03 is written with the start timing; exp = the preamble's; nr03 / start03 = $03 now / at the start. PASS if both agree; the progress record's timing flag is cleared."
   },
   {
@@ -1862,6 +2733,11 @@
    "operator": false,
    "opt_in": true,
    "stage": 2,
+   "purpose": "Does NextReg $BB bit 6 = 1 enable or disable the DivMMC automap exit on an instruction fetch from $1FF8-$1FFF?",
+   "method": "Interrupts off. DivMMC is mapped by an RST 8 with a one-byte RET planted at the alt ROM's $0008 (delayed entry). With $BB as NextZXOS left it, a RET found in the DivMMC ROM at $1FF8-$1FFF is called ($C9 also planted at those alt ROM addresses): does the ROM come back? Then mapped again, $BB bit 6 flipped, the same RET: does DivMMC stay mapped? $BB put back, DivMMC unmapped and the ROM bytes checked.",
+   "expect": "docs/NEXT_REGISTERS.md:35: $BB bit 6 = 1 DISABLES automap at $1FF8-$1FFF (official nextreg.txt); the varmfskii notes say it enables. book ch 3 (report D-C4): set = exit enabled. The launch value is evidence too: NextZXOS needs the exit.",
+   "needs": "opt-in group D (its hazard screen, Y); if it locks up: power off and on and start again (HANG-GUARD)",
+   "hazard": "maps DivMMC memory on purpose (alt ROM, NextReg $BB / $0A); could stop the machine or leave DivMMC mapped until reset (then a stop screen asks for a power cycle). Interrupts off throughout; never writes the SD card or port $E3; all changed registers and bytes are put back",
    "fields": "Interrupts off throughout; nothing of NextZXOS runs. nrbb = $BB at the start. map = DivMMC mapped after an RST 8 with a one-byte RET at the alt ROM's $0008 (the entry is delayed: spec 1.1). dv = the 8 DivMMC ROM bytes at $1FF8-$1FFF. off = the RET found there (ra = its address; $C9 planted at all eight alt ROM addresses too) brought the ROM back with $BB as at launch. mapflip = DivMMC stayed mapped when the same RET ran with bit 6 flipped ($BB put back after). v = set-enables / set-disables (which value of bit 6 lets the exit run), no-change, no-entry (the RST 8 did not map DivMMC: nothing more tried), no-exit (no RET at $1FF8-$1FFF or it did not unmap: the flip not tried). INFO."
   },
   {
@@ -1876,6 +2752,11 @@
    "operator": false,
    "opt_in": true,
    "stage": 2,
+   "purpose": "With automap on and ROM 3 selected, does an instruction fetch at $3Dxx map DivMMC at once, so the code there comes from DivMMC and not the ROM image?",
+   "method": "Interrupts off. DivMMC mapped as in XD1; its RAM at $3D00-$3D01 saved and OR A : RET written there; unmapped by a RET at $1FF8-$1FFF. Alt ROM $3D00 = SCF : RET; $0A as at launch (automap on); CALL $3D00 with carry clear. Carry clear = DivMMC's code ran (instant); carry set = the alt ROM ran; DivMMC mapped afterwards is recorded. DivMMC bytes put back, DivMMC unmapped, ROM bytes checked.",
+   "expect": "docs/NEXT_REGISTERS.md:35 (cited via the test's set-up): $BB bit 7 = $3Dxx automap, instant, ROM 3. lesson.divmmc-3dxx-paging-suspect, docs/LEARNINGS.md:196-198, docs/BRIEFING.md:158: code at 0x3D00-0x3DFF crashed (Commando); probable cause a DivMMC automap on a fetch at 0x3Dxx - an inference, not confirmed. Expected: instant.",
+   "needs": "opt-in group D (its hazard screen, Y); if it locks up: power off and on and start again (HANG-GUARD)",
+   "hazard": "maps DivMMC on purpose and runs its RAM at $3D00 (OR A : RET only); could stop the machine or leave DivMMC mapped until a power cycle (stop screen). Interrupts off; no SD or port $E3 write; all bytes and registers put back",
    "fields": "Interrupts off throughout. DivMMC mapped as XD1; its RAM at $3D00-$3D01 saved and OR A : RET written there (ram = the write held); unmapped; alt ROM $3D00 = SCF : RET; CALL $3D00 with carry clear and $0A as at launch. Carry clear = DivMMC's OR A ran: the fetch at $3D00 came from DivMMC (instant, PASS); carry set and map = 1 = the alt ROM ran first and DivMMC mapped after (delayed, FAIL); neither = none (FAIL). The DivMMC bytes are put back. no-entry / no-exit / no-ram: the set-up was not possible (INFO, says why the rest is left out)."
   },
   {
@@ -1890,6 +2771,11 @@
    "operator": false,
    "opt_in": true,
    "stage": 2,
+   "purpose": "Does the DivMMC delayed RST $38 trap still fire when an alt ROM image replaces the ROM?",
+   "method": "Interrupts off. Alt ROM $0038 = RET (one byte; the next fetch would come from DivMMC if the trap fires); $0A as at launch; RST $38 with the esx call state (IM 1, IY = $5C3A). Afterwards: is DivMMC mapped (the delayed trap fired), and did the FRAMES counter at $5C78 move (NextZXOS's own $0038 code ran)? Then DivMMC unmapped and the ROM bytes checked before interrupts come back.",
+   "expect": "lesson.divmmc-hidden-rom-keeps-trap: a whole hidden ROM does not remove a delayed DivMMC RST 38 trap; only its enabling bit does. lesson.divmmc-rst38-trap: NextZXOS's trap at 0x0038 masks alt-ROM hook code (observed in JNext). Expected: the trap fires (trap or isr).",
+   "needs": "opt-in group D (its hazard screen, Y); if it locks up: power off and on and start again (HANG-GUARD)",
+   "hazard": "maps DivMMC memory on purpose (alt ROM, NextReg $BB / $0A); could stop the machine or leave DivMMC mapped until reset (then a stop screen asks for a power cycle). Interrupts off throughout; never writes the SD card or port $E3; all changed registers and bytes are put back",
    "fields": "Interrupts off throughout. Alt ROM $0038 = RET (one byte); RST $38 with the esx call state. map = DivMMC mapped after (the delayed trap fired after the fetch at $0038: trap, PASS); frames = the FRAMES counter ($5C78) moved (NextZXOS's own $0038 code ran: isr, PASS); neither = no-trap (FAIL). DivMMC then unmapped and the ROM bytes checked before interrupts come back."
   },
   {
@@ -1904,6 +2790,11 @@
    "operator": false,
    "opt_in": true,
    "stage": 2,
+   "purpose": "Does a DMA transfer in continuous mode with auto-restart keep the bus forever, so the CPU never runs again unless an interrupt allowed to break in stops it?",
+   "method": "One DMA test byte first (a deaf DMA from an earlier XH2 gives SKIP). Hardware IM 2 (table at $FC00, ULA interrupt only), NextReg $CC bit 0 = 1 (ULA interrupt may break into a DMA transfer), EI. A 256-byte copy $0000 -> $2000, continuous, WR5 $A2 (auto-restart), $87. The main loop counts passes while the DMA runs; the handler counts interrupts and at the second sends $83 then $C3. Then DI, the copy checked. Result: passes (count).",
+   "expect": "book ch 5 (report B-N17): auto-restart in continuous mode never gives the CPU the bus back; only a reset or a yielding interrupt frees it. lesson.zxn-dma-autorestart-freeze: it froze the machine at once (observed on a board). Expected: few or no main-loop passes, the handler stops it.",
+   "needs": "opt-in group H (its hazard screen, Y); a working DMA (not left deaf by an earlier XH2); if the machine does not come back: reset and start again (HANG-GUARD)",
+   "hazard": "may freeze the machine: the DMA keeps the bus; the ULA interrupt with $CC is the escape. If it fails, only a reset frees it. Nothing is saved to the machine; opt-in for that reason",
    "fields": "v = main-loop passes between $87 and the stop (the CPU had the bus that often); irq = handler runs (the handler stops the DMA at the second); bad = bytes of the 256-byte copy that differ. PASS if stopped and v <= 50. A machine that does not come back = the escape (hardware IM2 + $CC) failed: HANG-GUARD. JNext 1.3.0 hangs here (no $CC escape); CSpect PASS v=1. The DMA must answer one byte first: a DMA still locked by an earlier XH2 gives SKIP why=dma-deaf (board run 7 pass 2 printed FAIL v=15812 bad=254 that way)."
   },
   {
@@ -1918,6 +2809,11 @@
    "operator": false,
    "opt_in": true,
    "stage": 2,
+   "purpose": "Does a DMA WR4 byte with bit 4 set (interrupt control follows) leave the DMA deaf, and which reset (soft, hard, power cycle) frees it?",
+   "method": "One DMA test byte first (already deaf: SKIP). Else the progress record is marked, $91 (WR4 with bit 4) is sent to port $6B, and a 1-byte copy is tried: copied or not. The screen then asks to finish the group, reset or power-cycle and start the suite again. On that start one DMA byte is tried at once; XH2 then asks which reset was used (keys 1-3) and records whether the DMA answered.",
+   "expect": "book ch 5 (report B-N10): a WR4 byte with bit 4 leaves the DMA deaf until a machine reset; a hard or soft reset frees it. lesson.zxn-dma-wr4-interrupt-lock: byte $91 locked the DMA until power-off (one board, core 3.03.00; hard reset untested).",
+   "needs": "opt-in group H (its hazard screen, Y); a soft reset, hard reset or power cycle, then a restart of the suite and an operator answer (keys 1-3) for the follow-up",
+   "hazard": "leaves the DMA unusable on purpose until a reset (possibly until power-off); no other change. Run last in its group; the screen after it says what to do. Opt-in for that reason",
    "fields": "XH2: first pass: one DMA byte; if it does not arrive the DMA is already deaf: SKIP why=dma-deaf (nothing sent). Else before / after = 1-byte copies before and after the WR4 byte $91 (bit 4); v = deaf (PASS) or copied (FAIL). Then power off and on (or a hard reset), start again, H: a 1 / 2 / 3 question gives reset=soft / hard / power and v = reset-frees or still-locked (the start's DMA byte, PRG_XH2), OPERATOR. The verdict uses the lock pass; the note states each follow-up. Board run 7 (KS1, 3.03.00): pass 4 ran in the same run as the lock (no restart) and found the DMA still deaf; the files hold no start after a reset, so what F4 does is not yet shown."
   }
  ],

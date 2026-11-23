@@ -67,6 +67,26 @@ def page2_labels():
     return out
 
 
+DESCRIBE = ('purpose', 'method', 'fields')          # every built test must say these (emulator authors read them)
+DESCRIBE_MORE = ('expect', 'needs', 'hazard')
+
+
+def describe_problems(tests):
+    """[problem] for built tests (no left_out) that lack a plain description: purpose, method and fields are
+    required (`intake.py --describe` and the test reference print them); expect / needs / hazard are too."""
+    bad = []
+    for x in tests:
+        if 'left_out' in x:
+            continue
+        for k in DESCRIBE + DESCRIBE_MORE:
+            v = x.get(k)
+            if not isinstance(v, str) or len(v.strip()) < 3:
+                bad.append('%s: no %s' % (x['id'], k))
+            elif any(ord(c) > 126 for c in v):
+                bad.append('%s: %s is not plain ASCII' % (x['id'], k))
+    return bad
+
+
 def extra_pages():
     """[(k, OVLX_k symbol, set of test labels)] for files included under `MMU 7,OVLX_<k>` (k = 1-7): their tests
     run with slot 7 = page OVLX_k (test table flags bits 5-7 = k, harness xpage table)."""
@@ -107,6 +127,20 @@ def asm_str(s):
     return '"%s",0' % s
 
 
+def platform_list(t):
+    """the questionnaire's machine list, checked: two capitals / digits, unique, a name of at most 26 characters,
+    at most 17 entries (screen rows 3-19)"""
+    pl = t['platforms']['list']
+    codes = [p_['code'] for p_ in pl]
+    assert len(pl) <= 17, 'at most 17 platforms fit the screen'
+    assert len(set(codes)) == len(codes), 'platform codes must be unique'
+    for p_ in pl:
+        assert len(p_['code']) == 2 and all(c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789' for c in p_['code']), p_
+        assert p_['code'] != 'S' * 2 and p_['code'][0] != 'S', 'S skips: no code may start with S'
+        assert len(p_['name']) <= 26, p_
+    return pl
+
+
 def tests_inc(out):
     t = table()
     labels = built_labels()
@@ -143,6 +177,8 @@ def tests_inc(out):
     xk = {lab: k for k, _, labs in xp for lab in labs}
     lines.append('xpage:  db %s' % (','.join(sym for _, sym, _ in xp) or '0'))
     assert [k for k, _, _ in xp] == list(range(1, len(xp) + 1)), 'OVLX_ pages must be numbered 1, 2, ...'
+    why = describe_problems(tests)
+    assert not why, 'tests without a description (nxsuite_claims.json): ' + '; '.join(why[:8])
     lines.append('ttab:')
     gidx = {g['id']: g['index'] for g in groups}
     for x in tests:
@@ -167,6 +203,10 @@ def tests_inc(out):
     for x in tests:
         lines.append('cl_%s: db %s' % (x['id'], asm_str(','.join(x['claims']) or '-')))
         lines.append('ti_%s: db %s' % (x['id'], asm_str(x['title'][:20])))
+    lines.append('qmodels:')                  # the questionnaire's machine list (gq.asm): "K1 name", then a 0
+    for p_ in platform_list(t):
+        lines.append('        db %s' % asm_str('%s %s' % (p_['code'], p_['name'])))
+    lines.append('        db 0')
     lines.append('strings_end:')
     lines.append('        ASSERT strings_end <= $DCF0   ; page-62 offsets $1CF0-$1FFF hold ROM8C and FONTC')
     p = os.path.join(out, 'nxsuite_tests.inc')
