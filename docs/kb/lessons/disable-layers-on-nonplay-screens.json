@@ -47,5 +47,6 @@
   "layer 2"
  ],
  "review": "source-checked",
- "as_of": "0.1.7"
+ "as_of": "0.1.7",
+ "next_check": "A frame-layer capture over a recording that fails when Layer 2, sprites or tilemap are enabled on a frame only the ULA drew."
 }

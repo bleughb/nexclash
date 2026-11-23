@@ -49,5 +49,6 @@
   "reset"
  ],
  "review": "source-checked",
- "as_of": "0.1.7"
+ "as_of": "0.1.7",
+ "next_check": "A hook-boundary check in the verifier model: MMU slots, 7FFD and the ROM select are equal at the entry and exit of every hook."
 }

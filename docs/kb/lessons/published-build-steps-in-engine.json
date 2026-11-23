@@ -46,5 +46,6 @@
   "MD5"
  ],
  "review": "source-checked",
- "as_of": "0.1.7"
+ "as_of": "0.1.7",
+ "next_check": "Fail a record whose published output MD5 is not the one `nexclash.py auto` makes with no rework arguments."
 }

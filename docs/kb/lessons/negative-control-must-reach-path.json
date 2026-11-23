@@ -45,5 +45,6 @@
   "verification"
  ],
  "review": "source-checked",
- "as_of": "0.1.7"
+ "as_of": "0.1.7",
+ "next_check": "Have every engine report its negatives through nexclash.runchecks.measured with the expected count, so an n/a or undetected variant gives \"incomplete\"."
 }

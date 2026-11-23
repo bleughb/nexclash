@@ -53,5 +53,6 @@
   "paint removal"
  ],
  "review": "source-checked",
- "as_of": "0.1.7"
+ "as_of": "0.1.7",
+ "next_check": "A site check that the replacement bytes at a paint site have the length, T states and memory accesses of the original instruction."
 }

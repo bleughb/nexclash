@@ -53,5 +53,6 @@
   "archive"
  ],
  "review": "source-checked",
- "as_of": "0.1.7"
+ "as_of": "0.1.7",
+ "next_check": "A selftest step per record that applies each trainer over a recording and checks the poked byte is one game code writes and the game still reaches play."
 }

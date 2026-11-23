@@ -14,6 +14,11 @@
    "text": "The verifier failed 'port access in a hook' on the latch's IN (0x253B); it now answers it from its NextREG model (_NS.read) instead of counting it as a port access.",
    "quote": "latch's IN (0x253B) from its NextREG model (_NS.read) instead of counting it as a port access.",
    "shown_on": "simulator"
+  },
+  {
+   "game": "games/cyclone.md",
+   "text": "The latch's IN (0x253B) comes from the NextREG model (NextState.sel) instead of being logged as a port access.",
+   "shown_on": "simulator"
   }
  ],
  "level": "demonstrated",

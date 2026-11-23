@@ -52,5 +52,6 @@
   "pace"
  ],
  "review": "source-checked",
- "as_of": "0.1.7"
+ "as_of": "0.1.7",
+ "next_check": "After a pace run compare the keyboard rows the game read in both arms at each update and fail where they differ."
 }

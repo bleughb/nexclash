@@ -47,5 +47,6 @@
   "check the game changed"
  ],
  "review": "source-checked",
- "as_of": "0.1.7"
+ "as_of": "0.1.7",
+ "next_check": "After the start keys require a state byte the profile names (position, score) to change, and report \"keys did not reach play\" otherwise."
 }

@@ -51,5 +51,6 @@
   "hot spot"
  ],
  "review": "source-checked",
- "as_of": "0.1.7"
+ "as_of": "0.1.7",
+ "next_check": "Make nexclash.hookprofile work for every engine and fail an engine report in which a hook has no timing row."
 }

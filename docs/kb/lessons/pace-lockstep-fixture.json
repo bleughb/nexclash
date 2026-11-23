@@ -55,5 +55,6 @@
   "LD A,I"
  ],
  "review": "source-checked",
- "as_of": "0.1.7"
+ "as_of": "0.1.7",
+ "next_check": "A pace profile key \"fixture\" of byte patches applied to both copies, with a scan that lists every LD A,R the fixture does not cover."
 }

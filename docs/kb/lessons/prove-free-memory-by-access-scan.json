@@ -52,5 +52,6 @@
   "stage"
  ],
  "review": "source-checked",
- "as_of": "0.1.7"
+ "as_of": "0.1.7",
+ "next_check": "Record which recordings a tail site was scanned over and warn when they are fewer than the stages the game has."
 }

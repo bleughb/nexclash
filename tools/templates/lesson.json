@@ -14,6 +14,7 @@
  "level": "REPLACE: observed | inferred | demonstrated",
  "area": "REPLACE: platform | emulator | toolkit | method | design | process",
  "facts": {"OPTIONAL, only what the lesson needs": "machine 48K | 128K; interrupts on | off; draw back-buffer | cell-copier | one-routine | direct"},
+ "next_check": "OPTIONAL: what a check for this could test, in one sentence (or why a machine cannot check it)",
  "enforced_by": ["OPTIONAL: nexclash.<module>.<function> or a file that now checks this, once one does"],
  "words": ["REPLACE", "four to nine search words"],
  "review": "extracted",
