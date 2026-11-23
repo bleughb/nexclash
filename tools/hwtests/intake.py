@@ -1168,7 +1168,7 @@ def describe(tid=None, table=None, out=sys.stdout):
     return len(tests)
 
 
-def _cell(x):
+def _tcell(x):
     if not x:
         return 'not run'
     v = '%s %s' % (x.get('v'), x.get('u') if x.get('u') not in (None, '-') else '')
@@ -1209,7 +1209,7 @@ def reference(paths, outdir, table=None):
         if recs and 'left_out' not in x:
             o.write('\n| Record | Result |\n|---|---|\n')
             for p, D in recs:
-                o.write('| %s | %s |\n' % (_rec_name(D), _cell(D['run']['tests'].get(x['id']))))
+                o.write('| %s | %s |\n' % (_rec_name(D), _tcell(D['run']['tests'].get(x['id']))))
     with open(path, 'w', encoding='utf-8', newline='\n') as f:
         f.write(o.getvalue())
     return path
@@ -1257,7 +1257,7 @@ def conformance(emu, ref, table=None, out=sys.stdout):
         else:
             n['DIFFERENT'] += 1
             print('  %-5s DIFFERENT       %s' % (x['id'], purpose), file=out)
-            print('        emulator %s | reference %s: %s' % (_cell(e), _cell(b), '; '.join(why)), file=out)
+            print('        emulator %s | reference %s: %s' % (_tcell(e), _tcell(b), '; '.join(why)), file=out)
     print('\n(tolerance as --runs: the larger within-run min-max, RUN_TOL, +-1 for counts, 0.5 % or 0.05 for '
           'fixed-point values; operator (V) tests compare only when both answered)', file=out)
     print('summary: %d SAME, %d DIFFERENT, %d NOT COMPARABLE' % (n['SAME'], n['DIFFERENT'], n['NOT COMPARABLE']),

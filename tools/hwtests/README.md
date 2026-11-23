@@ -340,6 +340,20 @@ values and the reason, `--runs` tolerance) or NOT COMPARABLE (not run, SKIP, una
 that one board and core: "different" means different from it, and an emulator result is never hardware
 evidence.
 
+Emulators (unattended, the automatic pass): `tools/hwtests/emurun.py` starts one emulator, presses the menu
+key, waits for the DONE flag and leaves `NXSUITE.TXT` / `.PRG` in the SD folder given; the emulator program
+and the folder are arguments (nothing machine-specific in the repository):
+
+    python tools/hwtests/emurun.py jnext  --exe JNEXT_EXE  --sd DIR --nex nxsuite.nex [--card SD_IMAGE]
+    python tools/hwtests/emurun.py cspect --exe CSPECT_EXE --sd DIR --nex nxsuite.nex [--hz60] [--port 8766]
+    python tools/hwtests/intake.py DIR/NXSUITE.TXT --platform "JNext 1.3.0"
+
+Proven 2026-11-24: JNext 1.3.0 (49 s) and CSpect 4.5.9.0 (374 s). MAME 0.289 (driver tbblue) is not
+supported: started with `-snapshot nxsuite.nex` the suite reaches its menu with an unreadable font (the
+ROM mapped there is not NextZXOS's ROM 3) and no key is taken; booted from a NextZXOS SD image it stays on
+the welcome screen (CPU at $0C90 from frame 200, keys not taken through Lua). An emulator author can still
+run the suite by hand; the V (visual) pass can be answered by eye or left PENDING.
+
 It refuses a file that is cut short, damaged (CRC), not ASCII / LF, or names an unknown test or status,
 and a continuation whose parts are not all beside it.
 Per claim it reports CONFIRMED, DISPROVED, MEASURED value +- spread, CHOICE word or NOT ANSWERED (with the
