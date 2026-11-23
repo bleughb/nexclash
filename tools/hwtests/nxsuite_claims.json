@@ -1614,7 +1614,7 @@
    "operator": true,
    "opt_in": false,
    "stage": 2,
-   "left_out": "No program read-back and no one-key answer decides it: the difference is one dot at 640 dots a line. A pattern that would show a one-dot shift (alternating one-dot columns, which a one-dot shift inverts and a two-dot shift leaves alone) looks like an even grey on a screen either way, and wider patterns hide the one-dot shift. A photograph of the screen settles it; the suite records key presses, not photographs."
+   "fields": "V08: s0 / s1 = two answers on the 640 x 256 Layer 2 white blocks (16 dots, transparent 16-dot gaps, border strips rows 0-31 and 224-255) over a 40 x 32 tilemap with red tiles exactly under the blocks and blue under the gaps: none (no red at any edge), left / right (a thin red line on that edge of every block: the layers one dot apart), or other. s0: no scroll (do the layers line up); s1: Layer 2 X scroll 1 and tilemap X scroll 1 (one 7 MHz dot = 2 dots). means=<s0>-<s1>; v = s1. The claim (a 640 scroll step is 2 dots): s1 = none when s0 = none; a red line in s1 only = a 1-dot step. Only the scroll step is asked: a half-pixel scroll by two screens is not."
   },
   {
    "id": "V09",

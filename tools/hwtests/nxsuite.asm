@@ -153,7 +153,7 @@ OVL2_V  equ 42                  ; V tests in gv2.asm, after g3b.asm on page 42 (
 OVL_XT  equ 61                  ; X-T after G7 on page 61
 OVL_XD  equ 60                  ; X-D after G1 on page 60
 OVL_XH  equ 63                  ; X-H after G6 on page 63 (IM2 table $FC00)
-OVLX_1  equ 40                  ; V tests in gv3.asm at $F200-$FCFF of page 40 (Z04: $F000-$F1FF, F05: $FD00-)
+OVLX_1  equ 40                  ; V tests in gv3.asm at $F200-$FCFF of page 40 (Z04: $F000-$F1FF, F05: $FD00-), gv7.asm after G4
 OVLX_2  equ 43                  ; V tests in gv4.asm after G5 / G8 (test table flags bits 5-7 = k: page OVLX_k)
 OVLX_3  equ 61                  ; V tests in gv5.asm after G7 / X-T
 OVLX_4  equ 63                  ; V tests in gv6.asm at $FD02 (above X-H's IM2 table and vector)
@@ -212,6 +212,10 @@ gxt_end:
         INCLUDE "nxsuite/gv3.asm"
 gv3_end:
         ASSERT $ <= F5T
+        ORG g4_end                      ; V08 below Z04's $F000 on the same page
+        INCLUDE "nxsuite/gv7.asm"
+gv7_end:
+        ASSERT $ <= $F000
         MMU 7,OVLX_2
         ORG g58_end
         INCLUDE "nxsuite/gv4.asm"

@@ -710,6 +710,28 @@ def _v07(e, rec, src):
                 'the 320 x 256 Layer 2 shown too). The claim: top, then both.' % (a, b))
 
 
+def _v08(e, rec, src):
+    a, b = e.get('s0'), e.get('s1')
+    if not a or not b:
+        return None
+    if a == 'none' and b == 'none':
+        st = 'PASS'
+    elif a == 'none' and b in ('left', 'right'):
+        st = 'FAIL'
+    else:
+        st = None
+    how = ('operator: 640 x 256 Layer 2 blocks over red / blue tiles - no scroll: %s; Layer 2 and tilemap both '
+           'scrolled one step: %s (none = no red at any block edge; left / right = a one-dot red line on that '
+           'edge). ' % (a, b))
+    if st == 'PASS':
+        how += 'The layers line up and a 640 scroll step moved Layer 2 by 2 dots, like the tilemap: the claim.'
+    elif st == 'FAIL':
+        how += 'A red line only after the scroll: a 640 scroll step moved Layer 2 by 1 dot, not 2.'
+    elif a != 'none':
+        how += 'Without a scroll the layers did not line up, so the scroll step is not decided by this run.'
+    return st, how
+
+
 def _vone(table):
     """a one-question V test: v = word -> (status, what the operator saw)"""
     def f(e, rec, src):
@@ -816,7 +838,7 @@ DERIVE = {('V17', 'copper-15-resets-clip'): _v17, ('V01', 'spr-clip-units'): _v0
           ('V11', 'lay-tilemap-bank7-wrap'): _v11, ('V12', 'lay-tilemap-text-and-6b'): _v12,
           ('V13', 'lay-sprites-between-ula-tilemap'): _v13, ('V14', 'lay-blend-stencil'): _v14,
           ('V04', 'lay-transparency-rules'): _v04,
-          ('XH2', 'dma-wr4-interrupt-lock'): _xh2, ('V07', 'lay-l2-wide-clip-default'): _v07, ('V05', 'lay-border-transparent'): _v05, ('V18', 'frame-64-33-l2-top'): _v18, ('V10', 'lay-l2-flip-not-synced'): _v10,
+          ('XH2', 'dma-wr4-interrupt-lock'): _xh2, ('V07', 'lay-l2-wide-clip-default'): _v07, ('V08', 'lay-l2-640-whole-pixels'): _v08, ('V05', 'lay-border-transparent'): _v05, ('V18', 'frame-64-33-l2-top'): _v18, ('V10', 'lay-l2-flip-not-synced'): _v10,
           ('XT2', 'frame-timing-change-frame-end'): _xt2,
           ('XT4', 'mem-48k-timing-7ffd'): _xt4, ('D02', 'dma-default-cycle-length'): _d02_default, ('D02', 'dma-cost-per-byte'): _d02_cost,
           ('D04', 'dma-prescaler-rate'): _d04, ('D05', 'dma-burst-cpu-share'): _d05,
