@@ -1,14 +1,15 @@
 # Jack the Nipper II - In Coconut Capers (Gremlin Graphics, 1987) - stage 0 done; engine not yet written
 
 ## Next session
-Stage: 1 (design)            State: intake done 2026-11-22 (survey below); no design yet
+Stage: 1 (design)            State: stage 1 analysis done 2026-11-23 (below); the design question not yet asked
 Inputs: TOSEC `Jack the Nipper II - In Coconut Capers (1987)(Gremlin Graphics Software)[a].z80` (md5
 6f5d708c439f3356a930ea4f176a0c8f: 48K, in game); rzxarchive `j/jacknipper2.rzx` (158,593 frames, 52 min; its own
 start snapshot md5 f89e14ab3939e70ecbe94cc1f42b38fe)    Branch: add-jack-the-nipper
-Checks: survey (GATE CHECK, below), inspect    Pending user answers: none yet (the stage-1 question comes with the preview)
-Start with: the composite draw at 0xB28B per type path (0xB3B1, 0xB534, 0xB5D3) and its cell loop
-("Stage 1 analysis" below)    Read: PLAYBOOK 2-3, 3d (an unknown engine: feasibility first)
-Open: the three unreached CALL sites; the figure plotter(s); a short recording (3-5 min) from the 48K snapshot
+Checks: survey (GATE CHECK, below), inspect, scan --writers (no pixel logic)    Pending user answers: Jack the
+Nipper's design question first (most defaults carry over: same family, same no-frame-sync pacing)
+Start with: the design question (defaults + exceptions below), a preview and a plain .nex from `[a]` (SP 0xFFFA:
+prove the tail with rom_paths' tail proof)    Read: PLAYBOOK 2-3, games/jack_the_nipper.md (the design there)
+Open: the three unreached CALL sites (a screen redraw and a text printer, not figure plotters)
 
 ## Snapshot (0b)
 - The plain TOSEC `.z80` (812f365c792c8af30edafcf227843a96) is a BASIC loader (`LOAD ""SCREEN$`, "IBM copy by
@@ -37,9 +38,32 @@ Open: the three unreached CALL sites; the figure plotter(s); a short recording (
   SP as a data pointer (POP blits, SP saved at 0xBDE8), widths patched into the code (self-modifying, 0xB412 / 0xB417
   ...), a path per (IX+2) type bit (0xB5D3, 0xB534, 0xB3B1). A conversion splits the composite: background only to the
   screen, the figure as sprites.
+- Correction (2026-11-23): the draw composites into a cell buffer, not onto the screen. Per object: 0xBA56 clears
+  0xE900-0xECFF (PUSH 0); 0xBAF9 / 0xBB64 / 0xBA8A set up the object's cells and its colour ((IX+9) into the cell
+  colour list at 0xBD68); the blit masks the figure into the buffer (AND mask, OR graphics; column stride 24 / 32 / 40
+  bytes, INC IY per pixel row). After the loop, 0xBC62 walks the dirty-cell map 0xFB00-0xFD7F beside the tile map
+  0xF800 and writes changed cells to the screen (0xBCC7-0xBCD9 pixels, 0xBCEF attributes).
+- Figure format: CALL 0x92A3 returns the graphics in HL ((IX+3/4) when (IX+8) bit 6, else by type); per row the mask
+  bytes then the graphics bytes, top row first (mask 1 = background shows). Size by (IX+2), as the dispatch at
+  0xB2E9 reads it: bit 0 16x16, bit 1 16x24, bit 2 24x24, bit 3 24x32, bit 4 16x24, none 24x32. x & 7 picks a
+  run-time shift (a shift ladder, 0xB484); (IX+5) bit 1 draws it mirrored through the byte-reverse table at 0xE800.
+  One SP blit per size x shift x mirror: 16 sites (0xB34B ... 0xB9B3), each right after the CALL.
+- Census (whole recording, jtn2_figures.py at the 16 blit sites): 142,528 blits, 100 distinct figures (51 of
+  16x16, 32 of 16x24, 9 of 24x24, 8 of 24x32): Jack, natives, monkeys, a lion, a hippo, scorpions, snakes, birds,
+  the explorer with a gun, fruit and pick-ups, a few sparkle effects. Every figure fits 2 x 2 16x16 sprites; the
+  game mirrors at run time, which a sprite's X-mirror bit does for free.
+- No pixel logic (`scan --writers`, frames 0-40,000): screen readers are the panel animation (0x935E: cells of the
+  bottom rows with attribute 0x6F, pixels rotated in place) and the panel digits (0x93B4); attribute readers the
+  panel test and a colour cycler (0xC0B3); buffer readers the maskers and the room decoder (0xAA00). Collisions
+  come from the object table, not pixels.
+- Plan for the design: as Jack the Nipper (games/jack_the_nipper.md): hook each blit site to place the figure as
+  sprites (pattern from HL, mirror bit, x / y from the record) and skip the mask-and-OR, so the buffer holds the
+  background only and the cell copier puts back what a figure covered; the figure's colour leaves the cells (sprites
+  carry their own). Depth: table order (later objects over earlier), as the composite.
 
 ## Stage log
 - 2026-11-22: stage 0, ~1.5 h wall (with Jack the Nipper), ~20 tool calls, no user rounds.
+- 2026-11-23: stage 1 analysis (draw path, figure census, readers), ~25 tool calls, no user rounds.
 
 ## Lessons
 - [none: PLAYBOOK 0b already covers loader snapshots; the TOSEC `[a]` copy was the in-game one]
@@ -53,4 +77,5 @@ Open: the three unreached CALL sites; the figure plotter(s); a short recording (
 - environment: [none: no workaround]
 - hand-rolled: [local: this game's recording machine] comparing the 128K recording's start with the 48K snapshot
   (paging byte, empty banks, RAM equal) was a hand-written check
-- scratch: [none: one inline check, recorded above]
+- scratch: [local: kept for the build stage] jtn2_figures.py (the figure census at the 16 blit sites; becomes the
+  engine's figure table and sheet in stage 2)
