@@ -1,7 +1,7 @@
 # Hard Drivin' (Domark / Binary Design, 1989; 128K tape)
 
 ## Next session
-Stage: 1 for route 2 (feasibility)    State: route 1 (smooth views) stamped verified, hardware: plays like the original; route 2 probe 2 done, build 2a next
+Stage: 1 for route 2 (feasibility)    State: route 1 (smooth views) stamped verified, hardware: plays like the original; route 2a (hd4) built and verified, hardware test 2 sent
 Techniques: `patch.inbetween-views`, `detect.pacing-structure`, `patch.pace-limiter`, `patch.restore-speed`, `patch.whole-altrom-image`, `verify.update-locked-pace`
 Inputs: C:\1NEXT\harddrivin_work: hard_drivin.z80 (MD5 18809405, snapshot 0 of hard_drivin.rzx), hard_drivin.rzx (MD5 c649e04c, 22,116 frames), in\hd.tap (MD5 02e1f96c), in\hd.tzx (61f7d04c), in\hd.dsk ([a], 43a6bc4c). Game data: never in this repo; not yet in specnext/reference (a maintainer push: ask first).
 Branch: add-hard-drivin (worktree C:\1NEXT\nexclash-hd), main merged 2026-11-23 (83cd68b)    Commit: see git log
@@ -14,10 +14,8 @@ Checks: `python nexclash.py auto hard_drivin.z80 --rzx hard_drivin.rzx --quick 2
   COMPLETE. Prototype evidence (C:\1NEXT\harddrivin_work): whole-RZX verify PASS (3,112 checks), 18 / 18 mutants,
   JNext pace +3 frames / 178 updates.
 Pending user answers: none
-Start with: route 2a stage 3 (pace 10 frames per original update, adaptive N, logic at 28 MHz, push-out whole,
-  JNext) running in a subagent (2026-11-23): brief C:\1NEXT\harddrivin_work\step\STAGE3_BRIEF.md, progress stage3_results.md;
-  if incomplete, a subagent resumes from them. Then check its numbers and send the hardware build. Auto-resume after
-  a reset is allowed (user).
+Start with: hardware test 2 results (route 2a, C:\1NEXT\harddrivin_work\hardware2). Then: move hd4 into the engine as a
+  second output (hard_drivin_steps.nex) with spec.py / hd4_verify as its verify, record, selftest stamp.
 Open: the first calibration interrupt's extra ~574 T (not subtracted, 0.06 %); sub-unit angle interpolation;
   the CALL at 0xA402 (time-out path, not in the recording); R not preserved (patch.preserve-r: the verify excludes
   R; no consumer of R found, not proven)
@@ -220,6 +218,19 @@ response) to consider on top: it needs the same sub-stepped game state, so this 
 - Cost (model): N = 4 with logic at 28 MHz 6.1 / 9.9 / 11.5 frames per original update (median / p95 / max) against
   10; real 28 MHz ~1.2x slower: N must be chosen per update. Run 150 at N = 4: the car stays stuck in an object (the
   push-out is scaled 1 / N): stage 3 makes it whole.
+### Build 2a stage 3 = hd4 (subagent, 2026-11-23; C:\1NEXT\harddrivin_work\step\stage3_results.md, hd4.asm / hd4_build.py / hd4_verify.py)
+- Pace: 3,110 lines (10 frames) per original update; sub-step i's view copied no earlier than base + (i + 1) x
+  3110 / N, in the no-tear band (lines 128-262); absolute schedule, debt carried (capped at 3 frames); whole driver at
+  28 MHz; the time-out update runs plain. N per update from the last update's busy lines per sub-step c (stay 4 while
+  c <= 660, 2 while <= 1350; up to 4 at <= 600).
+- Two hd3 defects found on JNext and fixed: an overlapping 10-byte trampoline in an 8-byte slot (slot-overlap check
+  added), and 7FFD writes (0x9E7C / 0x9E86) setting MMU slots 0-1 back to ROM mid sub-step (new site 0x9E88 maps the
+  page again; the host model now does the same reset). Push-out at A4DB whole (Spec4); run 150's stuck car was the
+  open-loop divergence, not the push-out.
+- Verify (Spec4, site bytes included): 1,554 updates x N = 1 / 2 / 4 / switching / adaptive, 176 runs of 40, synthetic
+  skid / steering / push-out: 0 mismatches; 20 / 20 negative controls (rerun 2026-11-23: 20 / 20).
+- Pace: host model per update 10.00 / 10.02 / 12.0 frames (median / p95 / max); JNext 154 s of driving: 120 clock s in
+  120.12 s, N = 4 on 534 and N = 2 on 229 of 763 updates.
 
 ## Hardware checklist
 Test 1 (2026-11-23), sent to the user: C:\1NEXT\harddrivin_work\hardware1 (CHECKLIST.txt + both builds: hard_drivin_smooth.nex
@@ -227,4 +238,9 @@ Test 1 (2026-11-23), sent to the user: C:\1NEXT\harddrivin_work\hardware1 (CHECK
 smaller steps; smooth turns; none when stopped; no tearing); speed: stopwatch over 30 race-clock seconds (the clock
 counts updates) in both builds, a quiet and a busy stretch, expected within ~1 s (JNext: +3 frames / 178 updates);
 crash replay and key 0; the out-of-time path (0xA402, not in the recording); sounds; a 10-minute soak.
+Results: (pending)
+Test 2 (2026-11-23, route 2a), sent to the user: C:\1NEXT\harddrivin_work\hardware2 (CHECKLIST.txt, hard_drivin_steps.nex 46e06774 =
+hd4_na, hard_drivin.nex d74f75e6). Steps: start-up (a crash after the first view = the 7FFD paging fault JNext
+modelled), feel, tearing, stopwatch vs race clock 1:1, crash / replay / time-out / race end / menus, objects, sound,
+10-minute soak.
 Results: (pending)
