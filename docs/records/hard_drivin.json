@@ -62,11 +62,11 @@
  "outputs": {
   "plain": {
    "file": "hard_drivin.nex",
-   "md5": "5b37afa483196f964384c152c5fb4a7a"
+   "md5": "d74f75e6995eb0f54eaec2122a5164d0"
   },
   "smooth": {
    "file": "hard_drivin_smooth.nex",
-   "md5": "9fc24d7cf3f11ef68ce1651058acb2b0"
+   "md5": "9fb23f8e64fa8187ba304c34af9a6016"
   }
  },
  "repro": [],
@@ -148,25 +148,25 @@
  "status": {
   "title": "Hard Drivin'",
   "engine_col": "hard_drivin (hard_drivin.md)",
-  "build": "stage 2; hard_drivin_smooth.nex 9fc24d7c (default: render + copy at 28 MHz in original-time windows, in-between views, K calibrated at run time) and plain hard_drivin.nex 5b37afa4 (tail 0x6C00); original pictures",
-  "software": "auto --quick 2000 PASSED (boot both builds with and without NEXLOAD, 146 checks, 168 in-between views, unit tests, 4 negative controls); prototype whole-RZX verify PASS 3,112 checks, 18 / 18 mutants; JNext pace +3 frames / 178 updates; no stamped selftest yet",
+  "build": "stage 2; hard_drivin_smooth.nex 9fb23f8e (default: render + copy at 28 MHz in original-time windows, in-between views, K calibrated at run time) and plain hard_drivin.nex d74f75e6 (tail 0x6C00); original pictures; automap_off entry (nxc patch) as auto applies it",
+  "software": "selftest --verify --stamp (whole RZX, 22,116 frames): 1,556 renders, 3,112 checks (normal and calibration paths), 3,281 in-between views each = the original render at its camera, calibration samples within 0.43 % (1,360 kept, 196 dropped); unit tests on 11 states, 4 / 4 negative controls; boot with and without NEXLOAD; rom_paths complete; prototype: 18 / 18 mutants; JNext pace +3 frames / 178 updates",
   "hardware": "untested",
-  "next": "stage the inputs; selftest --verify --stamp; hardware checklist"
+  "next": "hardware checklist; R preservation (patch.preserve-r)"
  },
  "results": [
   {
    "application": "hard_drivin.inbetween",
    "check": "state.rzx-differential",
-   "status": "partial",
-   "build": "9fc24d7c",
-   "scope": "repo engine, auto --quick 2000: 146 checks (normal and calibration paths), 168 in-between views each equal to the original render at its camera, 4 negative controls; the prototype's identical bytes: whole RZX, 3,112 checks, 18 / 18 mutants; R excluded; no stamped selftest; no hardware",
+   "status": "pass",
+   "build": "9fb23f8e",
+   "scope": "selftest --verify, whole RZX 22,116 frames: 3,112 checks on both paths, 3,281 in-between views equal to the original render at their cameras, calibration within 0.43 % of the original; unit tests on 11 states and 4 negative controls; R excluded; no hardware",
    "evidence": "games/hard_drivin.md \"Next session\""
   },
   {
    "application": "hard_drivin.pace",
    "check": "time.pace",
    "status": "partial",
-   "build": "9fc24d7c",
+   "build": "9fb23f8e",
    "scope": "JNext 1.3.0, 178 updates against the plain build: +3 frames, median update -0.001 frames, 191 in-between views; no hardware",
    "evidence": "games/hard_drivin.md \"Next session\""
   },
@@ -174,7 +174,7 @@
    "application": "hard_drivin.pace-check",
    "check": "time.pace",
    "status": "partial",
-   "build": "9fc24d7c",
+   "build": "9fb23f8e",
    "scope": "as above",
    "evidence": "games/hard_drivin.md \"Next session\""
   },
@@ -182,15 +182,15 @@
    "application": "hard_drivin.pacing",
    "check": "detect",
    "status": "pass",
-   "build": "9fc24d7c",
+   "build": "9fb23f8e",
    "scope": "229 updates profiled in the first 6,000 frames",
    "evidence": "games/hard_drivin.md \"Pacing measurement\""
   },
   {
    "application": "hard_drivin.speed",
    "check": "state.rzx-differential",
-   "status": "partial",
-   "build": "9fc24d7c",
+   "status": "pass",
+   "build": "9fb23f8e",
    "scope": "as hard_drivin.inbetween",
    "evidence": "games/hard_drivin.md \"Next session\""
   },
@@ -198,9 +198,75 @@
    "application": "hard_drivin.altrom",
    "check": "boot",
    "status": "pass",
-   "build": "9fc24d7c",
+   "build": "9fb23f8e",
    "scope": "boot_problems with and without NEXLOAD (tail and printer buffer credited to rom_paths); rom_paths COMPLETE over 2,000 frames",
    "evidence": "games/hard_drivin.md \"Next session\""
   }
- ]
+ ],
+ "checked": {
+  "deps": {
+   "asm/hard_drivin_hooks.asm": "fcf860f1fd2a073f",
+   "asm/hard_drivin_wset.inc": "c5acb659ce276388",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
+   "docs/profiles/hard_drivin.json": "4ed3e4b8fe925c11",
+   "nexclash.py": "d9b430cef7478a38",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "7ce4a95aeb51d4c8",
+   "nexclash/hard_drivin.py": "748344159e5eae90",
+   "nexclash/hooklib.py": "258714a3676ee71b",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "a48f70d32f869201",
+   "nexclash/recolour.py": "28ecc65866678e42",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "2c8934b73d797405",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-23"
+ },
+ "verified": {
+  "deps": {
+   "asm/hard_drivin_hooks.asm": "fcf860f1fd2a073f",
+   "asm/hard_drivin_wset.inc": "c5acb659ce276388",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
+   "docs/profiles/hard_drivin.json": "4ed3e4b8fe925c11",
+   "nexclash.py": "d9b430cef7478a38",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "7ce4a95aeb51d4c8",
+   "nexclash/hard_drivin.py": "748344159e5eae90",
+   "nexclash/hooklib.py": "258714a3676ee71b",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "a48f70d32f869201",
+   "nexclash/recolour.py": "28ecc65866678e42",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "2c8934b73d797405",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-23"
+ }
 }

@@ -692,9 +692,12 @@ def auto(a, z80, name, out, say):
         units = unit_tests(patch, states)
         ok &= not any(v for k, v in units.items() if k.endswith('!'))
         say('Unit      : %s' % dict(units))
-    else:
-        say('Unit      : no states (no recording given)')
+    elif getattr(a, 'rzx', None):
+        say('Unit      : no states (the recordings reached no render)')
         ok = False
+    else:                                           # a rebuild (record recipe without recordings): builds + boot only
+        say('Verify    : not run (no recording: rebuild)')
+        say('Unit      : not run (no recording: rebuild)')
     (out / (name + '_outputs.json')).write_text(json.dumps(
         {'default': name + '_smooth.nex', 'plain': name + '.nex', 'colours': {}}, indent=1) + '\n')
     say('Result    : ' + ('PASSED' if ok else 'FAILED'))

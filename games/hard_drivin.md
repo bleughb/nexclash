@@ -1,22 +1,22 @@
 # Hard Drivin' (Domark / Binary Design, 1989; 128K tape)
 
 ## Next session
-Stage: 2 (build) -> 3 (prove + deliver)    State: engine in the repo (nexclash/hard_drivin.py); `auto --quick 2000` PASSED
+Stage: 3 (prove + deliver)    State: selftest --game hard_drivin --verify --stamp PASSED 2026-11-23 (stamped verified); hardware next
 Techniques: `patch.inbetween-views`, `detect.pacing-structure`, `patch.pace-limiter`, `patch.restore-speed`, `patch.whole-altrom-image`, `verify.update-locked-pace`
 Inputs: C:\1NEXT\harddrivin_work: hard_drivin.z80 (MD5 18809405, snapshot 0 of hard_drivin.rzx), hard_drivin.rzx (MD5 c649e04c, 22,116 frames), in\hd.tap (MD5 02e1f96c), in\hd.tzx (61f7d04c), in\hd.dsk ([a], 43a6bc4c). Game data: never in this repo; not yet in specnext/reference (a maintainer push: ask first).
 Branch: add-hard-drivin (worktree C:\1NEXT\nexclash-hd), main merged 2026-11-23 (83cd68b)    Commit: see git log
 Engine: nexclash/hard_drivin.py (HDPatch from the profile, Next host model, verify, unit_tests, negative_patches,
   auto, boot_problems), asm/hard_drivin_hooks.asm + asm/hard_drivin_wset.inc, docs/profiles/hard_drivin.json.
-  Builds: hard_drivin.nex (plain, tail 0x6C00) 5b37afa4, hard_drivin_smooth.nex (default) 9fc24d7c = the prototype's
-  hd2 build byte for byte.
+  Builds: hard_drivin.nex (plain, tail 0x6C00) d74f75e6, hard_drivin_smooth.nex (default) 9fb23f8e: the prototype's
+  hd2 build (9fc24d7c) byte for byte + the automap_off entry auto adds to every build (docs/NXC_PATCHES.md).
 Checks: `python nexclash.py auto hard_drivin.z80 --rzx hard_drivin.rzx --quick 2000`: boot PASS (both builds, with
   and without NEXLOAD), 146 checks, 168 in-between views, unit tests and 4 / 4 negative controls PASS, rom_paths
   COMPLETE. Prototype evidence (C:\1NEXT\harddrivin_work): whole-RZX verify PASS (3,112 checks), 18 / 18 mutants,
   JNext pace +3 frames / 178 updates.
 Pending user answers: none
-Start with: stage 3: stage the inputs for selftest (NEXCLASH_REFERENCE or specnext/reference/hard_drivin, ask
-  before any push), `selftest.py --game hard_drivin --verify --stamp`; then the hardware build + checklist (K and the
-  copy time are measured at run time; JNext's ratio 6.2 vs TECHNIQUES' hardware 6.6-7.0)
+Start with: the hardware build hard_drivin_smooth.nex (9fb23f8e) + checklist for the user: walk and turn smooth, no
+  tearing, the original's speed (lap clock vs the plain build over a lap); K and the copy time are measured at run time
+  (JNext's ratio 6.2 vs TECHNIQUES' hardware 6.6-7.0). The inputs are in C:\1NEXT\hd_reference (not in specnext: ask before any push)
 Open: the first calibration interrupt's extra ~574 T (not subtracted, 0.06 %); sub-unit angle interpolation;
   the CALL at 0xA402 (time-out path, not in the recording); R not preserved (patch.preserve-r: the verify excludes
   R; no consumer of R found, not proven)
@@ -125,6 +125,10 @@ Open: the first calibration interrupt's extra ~574 T (not subtracted, 0.06 %); s
   sweeps the frame (every 13 lines). Boot check credits the tail 0x6C00 and NEXLOAD's printer buffer (rom_paths:
   never read before written). Main merged (shared lessons as data, docs/kb); kb entry docs/kb/games/hard_drivin.json.
 
+- 2026-11-23 (5): selftest --game hard_drivin --verify --stamp (inputs in a local reference folder,
+  C:\1NEXT\hd_reference, not pushed): verify PASS on the whole RZX (3,112 checks, 3,281 views, unit tests on 11 states,
+  4 / 4 negatives); two FAILs fixed: auto failed a rebuild with no recording (Unit: no states), so main's automap_off
+  step never ran and the rebuild's MD5s differed from the verify's; the record held pre-automap_off MD5s.
 ## Technique use
 - detect.pacing-structure: helped: no frame wait, 7-21 frame updates, the lap clock counts updates (not time)
 - patch.inbetween-views: helped: the route itself; corrected: K is measured at run time by a calibration render (the card's fixed K from JNext would be 6-10 % off on hardware), and in-between views run on scratch copies of the game's pages instead of Layer 2 banks
@@ -142,6 +146,7 @@ Open: the first calibration interrupt's extra ~574 T (not subtracted, 0.06 %); s
 - [kb lesson.negative-control-phase-sweep: sweep the start line for interrupt-timed faults] demonstrated: the no-repair control passed on 6 states at their own start line and was caught once the start line swept the frame.
 - [kb lesson.skoolkit-write-guards-below-4000: the reference re-render ran away] observed: stock SkoolKit dropped the hook page's writes below 0x4000; dizzy6._rw_simulator keeps them.
 - [kb lesson.nexload-printer-buffer: 256 bytes differ when booted as NEXLOAD] observed: both builds differ only in 0x5B00-0x5BFF and the tail; rom_paths shows neither is read before written.
+- [kb lesson.rebuild-without-recording-must-pass: a FAILED auto skips the CLI's later steps] observed: the rebuild recipe gives no recording; auto returned FAILED, so the automap_off entry was not added and the rebuild's MD5s differed from the verify's.
 - [kb lesson.asm2profile-key-prefix: profile keys from SAVEBIN names] observed: asm2profile takes the key from the SAVEBIN name up to the first underscore, so hard_drivin_page.bin gave "drivin_page"; named hdrivin_page.bin / hdrivin_rom.bin.
 
 ## Friction
