@@ -1,0 +1,36 @@
+{
+ "id": "lesson.verifier-nextreg-model",
+ "kind": "fact",
+ "claim": "The verifier must answer the speed latch's IN 0x253B from a NextREG model instead of replaying it from the recording or counting it as a port access.",
+ "evidence": [
+  {
+   "game": "games/spellbound_magic_knight.md",
+   "text": "The verifier answers IN 0x253B from its NextREG model (_NS.sel / nr_read); an IN (0x253B) taken as a game input made the replay fail at once.",
+   "quote": "The verifier answers IN 0x253B from its NextREG model (_NS.sel / nr_read).",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/target_renegade.md",
+   "text": "The verifier failed 'port access in a hook' on the latch's IN (0x253B); it now answers it from its NextREG model (_NS.read) instead of counting it as a port access.",
+   "quote": "latch's IN (0x253B) from its NextREG model (_NS.read) instead of counting it as a port access.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/cyclone.md",
+   "text": "The latch's IN (0x253B) comes from the NextREG model (NextState.sel) instead of being logged as a port access.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "toolkit",
+ "card": "patch.restore-speed",
+ "words": [
+  "nextreg",
+  "verifier",
+  "port 253B",
+  "model",
+  "speed latch"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

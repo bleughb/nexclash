@@ -1,0 +1,30 @@
+{
+ "id": "lesson.pace-clock-race",
+ "kind": "pitfall",
+ "claim": "A pace-clock reading from game code must be made with interrupts off (or redone if one came in), the window must open with interrupts off, and the game's own waits must use the pace clock.",
+ "evidence": [
+  {
+   "game": "games/castle_master.md",
+   "text": "Main-line readings commit with interrupts off and read again if an interrupt came during them (-6 frames in 3 of 5,233 without); the window opens with interrupts off; the game's 14 handler waits in the window are real time (+28 frames until found).",
+   "quote": "main-line readings commit with interrupts off and read again if an",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "platform",
+ "facts": {
+  "interrupts": "on"
+ },
+ "card": "verify.update-locked-pace",
+ "words": [
+  "pace clock",
+  "interrupt",
+  "DI",
+  "window",
+  "waits",
+  "race",
+  "mutants"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

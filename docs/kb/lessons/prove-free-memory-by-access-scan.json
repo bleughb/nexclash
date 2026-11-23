@@ -1,0 +1,57 @@
+{
+ "id": "lesson.prove-free-memory-by-access-scan",
+ "kind": "pitfall",
+ "claim": "Memory untouched in a recording is not proven free, so scan every wave, room and stage and prefer write-first bytes before choosing a tail site.",
+ "evidence": [
+  {
+   "game": "games/atic_atac.md",
+   "text": "\"Free RAM\" from the survey is untouched by the recording, not free: 0xB536- and 0xD2EE- hold graphics never drawn.",
+   "quote": "\"Free RAM\" = untouched by the recording, not free (0xB536-, 0xD2EE-: graphics never drawn).",
+   "shown_on": "analysis"
+  },
+  {
+   "game": "games/silkworm.md",
+   "text": "0x9000-0x901F looked free in wave 1 and took writes past the back buffer in other waves.",
+   "quote": "0x9000-0x901F looked free in wave 1 and took writes past the back buffer in other waves.",
+   "shown_on": "analysis"
+  },
+  {
+   "game": "games/comando_quatro.md",
+   "text": "An untouched span in a 2,500-frame scan is not free memory: game data at 5B10 is first read later; write-first variables confirmed over longer recordings are the place.",
+   "quote": "An untouched span in a 2,500-frame scan is not free memory: game data at 5B10 is first read later.",
+   "shown_on": "analysis"
+  },
+  {
+   "game": "games/green_beret.md",
+   "text": "First choice 0x9400 was graphics of stage 4; the stage-4 recording's scan caught it.",
+   "quote": "First choice 0x9400 was graphics of stage 4: the stage-4 recording's scan caught it.",
+   "shown_on": "analysis"
+  },
+  {
+   "game": "games/ruff_and_reddy.md",
+   "text": "Art mapped in slot 2 hid a room map that lies below 0x6000: read the game's data before mapping over it.",
+   "quote": "Art mapped in slot 2 hid a room map that lies below 0x6000: read the game's data before mapping over it.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/magicland_dizzy.md",
+   "text": "Printer buffer used: the game's bit-reverse table, read before written.",
+   "quote": "the printer buffer (the game's bit-reverse table, read before written)",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "free memory",
+  "tail",
+  "access scan",
+  "write-first",
+  "printer buffer",
+  "untouched",
+  "stage"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7",
+ "next_check": "Record which recordings a tail site was scanned over and warn when they are fewer than the stages the game has."
+}

@@ -1,0 +1,31 @@
+{
+ "id": "lesson.unreached-branch-unit-case",
+ "kind": "method",
+ "claim": "When no recording reaches a branch, drive it with unit cases run from captured state.",
+ "evidence": [
+  {
+   "game": "games/jetpac.md",
+   "text": "No RZX yet: rocket build, take-off and levels 2+ are proven by unit tests on the game's own routines.",
+   "quote": "No RZX and a free run that never builds the rocket: the unit tests now run the game's own routines (26217 flames, 26419 sections) from a captured state",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/heartland.md",
+   "text": "A wrapper hook must hand the routine the original's R: the attribute copy reads R on one of three ways; found by a unit case that forces each way, as the recordings only take the plain one.",
+   "quote": "leave the original's R after it: the attribute copy reads R on one of its three ways. Found by a unit case that forces",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "card": "detect.tracked-unit",
+ "words": [
+  "unit test",
+  "recording",
+  "unreached",
+  "branch",
+  "captured state"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

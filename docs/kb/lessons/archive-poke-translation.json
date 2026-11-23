@@ -1,0 +1,58 @@
+{
+ "id": "lesson.archive-poke-translation",
+ "kind": "pitfall",
+ "claim": "Archive POKs cannot be imported blindly: check each against the disassembly, translate addresses, and test every one per release.",
+ "evidence": [
+  {
+   "game": "games/flying_shark.md",
+   "text": "One entry of the archive's .pok is an address in the packed snapshot (54462, lives), the rest are live addresses that the unpack overwrites; tested on the real game, translated through the stream map.",
+   "quote": "One entry of the archive's .pok is an address in the packed snapshot (54462, lives), the rest are live addresses that the unpack overwrites",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/gryzor.md",
+   "text": "The .pok's [L1] lines name addresses of another release (data or mid-instruction in this file); only Infinite Lives (34919) and the unlabelled-version lines 35604 and 35651 work here, proven on the simulator.",
+   "quote": "only Infinite Lives (34919) and the unlabelled-version lines 35604 and 35651 work here, proven on the simulator",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/cobra.md",
+   "text": "The TOSEC .pok's Infinite Lives also pokes 34925, which is not lives but a graphics pointer (read by the plotter's frame lookup at 39837); the single-poke trainer is used.",
+   "quote": "the TOSEC .pok's Infinite Lives also pokes 34925, which is not lives but a graphics pointer",
+   "shown_on": "analysis"
+  },
+  {
+   "game": "games/sabre_wulf.md",
+   "text": "Of 16 .pok trainers, See Ending and Paralyzed Enemies freeze the game, Keep SabreMan cyan sets colour 186 and stops the orchid effects ending, Immunity still loses lives; the menu keeps the six shown to work.",
+   "quote": "of 16 .pok trainers, See Ending and Paralyzed Enemies freeze the game",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/highway_encounter.md",
+   "text": "The archive POK has overlapping immunity variants at 40905.",
+   "quote": "This archive POK has overlapping immunity variants at 40905 (0 versus 8).",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/beyond_the_ice_palace.md",
+   "text": "The archive's POK labelled 128K has 48K addresses; translated by matching the instructions, each executed with and without the change; all five translations are behaviour-tested.",
+   "quote": "the archive's POK labelled 128K has 48K addresses. Translated by matching the",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "words": [
+  "POK",
+  "trainer",
+  "cheat",
+  "infinite lives",
+  "import-pok",
+  "relocation",
+  "release",
+  "archive"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7",
+ "next_check": "A selftest step per record that applies each trainer over a recording and checks the poked byte is one game code writes and the game still reaches play."
+}

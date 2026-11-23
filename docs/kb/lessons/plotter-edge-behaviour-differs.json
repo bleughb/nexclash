@@ -1,0 +1,30 @@
+{
+ "id": "lesson.plotter-edge-behaviour-differs",
+ "kind": "pitfall",
+ "claim": "A verifier edge-case check written for one game's plotter can fail on another's, because plotters differ in whether a figure wraps within its row or runs on into the next.",
+ "evidence": [
+  {
+   "game": "games/pssst.md",
+   "text": "This plotter does not wrap within the 32-byte row: past column 31 it runs on, so a column crossing the right edge sits 8 lines down.",
+   "quote": "One difference: this plotter does not wrap within the 32-byte row; past column 31 it",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/pssst.md",
+   "text": "A verifier check written for another game's plotter (a figure wraps within its row) failed a third of the edge cases here: this plotter runs on into the next row.",
+   "quote": "A check written for another game's plotter (a figure wraps within its row) failed a",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "plotter",
+  "row wrap",
+  "right edge",
+  "verifier",
+  "edge case"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,27 @@
+{
+ "id": "lesson.layer2-colour-from-mono-buffer",
+ "kind": "method",
+ "claim": "Build the Layer 2 picture from the game's own 1-bit buffer, taking face colour for set pixels and paper for clear ones, so the dither and anything drawn into that buffer carry over unchanged.",
+ "limit": "Output drawn straight onto the ULA screen or into attributes is lost under the layer.",
+ "evidence": [
+  {
+   "game": "games/castle_master.md",
+   "text": "Layer 2 pixel = buffer bit set ? the face's colour : the area's paper (user: keep the dither); the centre marker, printer, transition and boxes draw into the buffer; Layer 2 byte = 2 x code + the original bit, code 0-15 face colour.",
+   "quote": "Option (i) trial (opt1_trial.py; user: KEEP the dither): Layer 2 pixel = buffer bit set ? the face's colour :",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "card": "patch.hybrid-display-replacement",
+ "words": [
+  "Layer 2",
+  "1-bit buffer",
+  "dither",
+  "face colour",
+  "paper",
+  "message scroll"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,27 @@
+{
+ "id": "lesson.pattern-page-overflow",
+ "kind": "pitfall",
+ "claim": "A sprite pattern upload can overrun an 8K page unnoticed because the sprite checks compare x, y and pattern number, not the pattern; give the upload its own check against the art.",
+ "evidence": [
+  {
+   "game": "games/that_sinking_feeling.md",
+   "text": "34 patterns are 8,704 bytes: the upload ran off an 8K page and the last two objects were noise in both modes, yet every test passed; a side-by-side with the set found it.",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "toolkit",
+ "when": [
+  "sprite.working_set_fits"
+ ],
+ "words": [
+  "pattern",
+  "8K page",
+  "overflow",
+  "upload",
+  "sprite checks",
+  "art"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

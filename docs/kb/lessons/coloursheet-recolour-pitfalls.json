@@ -1,0 +1,26 @@
+{
+ "id": "lesson.coloursheet-recolour-pitfalls",
+ "kind": "pitfall",
+ "claim": "Colour-sheet import must read the full declared palette; truncating it at 15 entries loses colours.",
+ "evidence": [
+  {
+   "game": "games/bubbler.md",
+   "text": "The moving sheet has 34 RGB entries; the sheet importer truncated palettes at 15 entries and now reads the full declared palette.",
+   "quote": "reads the full declared palette rather than silently restricting import to its first 15 colours.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "card": "patch.runtime-colour-map",
+ "words": [
+  "coloursheet",
+  "palette",
+  "import",
+  "recolour",
+  "sheet",
+  "15 entries"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

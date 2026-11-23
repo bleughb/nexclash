@@ -695,7 +695,7 @@ setup:
         xor a
         ld bc,0xE3
         out (c),a
-        nextreg 0x07,0
+        nextreg 0x07,0        ; speed: start-up (once, before the game)
         ret
 setup_end:
         SAVEBIN "alien8_setup.bin",0xD000,setup_end-0xD000

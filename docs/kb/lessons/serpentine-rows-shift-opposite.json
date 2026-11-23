@@ -1,0 +1,24 @@
+{
+ "id": "lesson.serpentine-rows-shift-opposite",
+ "kind": "pitfall",
+ "claim": "When a game stores alternate rows reversed (serpentine plotters) and shifts a figure in place, odd rows move the opposite way in memory, so un-shifting must use row parity.",
+ "evidence": [
+  {
+   "game": "games/rainbow_z80n.md",
+   "text": "Treating all rows alike made 927 player pixels ink in one figure and clear in another; a probe over 444,840 rows of both RZX showed 0 differences with the parity rule.",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "words": [
+  "serpentine",
+  "shifted",
+  "row parity",
+  "reversed rows",
+  "painting sheet",
+  "colour map"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

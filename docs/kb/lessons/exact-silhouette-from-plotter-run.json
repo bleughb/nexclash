@@ -1,0 +1,46 @@
+{
+ "id": "lesson.exact-silhouette-from-plotter-run",
+ "kind": "method",
+ "claim": "Learn a plotter's layout, mask and exact figure pixels by running the original plotter on an empty (0x00) and a full (0xFF) canvas instead of decoding graphics or guessing the body.",
+ "evidence": [
+  {
+   "game": "games/olli_and_lissa.md",
+   "text": "First model of the figure's layout was wrong (the mask is a row and a byte larger and starts a pixel left); the game's own routine run on an empty and a full background showed the layout.",
+   "quote": "the game's own routine run on an empty and a full background showed the layout.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/olli_and_lissa_3.md",
+   "text": "The game's own routines run on an empty and a full screen gave the layout (byte order in a row, the empty rows, the mask's corner) at the first try; the model matched at every shift.",
+   "quote": "The game's own routines run on an empty and a full screen gave the layout (byte order",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/el_capitan_trueno.md",
+   "text": "Measured on f5000 with blank buffers 0x00 / 0xFF: the mask is a ~1 px outline built in pixel pairs; a morphological body leaves 49 mask pixels uncovered, so masks must come from the game.",
+   "quote": "fill(close1(dilate1(ink)))) leaves 49 mask pixels uncovered -> masks must come from the game.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/olli_and_lissa_2.md",
+   "text": "A masked graphic sits a row below and a pixel right of its mask's corner.",
+   "quote": "a masked graphic sits a row below and a pixel right of its mask's corner",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "words": [
+  "canvas",
+  "silhouette",
+  "mask",
+  "plotter run",
+  "empty screen",
+  "full screen",
+  "layout",
+  "00 buffer",
+  "FF buffer"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,23 @@
+{
+ "id": "lesson.boot-check-expected-rom-view",
+ "kind": "method",
+ "claim": "A boot check's expected ROM view must include the register block the stub writes, and a deliberately broken stub (no 1FFD write, no unlock, hooks not copied) must fail the check.",
+ "evidence": [
+  {
+   "game": "notes",
+   "text": "Maintainers' note: the check first showed 17 'ROM differs' bytes in that block.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "boot check",
+  "ROM view",
+  "register block",
+  "broken stub",
+  "negative"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

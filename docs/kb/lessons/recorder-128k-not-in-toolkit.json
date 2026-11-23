@@ -1,0 +1,55 @@
+{
+ "id": "lesson.recorder-128k-not-in-toolkit",
+ "kind": "fact",
+ "claim": "The shared recorder, analyse, new and verify paths are 48K only (machine.py has no paging), so 128K games need their own recorder with 7FFD paging and their own verifier copy.",
+ "evidence": [
+  {
+   "game": "games/altered_beast.md",
+   "text": "record is 48K only; a 90-line private m128.py (Machine with 7FFD paging, banks in save/load) recorded the game and replays cleanly through rzxplay.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/arc_of_yesod.md",
+   "text": "A scripted 128K recorder was needed in the toolkit because machine.py has no paging.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/exolon.md",
+   "text": "The shared 48K recorder cannot save the 128K source; a private 128K recorder was reused, and a 48K-only recorder attempt failed before producing a recording.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/fantasy_world_dizzy.md",
+   "text": "The 128K engine carries a 128K copy of nexclash/verify.py.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/pac_mania.md",
+   "text": "The verifier's 128K paging (a flat view plus banks swapped on 7FFD) is the engine's own.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/simpsons.md",
+   "text": "nexclash.py new stopped on a 128K snapshot (Machine has no attribute ay: the 48K-only analysis); work went on with scan, isr, preview and a trace script.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "facts": {
+  "machine": "128K"
+ },
+ "words": [
+  "128K",
+  "recorder",
+  "m128.py",
+  "7FFD",
+  "paging",
+  "machine.py",
+  "verify.py",
+  "analyse"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7",
+ "next_check": "Make the recorder, analyse and verify refuse a 128K snapshot unless the engine supplies a paging model."
+}

@@ -132,15 +132,15 @@ with the painted colours.
   game changes.
 
 ## Lessons
-- [local: this game's hooks] A hook that saves AF on the game's stack before switching to its own writes two bytes
+- [kb lesson.hook-stack-below-sp: this game's hooks] A hook that saves AF on the game's stack before switching to its own writes two bytes
   below the game's SP: the comparison of all game memory found it in the first run. HLIB_R_IN goes after the stack
   switch.
-- [local: this game's analysis] The routine run on an empty and on a full copy of the screen gave the layout at
+- [kb lesson.exact-silhouette-from-plotter-run: this game's analysis] The routine run on an empty and on a full copy of the screen gave the layout at
   once, and showed that an unmasked figure starts a line higher than a masked graphic (the OR loop starts at the
   mask's first row).
 - [local: this game's verifier] A CALL before a routine that waits for keys (the title) cannot be compared at the
   routine's end from a copy of the state: the hook is compared where the routine starts.
-- [local: this game's design] A fade to black and a scene on a black screen need the sprites off for their length:
+- [kb lesson.fades-need-sprites-off: this game's design] A fade to black and a scene on a black screen need the sprites off for their length:
   the figures the game drew fade or go black with the attributes, and a sprite would not.
 
 ## Friction
@@ -150,7 +150,7 @@ with the painted colours.
   the first two short runs.
 - hand-rolled: [local: private run folder] adds.py (draws and plays), tt.py (the routine's time), geo.py (the model
   against the routine), shots.py (what the Next shows, from the verifier's state).
-- environment: [local: this machine] a background command given a time limit is stopped at the limit: the long
+- environment: [kb lesson.long-job-background-no-limit: this machine] a background command given a time limit is stopped at the limit: the long
   check runs with none.
 - scratch: [local: private run folder] NOTES.md and tools/.
 

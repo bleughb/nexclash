@@ -1,0 +1,26 @@
+{
+ "id": "lesson.copier-also-plays-sound",
+ "kind": "pitfall",
+ "claim": "A screen copier may also play sound and call the speed limiter; replay each beeper OUT at its original time from inside any faster routine.",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "Copier head 9790..97FB (416 cells, 25.2-30.8 ms) OUTs the A700 beeper buffer per cell and calls limiter 9907 after row 6; OUTs replayed at the original T (CTC ch 3 polled), model OUT -24..+56 T.",
+   "quote": "The copier head 9790..97FB (416 cells, 25.2-30.8 ms) OUTs the A700 beeper buffer per cell.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "copier",
+  "beeper",
+  "OUT 254",
+  "28 MHz",
+  "limiter",
+  "CTC",
+  "timed output"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,28 @@
+{
+ "id": "lesson.windows-heredoc-loses-backslashes",
+ "kind": "pitfall",
+ "claim": "Python written through a shell heredoc loses its backslash escapes; write the script to a file instead.",
+ "evidence": [
+  {
+   "game": "games/castle_master.md",
+   "text": "Heredoc-written Python loses its backslash escapes (use a file).",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/cisco_heat.md",
+   "text": "Shell heredocs with backslashes and quotes failed several times; scripts went through the Write tool.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "words": [
+  "heredoc",
+  "backslash",
+  "shell",
+  "Windows",
+  "script file"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

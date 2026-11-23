@@ -115,15 +115,15 @@ trainer. Compare player pace and beeper effects with the unchanged 48K original.
 Record the board and core version.
 
 ## Lessons
-- [local: Underwurlde release evidence] SkoolKit per-call int_active 32 can clear both LD A,I PV reads without an
+- [kb lesson.ld-a-i-simulator-int-active: Underwurlde release evidence] SkoolKit per-call int_active 32 can clear both LD A,I PV reads without an
   accepted interrupt; paired-hook simulators use 0 and real injected IRQs are tested separately.
 - [tool nexclash/hooklib.py] Fixed-M1 IFF reads need equal fetch counts on both paths: shared opt-in macro and 16
   hooklib cases added, old callers' bytes unchanged.
 - [local: Underwurlde release evidence] Pre-LDIR trainers need per-instruction translation; the weapon-layout effect
   was proved over 256 seeds instead of checking bytes alone.
-- [local: Underwurlde release evidence] Natural encounter divergence is not pace evidence; controlled fixtures keep
+- [kb lesson.pace-fixture-and-control: Underwurlde release evidence] Natural encounter divergence is not pace evidence; controlled fixtures keep
   identical player states over several video phases.
-- [local: Underwurlde release evidence] A whole hidden ROM does not remove a delayed DivMMC RST 38 trap; clear only its
+- [kb lesson.divmmc-hidden-rom-keeps-trap: Underwurlde release evidence] A whole hidden ROM does not remove a delayed DivMMC RST 38 trap; clear only its
   enabling bit and keep the other controls.
 - [doc docs/LEARNING.md §1. Source refresh and verification freeze] Integration onto newer main (2026-11-07): the
   frozen engine files plus the reviewed registry and IFF patches rebuilt both NEX files byte for byte, so the proof
@@ -132,7 +132,7 @@ Record the board and core version.
 ## Friction
 - reuse: [local: existing per-slot image cache and shared hook helpers kept; no new generic probe]
 - retries: [local: the final suite leaves out the old K104 and synthetic int-window failures, kept as diagnosis]
-- environment: [local: Python 3.14 forkserver needs a main guard; dead-register subprocesses use an explicit fork context]
+- environment: [kb lesson.python-env-pitfalls: Python 3.14 forkserver needs a main guard; dead-register subprocesses use an explicit fork context] 
 - hand-rolled: [local: controlled busy and beeper fixtures live in the run evidence; the player-update probe is per game]
 - scratch: [none: work scripts stay in the pilot run; no scratch files in the toolkit]
 

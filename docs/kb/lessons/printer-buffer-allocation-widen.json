@@ -1,0 +1,24 @@
+{
+ "id": "lesson.printer-buffer-allocation-widen",
+ "kind": "pitfall",
+ "claim": "Do not widen a printer-buffer allocation that was proved for part of the buffer to the whole buffer without proving access again.",
+ "evidence": [
+  {
+   "game": "games/treasure_island_dizzy.md",
+   "text": "ROM startup writes 0x5B89; do not expand a previously proved 0x5B00-0x5B61 allocation to the full printer buffer; keep the larger trampoline in the hidden ROM.",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "printer buffer",
+  "allocation",
+  "5B00",
+  "trampoline",
+  "hidden ROM",
+  "5B89"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

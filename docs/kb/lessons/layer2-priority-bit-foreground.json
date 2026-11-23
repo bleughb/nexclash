@@ -1,0 +1,26 @@
+{
+ "id": "lesson.layer2-priority-bit-foreground",
+ "kind": "fact",
+ "claim": "A Layer 2 palette priority bit can put chosen Layer 2 pixels above sprites, so a sprite passes behind a bush.",
+ "evidence": [
+  {
+   "game": "games/el_capitan_trueno.md",
+   "text": "In the sprites build a goblin passes behind a bush (Layer 2 priority), seen in MAME; the host's look was still to come.",
+   "quote": "sprites, a goblin passes behind a bush (Layer 2 priority). Host's look still to come.",
+   "shown_on": "mame"
+  }
+ ],
+ "level": "inferred",
+ "area": "platform",
+ "words": [
+  "Layer 2",
+  "priority",
+  "foreground",
+  "bushes",
+  "sprites",
+  "palette"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7",
+ "limit": "Seen in MAME only; the look on the host was still to come in the notes."
+}

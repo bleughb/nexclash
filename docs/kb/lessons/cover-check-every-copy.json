@@ -1,0 +1,26 @@
+{
+ "id": "lesson.cover-check-every-copy",
+ "kind": "method",
+ "claim": "Replay the whole recording and check at every copy that each figure pixel the game changes lies under an opaque sprite pixel; this finds sprite masks that leave ULA pixels showing.",
+ "evidence": [
+  {
+   "game": "games/el_capitan_trueno.md",
+   "text": "Cover check over the whole RZX: every figure pixel the game changes lies under an opaque sprite pixel - 10,508 renders, 17 flushes, 0 uncovered after the consistent-state shapes; before them 5,769 renders were uncovered (the white flashes). Mask outlines had to come from the game.",
+   "shown_on": "simulator",
+   "quote": "figure pixel the game changes lies under an opaque sprite pixel - 10,508 renders, 17 flushes,"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "cover check",
+  "sprite mask",
+  "uncovered pixels",
+  "replay",
+  "opaque sprite",
+  "Layer 2",
+  "figure pixels"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

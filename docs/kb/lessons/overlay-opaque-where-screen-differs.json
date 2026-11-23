@@ -1,0 +1,25 @@
+{
+ "id": "lesson.overlay-opaque-where-screen-differs",
+ "kind": "fact",
+ "claim": "Make an overlay sprite opaque per pixel only where the screen differs from what the renderer drew, with the marker excluded from that reference, rather than by byte-granular rules.",
+ "evidence": [
+  {
+   "game": "games/castle_master.md",
+   "text": "Overlay sprites over Layer 2 are opaque per pixel where the screen differs from the raster's output (the buffer at the copy, marker out), ink where its bit is set.",
+   "shown_on": "unknown",
+   "quote": "black), opaque per pixel where the screen differs from the raster's output (ov_s: the buffer at the copy,"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "overlay",
+  "crosshair",
+  "opaque mask",
+  "sprite",
+  "per pixel",
+  "marker"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

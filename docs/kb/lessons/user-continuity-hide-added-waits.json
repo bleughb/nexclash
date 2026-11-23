@@ -1,0 +1,31 @@
+{
+ "id": "lesson.user-continuity-hide-added-waits",
+ "kind": "owner-rule",
+ "claim": "Hide or remove waits the conversion adds and keep the original game's flow and speed.",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "The driver install is shown with loading bars and skipped on a same-level restart.",
+   "shown_on": "unknown",
+   "quote": "Installed, with loading bars; skipped on a same-level restart."
+  },
+  {
+   "game": "games/cisco_heat.md",
+   "text": "The tape's own loading screen is shown by NEXLOAD at once and kept while the banks load, then held boot_frames (200; 0 in the NXC build) frames or until a key.",
+   "shown_on": "unknown",
+   "quote": "so NEXLOAD shows it at once and keeps it while the banks load; boot_resume then holds it boot_frames (200; 0 in the NXC build)"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "loading wait",
+  "continuity",
+  "retry",
+  "border bars",
+  "original behaviour",
+  "loading screen"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

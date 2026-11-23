@@ -34,7 +34,9 @@ flags to spare restores through its page before unmapping it: `ld (V_A),a / ld a
 (Midnight Resistance's loop exits, Wally 2, Smash TV).
 
 **Assumptions.** NR 7 reads back bits 1:0 = the programmed speed (core 3.02 zxnext.vhd 5902; JNext 1.1.104
-composes the same); the game and its ROM ISR never use ports 0x243B / 0x253B (a Spectrum game cannot).
+composes the same); the game and its ROM ISR never use ports 0x243B / 0x253B.
+Never rely on an earlier select: the .nex stub leaves NR 8 selected and an engine's ISR may select another (JSW, NZS);
+every read selects 7 itself.
 
 **Validation gap.** Library unit tests on the simulator (NR 7 modelled as the core composes it); the
 Atic Atac v1.1 candidate in JNext (all four clocks, 24 sites). No board run of the library.
@@ -51,7 +53,7 @@ same clock with the same results. Stop when every site passes.
 - State: the macros keep every register and flag (`_ABC` / `_A` forms lose what they say); stack: hook
   stack: 4 bytes (IN) / 2 bytes (OUT) below SP, 0 for the `_ABC` / `_A` forms; interrupt headroom: the
   game's ISR depth, as without the hook.
-- Time: 97 T at the incoming clock before the NEXTREG; port 0x243B is left selecting register 7.
+- Time: 97 T at the incoming clock before the NEXTREG.
 - Display: software = return/boundary only; hardware = checklist item "speed options and F8 change the game, the hooks never undo them"
 
 ## Resources owned

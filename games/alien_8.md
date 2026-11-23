@@ -96,10 +96,10 @@ tearing at publication; beeper effects. Record board and core.
 - [local: owner art as text] Painting of the original figures goes in the repository as palette-indexed rows
   (docs/profiles/alien_8_colours.json) and the original graphics are decoded from the user's snapshot, so `auto` and
   the record rebuild Enhanced without private files and no game graphics are stored.
-- [local: palette_check reads tables, not draws] palette_check flagged 4 off-standard default entries (205/255 shades); the
+- [kb lesson.palette-check-reads-tables: palette_check reads tables, not draws] palette_check flagged 4 off-standard default entries (205/255 shades); the
   native snapshot showed the build never draws them (figures use entries 64 + ink). Check the indices drawn before
   saying a shade is seen.
-- [local: graphic table end] The graphic table at 7827 holds ids up to 0x84 and ends where the first graphic (7931)
+- [kb lesson.fixed-table-scan-snapshot-in-play: graphic table end] The graphic table at 7827 holds ids up to 0x84 and ends where the first graphic (7931)
   begins. Read 256 words and a snapshot taken in play gives strays (A0, BA, BD, FB pointed at the stack and work RAM
   that parsed as graphics: 134 entries, `auto` refused the dump). `original_graphics` stops at the first graphic.
 - [backlog C2 #47] `patch` on Alien 8 ends "not supported yet" and makes no .nxc: userflow looks for

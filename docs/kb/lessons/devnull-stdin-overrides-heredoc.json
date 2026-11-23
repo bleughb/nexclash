@@ -1,0 +1,23 @@
+{
+ "id": "lesson.devnull-stdin-overrides-heredoc",
+ "kind": "pitfall",
+ "claim": "In this sandbox, a /dev/null stdin overrides a Python heredoc.",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "/dev/null stdin overrides a Python heredoc.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "words": [
+  "stdin",
+  "/dev/null",
+  "heredoc",
+  "Python",
+  "sandbox"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,25 @@
+{
+ "id": "lesson.sprite-outline-ring-prerender",
+ "kind": "fact",
+ "claim": "Pre-render a figure's outline one pixel bigger on every side as sprite patterns, rather than drawing a border inside the figure's own cells.",
+ "evidence": [
+  {
+   "game": "games/r_type.md",
+   "text": "Figure registry: outlines pre-rendered one pixel bigger (pages 88-95); layers stored, not yet used.",
+   "shown_on": "unknown",
+   "quote": "outlines pre-rendered one pixel bigger (pages 88-95)."
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "outline",
+  "border",
+  "pre-render",
+  "ring",
+  "sprite",
+  "pixel bigger"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

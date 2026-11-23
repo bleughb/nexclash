@@ -69,6 +69,8 @@ local / deferred; learncheck checks them). What is left for maintainers:
 - Old games still with "## Lesson candidates": migrated when the game is next touched (learncheck
   fails a changed file that still has them). A lesson seen in two or more games goes into LEARNINGS
   / BRIEFING, merged into the existing line on the same subject (grep first), never beside it.
+- `python tools/knowledge.py recurring`: terms the [local] lessons of 3+ games share; sweep the real ones into
+  docs/kb/lessons/ (`[kb lesson.<id>]`). Also `gate`, `promote`, `duplicates`, `stale` (its docstring).
 - `python tools/knowledge.py coverage` / `eval`: what is recorded as data (predicate values per
   record, docs/risks.json) and whether precedents predict the cards used; `export` writes it all as
   JSON lines, the same bytes for the same commit.

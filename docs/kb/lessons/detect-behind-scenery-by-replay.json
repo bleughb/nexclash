@@ -1,0 +1,30 @@
+{
+ "id": "lesson.detect-behind-scenery-by-replay",
+ "kind": "method",
+ "claim": "To find figures the original draws behind scenery, hook the original's owner-map test in a replay and list the figure families that report hidden cells.",
+ "evidence": [
+  {
+   "game": "games/r_type.md",
+   "text": "Hooking the owner-map test (8ED6) in an RZX replay listed 71 families hidden behind scenery; kept as an editable flag table behind a build switch. Partly drawn figures are published behind whole ones.",
+   "quote": "listed 71 families hidden behind scenery; kept as an editable flag table behind a build switch.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "when": [
+  "design.figures_in_front"
+ ],
+ "card": "detect.behind-scenery",
+ "words": [
+  "behind scenery",
+  "owner map",
+  "replay",
+  "hidden cells",
+  "flag table",
+  "figure families",
+  "sprite order"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

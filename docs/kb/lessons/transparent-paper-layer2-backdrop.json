@@ -1,0 +1,24 @@
+{
+ "id": "lesson.transparent-paper-layer2-backdrop",
+ "kind": "method",
+ "claim": "Set the ULA pane's paper to the transparent colour so a Layer 2 backdrop shows behind game-drawn lines, with the ULA kept over Layer 2.",
+ "evidence": [
+  {
+   "game": "games/winter_sports.md",
+   "text": "Bright white paper = NextReg 0x14 colour 0xE3, NextReg 0x15 = 0x08 (ULA over Layer 2), a clip window; works on hardware (Downhill, 2026-11-22).",
+   "shown_on": "hardware"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "platform",
+ "words": [
+  "Layer 2",
+  "transparent",
+  "scroll register",
+  "backdrop",
+  "ULA over layer",
+  "panorama"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

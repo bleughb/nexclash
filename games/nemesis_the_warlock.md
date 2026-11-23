@@ -166,7 +166,7 @@ Open: stamps (bodies) on the ULA; speed spikes (129K T max at 3.5 MHz, cache-mis
 - [local: game-specific] A plot whose save-under pointer is in ROM is a permanent stamp (scenery), not a figure: check every plot caller's save pointer before treating it as a sprite.
 - [doc CLAUDE.md §Rules] I wrote `kill -0 $(pgrep -o -f X)` in a wait loop - the warned pattern in a new form; CLAUDE.md's rule now names it.
 - [doc docs/PLAYBOOK.md §6. Verify (differential test)] Quick runs: 2000 frames missed two rare cases that 20000 found (XOR effect under a figure, column-31 wrap): run 20000 before stage 3 when the verifier is fast.
-- [local: measured here; the PLAYBOOK speed budget already asks for it] Row address arithmetic per row cost 3x the copy itself (620 T/row): compute visible row range + screen address once, step with the next-line routine.
+- [kb lesson.copy-destination-and-beam: measured here; the PLAYBOOK speed budget already asks for it] Row address arithmetic per row cost 3x the copy itself (620 T/row): compute visible row range + screen address once, step with the next-line routine.
 - [tool nexclash.py rzx] SPIN RZX snapshot blocks are zlib-compressed (flag 2); I parsed them by hand. Now `nexclash.py rzx extract` (golden check in selftest --tools); MAINTAIN points to it. (Was mis-tagged local.)
 - [doc docs/ENGINE_CONTRACT.md §Verify loop] Return shortcut: verify a hook on a long routine from the original's state at its RET (full runs for the first 20 calls): full verify 14 min instead of hours.
 - [doc docs/ENGINE_CONTRACT.md §Verify loop] simpool.machine pools one simulator per slot name: my original and patched XOR runs shared slot 'p' and the second reset the first (false "memory differs", one retry).
@@ -174,7 +174,7 @@ Open: stamps (bodies) on the ULA; speed spikes (129K T max at 3.5 MHz, cache-mis
 - [doc docs/LEARNING.md §2b. Friction sweep] Not captured at first: toolkit and environment lessons were treated as engineering, not findings, and learncheck checked form, not coverage. Added the friction sweep and a check that a local-tagged lesson does not name shared code (learncheck).
 
 - [card patch.runtime-colour-map §Evidence] Second game for the card: a pattern builder with no canvas takes the stream in its own output order (AND / OR pair per byte); a palette with run-time entries leaves fewer fixed colours. Card evidence + validation gap amended.
-- [local: game-specific] `po` is a Z80 condition code (call po = CALL parity odd): sjasmplus refused the routine name; renamed pout.
+- [kb lesson.sjasmplus-condition-code-names: game-specific] `po` is a Z80 condition code (call po = CALL parity odd): sjasmplus refused the routine name; renamed pout.
 
 ## Friction
 - reuse: [doc docs/ENGINE_CONTRACT.md §Verify loop] the return shortcut and per-event slots; [card verify.model-reconstruction §Use] the model rebuild check.

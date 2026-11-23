@@ -1,0 +1,25 @@
+{
+ "id": "lesson.test-hygiene-compare-runs",
+ "kind": "pitfall",
+ "claim": "Do not edit the tree while a compare runs: it rebuilds each level from the current files, and a half-edited layout gave a false slowdown.",
+ "evidence": [
+  {
+   "game": "games/r_type.md",
+   "text": "Compare rebuilds each level from the current files; a half-edited layout gave a false slowdown on levels 2-8, cleared by a worktree bisect.",
+   "quote": "half-edited layout gave a false slowdown on levels 2-8, cleared by a worktree bisect.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "words": [
+  "selftest",
+  "stamp",
+  "compare",
+  "false slowdown",
+  "edits",
+  "bisect"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,24 @@
+{
+ "id": "lesson.lockstep-replay-not-proof",
+ "kind": "method",
+ "claim": "Once hooks change cycle counts, lockstep replay diverges and proves nothing; instead copy the state at each patched routine, run both to the return and compare registers (except R, T, MEMPTR) and memory.",
+ "evidence": [
+  {
+   "game": "notes",
+   "text": "Maintainers' note: this method worked on every game; registers that differ at return are acceptable only if they converge or are overwritten before use.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "lockstep",
+  "replay",
+  "hook compare",
+  "registers",
+  "MEMPTR",
+  "routine return"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

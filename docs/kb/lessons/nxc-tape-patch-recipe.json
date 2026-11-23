@@ -1,0 +1,44 @@
+{
+ "id": "lesson.nxc-tape-patch-recipe",
+ "kind": "method",
+ "claim": "Where auto cannot make an NXC patch, give each build option its own byte so each variant is a valid menu toggle, use --tape-bank for tape games, and check each variant's MD5 against a rebuild from the tape.",
+ "evidence": [
+  {
+   "game": "games/cisco_heat.md",
+   "text": "One byte per build option makes each variant a valid NXC toggle (same length, distinct bytes: 25 fps 2 bytes, smooth 1, car 1); verified per variant.",
+   "quote": "One byte per build option makes each variant a valid NXC toggle (same length, distinct bytes: 25 fps 2 bytes, smooth 1, car 1); verified per variant.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/cisco_heat.md",
+   "text": "A multiload's stage blocks come from the player's tape with --tape-bank (61,044 bytes from the tape, 3,096 carried); build_screen is the SCREEN$ offset + 3.",
+   "quote": "A multiload's stage blocks come from the player's tape with `--tape-bank`: 61,044 bytes from the tape, 3,096 carried; build_screen is the SCREEN$ offset + 3.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/cisco_heat.md",
+   "text": "Checks: each variant's MD5 from the tape; the loader on the Z80 harness (menu, screen, toggles, trainer, fix off).",
+   "quote": "each variant's MD5 from the tape; the loader on the Z80 harness",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/3d_stock_car_championship.md",
+   "text": "`nexclash.py patch` makes the whole .nxc since nexclash/nxc.py was re-vendored (SET3); before, the packager could not make an option that needs more memory.",
+   "quote": "`nexclash.py patch` makes the whole .nxc since nexclash/nxc.py was re-vendored (SET3)",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "words": [
+  "NXC",
+  "tape",
+  "toggle",
+  "tape-bank",
+  "build_screen",
+  "variants",
+  "SET3"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

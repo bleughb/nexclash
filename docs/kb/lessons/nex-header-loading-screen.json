@@ -1,0 +1,25 @@
+{
+ "id": "lesson.nex-header-loading-screen",
+ "kind": "pitfall",
+ "claim": "A NEX header loading screen is a hazard for tools: the boot model read a header-screen NEX as banks from offset 512 and missed the tail until it skipped the screen as NEXLOAD does.",
+ "evidence": [
+  {
+   "game": "games/beyond_the_ice_palace.md",
+   "text": "The boot model read a .nex with a header loading screen (byte 10 = 2) as banks from offset 512 and failed to find the tail; it now skips the screen as NEXLOAD does (nex_screen_size). This is the first build with one.",
+   "quote": "the boot model read a .nex with a header loading screen (byte 10 = 2) as banks from offset 512 and failed to find the tail; it now skips the screen as NEXLOAD does",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "NEX header",
+  "loading screen",
+  "byte 10",
+  "boot model",
+  "offset 512",
+  "NEXLOAD"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

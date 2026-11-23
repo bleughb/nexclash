@@ -63,18 +63,18 @@
  "outputs": {
   "plain": {
    "file": "magicland_dizzy.nex",
-   "md5": "09eb18496cff334ea17bfc0b0c94585d"
+   "md5": "d4209fa73afd96c05936b3b90bf496a6"
   },
   "sprites": {
    "file": "magicland_dizzy_sprites.nex",
-   "md5": "ab66b5011a3e87a54f561502ded0ac24"
+   "md5": "f0e32785990472fb01a8370e3a187e78"
   }
  },
  "repro": [
   {
    "strategy": "slot1",
    "file": "magicland_dizzy_sprites.nex",
-   "md5": "d3b37c05d4c47ada07294fa2d7c1ae76"
+   "md5": "8ff3d10c0a600924a938d0541cd87fa2"
   }
  ],
  "pin": {
@@ -190,11 +190,11 @@
    "outputs": {
     "plain": {
      "file": "Dizzy 4 - Magicland Dizzy (1990)(Code Masters)(128K).nex",
-     "md5": "36e1a1c896fe31fa5936cbacbfb5a96e"
+     "md5": "9ced1dd8f9e390e274832bd73809190a"
     },
     "sprites": {
      "file": "Dizzy 4 - Magicland Dizzy (1990)(Code Masters)(128K)_sprites.nex",
-     "md5": "67808068a9b0c653503b5a5583f88225"
+     "md5": "3b8b6d4fdbf4bac7a421840be4e6e4a1"
     }
    },
    "proof": "PARTIAL. 3 bot walks of the 128K release (12,013 / 12,028 / 12,020 frames) on rework v128: every hook event IDENTICAL (4,684 plots, 4,695 erases, 21,245 ISR hide checks, 135 room wipes, 47 boxes), 4,713 sprite plots pixel-perfect; but 5 of 101,594 pixel tests (0xA134) read a byte where the original's own erase had left a hole (Dizzy plotted, another routine (0x906F / 0x90DE) drew over him, the eraser 0x9CA0 XOR-restored a stale undo): the build keeps that background pixel, so those tests differ (Dean's 48K build has the same property: same code); negatives: pattern nibbles, frame table, ISR hide, box hide, ISR+wipe hide detected by their own signals, the wipe hide alone is masked by the ISR hide; clock matrix 5 sites x 4 clocks = 20 cases PASS, forced 3.5 MHz exit detected; ROM paths: every ROM byte as recorded; tail never read before written; printer buffer as the snapshot after NEXLOAD",

@@ -1,0 +1,29 @@
+{
+ "id": "lesson.ld-a-i-quirk-harness-int-active",
+ "kind": "pitfall",
+ "claim": "SkoolKit's simulator applies the LD A,I quirk from its own 48K frame timing, not from the harness's interrupts, so a harness that injects its own interrupts must set int_active 0 where it delivers none.",
+ "evidence": [
+  {
+   "game": "games/castle_master.md",
+   "text": "The quirk (P/V 0) on its own 48K frame left interrupts off at random via HLIB_IFF_DI and hung a run; set int_active 0 and clear P/V only where the harness accepts an interrupt.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/bruce_lee.md",
+   "text": "A direct-opcode scope must set int_active=0 when it does not deliver interrupts.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "toolkit",
+ "words": [
+  "SkoolKit",
+  "LD A,I",
+  "int_active",
+  "harness",
+  "simulator",
+  "P/V flag"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

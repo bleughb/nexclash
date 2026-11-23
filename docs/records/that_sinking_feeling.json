@@ -311,19 +311,19 @@
  "outputs": {
   "sprites": {
    "file": "that_sinking_feeling_sprites.nex",
-   "md5": "07fea8b4205b854febc67d44a3d013fe"
+   "md5": "95585c91e3603dc68deaffde7fee7664"
   },
   "loading": {
    "file": "that_sinking_feeling_sprites_loading.nex",
-   "md5": "7a34cae8445952cc8c56b0fc52e9908b"
+   "md5": "8c5de872254801323acd7c1fd2916cce"
   },
   "enhanced": {
    "file": "that_sinking_feeling_enhanced.nex",
-   "md5": "f6838dd33f91b87930d22fa3a584bc9e"
+   "md5": "eb9baa5c0a847826b5d47daa72eff769"
   },
   "enhanced_loading": {
    "file": "that_sinking_feeling_enhanced_loading.nex",
-   "md5": "8c9469e34a9fb936e8c1f7709e383ea7"
+   "md5": "c7d2a28d655190b7c7aae295641aa236"
   }
  },
  "rom_paths_known": [
@@ -359,18 +359,18 @@
    "asm/that_sinking_feeling_hooks.asm": "1fee439de3c7a86a",
    "docs/profiles/that_sinking_feeling.json": "1e8ac3885f8f0272",
    "docs/profiles/that_sinking_feeling_palette.json": "06e4ffeca9e79d3c",
-   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash.py": "04157df11540c17d",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "bf75ad27e5bfabce",
+   "nexclash/engines.py": "2abd23b537c0b5d4",
    "nexclash/hooklib.py": "24241497925658d6",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
-   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
-   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/recolour.py": "6f27e87ef0c47a17",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/rzx.py": "e018e000440e0274",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
@@ -378,31 +378,31 @@
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/that_sinking_feeling.py": "b49b623e9d9ef31b",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "284f7af958ee27ef",
+   "recipe": "086c2f060f25e364",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-17"
+  "date": "2026-11-20"
  },
  "verified": {
   "deps": {
    "asm/that_sinking_feeling_hooks.asm": "1fee439de3c7a86a",
    "docs/profiles/that_sinking_feeling.json": "1e8ac3885f8f0272",
    "docs/profiles/that_sinking_feeling_palette.json": "06e4ffeca9e79d3c",
-   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash.py": "04157df11540c17d",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "112c3b17a78ace9a",
+   "nexclash/engines.py": "2abd23b537c0b5d4",
    "nexclash/hooklib.py": "24241497925658d6",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
-   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
-   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/recolour.py": "6f27e87ef0c47a17",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/rzx.py": "e018e000440e0274",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
@@ -410,12 +410,12 @@
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/that_sinking_feeling.py": "b49b623e9d9ef31b",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "284f7af958ee27ef",
+   "recipe": "086c2f060f25e364",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-12"
+  "date": "2026-11-20"
  }
 }

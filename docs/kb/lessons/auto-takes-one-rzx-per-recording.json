@@ -1,0 +1,23 @@
+{
+ "id": "lesson.auto-takes-one-rzx-per-recording",
+ "kind": "fact",
+ "claim": "auto takes one --rzx per recording; passing several RZX files to one --rzx fails.",
+ "evidence": [
+  {
+   "game": "games/crystal_kingdom_dizzy.md",
+   "text": "The first four-walk rerun passed several RZX files to one --rzx; auto takes one --rzx per recording.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "auto",
+  "--rzx",
+  "recording",
+  "rerun",
+  "walks"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

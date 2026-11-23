@@ -1,0 +1,35 @@
+{
+ "id": "lesson.sp-as-data-pointer",
+ "kind": "pitfall",
+ "claim": "A routine that uses SP as a data pointer breaks coroutine yields, mid-blit snapshots and stack low-water measurement unless handled.",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "A loop using SP as data pointer yields without CALL: save SP and live registers.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/movie.md",
+   "text": "A mid-blit snapshot with SP as a graphics pointer needs a bounded native prelude.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/magicland_dizzy.md",
+   "text": "The eraser uses SP as a pointer, so the stack low-water measurement is unreliable.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "card": "patch.work-in-timed-gaps",
+ "words": [
+  "SP",
+  "stack pointer",
+  "data pointer",
+  "coroutine",
+  "mid-blit",
+  "low-water"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

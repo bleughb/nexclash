@@ -46,21 +46,21 @@ Nothing has run on a Next. To check: AY sounds; both Kempston and keyboard; 1MB 
 - verify.update-locked-pace: used: probe at the controls' read in the main loop; penalty +0.00%.
 
 ## Lessons
-- [local: a label is not a state] The (128K) dump is a BASIC loader that would page ROM 0; its [a][a] twin is the same game already running. Check `inspect` on the alternates before planning a front end.
+- [kb lesson.snapshot-taken-in-loader: a label is not a state] The (128K) dump is a BASIC loader that would page ROM 0; its [a][a] twin is the same game already running. Check `inspect` on the alternates before planning a front end.
 - [local: tiles settle clash] Checking every play cell against the two tile sets settled "no clash"; the attribute histogram alone could not have told a tile engine from careful painting.
-- [local: frame-locked pace] A game that waits on N interrupts per update makes pace read 0.00% whatever the update costs inside: compare cycles from the wait's end to the update's end too. Found here when a plain build seemed 10,000 T dearer than the original; the cause was LD A,R placing figures differently, not the build.
+- [kb lesson.frame-locked-pace-hides-cost: frame-locked pace] A game that waits on N interrupts per update makes pace read 0.00% whatever the update costs inside: compare cycles from the wait's end to the update's end too. Found here when a plain build seemed 10,000 T dearer than the original; the cause was LD A,R placing figures differently, not the build.
 - [local: random picks differ] Any LD A,R in the game means build and original differ in play from the first key: make it LD A,I in both test copies before comparing anything.
 - [local: start points] A fixture via the game's own table of start points (BA48) reached other floors; its floor numbers run one off the names the game prints, so label fixtures from the message on screen.
 
-- [local: a slot found, not a slot assumed] A wrapper that mapped slot 1 to ROM during the interrupt crashed when a hook's stack was in slot 1. It now restores what it found.
-- [local: carry into D] Copying a tile at column 31 carried into D. Push and pop DE per row rather than trusting E to wrap.
-- [local: K at the right level] A game that waits on its own interrupts needs no K window on its update; 28 MHz to the wait is enough. Fine K windows on every tile only added cost.
-- [local: a selected register is shared state] An interrupt between a hook's `out (0x243B)` and its `in (0x253B)` leaves another register selected. `HLIB_SPEED_IN` then latched a line number as the clock. Silkworm's pace tables found it; this engine has the same wrapper and could leave a scroll step at a low clock, though none showed in its runs. The wrapper now holds the pace in every interrupt and selects NR 7 again before it returns, and the replay checks that. Worth a look upstream, in any engine whose wrapper reads lines.
+- [kb lesson.paging-write-hides-hook-code: a slot found, not a slot assumed] A wrapper that mapped slot 1 to ROM during the interrupt crashed when a hook's stack was in slot 1. It now restores what it found.
+- [kb lesson.layer2-ldi-column-wrap: carry into D] Copying a tile at column 31 carried into D. Push and pop DE per row rather than trusting E to wrap.
+- [kb lesson.pace-need-by-game-structure: K at the right level] A game that waits on its own interrupts needs no K window on its update; 28 MHz to the wait is enough. Fine K windows on every tile only added cost.
+- [kb lesson.nextreg-select-shared-state: a selected register is shared state] An interrupt between a hook's `out (0x243B)` and its `in (0x253B)` leaves another register selected. `HLIB_SPEED_IN` then latched a line number as the clock. Silkworm's pace tables found it; this engine has the same wrapper and could leave a scroll step at a low clock, though none showed in its runs. The wrapper now holds the pace in every interrupt and selects NR 7 again before it returns, and the replay checks that. Worth a look upstream, in any engine whose wrapper reads lines.
 
 ## Friction
 - reuse: [none: nexclash.scan, pace, soak, flicker and rom_paths were enough]
 - retries: [local: TNT branch not reached] Placing TNT in the map to shoot it did not reach the branch in the time allowed, so that cheat is left out.
-- environment: [local: heavy load] A cheat test passed the shell's time limit at load 60; run long tests in the background.
+- environment: [kb lesson.long-job-background-no-limit: heavy load] A cheat test passed the shell's time limit at load 60; run long tests in the background.
 - hand-rolled: [local: review scripts] Fixtures, boot negatives and loader runs live in the review run.
 - scratch: [local: review run] Its work folder stays in private evidence.
 

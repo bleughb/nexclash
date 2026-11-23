@@ -1,0 +1,23 @@
+{
+ "id": "lesson.csimulator-rom-replace-in-place",
+ "kind": "pitfall",
+ "claim": "Replacing Memory.roms after the CSimulator is built does nothing; write the new ROM into the existing buffer in place or recordings desync.",
+ "evidence": [
+  {
+   "game": "games/pac_mania.md",
+   "text": "Replacing skoolkit's Memory.roms tuple after the CSimulator is built does nothing; recordings made the other way desync on the 48K ROM.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "emulator",
+ "words": [
+  "skoolkit",
+  "csimulator",
+  "Memory.roms",
+  "ROM buffer",
+  "desync"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,33 @@
+{
+ "id": "lesson.interrupt-handler-runs-twice-next-core",
+ "kind": "fact",
+ "claim": "On the Next core the /INT pulse outlasts a 128K's 36 T, so a handler that enables interrupts soon after the acknowledge is entered twice; this shows only on the board, not in emulators.",
+ "limit": "Threshold measured on one board.",
+ "evidence": [
+  {
+   "game": "games/altered_beast.md",
+   "text": "Measured on the board with a test handler: at 128K timing it re-enters when sampled 38 T after the acknowledge, not at 42 (48K timing: 34 yes, 38 no); unfixed builds crashed at about 8 s.",
+   "quote": "on the board with a test handler: at 128K timing it re-enters when sampled 38 T after the acknowledge, not at 42 (48K",
+   "shown_on": "hardware"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "platform",
+ "facts": {
+  "machine": "128K"
+ },
+ "when": [
+  "exec.interrupts_on_at_sites"
+ ],
+ "words": [
+  "interrupt",
+  "/INT pulse",
+  "re-entry",
+  "EI",
+  "handler",
+  "Next core",
+  "36 T"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

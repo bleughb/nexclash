@@ -1,0 +1,30 @@
+{
+ "id": "lesson.hlib-pace-library-changes",
+ "kind": "pitfall",
+ "claim": "The current hlib_pace_open and hlib_debt_open lose DE (and hlib_debt_open also HL), unlike the first library version; save the game's value around them or take it from its saved copy.",
+ "evidence": [
+  {
+   "game": "games/cobra.md",
+   "text": "The current hlib_pace_open / hlib_debt_open lose DE (V1 kept it); an engine moving off HLIB_PACE_V1 saves DE around them.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/comando_quatro.md",
+   "text": "hlib_debt_open loses HL: a hook that needs the game's HL takes it from its saved copy.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "card": "patch.pace-limiter",
+ "words": [
+  "hlib_pace",
+  "hlib_debt_open",
+  "DE",
+  "HL",
+  "registers",
+  "library"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

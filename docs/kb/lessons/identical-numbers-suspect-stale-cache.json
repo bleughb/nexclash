@@ -1,0 +1,32 @@
+{
+ "id": "lesson.identical-numbers-suspect-stale-cache",
+ "kind": "pitfall",
+ "claim": "When a change that should move a measurement leaves it exactly unchanged, check the harness cache key and the build's freshness before trusting the result.",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "Store cache keys must cover all code they hold.",
+   "quote": "Store cache keys must cover all code they hold.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/gunrunner.md",
+   "text": "A pace script that builds its fixture only if the file is missing measured a build from hours earlier under a reused tag; use a new tag per measurement and build once before the runs start.",
+   "quote": "A pace script that builds its fixture only if the file is missing measured a build from hours earlier under a reused tag.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "words": [
+  "stale cache",
+  "cache key",
+  "identical results",
+  "stale build",
+  "tag",
+  "fixture",
+  "measurement"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

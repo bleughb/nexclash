@@ -1,0 +1,24 @@
+{
+ "id": "lesson.redirect-slot-2-scratch-screen",
+ "kind": "method",
+ "claim": "Redirecting slot 2 to a scratch page keeps every register and the original timing with almost no hook code, if the game does not read the screen for logic and the ISR stays out of slot 2.",
+ "limit": "Needs the game not to read the screen for logic.",
+ "evidence": [
+  {
+   "game": "games/green_beret.md",
+   "text": "Each plot site maps Next page 26 at slot 2 so 0x4000-0x57FF land in a scratch screen; the plot leaves registers and time as in the original.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "slot 2",
+  "scratch screen",
+  "plot redirect",
+  "register parity",
+  "timing"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

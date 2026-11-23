@@ -1,0 +1,24 @@
+{
+ "id": "lesson.startup-code-keeps-cpu-speed",
+ "kind": "pitfall",
+ "claim": "Start-up code must restore or keep the CPU speed the player chose instead of forcing 3.5 MHz.",
+ "evidence": [
+  {
+   "game": "games/cisco_heat.md",
+   "text": "Main merge: boot restores the caller's speed (patch.restore-speed); desync fails replay.",
+   "quote": "boot restores the caller's speed (patch.restore-speed); desync fails replay.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "platform",
+ "words": [
+  "CPU speed",
+  "3.5 MHz",
+  "startup",
+  "restore speed",
+  "engine rules"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

@@ -191,10 +191,10 @@ calibrated in JNext only.
 
 ## Lessons
 - [none: the port changed nothing at the call sites; the 26-byte state and the matrix exclusion are in the section above]
-- [local: this game's loops] demonstrated: NOPing a plotter's stores saves only 3 T a byte, less than a hook's fixed entry and exit at 3.5 MHz (about 250 T), so a 28 MHz plot hook in front of the loop made the game slower (pace model +3,800 T a tick); replacing the whole loop, with its exit registers from the geometry, gave the window the loop's whole time (+36 T a tick).
-- [local: this game's RNG] demonstrated: the star routine's path depends on the figures in its bytes; a star hook that works out the original's bytes from the tick's plot list keeps R exact, and the pace runs stay in lockstep with the original with no fixture.
-- [local: this game's menu] observed: the menu reads the keyboard from its interrupt every few frames; a 1-frame JNext keypress is often missed, in the plain build and the original alike; hold the key.
-- [local: the archive's trainers] observed: the .pok's [L1] lines name addresses of another release (data or mid-instruction in this file); only Infinite Lives (34919) and the unlabelled-version lines 35604 and 35651 work here, proven on the simulator.
+- [kb lesson.small-saving-hook-overhead: this game's loops] demonstrated: NOPing a plotter's stores saves only 3 T a byte, less than a hook's fixed entry and exit at 3.5 MHz (about 250 T), so a 28 MHz plot hook in front of the loop made the game slower (pace model +3,800 T a tick); replacing the whole loop, with its exit registers from the geometry, gave the window the loop's whole time (+36 T a tick).
+- [kb lesson.r-register-checks-local-vs-global: this game's RNG] demonstrated: the star routine's path depends on the figures in its bytes; a star hook that works out the original's bytes from the tick's plot list keeps R exact, and the pace runs stay in lockstep with the original with no fixture.
+- [kb lesson.menu-key-pulses-missed: this game's menu] observed: the menu reads the keyboard from its interrupt every few frames; a 1-frame JNext keypress is often missed, in the plain build and the original alike; hold the key.
+- [kb lesson.archive-poke-translation: the archive's trainers] observed: the .pok's [L1] lines name addresses of another release (data or mid-instruction in this file); only Infinite Lives (34919) and the unlabelled-version lines 35604 and 35651 work here, proven on the simulator.
 
 - [local: the outline map can keep only its bits] gryzor_outline.json's check values are null (each was the game's byte); _entry trusts a null check, and the image comes from the player's snapshot. Builds unchanged.
 

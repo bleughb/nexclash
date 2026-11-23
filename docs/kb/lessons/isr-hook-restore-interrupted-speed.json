@@ -1,0 +1,27 @@
+{
+ "id": "lesson.isr-hook-restore-interrupted-speed",
+ "kind": "pitfall",
+ "claim": "An ISR hook that sets the speed for the ISR body must put the interrupted speed back, or the rest of a 28 MHz hook runs at 3.5 MHz.",
+ "evidence": [
+  {
+   "game": "games/quazatron.md",
+   "text": "Without restoring, every interrupt landing in a 28 MHz hook left the rest of it at 3.5 MHz; the fast build was 21% slower in JNext until fixed.",
+   "shown_on": "jnext"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "facts": {
+  "interrupts": "on"
+ },
+ "words": [
+  "ISR hook",
+  "restore speed",
+  "interrupted speed",
+  "28 MHz",
+  "3.5 MHz",
+  "latch"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

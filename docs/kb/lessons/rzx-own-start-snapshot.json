@@ -1,0 +1,37 @@
+{
+ "id": "lesson.rzx-own-start-snapshot",
+ "kind": "fact",
+ "claim": "An RZX holds the snapshot it was recorded from, so intake can start from the RZX alone, but that snapshot can be a different build or state than the delivered .z80.",
+ "evidence": [
+  {
+   "game": "games/castle_master.md",
+   "text": "Snapshot: the RZX's embedded .z80 (nexclash.py rzx extract) is the build input; an RZX alone (no separate .z80) is a complete intake.",
+   "quote": "Snapshot: the RZX's embedded .z80 (`nexclash.py rzx extract`), in game: 48K",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/atic_atac.md",
+   "text": "The RZX embeds its own snapshot (start address 41446 = 0xA1E6, game running, code already descrambled); only the .z80 is at the loader (PC 0x5B89).",
+   "quote": "CORRECTION (stage 1, 2026-10-26): the RZX embeds its OWN snapshot (rzxinfo: start address 41446 =",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/cauldron.md",
+   "text": "The RZX's embedded snapshot was a different build than the delivered .z80 (11,283 bytes of 0x6018-0xFFFF and 711 of sysvars/BASIC differ); everything measured is the RZX's copy.",
+   "quote": "The RZX's embedded snapshot was a different build than the delivered .z80",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "words": [
+  "RZX",
+  "snapshot",
+  "intake",
+  "embedded snapshot",
+  "extract",
+  "build differs"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

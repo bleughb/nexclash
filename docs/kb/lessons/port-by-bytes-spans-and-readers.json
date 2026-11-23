@@ -1,0 +1,28 @@
+{
+ "id": "lesson.port-by-bytes-spans-and-readers",
+ "kind": "pitfall",
+ "claim": "Porting an engine by matching bytes finds the sites but not their spans, so compare each site's whole original span; an exit one instruction short shows only as R one out.",
+ "evidence": [
+  {
+   "game": "games/arc_of_yesod.md",
+   "text": "The copy hook's exit was one instruction short (the loop's own JP), seen only as R one out.",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "when": [
+  "screen.gameplay_reads_figure_pixels"
+ ],
+ "words": [
+  "port",
+  "span",
+  "exit",
+  "R",
+  "engine",
+  "JP",
+  "byte match"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

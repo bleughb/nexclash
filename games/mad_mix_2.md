@@ -31,24 +31,24 @@ The owner's rule (2026-11-08): no mock-up or approval to convert a Spec256 set. 
 - verify.update-locked-pace: used: lockstep pace runs on the test fixture.
 
 ## Lessons
-- [local: port 0xFF] A 128K game can write port 0xFF for no reason a 128K sees; on a Next that is Timex hi-colour and a scrambled picture. Found by looking at the plain conversion's JNext screen, not by any check. Grep OUT (0xFF) in a plain conversion before designing.
+- [kb lesson.port-ff-timex: port 0xFF] A 128K game can write port 0xFF for no reason a 128K sees; on a Next that is Timex hi-colour and a scrambled picture. Found by looking at the plain conversion's JNext screen, not by any check. Grep OUT (0xFF) in a plain conversion before designing.
 - [local: nfo words] The .nfo tool words every patch as a clash fix with sprites or layers. This game has no clash, so the review run edits its .nfo after the tool; the tool wants a no-clash case.
-- [local: helper name] A helper named dis.py in the working folder shadows the standard library's and breaks PIL's PNG import.
-- [local: fixture] Pace fixture: R out of the random numbers, no key waits (93A5, A7FE), lives do not fall. Input changes only at updates, so a wait for input never ends.
+- [kb lesson.windows-dis-py-shadows-stdlib: helper name] A helper named dis.py in the working folder shadows the standard library's and breaks PIL's PNG import.
+- [kb lesson.pace-input-timing: fixture] Pace fixture: R out of the random numbers, no key waits (93A5, A7FE), lives do not fall. Input changes only at updates, so a wait for input never ends.
 - [local: Spec256] The Spec256 snapshot has the same port 0xFF writes; what they do there was not tested.
-- [local: fix off] The note first said the fix line off scrambles the picture; the real loader showed the OS loader runs the original correctly. Test a claim about the off path before writing it.
-- [local: exact times] A K window was wrong in both directions here: K is a ratio of body time, and the body's clock ratio differs by path (LDI heavy against register heavy). Replays give the original routines' exact T by path; waiting those out gave +0.1% against +-5%, and needs no tuning per emulator. Prefer it wherever the time is a simple function of the arguments.
-- [local: a debt window across a frame] The picture takes over a frame in the shifted path. hlib_nest_open..close across a frame wrap loses 311 lines, so the wait ran a frame long, and K tuning hid it (K 48 looked right). The library says tick at least once a frame; col_tiles calls hlib_debt_tick each band.
-- [local: flip timing] The copy ends with the beam in the window's upper rows, so a flip there tears. The audit showed it, not the arithmetic. It goes at the copy's start, beam below the window, and the opaque picture hides the copy.
-- [local: z80n writes] The simulator's LDIX family dropped writes below 0x4000, so the write map showed nothing in the verifier though JNext was right. sim.low_writes lets a model that handles the map see them.
-- [local: a model catches refactors] An MMU line lost in a refactor showed at once as a picture against the model, where the eye would have taken a while.
+- [kb lesson.test-off-path-claims: fix off] The note first said the fix line off scrambles the picture; the real loader showed the OS loader runs the original correctly. Test a claim about the off path before writing it.
+- [kb lesson.exact-time-waits: exact times] A K window was wrong in both directions here: K is a ratio of body time, and the body's clock ratio differs by path (LDI heavy against register heavy). Replays give the original routines' exact T by path; waiting those out gave +0.1% against +-5%, and needs no tuning per emulator. Prefer it wherever the time is a simple function of the arguments.
+- [kb lesson.pace-window-needs-tick: a debt window across a frame] The picture takes over a frame in the shifted path. hlib_nest_open..close across a frame wrap loses 311 lines, so the wait ran a frame long, and K tuning hid it (K 48 looked right). The library says tick at least once a frame; col_tiles calls hlib_debt_tick each band.
+- [kb lesson.publication-raster-phase: flip timing] The copy ends with the beam in the window's upper rows, so a flip there tears. The audit showed it, not the arithmetic. It goes at the copy's start, beam below the window, and the opaque picture hides the copy.
+- [kb lesson.simulator-ldix-low-writes: z80n writes] The simulator's LDIX family dropped writes below 0x4000, so the write map showed nothing in the verifier though JNext was right. sim.low_writes lets a model that handles the map see them.
+- [kb lesson.compare-final-frame-with-original: a model catches refactors] An MMU line lost in a refactor showed at once as a picture against the model, where the eye would have taken a while.
 
 ## Evidence
 Review runs runs/mad_mix_2/release-20261108 (default) and release-20261108b (Enhanced), JNext 1.1.104, emulator and simulator only. Default: replay of a1, a2, fx1 (40,067 frames, R at every frame end, all eight banks, 11,664 site passes, no port FF write), 512 site cases, 5 broken builds, boot exact, soak, flicker, real loader. Enhanced (5b402870): 4 recordings, 70,074 frames, 133,046 hooks with R and all RAM, 4,163 pictures against a model; 14 of 14 broken builds; 402 handler-inside-a-hook cases; boot exact; 15-minute soak; flicker clean; 709 of 710 flips outside the window (one at line 36, cause not found); real loader in every mode. Pace, Enhanced, 5 seeds of 800 updates in lockstep: whole +0.09 to +0.26%, thirds within +0.38%, slowest 20 updates up to +2.95%, over the 2% rule (the owner's call by feel).
 
 ## Friction
 - reuse: [none: the Game Over run's packaging and loader scripts were enough]
-- retries: [local: key gaps] The first scripts held keys through the READY wait, which wants all keys up first; a stage fixture looked stuck until the script left gaps.
+- retries: [kb lesson.title-key-sequences: key gaps] The first scripts held keys through the READY wait, which wants all keys up first; a stage fixture looked stuck until the script left gaps.
 - environment: [none: the pilot venv and references were enough]
 - hand-rolled: [local: review scripts] Pace, soak and loader runs were driven by scripts in the review run, not the toolkit.
 - scratch: [local: review run] Its work folder stays in private evidence.

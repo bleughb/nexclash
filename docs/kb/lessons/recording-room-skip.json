@@ -1,0 +1,29 @@
+{
+ "id": "lesson.recording-room-skip",
+ "kind": "method",
+ "claim": "A game's own debug or room skip can reach far rooms honestly, but skipping past the last room can crash into ROM and poison later scans, so read the level count first.",
+ "evidence": [
+  {
+   "game": "games/prince_of_the_yolkfolk.md",
+   "text": "Developer room skip: 0x77C2 = 0, hold C with a direction until the room changes, tap SPACE to leave.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/solomons_key.md",
+   "text": "Skipping past the last room by the debug routine crashed the game into ROM; a recording past room 16 showed ROM writers and made free memory look used.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "room skip",
+  "debug",
+  "recording",
+  "scan",
+  "level count",
+  "ROM writers"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

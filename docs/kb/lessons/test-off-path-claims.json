@@ -1,0 +1,23 @@
+{
+ "id": "lesson.test-off-path-claims",
+ "kind": "pitfall",
+ "claim": "Test a claim about the fix-off path before documenting it, since the original path may run correctly through the real loader.",
+ "evidence": [
+  {
+   "game": "games/mad_mix_2.md",
+   "text": "A note said fix off scrambles the picture; the real loader showed the OS loader runs the original correctly (seen in JNext).",
+   "shown_on": "jnext"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "words": [
+  "fix off",
+  "original path",
+  "loader",
+  "claim",
+  "documentation"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

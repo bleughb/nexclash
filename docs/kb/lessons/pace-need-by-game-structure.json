@@ -1,0 +1,50 @@
+{
+ "id": "lesson.pace-need-by-game-structure",
+ "kind": "fact",
+ "claim": "The pace limiter a game needs follows its structure: none where it waits on its own interrupts or HALTs, a fixed-stretch credit with no frame sync, a K window for a flat-out game.",
+ "evidence": [
+  {
+   "game": "games/into_the_eagles_nest.md",
+   "text": "A game that waits on its own interrupts needs no K window on its update; 28 MHz to the wait is enough. Fine K windows on every tile only added cost.",
+   "quote": "A game that waits on its own interrupts needs no K window on its update; 28 MHz to the wait is enough.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/father_christmas.md",
+   "text": "Plots run at 28 MHz and pay for the overlay; the HALTs hold the pace: an update has a frame of slack, more than one frame's work takes three. No pace window.",
+   "quote": "The HALTs hold the pace: an update has a frame of slack, more than one frame's work takes three. No pace window.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/jetpac.md",
+   "text": "A game with no frame sync and a hook cost per draw needs no limiter: run a fixed stretch of the same draw's own set-up at 28 MHz; the credit scales with the draws and no wait is added.",
+   "quote": "A game with no frame sync and a hook cost per draw needs no limiter: run a fixed stretch of the same draw's own set-up at 28 MHz.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/jillys_farm.md",
+   "text": "A game with no frame wait needs a K window round all it can, or every hook entry at 3.5 MHz is its own cost.",
+   "quote": "A game with no frame wait needs a K window round all it can, or every hook entry at 3.5 MHz is its own cost.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/cyclone.md",
+   "text": "A CPU-bound game whose hooks cost more than the original's idle time: run one of its own long routines (the renderer, 38 ms) at 28 MHz in a game-routine window; +15% -> within 1%.",
+   "quote": "game's own long routines (here the renderer, 38 ms) at 28 MHz in a game-routine window; its saved time repays the",
+   "shown_on": "jnext"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "pace limiter",
+  "K window",
+  "HALT",
+  "frame sync",
+  "28 MHz",
+  "hook cost"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7",
+ "card": "detect.pacing-structure"
+}

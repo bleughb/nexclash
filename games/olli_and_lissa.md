@@ -124,16 +124,16 @@ as the original's over a minute of play. Enhanced: the same with the painted col
   within five calls. The check now waits eight calls before it asks.
 - [local: this game's hooks] The shared model counts a 256-byte pattern as shown when either of its 4-bit halves is: a
   build that keeps its 4-bit patterns apart needs its own test of the half (this module's Model.halves).
-- [local: this game's build] The routine's own time by size and shift comes from running the routine itself at build
+- [kb lesson.original-time-by-running-it: this game's build] The routine's own time by size and shift comes from running the routine itself at build
   time on the snapshot's memory: no fitting from recordings, and the hooks came out within 0.01% at the first try
   once the constant for the hook's own entry and exit was set.
-- [local: this game's painting] OverSpec resumes a game's last session from its data folder: a second scripted run
+- [kb lesson.overspec-scripting: this game's painting] OverSpec resumes a game's last session from its data folder: a second scripted run
   never saw the patch menu, so "Enhanced" looked like the plain build until the run used a fresh folder.
 
 ## Friction
 - reuse: [local: this game's module] Gauntlet's module shape (128K snapshot of a 48K game, alt ROM from 0x2800, state
   page at slot 0) and The Simpsons' painting tools.
-- retries: [local: this game's analysis] the first model of the figure's layout was wrong (the mask is a row and a byte
+- retries: [kb lesson.exact-silhouette-from-plotter-run: this game's analysis] the first model of the figure's layout was wrong (the mask is a row and a byte
   larger and starts a pixel left); the game's own routine run on an empty and a full background showed the layout.
 - hand-rolled: [local: this game's module] the Next model's sprites carried between hooks; the survey's analysis pass
   on an 83,418-frame recording did not finish in 15 minutes and was run again with --stop 15000.

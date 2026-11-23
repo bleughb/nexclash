@@ -1,0 +1,30 @@
+{
+ "id": "lesson.right-edge-wrap-vs-sprite-clip",
+ "kind": "fact",
+ "claim": "A plotter that writes past column 31 wraps into the next row where a hardware sprite clips; classify such unit-test cases as not a game case when recordings never reach them.",
+ "evidence": [
+  {
+   "game": "games/chuckie_egg.md",
+   "text": "Plotter overwrite INC E wraps at column 31; wrap edges classified (player/duck x > 240: 360 cases, hens x = 248: 252 cases).",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/rainbow_islands.md",
+   "text": "Known non-game case: a 6-wide piece at column 27 or more wraps on the ULA.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "platform",
+ "words": [
+  "edge",
+  "wrap",
+  "clip",
+  "column 31",
+  "INC E",
+  "unit test",
+  "right edge"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

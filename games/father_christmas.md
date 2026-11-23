@@ -38,14 +38,14 @@ Nothing has run on a Next. To check: ladder and table in level 1; beeper tune an
 - verify.update-locked-pace: used: lockstep pace runs on a fixture without R and with infinite time.
 
 ## Lessons
-- [local: HALT locked] Where an update is held by HALTs, its time matters only at the frame edge: the plots at 28 MHz pay for the overlay and no window is needed; pace stays in lockstep at 25 a second.
-- [local: lockstep needs R gone] R runs during a HALT, so LD A,R is timing: a test fixture with those reads made constant keeps state in lockstep.
+- [kb lesson.pace-need-by-game-structure: HALT locked] Where an update is held by HALTs, its time matters only at the frame edge: the plots at 28 MHz pay for the overlay and no window is needed; pace stays in lockstep at 25 a second.
+- [kb lesson.pace-lockstep-fixture: lockstep needs R gone] R runs during a HALT, so LD A,R is timing: a test fixture with those reads made constant keeps state in lockstep.
 - [local: probe after read] The pace input has to go in after the game's read (8979, after 7E95), or a key lands an update early on one machine, as in Ikari Warriors.
-- [local: upstream naming] The default is a hook build, so auto names it NAME_sprites.nex, which nxcout packages as the default.
+- [kb lesson.auto-naming-hook-build: upstream naming] The default is a hook build, so auto names it NAME_sprites.nex, which nxcout packages as the default.
 
 ## Friction
 - reuse: [none: the shared pace and hook libraries, and Flying Shark's list store, were enough]
-- retries: [local: name screen] The start needs a wheel of letters; a held key stepped past the end: short presses with a wait.
+- retries: [kb lesson.menu-key-pulses-missed: name screen] The start needs a wheel of letters; a held key stepped past the end: short presses with a wait.
 - environment: [none: the pilot venv was enough; other agents' load only made some runs slower]
 - hand-rolled: [local: review scripts] Pace, soak and loader runs were driven by scripts in the review run, not the toolkit.
 - scratch: [local: review run] Its work folder stays in private evidence.

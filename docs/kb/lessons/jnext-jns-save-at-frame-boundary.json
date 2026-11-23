@@ -1,0 +1,24 @@
+{
+ "id": "lesson.jnext-jns-save-at-frame-boundary",
+ "kind": "fact",
+ "claim": "In JNext 1.2.0 execute-triggered JNS save requests land at a frame boundary, so exact hook ABI and RAM tests should use execute-time logs or dump_mem instead.",
+ "evidence": [
+  {
+   "game": "games/r_type.md",
+   "text": "Observed in JNext 1.2.0: execute-triggered JNS requests save at a frame boundary; exact hook ABI/RAM tests use execute-time logs or dump_mem.",
+   "shown_on": "jnext"
+  }
+ ],
+ "level": "observed",
+ "area": "emulator",
+ "words": [
+  "JNext",
+  "JNS",
+  "save request",
+  "frame boundary",
+  "dump_mem",
+  "hook ABI"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

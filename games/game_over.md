@@ -60,8 +60,8 @@ Nothing has run on a Next. To check: Layer 2 timing and the beam wait (JNext's s
 ## Lessons
 - [local: lockstep fixture] A test-only fixture (BA58 INC HL made NOP, the ISR's RND seed step) gives lockstep pace runs.
 - [local: pace windows] A pace window with interrupts on saves the handler's time, and FRAMES counts them; hlib interrupt time in a window is waited out so the beat with the frame does not move the pace.
-- [local: detector input] The first draft of the detector read `.banks`, which only the converter's snapshot class has: auto's skoolkit snapshot never matched. The published bytes were not affected. Detect on `.memory` for that class.
-- [local: reserved top page] The default lists zero banks up to Enhanced's top page; the constant for a build without the sets (83) was above the sets' real top (75), so main's default differed from the published one by four empty banks. It is 75 now, and the default builds without the sets.
+- [kb lesson.auto-snapshot-class-detector: detector input] The first draft of the detector read `.banks`, which only the converter's snapshot class has: auto's skoolkit snapshot never matched. The published bytes were not affected. Detect on `.memory` for that class.
+- [kb lesson.published-build-steps-in-engine: reserved top page] The default lists zero banks up to Enhanced's top page; the constant for a build without the sets (83) was above the sets' real top (75), so main's default differed from the published one by four empty banks. It is 75 now, and the default builds without the sets.
 
 ## Friction
 - reuse: [none: the shared pace and hook libraries were enough]

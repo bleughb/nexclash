@@ -1,0 +1,23 @@
+{
+ "id": "lesson.blitter-sram-aperture-offset",
+ "kind": "fact",
+ "claim": "Physical SRAM addresses used by the blitter include a 040000 aperture offset.",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "Physical SRAM includes the 040000 aperture offset; high staging is 216-223.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "platform",
+ "words": [
+  "blitter",
+  "SRAM",
+  "040000",
+  "aperture",
+  "physical address"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

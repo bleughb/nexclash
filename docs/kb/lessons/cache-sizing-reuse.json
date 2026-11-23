@@ -1,0 +1,24 @@
+{
+ "id": "lesson.cache-sizing-reuse",
+ "kind": "method",
+ "claim": "Size a pattern cache from a reuse analysis first: sharing patterns by content saves far more uploads than per-slot caches.",
+ "evidence": [
+  {
+   "game": "games/lunar_jetman.md",
+   "text": "Per-slot tile cache (each object its own patterns) saved 60% of figure tile uploads; a pool shared by content saved 97%.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "pattern cache",
+  "reuse analysis",
+  "upload",
+  "pool",
+  "simulate",
+  "hit rate"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

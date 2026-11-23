@@ -1,0 +1,45 @@
+{
+ "id": "lesson.graphic-keys-collide-or-move",
+ "kind": "pitfall",
+ "claim": "Keys and signatures that identify a graphic or figure entry can collide, match rows in a different order, or move; mix in position and size, and do not key a sprite to an entry address.",
+ "evidence": [
+  {
+   "game": "games/simpsons.md",
+   "text": "Three 8-bit keys (sum, sum of sums, rotate and XOR) gave two striped poles the same keys; a sum plus a 16-bit hash with the size has no clash in 1,239 shapes.",
+   "quote": "a sum and a 16-bit hash (x 3 + byte + 1) with the size has no clash in 1,239 shapes.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/crystal_kingdom_dizzy.md",
+   "text": "A sum-based signature matched rows in another order; the cache signature is now order-sensitive (a sum with RLCA and an XOR with RRCA: two rows swapped no longer hit the cache).",
+   "quote": "the cache signature is order-sensitive (a sum with RLCA and an XOR with RRCA: two rows",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/scooby_doo.md",
+   "text": "A sprite table entry with no rows can hold the same address as a real one; a lookup by address must skip it.",
+   "quote": "A sprite table entry with no rows can hold the same address as a real one; a lookup by address must skip it.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/that_sinking_feeling.md",
+   "text": "Keying a sprite to a figure entry's address fails when the game swaps entries to sort them: one figure vanished and another doubled for a frame; the flicker tool found it.",
+   "quote": "Keying a sprite to a figure entry's address fails when the game swaps its entries to sort them: one figure vanished and another doubled for a frame",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "key",
+  "hash",
+  "collision",
+  "signature",
+  "sprite table",
+  "entry address",
+  "checksum",
+  "pattern cache"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

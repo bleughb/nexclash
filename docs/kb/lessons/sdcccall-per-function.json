@@ -1,0 +1,24 @@
+{
+ "id": "lesson.sdcccall-per-function",
+ "kind": "pitfall",
+ "claim": "Use __sdcccall(1) per function, not globally: -Cs\"--sdcccall 1\" links but calls library helpers such as __mullong with register args while the library takes stack args, giving garbage.",
+ "evidence": [
+  {
+   "game": "notes",
+   "text": "Global --sdcccall 1 linked but gave garbage results from library helpers; __sdcccall(1) functions clean the stack themselves only if non-variadic and returning void or at most 16 bits.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "z88dk",
+  "sdcc",
+  "sdcccall",
+  "__mullong",
+  "calling convention",
+  "stack cleanup"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,29 @@
+{
+ "id": "lesson.sequence-test-between-redraws",
+ "kind": "method",
+ "claim": "Overlay hooks need a test that replays the build's overlay code along the whole recording, because the cursor moves and the interrupt-driven printer writes between redraws.",
+ "evidence": [
+  {
+   "game": "games/castle_master.md",
+   "text": "m3b_seq replays the build's overlay code along the recording (5,357 views, 3,670 cursor moves, 87 portcullis steps); the printer in the handler writes the view buffer between views, never copied.",
+   "quote": "5,357 views, 3,670 cursor moves, 87 portcullis steps)",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "when": [
+  "screen.other_writers_change_figure_bits"
+ ],
+ "card": "verify.frame-layer-capture",
+ "words": [
+  "overlay",
+  "cursor",
+  "sequence test",
+  "between redraws",
+  "printer",
+  "recording"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

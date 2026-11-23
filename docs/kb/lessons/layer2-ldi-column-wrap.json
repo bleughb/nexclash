@@ -1,0 +1,29 @@
+{
+ "id": "lesson.layer2-ldi-column-wrap",
+ "kind": "pitfall",
+ "claim": "LDI's DE carries out of column 255 into the next row, so copying a tile at the right edge of Layer 2 needs its last byte by hand, or DE pushed and popped per row.",
+ "evidence": [
+  {
+   "game": "games/page_pharaoh.md",
+   "text": "LDI's DE carries out of column 255 into the next row; a tile at the right edge needs its last byte by hand; the whole-picture replay model caught it where hook registers and RAM did not.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/into_the_eagles_nest.md",
+   "text": "Copying a tile at column 31 carried into D; push and pop DE per row rather than trusting E to wrap.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "Layer 2",
+  "LDI",
+  "DE carry",
+  "column 255",
+  "right edge",
+  "push pop DE"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

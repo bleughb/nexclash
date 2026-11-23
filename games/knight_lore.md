@@ -89,18 +89,18 @@ Default and Enhanced: room entries (pause length against the original), transfor
 trainer, the loading screen; look for tearing at publication; beeper effects against the original. Record board/core.
 
 ## Lessons
-- [local: the original Filmation masks establish this game's ownership] A final monochrome buffer does not establish
+- [kb lesson.mask-ink-composition: the original Filmation masks establish this game's ownership] A final monochrome buffer does not establish
   coloured pixel ownership; keep the original opaque masks and plot order, coincident ink included.
 - [local: this game's overlapping static blocks invalidate its candidate filter] Geometry-only redraw filtering failed:
   an unchanged overlapping static block can repaint colours outside a moving actor's old/new bounds.
 - [local: this approved palette fits the tagged encoding exactly] Tagged palette duplicates remove an owner plane.
-- [local: this archive bootstrap and ROM baseline differ] R must match at player updates, including the bootstrap and
+- [kb lesson.rom3-baseline-for-verify: this archive bootstrap and ROM baseline differ] R must match at player updates, including the bootstrap and
   hidden ROM; a plain NEX on a different ROM is not a valid original baseline.
 - [local: this game's death route returns to a quiet room] A busy fixture that dies and returns to a quiet room cannot
   give busy-scene pace from its average: compare sustained busy periods.
 - [local: the measured compositor spans exceed this game's video frame] Account held work in bounded chunks; a
   multi-frame hold cannot come off a modulo-one-frame line interval without checkpoints.
-- [local: this game's cache has independently tested collisions] Pattern hashes only narrow the search; compare bytes.
+- [kb lesson.cache-correctness: this game's cache has independently tested collisions] Pattern hashes only narrow the search; compare bytes.
 - [doc docs/LEARNING.md §1. Source refresh and verification freeze] Integration onto main 213a238 (2026-11-07):
   includes moved into asm/, the palette INCBIN turned into DB lines, private art read from a directory: the profile and
   both NEX files rebuild byte for byte, so the proof carried; shown by rebuilding, not assumed.

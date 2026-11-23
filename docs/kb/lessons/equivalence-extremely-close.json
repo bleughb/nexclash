@@ -1,0 +1,32 @@
+{
+ "id": "lesson.equivalence-extremely-close",
+ "kind": "owner-rule",
+ "claim": "Equivalence to the original is 'extremely close', not identical: exact preservation of items nothing reads (R, interrupt state, copier RAM) can be unneeded, and the original can run unchanged as the logic.",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "Skipping the copier with recorded LD A,R values kept game RAM equal on levels 1-4 and 6: exact R/IRQ/copier-RAM preservation was unneeded.",
+   "quote": "LD A,R values were fed: exact R/IRQ/copier-RAM preservation was unneeded; disassembly found 9804 logic.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/r_type.md",
+   "text": "Route: equivalence \"extremely close\": the original game runs unchanged as the logic; scenery is drawn on Layer 2 and hardware-scrolled; figures are hardware sprites.",
+   "quote": "dropped; equivalence \"extremely close\"): the original game runs unchanged as the logic; scenery is",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "equivalence",
+  "extremely close",
+  "exact match",
+  "R register",
+  "relax gates",
+  "consumer",
+  "1:1"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

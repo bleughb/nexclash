@@ -1,0 +1,57 @@
+{
+ "id": "lesson.pace-input-timing",
+ "kind": "fact",
+ "claim": "JNext queues input to the next frame boundary, so inject keys after the game's own read, just before the render, or at the game's reads, and give both arms the same input.",
+ "evidence": [
+  {
+   "game": "games/ikari_warriors.md",
+   "text": "JNext input arrives at the next frame boundary; applied after the game's read (0xEB5F) the runs stay in lockstep.",
+   "quote": "JNext input arrives at the next frame boundary; applied after the game's read (0xEB5F) the runs stay in lockstep.",
+   "shown_on": "jnext"
+  },
+  {
+   "game": "games/comando_quatro.md",
+   "text": "The game reads the keys at a dozen places through each update; applying input just before the render gives every arm over a frame before the next read, and lockstep held for 800 updates.",
+   "quote": "applying it just before the render gives every arm over a frame before the next read, and lockstep held for 800 updates.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/everyones_a_wally_updated.md",
+   "text": "Three reads of row 0xEFFE come within 2 ms after the probe, so a build whose phase differs can see a key one update off (Enhanced seed 3 parted at update 31); keys given at the game's reads (profile inject) hold lockstep.",
+   "quote": "three reads of row 0xEFFE come within 2 ms after the probe, so a build whose phase",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/jillys_farm.md",
+   "text": "Updates shorter than a frame: a small generator in place of the control read gave both arms the same input and lockstep over 3,000 updates.",
+   "quote": "a small generator in place of the control read gave both arms the same input and lockstep over 3,000 updates.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/herbert.md",
+   "text": "Queue replay keys before the long copy window and count pace at player update 9095; queuing at the reader itself can give one build an extra jump update.",
+   "quote": "Queue replay keys before the long copy window and count pace at player update 9095.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/mad_mix_2.md",
+   "text": "Pace fixture: R out of the random numbers, no key waits (93A5, A7FE), lives do not fall; input changes only at updates, so a wait for input never ends.",
+   "quote": "Input changes only at updates, so a wait for input never ends.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "emulator",
+ "words": [
+  "JNext",
+  "input",
+  "frame boundary",
+  "key reads",
+  "inject",
+  "lockstep",
+  "pace"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7",
+ "next_check": "After a pace run compare the keyboard rows the game read in both arms at each update and fail where they differ."
+}

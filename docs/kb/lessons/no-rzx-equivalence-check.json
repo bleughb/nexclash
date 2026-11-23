@@ -1,0 +1,25 @@
+{
+ "id": "lesson.no-rzx-equivalence-check",
+ "kind": "method",
+ "claim": "Without a recording, verify a patched menu by running it and the original with the same input and comparing memory, system variables, stack, interrupt mode and flags; record it as verification without a recording.",
+ "evidence": [
+  {
+   "game": "games/winter_sports.md",
+   "text": "Patched menu versus original menu loading each event from tape, same keys: after 900 frames 0x4000-0xFFFF agree outside the hook, its variables, the system variables 0x5C00-0x5C7F and the stack 0x5F80-0x5FFF; I, IM, IFF agree; a negative control (pages shifted by one) fails all 6 data cases.",
+   "quote": "original menu (loads answered at ROM 0x0562 from the tape) run from the snapshot with the same keys; after 900 frames 0x4000-0xFFFF agree",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "words": [
+  "no recording",
+  "equivalence",
+  "tape",
+  "menu",
+  "negative control",
+  "side by side"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

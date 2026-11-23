@@ -1,0 +1,31 @@
+{
+ "id": "lesson.xor-empty-screen-reference",
+ "kind": "pitfall",
+ "claim": "An empty screen is a wrong reference for an XOR plotter that draws the frame it erases; check draw-only entries against a model of the figure.",
+ "evidence": [
+  {
+   "game": "games/cookie.md",
+   "text": "An XOR plotter on an empty screen draws the frame it means to erase; the model of the figure is the reference and the draw-only entries check the model; that check found the game draws nothing for a figure whose bottom line is above line 31 (signed compare).",
+   "shown_on": "unknown",
+   "quote": "An XOR plotter on an empty screen draws the frame it means to erase: the empty"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "facts": {
+  "draw": "direct"
+ },
+ "when": [
+  "render.composition.xor"
+ ],
+ "words": [
+  "XOR",
+  "plotter",
+  "verifier",
+  "empty screen",
+  "signed compare",
+  "model"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

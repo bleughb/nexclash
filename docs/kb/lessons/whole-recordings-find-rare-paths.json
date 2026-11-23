@@ -1,0 +1,31 @@
+{
+ "id": "lesson.whole-recordings-find-rare-paths",
+ "kind": "pitfall",
+ "claim": "Short or partial replays miss rare paths: replay every recording to its end before treating graphics as static.",
+ "evidence": [
+  {
+   "game": "games/pac_mania.md",
+   "text": "The first recording showed no writer in the graphics; a later one showed the score frame rewritten; a chase bot found the second one (ghost score) only after six recordings had passed. Treat 'static graphics' as provisional until every recording has passed.",
+   "quote": "a chase bot found the second one (ghost score) only after six recordings had passed. Treat \"static graphics\" as provisional until every recording has passed.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/nemesis_the_warlock.md",
+   "text": "Quick runs: 2000 frames missed two rare cases that 20000 found (XOR effect under a figure, column-31 wrap): run 20000 before stage 3 when the verifier is fast.",
+   "quote": "Quick runs: 2000 frames missed two rare cases that 20000 found (XOR effect under a figure, column-31 wrap)",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "recording",
+  "whole run",
+  "replay",
+  "rare path",
+  "frames",
+  "static graphics"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

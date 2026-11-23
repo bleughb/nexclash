@@ -119,23 +119,23 @@
  "outputs": {
   "plain": {
    "file": "abu_simbel.nex",
-   "md5": "82c1349ae5d34e68a67a7aabc68e039f"
+   "md5": "1cb4729ad763c147625bec0a8ce6b14f"
   },
   "sprites": {
    "file": "abu_simbel_sprites.nex",
-   "md5": "c2dd86f174c55a4ae9155abb90689d8b"
+   "md5": "75ed5dbfa892de1188d51bfc9d53e3d6"
   },
   "enhanced": {
    "file": "abu_simbel_enhanced.nex",
-   "md5": "b45603707d1f71bb7704436dbe0c3169"
+   "md5": "8f8aec94d62cbcf37c7c2e10c803d79a"
   },
   "english": {
    "file": "abu_simbel_english.nex",
-   "md5": "2e3aa22510d9a925a5b0800aad3f26c9"
+   "md5": "0678b953370ede18d99a326a10b4ee5b"
   },
   "english_enhanced": {
    "file": "abu_simbel_english_enhanced.nex",
-   "md5": "053806e52684ce68b89a020a848e7196"
+   "md5": "1661e9c766c7284b6961623caf145ec5"
   }
  },
  "repro": [],
@@ -207,32 +207,32 @@
    "docs/profiles/abu_simbel.json": "3bffa87190cf6b3a",
    "docs/profiles/abu_simbel_english.json": "27f3a29d17e5e2ae",
    "docs/profiles/abu_simbel_enhanced.json": "6f1b9e43021fe7c0",
-   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash.py": "04157df11540c17d",
    "nexclash/abu_simbel.py": "5f4f62def145356e",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "bf75ad27e5bfabce",
+   "nexclash/engines.py": "2abd23b537c0b5d4",
    "nexclash/hooklib.py": "24241497925658d6",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
-   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
-   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/recolour.py": "6f27e87ef0c47a17",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/rzx.py": "e018e000440e0274",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "99f677e899a1d9be",
+   "recipe": "26918b8cea468184",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-17"
+  "date": "2026-11-20"
  },
  "results": [
   {
@@ -270,31 +270,31 @@
    "docs/profiles/abu_simbel.json": "3bffa87190cf6b3a",
    "docs/profiles/abu_simbel_english.json": "27f3a29d17e5e2ae",
    "docs/profiles/abu_simbel_enhanced.json": "6f1b9e43021fe7c0",
-   "nexclash.py": "cc1297e9104ece5f",
+   "nexclash.py": "04157df11540c17d",
    "nexclash/abu_simbel.py": "5f4f62def145356e",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "05b757b4b393c22b",
+   "nexclash/coloursheet.py": "b22123bdf2572c9b",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "112c3b17a78ace9a",
+   "nexclash/engines.py": "2abd23b537c0b5d4",
    "nexclash/hooklib.py": "24241497925658d6",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
-   "nexclash/nextboot.py": "05f0fe47c3c3eac6",
-   "nexclash/recolour.py": "091578827a6f24a5",
+   "nexclash/nextboot.py": "9272cb3a8c980c98",
+   "nexclash/recolour.py": "6f27e87ef0c47a17",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/rzx.py": "e018e000440e0274",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "2778169fe43fd5de",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "9bd684151bdab4ea",
+   "nexclash/z80tonex.py": "50684436558662bd",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "99f677e899a1d9be",
+   "recipe": "26918b8cea468184",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-12"
+  "date": "2026-11-20"
  }
 }

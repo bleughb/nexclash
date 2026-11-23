@@ -1,0 +1,28 @@
+{
+ "id": "lesson.frame-lines-at-60hz-unsettled",
+ "kind": "open",
+ "claim": "How many lines a 60 Hz frame has is not settled: the book gives 264 (display from line 40), docs/TECHNIQUES.md gives 262 / 261. Until a board test, wait only for lines below 261 and never for a line the mode may not have.",
+ "limit": "Unresolved between two sources; neither figure was measured here for every video mode (VGA, HDMI).",
+ "evidence": [
+  {
+   "game": "reference",
+   "source": "I. Novak, Unraveling the ZX Spectrum Next, Vol 1 (2026; core 3.03.03), chapter 10",
+   "text": "60 Hz (NextREG 0x05 bit 2, not Pentagon): 264 lines instead of 311 / 312, display area from line 40, no border above or below the wide area; 58.15 Hz at 128K timing, 59.19 Hz at 48K.",
+   "shown_on": "documentation"
+  }
+ ],
+ "level": "inferred",
+ "area": "platform",
+ "words": [
+  "60Hz",
+  "frame",
+  "lines",
+  "raster",
+  "copper",
+  "wait",
+  "VGA",
+  "HDMI"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

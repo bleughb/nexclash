@@ -1,0 +1,30 @@
+{
+ "id": "lesson.recording-start-state-vs-tail-check",
+ "kind": "pitfall",
+ "claim": "A recording that starts from another state than the build's snapshot makes the ROM path check report tail reads the real start never makes; replay such fixtures by hand and keep verify-list recordings at the snapshot.",
+ "evidence": [
+  {
+   "game": "games/flying_shark.md",
+   "text": "A fixture recording that starts after the unpack holds game data where the start-up tail sits, so the check reports tail reads; it is replayed by hand and kept out of the verify list.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/arc_of_yesod.md",
+   "text": "nextboot.rom_paths treats a recording that starts at another state as starting at the build's snapshot, so a tail in write-first memory is reported as read.",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "rom_paths",
+  "tail",
+  "fixture",
+  "recording start",
+  "unpack",
+  "nextboot",
+  "false read"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

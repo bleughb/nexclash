@@ -1,0 +1,24 @@
+{
+ "id": "lesson.survey-full-fails-on-loader-snapshot",
+ "kind": "fact",
+ "claim": "A loader-stage snapshot (PC in ROM before RANDOMIZE USR) needs the recording pre-run to the first frame where the engine is live; auto does it with loader.prerun, before hardware detection is baked in.",
+ "evidence": [
+  {
+   "game": "games/spellbound_dizzy.md",
+   "text": "BASIC loader-stage snapshot (PAUSE 0 before USR 24180): the fix is to pre-run the recording to the first frame boundary where the engine is identified and live and take that state, before hardware detection (Kempston checks); built by dizzy5.py + loader.py (loader.prerun).",
+   "quote": "copy or not at all. Fix: pre-run the recording to the first frame boundary where the engine is",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "loader snapshot",
+  "survey --full",
+  "auto",
+  "loader.prerun",
+  "Dizzy 5"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}
