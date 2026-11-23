@@ -46,5 +46,6 @@
   "screen compare"
  ],
  "review": "source-checked",
- "as_of": "0.1.7"
+ "as_of": "0.1.7",
+ "card": "verify.model-reconstruction"
 }

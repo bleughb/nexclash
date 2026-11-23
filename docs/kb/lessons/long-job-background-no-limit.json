@@ -33,5 +33,6 @@
   "load"
  ],
  "review": "source-checked",
- "as_of": "0.1.7"
+ "as_of": "0.1.7",
+ "next_check": "Not checkable by a machine: it is how an agent starts a shell command. Stated in docs/PLAYBOOK.md."
 }

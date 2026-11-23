@@ -57,7 +57,8 @@ documentation, with `source` (its URL or title); a lesson with only reference ev
 until a game shows it on a machine. A lesson holds at most 6 evidence items; the games that met it are those
 plus every games/<game>.md that tags it [kb lesson.<name>] (counted, never stored: `promote`, `--facts`).
 `enforced_by` names the shared code that now checks the lesson (nexclash.<module>.<function>, or a file):
-such a lesson is kept for its evidence, and `promote` lists the well-met lessons that have none yet.
+such a lesson is kept for its evidence, and `promote` lists the well-met lessons that have none yet, each
+with its `next_check`: what a check for it could test (one sentence), or why a machine cannot check it.
 `facts` are measurable properties of a game (machine, interrupts, draw: see FACTS) that a lesson needs;
 `lessons --facts` leaves out a lesson only when the survey measured the opposite.
 
@@ -635,6 +636,8 @@ def check_lessons(cs, preds):
         for q in x.get('when', []):
             if q not in preds:
                 bad('when %r not in predicates.json' % q)
+        if len(x.get('next_check') or '') > CLAIM_MAX:
+            bad('next_check at most %d characters' % CLAIM_MAX)
         if x.get('card') and x['card'] not in cs:
             bad('no card %s' % x['card'])
         for ref in x.get('enforced_by', []):
@@ -800,9 +803,9 @@ def main(argv):
         print('%s  [%s; %s; %s; %s; as of %s]\n  %s' % (x['id'], x['kind'], x['level'], x['area'], x['review'], x['as_of'], x['claim']))
         if x.get('limit'):
             print('  limit: %s' % x['limit'])
-        for k in ('facts', 'when', 'enforced_by', 'card'):
+        for k in ('facts', 'when', 'enforced_by', 'card', 'next_check'):
             if x.get(k):
-                print('  %s: %s' % (k, json.dumps(x[k]) if k != 'card' else x[k]))
+                print('  %s: %s' % (k, json.dumps(x[k]) if k not in ('card', 'next_check') else x[k]))
         for e in x['evidence']:
             print('  - %s (%s): %s%s' % (os.path.basename(e['game']).replace('.md', ''), e['shown_on'], e['text'],
                                          ' [%s]' % e['source'] if e.get('source') else ''))
@@ -860,7 +863,8 @@ def main(argv):
         tags = tagged()
         for x in sorted(shared(), key=lambda x: (-len(met(x, tags)), x['id'])):
             if len(met(x, tags)) >= (top or 5) and not x.get('card') and not x.get('enforced_by'):
-                print('%2d games  %s' % (len(met(x, tags)), _line(x)))
+                print('%2d games  %s%s' % (len(met(x, tags)), _line(x),
+                                           '\n          next check: ' + x['next_check'] if x.get('next_check') else ''))
         return 0
     if cmd == 'stale':
         now = _read('VERSION').strip()

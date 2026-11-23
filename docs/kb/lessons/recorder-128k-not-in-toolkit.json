@@ -50,5 +50,6 @@
   "analyse"
  ],
  "review": "source-checked",
- "as_of": "0.1.7"
+ "as_of": "0.1.7",
+ "next_check": "Make the recorder, analyse and verify refuse a 128K snapshot unless the engine supplies a paging model."
 }

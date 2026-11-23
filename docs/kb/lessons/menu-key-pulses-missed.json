@@ -41,5 +41,6 @@
   "interrupt"
  ],
  "review": "source-checked",
- "as_of": "0.1.7"
+ "as_of": "0.1.7",
+ "next_check": "Log the keyboard-port reads in a run and report a scripted press shorter than the gap between two reads of its row."
 }
