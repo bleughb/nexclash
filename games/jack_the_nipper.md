@@ -5,7 +5,7 @@ Stage: 1 (design)            State: intake done 2026-11-22 (survey below); no de
 Inputs: TOSEC `Jack the Nipper (1986)(Gremlin Graphics Software).z80` (md5 adcdb8f9bb5e72218392aab8fd44e78e) and its
 `[a]` (4c5398b8bcfd88ebd83656f01c3aca21); rzxarchive `j/jacknipper.rzx` (108,043 frames, 36 min; its own start
 snapshot md5 903c092495784d308cf03899b80d7110)    Branch: add-jack-the-nipper
-Checks: survey (GATE OK), inspect    Pending user answers: none yet (the stage-1 question comes with the preview)
+Checks: survey (GATE OK), inspect, figure sheet, pixel readers, depth    Pending user answers: the design question below
 Start with: the object record's position bytes and 0x87BB, the erase / restore at 0x8760, objects per room
 (`cost --at 0x8009`)    Read: PLAYBOOK 2-3, 3d (an unknown engine: feasibility first)
 Open: the figure plotter(s) behind the copier; where the figures' colours come from; a short recording (3-5 min) for
@@ -24,7 +24,15 @@ RAMTOP 0x7C60, border 0. No loader to run.
 - Pacing: no interrupt accepted in 108,043 frames: nothing syncs the game to the frame, so hook time is game time
   (PLAYBOOK 4 "no frame sync"; card detect.pacing-structure).
 - Coverage: GATE OK (every CALL site to the top plot routines in code that ran was reached).
-- Plain conversion: boots in the simulator; no proven-safe tail yet (prove with `scan --range`).
+- Plain conversion: boots in the simulator, but its tail is NOT safe: the converter's default (79 bytes at
+  0x7F98-0x7FE6, below SP) covers the room-colour routine 0x7F84-0x7FBC, which runs at every room change. The printer
+  buffer is the game's (read and executed, 0x5B00-0x5BBC); the only untouched gap near the stack is 0x7FBD-0x7FE8 (44
+  bytes); the untouched ranges elsewhere are code the recording did not run (the Kempston reader at 0xA44D) and text
+  (0x8E55); the compact tail (53 bytes) does not fit the gap either. The tail goes at 0x6F00-0x6F4E instead, in the
+  lower shadow, which the room build writes before anything reads it (scan: write-first over the recording and over
+  600 free-run frames from the TOSEC snapshot), with the printer buffer restored after NEXLOAD (keep_printer_buffer:
+  the game reads and runs code there). Plain test build md5 f86eb31c28fe3f6c69dfc0a313ec509c: boot check OK with
+  and without the NEXLOAD model. The ROM is unused apart from one RET at 0x0052.
 
 ## Stage 1 analysis (2026-11-22, first 15,000 frames)
 - 0x86F9 is a dirty-cell copier, not a plotter: 512 cell counters at 0x7D00-0x7EFF (32 x 16 cells = the 256 x 128
@@ -37,8 +45,37 @@ RAMTOP 0x7C60, border 0. No loader to run.
   24 rows), (IX+5) animation frame (a 32 / 48 / 96 / 144-byte step into the graphics), (IX+7) / (IX+9) graphics and
   mask pointers; 0x87BB turns the position into a shadow address, then a 16-pixel-wide masked draw bottom-up (0x8781
   steps up a character row). Shared helpers: 0x8781 and 0x87A0 (8 callers each), 0x87BB (16).
+- Objects: a table at 0x8820, 16 bytes each, count at 0x8CD4 (loop at 0xAA55). 0x87BB: x = (IX+0) less 11 or 7 by type
+  (unless (IX+15) is set), y = (IX+1) (bottom row: the draw goes up), shadow address in the screen's layout from 0x6000;
+  it returns the pixel shift (x AND 7), and a non-zero shift takes the shifted path at 0x8147.
+- Per frame: objects drawn into the shadow (0x8009, cells marked), marked cells copied to the screen (0x86F9), then
+  restored in the shadow from the tile map (0x8735: cell map 0x7200-0x73FF = one tile index per cell, tile graphics at
+  0x7500 + 8 x index). So with sprites the figures can leave the shadow altogether, if no logic reads their pixels.
+- Object types 3+ take a second path (0x8228): 24 px wide (3 bytes a row), 24 / 32 / 40 rows by (IX+2) bits 2 / 3.
+  Both paths: at the return from 0x87BB (0x80C9, 0x8273) main DE = mask, alternate DE' = graphics, bottom row first.
+- No logic reads figure pixels (scan of the shadow and the display over 30,000 frames): the readers are the copier,
+  the room-entry blit (0xAE14: shadow and its attributes LDIR'd to the screen), fills (0xA8E5, 0xA917) and a
+  character-roll effect (0xFF93 / 0xFFCD). So no virtual read (PLAYBOOK 4: no dependency).
+- Depth: nothing draws into the shadow after the figures (0x9A0D between the draw and the copy is the footstep
+  sound), so figures are in front of all scenery and later objects over earlier ones: sprite order = object order.
 - Model so far: shadow screen + dirty cells + masked sprites; figures take the room's attributes (0x7F84 sets them
   per room). Next: the plotters' entry points and inputs (x, y, frame), the restore's source, figures per room.
+
+## Design question (pending, to Jon 2026-11-23; PLAYBOOK 3c defaults + this game's exceptions)
+The recording draws 69 figure kinds (figures.png, from 0x8009's two paths over 108,043 frames): 36 small objects
+(16 x 16: pickups such as the computer, glue, bomb and keys, a bug, and effects: the pea, a sparkle, four smoke
+puffs), 8 of 16 x 24 (Jack, the ghosts, a kid) and 25 adults 24 px wide (24 / 32 / 40 rows: postman, women, the
+policeman, a chef, others; one is a radiator).
+1. Every figure a sprite, from every caller of 0x8009 (pickups included: the game draws them as objects).
+2. Scenery, the HUD (Naughtyometer, In pocket, lives, RASH), score and text stay on the ULA.
+3. Depth: the game's own rule, which here is "figures in front of all scenery, later objects over earlier ones".
+4. Colours: the game's own (each figure in its room's ink) until the painted sheet (the first sprite build's).
+5. Pause / message windows over the play area: sprites off while up. None found in the code so far: does the game
+   have any?
+Always asked: effects (pea, sparkle, smoke) as sprites too?; the masks give every figure a black outline: keep it
+(the original's look) or drop it?; anything not converted: none found.
+Also: no frame sync, so the hooks run at 28 MHz and keep the original's pace; a 24 x 40 adult is six hardware
+sprites, so patterns are uploaded per figure from a cache (more figure kinds than the 16K pattern memory holds).
 
 ## Stage log
 - 2026-11-22: stage 0, ~1.5 h wall (both games' surveys in parallel), ~20 tool calls, no user rounds.
