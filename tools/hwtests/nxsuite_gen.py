@@ -127,6 +127,20 @@ def asm_str(s):
     return '"%s",0' % s
 
 
+def platform_list(t):
+    """the questionnaire's machine list, checked: two capitals / digits, unique, a name of at most 26 characters,
+    at most 17 entries (screen rows 3-19)"""
+    pl = t['platforms']['list']
+    codes = [p_['code'] for p_ in pl]
+    assert len(pl) <= 17, 'at most 17 platforms fit the screen'
+    assert len(set(codes)) == len(codes), 'platform codes must be unique'
+    for p_ in pl:
+        assert len(p_['code']) == 2 and all(c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789' for c in p_['code']), p_
+        assert p_['code'] != 'S' * 2 and p_['code'][0] != 'S', 'S skips: no code may start with S'
+        assert len(p_['name']) <= 26, p_
+    return pl
+
+
 def tests_inc(out):
     t = table()
     labels = built_labels()
@@ -189,6 +203,10 @@ def tests_inc(out):
     for x in tests:
         lines.append('cl_%s: db %s' % (x['id'], asm_str(','.join(x['claims']) or '-')))
         lines.append('ti_%s: db %s' % (x['id'], asm_str(x['title'][:20])))
+    lines.append('qmodels:')                  # the questionnaire's machine list (gq.asm): "K1 name", then a 0
+    for p_ in platform_list(t):
+        lines.append('        db %s' % asm_str('%s %s' % (p_['code'], p_['name'])))
+    lines.append('        db 0')
     lines.append('strings_end:')
     lines.append('        ASSERT strings_end <= $DCF0   ; page-62 offsets $1CF0-$1FFF hold ROM8C and FONTC')
     p = os.path.join(out, 'nxsuite_tests.inc')

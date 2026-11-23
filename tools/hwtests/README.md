@@ -217,14 +217,16 @@ in the test table, and a test any other page of the generator's `xpage` list, fl
 
 ### Owner checklist (one board, one core)
 
-1. Copy `nxsuite.nex` into a new folder of its own on the SD card; start it from the Browser.
+1. Copy `nxsuite.nex` into a new folder of its own on the SD card; start it from the Browser. The first
+   start asks a few optional questions (below); S skips them, and so do 20 s without a key.
 2. Press A (RUN ALL): about 6 minutes, leave the machine alone. The border is blue while a group runs,
    then green / yellow / red. F03 and F06 switch to the other refresh rate for a moment (the picture may
    blink; if it does not come back within 10 s: reset, start the suite again - it resumes). From the
    second group on, row 1 of the group screen says `Saved: <n> lines` - the file's length after the last
    group was written; the number grows group by group. DONE: the border turns green when the file was
-   saved, red with FILE WRITE FAILED when it was not (photograph that screen; builds up to 7a9f92e could
-   show that line when the file was saved); any key.
+   saved, red with FILE WRITE FAILED when it was not: the run then shows every result as pages to
+   photograph first (a failed write at a group end no longer stops the run: the message goes after a key
+   or 20 s); any key.
 3. Press V (the visual pass, about 8 minutes): answer each screen with Y / N or a number (1 to 3, 4 or 5 as the
    screen's last line says; S = ask later).
    Each picture is drawn under the question with a reference beside it (white / yellow lines, a square,
@@ -247,7 +249,8 @@ Build (keep the .nex out of the repository):
     python tools/hwtests/build.py nxsuite -o OUTDIR          # --sym also writes nxsuite.sym
 
 Run: copy `nxsuite.nex` into a folder of its own on the SD card and start it from the Browser. The suite
-writes `NXSUITE.TXT` (results), `NXSUITE.PRG` (progress record, 64 bytes) and, when needed, parts
+writes `NXSUITE.TXT` (results), `NXSUITE.PRG` (progress record, 64 bytes; offsets 52-63 hold the
+first-start answers, flag bit 2 = asked) and, when needed, parts
 `NXSUITE.001`, `NXSUITE.002`, ... into that folder and nothing anywhere else. Menu keys: A = all automatic tests (about 6 minutes - G7 BENCH alone is about 3 - leave it alone), 0-9 = one group,
 R = resume, U = retry the tests that hung, V = the visual pass (the person at the machine answers: Y / N or
 a number, S = ask later; in RUN ALL these tests are PENDING-OPERATOR), T / D / H = the opt-in groups (timing,
@@ -309,10 +312,19 @@ shows the digital test card.) `geom=` is what the measurements match: line lengt
 108 = hdmi, 112 / 312 = vga48, 112 / 320 = pentagon, 114 / 311 = vga128, else other.
 
 Statuses: PASS, FAIL (the claim's expectation is wrong on this machine), INFO (a number or a choice, no
-verdict), SKIP (`why=not-built`, `not-selected`, `hung-last-run`, `no-blitter` - core below 3.03 -, `dma-deaf` - XH: the DMA still locked by an earlier XH2 -, `left-out` -
+verdict), SKIP (`why=not-built`, `not-selected`, `hung-last-run`, `no-blitter` - D09's probe found no blitter, or
+D09 did not run this session and the core is below 3.03 -, `dma-deaf` - XH: the DMA still locked by an earlier XH2 -, `left-out` -
 on purpose: the reason is in `nxsuite_claims.json` and the intake prints it), HANG-GUARD (the machine stopped in this
 test on the run before), OPERATOR (`key=` / `means=`, answered by the person at the machine),
 PENDING-OPERATOR (an operator question left for the U pass), VISUAL / VISUAL-SHOWN (later stages).
+
+First start (once per folder): the machine as a two-key code from `nxsuite_claims.json` `platforms`
+(adding a platform is a data change; `nxsuite_gen.py` checks the list), display connection and kind, RAM
+believed fitted, Pi / accelerator, and a machine label of up to 8 letters / digits - the screen says it is
+a machine nickname, not a person's name. Every session writes them as
+`H operator model=K1 conn=1 disp=2 ramq=1 pi=2 label=BENCH1` (`-` = not given); the intake decodes them
+into the record's `operator` (what was said, not measured) and adds the label to the record name
+(`<board>-<core>-<label>.json`; without a label the name is `<board>-<core>.json` as before).
 
 After a hang: reset the Next, start `nxsuite.nex` again from the same folder. It finds the progress record,
 resumes by itself after 5 seconds (or press R): the test it stopped in is written HANG-GUARD, its group is
@@ -330,11 +342,18 @@ Intake (on the PC):
     python tools/hwtests/intake.py --describe [TEST]             # what a test does, without the assembly
     python tools/hwtests/intake.py --reference A.json B.json ... --out DIR   # DIR/nxsuite-test-reference.md
     python tools/hwtests/intake.py --conformance EMU.json --against BOARD.json
+    python tools/hwtests/intake.py --summary A.json B.json ...    # machines / cores / emulators side by side
 
 Every built test carries a plain `purpose`, `method`, `expect`, `fields`, `needs` and `hazard` in
 `nxsuite_claims.json`; the build stops if a built test lacks purpose, method or fields (or has non-ASCII
 text). `--describe` prints them; `--reference` writes them, with every given record's result labelled by its
 board and core (or emulator), into one Markdown file generated on demand (not kept in docs/).
+`--summary` prints the hardware identity of each record (NextReg $00 / $0F raw, core, RAM, timing,
+50 / 60 Hz, lines, start speed, 28 MHz wait, CTC calibration, DMA type, port enables, DivMMC registers,
+the operator's answers; each row names its source, decoded only as far as the source says; Pi / ESP / RTC
+are not probed: no safe documented read), then every test whose results differ beyond the `--runs`
+tolerance, grouped by which records agree and what sets the sides apart (platform, board, core, video, or
+no single one), then the tests that differ only within tolerance (run-to-run noise).
 `--conformance` sets one record (an emulator) against one board record per test: SAME, DIFFERENT (with both
 values and the reason, `--runs` tolerance) or NOT COMPARABLE (not run, SKIP, unanswered). The reference is
 that one board and core: "different" means different from it, and an emulator result is never hardware
@@ -386,3 +405,35 @@ Checklist for the owner:
    and run `intake.py` on `NXSUITE.TXT`; send the report. Check the DONE screen said no bytes LOST.
 7. To start clean for a new build, delete all `NXSUITE.*` files together (the program keeps an old
    build's file as a part anyway, so nothing is lost if you forget).
+
+### Sending the suite to another tester
+
+    python tools/hwtests/package.py -o OUTDIR      # OUTDIR outside the repository
+
+writes `OUTDIR/nxsuite-<build>.zip` with `nxsuite.nex` and `TESTER.TXT` (source: `nxsuite_tester.txt`; the
+build id and date filled in). The build id is the commit the .nex was built from, the `src=` of every
+result file it writes; the package is refused while `tools/hwtests` has uncommitted changes (or named
+`-dirty` with `--allow-dirty`). TESTER.TXT says what the suite is, that it writes only `NXSUITE.*` and no
+saved settings, how to copy and start it, the passes with their times, what each hazard means, what to do
+after a hang or a red screen, which files to send back, what the answers are used for, and that it needs a
+Spectrum Next core. Nothing personal goes into the package.
+
+### Filing results
+
+1. Put the tester's `NXSUITE.*` files in a folder of their own outside the repository.
+2. `python tools/hwtests/intake.py NXSUITE.TXT --dry-run` first: it refuses a damaged or cut-short file
+   and names the board and core it found; then without `--dry-run` (add `--board NAME` only when the
+   board id does not name it). The record lands in `docs/kb/hardware/<board>-<core>[-<label>].json`; an
+   emulator's (`--platform "<name> <version>"`) in `docs/kb/hardware/emulator/`.
+3. `python tools/hwtests/intake.py --summary docs/kb/hardware/*.json docs/kb/hardware/emulator/*.json`
+   shows the new machine beside the others. A record is the board's own file: never regenerate or edit a
+   board record from anything but that board's `NXSUITE.*` files, even when the suite's format or test
+   ids change later.
+4. A one-board figure is labelled with that board and core; it becomes a general fact only when other
+   boards agree.
+
+Emulator authors: run the suite by hand or with `emurun.py`, take the record with `--platform`, and read
+`--describe TEST` (or the generated `--reference`) for what each test does and expects;
+`--conformance EMU.json --against BOARD.json` lists where the emulator differs from that board and core.
+The V (visual) pass can be answered by eye or left PENDING-OPERATOR. An emulator result is never hardware
+evidence.

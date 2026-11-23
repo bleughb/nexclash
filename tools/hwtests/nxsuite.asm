@@ -118,11 +118,20 @@ g7far:  call measure
         nextreg $56,G7P6 : nextreg $57,OVL_G7
         ret
 g7ret:  ret
+; HL = a routine of gq.asm (questionnaire, H operator line, unsaved-results pages): called with the string
+; page in slot 7; the caller's slot-7 page is put back
+ovcall: ld a,$57 : call rdreg : push af
+        nextreg $57,STRPAGE
+        call .j
+        pop af : nextreg $57,a
+        ret
+.j:     jp (hl)
 code2_end:
         ASSERT code2_end <= TBUF
         ORG CODE2B
         INCLUDE "nxsuite/txt2.asm"
         INCLUDE "nxsuite/vh2.asm"
+q_hdr:  call hend : ld hl,q_wline : jp ovcall      ; H divmmc ended, then the H operator line (gq.asm)
 txt2_end:
         ASSERT $ <= CODE2B_END
 
@@ -132,6 +141,13 @@ txt2_end:
         INCLUDE "nxsuite/g0.asm"
         INCLUDE "nxsuite_tests.inc"
         ; (the include ends in the string page: MMU 6,STRPAGE / ORG $C000)
+        ; the questionnaire and the unsaved-results pages, run from the string page mapped into slot 7
+        ; (ovcall): assembled for $E000 + the page offset
+        DISP $ + $2000
+        INCLUDE "nxsuite/gq.asm"
+        ENT
+gq_end:
+        ASSERT gq_end <= $DCF0          ; page-62 offsets $1CF0-$1FFF hold ROM8C and FONTC
 
 ; ---------------------------------------------------------------- slot 7 overlays
 ; The harness maps a group's page into slot 7 ($E000-$FFFF) around each of its tests (gtab byte 7,

@@ -887,8 +887,10 @@ def write_json(res, table, path_in, data, board=None, outdir=OUTDIR, dry=False, 
     for s in res['sessions'][1:]:
         if s['header'].get('core') not in (None, core):
             raise Refused('the file mixes cores %s and %s: run the intake per core' % (core, s['header']['core']))
+    op = operator(h, table)
     if is_board(platform):
-        path = os.path.join(outdir, '%s-%s.json' % (board_name(res, board), core))
+        lab = '-' + slug(op['label']) if op and op.get('label') else ''      # no label: the old name
+        path = os.path.join(outdir, '%s-%s%s.json' % (board_name(res, board), core, lab))
     else:
         path = os.path.join(outdir, 'emulator', '%s-%s.json' % (slug(platform), core))
     old = json.load(open(path)) if os.path.exists(path) else {}
@@ -903,7 +905,7 @@ def write_json(res, table, path_in, data, board=None, outdir=OUTDIR, dry=False, 
            'board': {'name': board_name(res, board) if is_board(platform) else slug(platform),
                      'nr00': h.get('machine', ''), 'nr0f': h.get('board', ''),
                      'ram': h.get('ram'), 'video': h.get('video'), 'geom': h.get('geom')},
-           'core': core, 'intake_runs': len(hist), 'intakes': hist,
+           'core': core, 'operator': op, 'intake_runs': len(hist), 'intakes': hist,
            'run': {'suite': h.get('suite'), 'src': h.get('src'), 'file': os.path.basename(path_in),
                    'file_sha256': sha, 'sessions': [s['header'] for s in res['sessions']],
                    'nextregs': res['nextregs'], 'tests': res['tests'], 'subtests': res['subtests'],
@@ -1266,6 +1268,158 @@ def conformance(emu, ref, table=None, out=sys.stdout):
 
 
 
+def operator(h, table=None):
+    """the session header's "H operator" answers (gq.asm) decoded with nxsuite_claims.json "platforms" -> dict,
+    or None (a file from before the questionnaire). What the operator said, not a measurement."""
+    if 'conn' not in h and 'model' not in h:
+        return None
+    table = table or load_table()
+    pl = table.get('platforms', {})
+    names = {p_['code']: p_['name'] for p_ in pl.get('list', [])}
+    ans = pl.get('answers', {})
+    out = {'model': None if h.get('model', '-') == '-' else h['model']}
+    out['model_name'] = names.get(out['model']) if out['model'] else None
+    for k in ('conn', 'disp', 'ramq', 'pi'):
+        v = h.get(k, '-')
+        out[k] = ans[k][int(v) - 1] if v.isdigit() and 0 < int(v) <= len(ans.get(k, [])) else None
+    out['label'] = None if h.get('label', '-') == '-' else h['label']
+    return out
+
+
+def _nr(D, n):
+    return (D['run'].get('nextregs') or {}).get('$%02X' % n)
+
+
+def _t(D, tid, key='v'):
+    x = D['run']['tests'].get(tid)
+    if not x or x['status'] in NOT_FINAL:
+        return None
+    return x.get('v') if key == 'v' else (x.get('extra') or {}).get(key)
+
+
+def identity(D):
+    """the machine as one record measured it: [(item, value, source)]; values come from the launch NextReg
+    snapshot (S01), the session header and tests; decoded only as far as a cited source says"""
+    h = (D['run'].get('sessions') or [{}])[0]
+    def nr(n):
+        return _nr(D, n) or '?'
+    rows = [('machine id (NextReg $00)', nr(0x00) + ' raw', 'S02; book ch 3 (report D-N17): $00 is the machine id')]
+    b = nr(0x0F)
+    rows.append(('board id (NextReg $0F)', b + (' = Issue 5' if b == '$03' else ' raw (only Issue 5 = $03 is stated)'),
+                 'book ch 3 (report D-N17, B-N22)'))
+    rows.append(('core version ($01 / $0E)', D.get('core', '?'), 'S02; book ch 1 L1533'))
+    rows.append(('RAM (page 96)', '%s (%s)' % (h.get('ram', '?'), {
+                 'wrap': 'not its own RAM; what 1 MB shows there is not stated',
+                 'alias0': 'not its own RAM; what 1 MB shows there is not stated',
+                 'distinct': 'its own RAM: more than 1 MB'}.get(h.get('ram'), 'no decode')),
+                 'S03; docs/LEARNINGS.md:127'))
+    rows.append(('machine timing (NextReg $03)', nr(0x03), 'docs/NEXT_REGISTERS.md:31 (bits 6:4)'))
+    rows.append(('frame rate at start', '%s Hz ($05 = %s, bit 2)' % (h.get('hz', '?'), nr(0x05)),
+                 'docs/NEXT_REGISTERS.md:32'))
+    rows.append(('video timing (NextReg $11)', nr(0x11) + ' raw', 'no decode in the sources'))
+    rows.append(('lines per frame / geometry', '%s / %s' % (h.get('lines', '?'), h.get('geom', '?')),
+                 'F01; docs/TECHNIQUES.md:281'))
+    rows.append(('CPU speed at start (NextReg $07)', nr(0x07), 'docs/NEXT_REGISTERS.md:36 (5:4 actual, 1:0 set)'))
+    rows.append(('28 MHz read wait (NOP clocks)', str(_t(D, 'C01')), 'C01; book ch 2: 4 = none (3.03), 5 = 3.02'))
+    rows.append(('CTC ticks per line x 100 / T per line',
+                 '%s / %s' % (h.get('cal_ctc', '?'), h.get('t_per_line', '?')), 'header (G4 F02 method)'))
+    rows.append(('DMA (blitter probe)', str(_t(D, 'D09')), 'D09; docs/DDMA.md:25, book N27'))
+    rows.append(('internal port enables $82-$85', ' '.join(nr(n) for n in range(0x82, 0x86)),
+                 'book N19 (L3234-3248)'))
+    rows.append(('DivMMC ($0A, $B8-$BB)', ' '.join(nr(n) for n in (0x0A, 0xB8, 0xB9, 0xBA, 0xBB)),
+                 'header H divmmc'))
+    rows.append(('Pi / ESP / RTC', 'not probed', 'no safe documented read in the sources'))
+    op = D.get('operator')
+    if op:
+        rows.append(('operator: machine', '%s %s' % (op.get('model') or '-', op.get('model_name') or ''),
+                     'questionnaire (said, not measured)'))
+        rows.append(('operator: display', '%s, %s' % (op.get('conn') or '-', op.get('disp') or '-'),
+                     'questionnaire'))
+        rows.append(('operator: RAM / Pi', '%s / %s' % (op.get('ramq') or '-', op.get('pi') or '-'),
+                     'questionnaire'))
+        rows.append(('operator: label', op.get('label') or '-', 'questionnaire (a machine nickname)'))
+    return rows
+
+
+def _facets(D):
+    h = (D['run'].get('sessions') or [{}])[0]
+    pf = D.get('platform', {'kind': 'board'})
+    return {'platform': pf.get('kind', 'board') + ':' + (pf.get('name') or ''), 'board': D['board']['name'],
+            'core': D.get('core'), 'video': '%s %s %s' % (h.get('hz'), h.get('geom'), h.get('timing'))}
+
+
+def summary(paths, table=None, out=sys.stdout):
+    """records of several machines / cores / emulators: the hardware identity side by side, then every test whose
+    results differ beyond the --runs tolerance, grouped by what else differs between those records (board, core,
+    video, platform); tests that differ only within tolerance are run-to-run noise. -> {test: facets}"""
+    table = table or load_table()
+    D = [json.load(open(p, encoding='utf-8')) for p in paths]
+    names = [_rec_name(d) for d in D]
+    print('# nxsuite summary\n\nRecords: ' + '; '.join('%d = %s' % (i + 1, n) for i, n in enumerate(names)),
+          file=out)
+    print('Emulator columns are what that emulator does, never hardware evidence; a one-board figure is that '
+          'board and core only.', file=out)
+    builds = [d['run'].get('src') for d in D]
+    if len(set(builds)) > 1:
+        print('Suite builds differ (%s): a test changed between builds can differ for that reason.'
+              % ', '.join('%d %s' % (i + 1, b) for i, b in enumerate(builds)), file=out)
+    print('\n## Hardware identity\n', file=out)
+    print('| item | ' + ' | '.join(str(i + 1) for i in range(len(D))) + ' | source |', file=out)
+    print('|---' * (len(D) + 2) + '|', file=out)
+    ids = [identity(d) for d in D]
+    items = []
+    for r in ids:
+        for it, _, src in r:
+            if it not in [x[0] for x in items]:
+                items.append((it, src))
+    for it, src in items:
+        cells = [next((v for i_, v, _ in r if i_ == it), '-') for r in ids]
+        print('| %s | %s | %s |' % (it, ' | '.join(str(c).replace('|', '/') for c in cells), src), file=out)
+    fac = [_facets(d) for d in D]
+    groups, noise, same = collections.OrderedDict(), [], 0
+    found = {}
+    for x in _test_order(table):
+        if 'left_out' in x:
+            continue
+        have = [(i, d['run']['tests'].get(x['id'])) for i, d in enumerate(D)]
+        have = [(i, r) for i, r in have if r and r['status'] not in NOT_FINAL]
+        if len(have) < 2:
+            continue
+        why = diff_records(x['id'], [r for _, r in have])
+        if why:
+            cl = []                                     # records that agree (within tolerance) together
+            for i, r in have:
+                for c in cl:
+                    if not diff_records(x['id'], [c[0][1], r]):
+                        c.append((i, r))
+                        break
+                else:
+                    cl.append([(i, r)])
+            keys = tuple(k for k in ('platform', 'board', 'core', 'video')
+                         if all(len({fac[i][k] for i, _ in c}) == 1 for c in cl)
+                         and len({fac[c[0][0]][k] for c in cl}) == len(cl)) or ('no single one',)
+            part = ' | '.join(','.join(str(i + 1) for i, _ in c) for c in cl)
+            groups.setdefault((part, keys), []).append((x, have, why))
+            found[x['id']] = keys
+        elif len({json.dumps([r.get('v'), r.get('extra')], sort_keys=True) for _, r in have}) > 1:
+            noise.append(x['id'])
+        else:
+            same += 1
+    print('\n## Results that differ (beyond the --runs tolerance)\n', file=out)
+    for (part, keys), lst in sorted(groups.items(), key=lambda g: -len(g[1])):
+        print('### %s (%d tests): the records on each side of a | agree; what sets the sides apart: %s\n'
+              % (part, len(lst), ' + '.join(keys)), file=out)
+        for x, have, why in lst:
+            print('- %s %s: %s' % (x['id'], x['title'], '; '.join(
+                '%d %s' % (i + 1, _tcell(r)) for i, r in have)), file=out)
+            print('  (%s)' % '; '.join(why), file=out)
+        print('', file=out)
+    print('Run-to-run noise (values differ, within tolerance): %s' % (', '.join(noise) or 'none'), file=out)
+    print('Same in every record that answered: %d tests. A difference where only the machine differs may be '
+          'the machine or the run: repeat with --runs before reading it as a board difference.' % same, file=out)
+    return found
+
+
 def intake(path, board=None, outdir=OUTDIR, dry=False, out=sys.stdout, table=None, platform=None):
     table = table or load_table()
     lines, names = load_chain(path)
@@ -1437,6 +1591,31 @@ def selfcheck():
         n_ = runs_compare([a_, b_], table, out=sink)
         if n_ != 2:
             bad.append('--runs: %d tests flagged, expected 2 (%s)' % (n_, sink.getvalue().strip()))
+        # --summary: two made-up boards (the same file, the second with S05 / F01 changed, F02 within
+        # tolerance, another board name, an operator line with a label): S05 + F01 differ (board), F02 is noise
+        ra = parse(make_file(whole), table)
+        k_ = next(i for i, l in enumerate(alt) if l.startswith('H divmmc')) + 1
+        rb = parse(make_file(alt[:k_] + ['H operator model=K3 conn=2 disp=1 ramq=2 pi=3 label=BENCH2'] + alt[k_:]),
+                   table)
+        pa_, _ = write_json(ra, table, a_, b'a', 'made-up-a', d)
+        pb_, docb = write_json(rb, table, b_, b'b', 'made-up-b', d)
+        if not pb_.endswith('made-up-b-3.03.03-bench2.json') or not pa_.endswith('made-up-a-3.03.03.json'):
+            bad.append('record names %s / %s (label in the name only when given)' % (pa_, pb_))
+        if (docb.get('operator') or {}).get('model_name') != 'KS3 Next (Artix-7 35T)':
+            bad.append('operator answers not decoded: %s' % docb.get('operator'))
+        sink = io.StringIO()
+        f_ = summary([pa_, pb_], table, out=sink)
+        if sorted(f_) != ['F01', 'S05'] or f_['F01'] != ('board',) or 'F02' not in sink.getvalue().split(
+                'noise')[-1] or 'BENCH2' not in sink.getvalue():
+            bad.append('--summary: %s (want F01 + S05 by board, F02 noise, the label shown)' % f_)
+        # negative control: a summary blind to differences finds nothing - the check above would catch it
+        keep = diff_records
+        try:
+            globals()['diff_records'] = lambda t, h: []
+            if summary([pa_, pb_], table, out=io.StringIO()):
+                bad.append('negative control: --summary found differences with the comparison switched off')
+        finally:
+            globals()['diff_records'] = keep
     return bad
 
 
@@ -1457,6 +1636,8 @@ def main(argv=None):
     ap.add_argument('--reference', nargs='*', metavar='JSON',
                     help='write nxsuite-test-reference.md into --out (default: the current folder) with the results '
                          'of these records')
+    ap.add_argument('--summary', nargs='+', metavar='JSON',
+                    help='records side by side: hardware identity, then the results that differ, grouped')
     ap.add_argument('--conformance', metavar='EMU_JSON', help='a record against --against REF_JSON (a board)')
     ap.add_argument('--against', metavar='REF_JSON')
     ap.add_argument('--selfcheck', action='store_true')
@@ -1474,6 +1655,9 @@ def main(argv=None):
         return 0
     if a.reference is not None:
         print('wrote %s' % reference(a.reference, a.out if a.out != OUTDIR else '.'))
+        return 0
+    if a.summary:
+        summary(a.summary)
         return 0
     if a.conformance:
         if not a.against:

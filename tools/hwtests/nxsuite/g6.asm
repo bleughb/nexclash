@@ -519,7 +519,8 @@ t_d08:  call g6_map
 ; ($D7,$0B ; $DB,$0B ; $DF,$01 = physical); eight $83; then one ordinary 1-byte copy A $2000 -> B $0000.
 ; The blitter copies physical $0B2000 (page 57 offset 0) to $0B0000 (page 56 offset 0); an old DMA copies
 ; the 16-bit addresses (slot 1 = page 39 offset 0 -> slot 0 = page 38 offset 0). Bytes of 56 / 57 saved
-; and written back. INFO v = blitter / none / other; FAIL if none and core >= 3.03 ($01 >= $33).
+; and written back. INFO v = blitter / none / other; FAIL if none and core >= 3.03 ($01 >= $33). The
+; answer gates D10-D14 (blseen): a probe, not a version number (CSpect reports core 4.00.00).
 t_d09:  call g6_map
         nextreg $07,3
         nextreg $56,56 : ld a,($C000) : ld (.sv),a : xor a : ld ($C000),a
@@ -533,6 +534,9 @@ t_d09:  call g6_map
         nextreg $56,57 : ld a,(.sv+1) : ld ($C000),a
         ld a,HOMEP6 : nextreg $56,a
         call g6_unmap
+        ld a,(.r+1) : sub $22 : ld a,0 : jr nz,.bs
+        inc a
+.bs:    ld (blseen),a                                ; 1 blitter, 0 none / other
         ld a,(.r) : ld hl,k_old : call ex_kh
         ld a,(.r+1) : ld hl,k_phys : call ex_kh
         ld hl,w_blit : ld a,(.r+1) : cp $22 : jr z,.w
@@ -558,9 +562,14 @@ w6_other: db "other",0
 ; 23-16 of port A / B), $DF (flags: bit 0 physical, 1 2D, 2 transparent, 3 fill, 4 Layer 2 X,Y), $E3 / $E7
 ; / $EB / $EF (row length, rows, A stride, B stride, low byte first), $F3 (transparent colour), $F7 (fill
 ; value), then an ordinary program; $C3 again after. Physical address of RAM page n = $40000 + n x $2000:
-; page 38 = $08C000, page 39 = $08E000 (slots 0 / 1 here). Core below 3.03 ($01 < $33): SKIP why=no-blitter.
-bl_chk: ld a,(NRSNAP+$01) : cp $33 : ret nc
-        ld hl,why_nobl : ld (R_why),hl : ld a,ST_SKIP : ld (R_st),a : scf : ret
+; page 38 = $08C000, page 39 = $08E000 (slots 0 / 1 here). Gate: D09's probe this session (blseen 1 = run,
+; 0 = SKIP why=no-blitter); D09 not run this session ($FF: a resume or hung retry): core below 3.03 = SKIP.
+bl_chk: ld a,(blseen) : cp 1 : ret z
+        inc a : jr z,.v
+.no:    ld hl,why_nobl : ld (R_why),hl : ld a,ST_SKIP : ld (R_st),a : scf : ret
+.v:     ld a,(NRSNAP+$01) : cp $33 : jr c,.no
+        or a : ret
+blseen: db $FF
 ; A = flags: g6_def, no timing byte (the reset default), extended bytes $08 / $08
 bl_def: ld (blf),a : call g6_def : xor a : ld (g6t),a : ld a,$08 : ld (blxa),a : ld (blxb),a : ret
 ; the g6 variables (g6_mk) with physical addresses, (blxa) / (blxb), (blf), (blv) the colour / fill value,

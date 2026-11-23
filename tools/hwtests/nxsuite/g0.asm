@@ -192,11 +192,11 @@ txt_flush_g:
         ld a,2 : out ($FE),a
         ld hl,m_sfail : ld a,2 : call plines
         call keys_up
-.k:     call getkey : or a : jr z,.k
+        ld hl,q_key : call ovcall                   ; a key or 20 s: the run goes on
         call keys_up
         jp gscreen
 m_saved: db "Saved: ",0
 m_sfail: db "RESULTS NOT SAVED (file write",0
-        db "failed). Photograph this. Then",0
-        db "power off/on, start again, run",0
-        db "this group again. Any key.",0,0
+        db "failed). The run goes on; at",0
+        db "DONE: pages to photograph.",0
+        db "Any key, or wait 20 s.",0,0

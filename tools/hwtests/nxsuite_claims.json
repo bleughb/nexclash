@@ -115,6 +115,148 @@
    "stage": 2
   }
  ],
+ "platforms": {
+  "about": "The machine list of the first-start questionnaire (gq.asm, model=): a two-key code and a name of at most 26 characters, shown in this order (at most 17). Adding a platform is a change here only: nxsuite_gen.py puts the list in the string page and checks it. What the operator says is a claim about the machine, not a measurement; the intake shows it beside the measured identity. The names come from the owner's platform summary, not from a register source. ZXnano / MSXnano / A800nano are not Next cores: the suite cannot run there.",
+  "list": [
+   {
+    "code": "K1",
+    "name": "KS1 Next (Spartan-6)"
+   },
+   {
+    "code": "K2",
+    "name": "KS2 Next (Artix-7 15T)"
+   },
+   {
+    "code": "K3",
+    "name": "KS3 Next (Artix-7 35T)"
+   },
+   {
+    "code": "NG",
+    "name": "N-GO"
+   },
+   {
+    "code": "XB",
+    "name": "Xberry Pi"
+   },
+   {
+    "code": "ZD",
+    "name": "ZXDOS / ZXDOS+"
+   },
+   {
+    "code": "ZT",
+    "name": "ZXTRES"
+   },
+   {
+    "code": "MI",
+    "name": "MiSTer DE10-Nano"
+   },
+   {
+    "code": "KG",
+    "name": "Karabas-Go / Mini"
+   },
+   {
+    "code": "TN",
+    "name": "Tang Nano 20K NextNano"
+   },
+   {
+    "code": "NT",
+    "name": "NextTang"
+   },
+   {
+    "code": "EM",
+    "name": "emulator: MAME"
+   },
+   {
+    "code": "EC",
+    "name": "emulator: CSpect"
+   },
+   {
+    "code": "EJ",
+    "name": "emulator: JNext"
+   },
+   {
+    "code": "EZ",
+    "name": "emulator: ZEsarUX"
+   },
+   {
+    "code": "EO",
+    "name": "emulator: other"
+   },
+   {
+    "code": "OO",
+    "name": "other / don't know"
+   }
+  ],
+  "answers": {
+   "conn": [
+    "HDMI",
+    "VGA",
+    "RGB / SCART",
+    "don't know"
+   ],
+   "disp": [
+    "monitor",
+    "TV",
+    "capture device",
+    "don't know"
+   ],
+   "ramq": [
+    "1 MB",
+    "2 MB",
+    "other",
+    "don't know"
+   ],
+   "pi": [
+    "yes",
+    "no",
+    "don't know"
+   ]
+  }
+ },
+ "planned_groups": {
+  "about": "Reserved, NOT built: ids, menu keys and stage for peripheral groups. Each is left out as 'planned: needs hardware the first board lacks / a write-capable probe design'. Only reads a cited source documents as safe may ever be built without a hazard screen; anything that transmits, joins a network, or writes an RTC or flash is opt-in with its own hazard screen; WiFi credentials are never stored or printed. nxsuite_gen.py does not read this list (no menu row, no table entry).",
+  "room": "Menu: NGROUPS = 14 fills rows 3-16; NEXT STEP is at rows 18-20 and the key lines at 22-23, so three more groups need the group list in two columns (or the NEXT STEP text moved up a row each). Bank 0 (harness + test table) has about 20 bytes left: three gtab entries (8 bytes each) and their test-table rows (12 bytes a test) do not fit without moving code out of bank 0. Overlay room (2026-11-24): page 40 $EDD8-$EFFF (~550 bytes), page 42 $F6EC-$F7FF (~270), page 43 after G5 / G8 / V up to G5PAL, page 61 $FEAA-$FFFF (~340), page 63 $FFAC- (~80), page 41 $F7AB-$F7FF (~80), string page 62 ~200 bytes after the questionnaire; each group needs its own overlay page of code, so a new page would have to come from the suite's 32-63 range by giving up one of the Layer 2 pages 44-53 (V tests draw 320 x 256 there).",
+  "groups": [
+   {
+    "id": "XP",
+    "key": "P",
+    "name": "PI-LINK",
+    "stage": 3,
+    "kind": "opt-in",
+    "what": "the accelerator link to the Raspberry Pi Zero on the Pi header (NOT the SD card's SPI)",
+    "sources": "none: the repository's sources (docs/NEXT_REGISTERS.md, TECHNIQUES.md, the book notes) do not document the SPI / GPIO method to the Pi. No registers are guessed.",
+    "safe_reads": "none documented",
+    "platforms": "boards with a Pi fitted (KS2 / KS3 accelerator option per the owner's platform list)",
+    "left_out": "planned: needs hardware the first board lacks / a write-capable probe design"
+   },
+   {
+    "id": "XU",
+    "key": "E",
+    "name": "UART-ESP",
+    "stage": 3,
+    "kind": "opt-in",
+    "what": "the UART to the ESP WiFi module",
+    "sources": "book notes (Ch4 L3539-3545, L3824-3831, L3907-3918): UART0 / UART1 Rx and Tx interrupt positions, NextReg $C6 enable bits 0-2 / 4-6, status bits set even with interrupts off (polled), Rx near-full at 384 of 512 bytes. The UART port numbers and baud registers are not in the cited sources.",
+    "safe_reads": "the interrupt status bits only (already covered by G3 reads); no transmit",
+    "platforms": "boards with an ESP fitted",
+    "hazard": "transmit / joining a network: opt-in with its own hazard screen; never store or print WiFi credentials",
+    "left_out": "planned: needs hardware the first board lacks / a write-capable probe design"
+   },
+   {
+    "id": "XR",
+    "key": "C",
+    "name": "I2C-RTC",
+    "stage": 3,
+    "kind": "opt-in",
+    "what": "the real-time clock on I2C",
+    "sources": "none: the cited sources do not document the I2C ports or the RTC registers.",
+    "safe_reads": "none documented",
+    "platforms": "boards with an RTC fitted",
+    "hazard": "an RTC write changes the time kept across power: opt-in with its own hazard screen",
+    "left_out": "planned: needs hardware the first board lacks / a write-capable probe design"
+   }
+  ]
+ },
  "tests": [
   {
    "id": "S00",
@@ -1648,9 +1790,9 @@
    "purpose": "Are blitter physical addresses SRAM addresses, with 8K RAM page n at $40000 + n x $2000, and does an address carry across a 64K boundary into the extended byte?",
    "method": "28 MHz. Physical mode ($DF bit 0), $D7 / $DB extended bytes $08, no timing byte. 16 bytes $08C100 -> $08E100 (page 38 +$100 to page 39 +$100), read through the MMU (slots 0 / 1), with 16 guard bytes before and 32 after checked still $AA. Cross: 16 bytes from $08FFF8 (the last 8 of page 39, then 8 more where the address carries) to page 38 +$200, compared with page 39 and page 40 through slot 1.",
    "expect": "lesson.blitter-sram-aperture-offset, lesson.jnext-ram-dump-offset, book ch 5 (B-N21) and book ch 3 (D-N15): RAM page n at $40000 + n x $2000 (16K bank n at $40000 + n x $4000), 22 bits via $D7 / $DB (repo: the $040000 aperture offset).",
-   "needs": "core 3.03 or later (NextReg $01 >= $33), else SKIP why=no-blitter (g6.asm: JNext has no blitter, CSpect 4.5.9 has one)",
+   "needs": "the blitter seen by D09's probe this session (D09 not run this session: core 3.03 or later, NextReg $01 >= $33), else SKIP why=no-blitter (g6.asm: JNext has no blitter, CSpect 4.5.9 has one)",
    "hazard": "none",
-   "fields": "D10: v = wrong bytes of the first copy, the 16 guard bytes before and 32 after included (bytes); cross = wrong bytes of the copy from $08FFF8 (page 39's last 8 bytes, then page 40's first 8). PASS if v = 0 and cross = 0, else FAIL; SKIP why=no-blitter below core 3.03."
+   "fields": "D10: v = wrong bytes of the first copy, the 16 guard bytes before and 32 after included (bytes); cross = wrong bytes of the copy from $08FFF8 (page 39's last 8 bytes, then page 40's first 8). PASS if v = 0 and cross = 0, else FAIL; SKIP why=no-blitter when D09 found no blitter."
   },
   {
    "id": "D11",
@@ -1667,9 +1809,9 @@
    "purpose": "Can blitter physical-mode writes reach the block-RAM pages (bank 5 page $0A, page $0E), or do they land in an invisible SRAM twin, while page $0F is ordinary SRAM?",
    "method": "28 MHz. For pages $0A, $0E, $0F at physical $054000 / $05C000 / $05E000 (extended byte $05): the 16 bytes there saved by a physical copy (to page 38 +$300) and through the MMU (slot 1, to +$320); a 16-byte pattern copied there physically; read back through the MMU and by a physical copy (to +$360); then the saved bytes put back both ways. shows = the MMU read sees the pattern; twin = only the physical read-back does.",
    "expect": "docs/DDMA.md:54: banks 5 / 7 screen storage is block RAM and cannot be reached through their physical SRAM addresses. book ch 5 (B-N22) and book ch 3 (D-N16): the write lands in an invisible twin SRAM ($054000 / $05C000); page $0F is SRAM and shows.",
-   "needs": "core 3.03 or later (NextReg $01 >= $33), else SKIP why=no-blitter (g6.asm: JNext has no blitter, CSpect 4.5.9 has one)",
+   "needs": "the blitter seen by D09's probe this session (D09 not run this session: core 3.03 or later, NextReg $01 >= $33), else SKIP why=no-blitter (g6.asm: JNext has no blitter, CSpect 4.5.9 has one)",
    "hazard": "none (it writes 16 bytes at the start of the ULA screen, page $0A, and of pages $0E / $0F, and puts the saved bytes back physically and through the MMU)",
-   "fields": "D11: v = the word for page $0A: shows (the MMU read sees the pattern), twin (only the physical read-back sees it) or other; p0e / p0f = the same for page $0E / $0F. PASS if $0A = twin, $0E = twin and $0F = shows, else FAIL; SKIP why=no-blitter below core 3.03."
+   "fields": "D11: v = the word for page $0A: shows (the MMU read sees the pattern), twin (only the physical read-back sees it) or other; p0e / p0f = the same for page $0E / $0F. PASS if $0A = twin, $0E = twin and $0F = shows, else FAIL; SKIP why=no-blitter when D09 found no blitter."
   },
   {
    "id": "D12",
@@ -1686,9 +1828,9 @@
    "purpose": "Does blitter 2D mode move row length x rows bytes with strides measured from row start to row start, and does a row length or row count of 0 still move one byte?",
    "method": "28 MHz. Physical + 2D ($DF = 3), no timing byte; $E3 row length, $E7 rows, $EB / $EF A / B stride. Page 38 = a sheet 256 wide (byte = row x 13 + column); page 39 set to $AA before each case. a: 32 x 32 from column 16, strides 256 / 80, to +4; b: 64 x 20 (Rainbow shape), strides 64 / 80, to +488; z0l: row length 0, 1 row; z0r: row length 1, 0 rows (strides 1, to +$100). Copies checked against the sheet; other bytes must stay $AA.",
    "expect": "docs/DDMA.md:52: 2D length and row count are actual values, not minus one; zero still transfers one byte; strides are distances between row starts. book ch 5 (B-N23) states the same.",
-   "needs": "core 3.03 or later (NextReg $01 >= $33), else SKIP why=no-blitter (g6.asm: JNext has no blitter, CSpect 4.5.9 has one)",
+   "needs": "the blitter seen by D09's probe this session (D09 not run this session: core 3.03 or later, NextReg $01 >= $33), else SKIP why=no-blitter (g6.asm: JNext has no blitter, CSpect 4.5.9 has one)",
    "hazard": "could hang or overwrite: were a length or row count of 0 to mean 65536 the copy would run on past page 39 into pages 40-47 (40-43 hold suite code). The progress file is written first, so after a reset a restart resumes and marks it HANG-GUARD. Not opt-in.",
-   "fields": "D12: v = a + b (bytes); a / b = wrong bytes of the 32 x 32 and the 64 x 20 cases (copied bytes that differ plus bytes of page 39 written outside the rectangle); z0l / z0r = bytes of page 39 written by the row-length-0 and the rows-0 case. PASS if a = b = 0 and z0l = z0r = 1, else FAIL; SKIP why=no-blitter below core 3.03."
+   "fields": "D12: v = a + b (bytes); a / b = wrong bytes of the 32 x 32 and the 64 x 20 cases (copied bytes that differ plus bytes of page 39 written outside the rectangle); z0l / z0r = bytes of page 39 written by the row-length-0 and the rows-0 case. PASS if a = b = 0 and z0l = z0r = 1, else FAIL; SKIP why=no-blitter when D09 found no blitter."
   },
   {
    "id": "D13",
@@ -1705,9 +1847,9 @@
    "purpose": "Does blitter transparent mode still spend the write cycle on skipped bytes, and does fill mode take half the time of a fixed-source copy (no read cycle)?",
    "method": "28 MHz. Physical, page 38 -> page 39 (extended byte $08), no timing byte. op: opaque copy of a source whose even bytes are $E3; tr: the same with $E3 the transparent colour ($DF bit 2, $F3 = $E3); fi: fill $5A ($DF bit 3, $F7 = $5A); fx: plain copy from one fixed source byte $5A (WR1 $24). 256- and 2048-byte runs timed by CTC3 /16; 28 MHz clocks per byte = (t2048 - t256) / 1792. The 2048-byte results are checked.",
    "expect": "docs/DDMA.md:90: fill ($DF bit 3, $F7) has no read phase, twice as fast as a fixed-source fill. book ch 5 (B-N20) and lesson.blitter-hardware-benchmark: transparent mode skips bytes equal to $F3's value but still spends the write cycle (same time as opaque); fill has no read cycle (half the time of a fixed-source copy). The claim also notes CSpect fill at 0.07 us a byte.",
-   "needs": "core 3.03 or later (NextReg $01 >= $33), else SKIP why=no-blitter (g6.asm: JNext has no blitter, CSpect 4.5.9 has one)",
+   "needs": "the blitter seen by D09's probe this session (D09 not run this session: core 3.03 or later, NextReg $01 >= $33), else SKIP why=no-blitter (g6.asm: JNext has no blitter, CSpect 4.5.9 has one)",
    "hazard": "none",
-   "fields": "D13: v = fi (clocks); op / tr / fi / fx = 28 MHz clocks per byte of the opaque copy, the transparent copy, the fill and the fixed-source copy (2 decimals); bad = wrong bytes in the 2048-byte runs (op: copy; tr: even bytes still $AA, odd copied; fi / fx: all $5A). PASS if bad = 0, |tr - op| <= 0.10 and |2 x fi - fx| <= 0.20, else FAIL; SKIP why=no-blitter below core 3.03."
+   "fields": "D13: v = fi (clocks); op / tr / fi / fx = 28 MHz clocks per byte of the opaque copy, the transparent copy, the fill and the fixed-source copy (2 decimals); bad = wrong bytes in the 2048-byte runs (op: copy; tr: even bytes still $AA, odd copied; fi / fx: all $5A). PASS if bad = 0, |tr - op| <= 0.10 and |2 x fi - fx| <= 0.20, else FAIL; SKIP why=no-blitter when D09 found no blitter."
   },
   {
    "id": "D14",
@@ -1724,9 +1866,9 @@
    "purpose": "In blitter Layer 2 X,Y mode, where do bytes land: row-major in 256x192 with only X's low byte counted, column-major in 320x256, from the bank in NextReg $12, destination stride forced to 256?",
    "method": "28 MHz. NextReg $12 = 22 (Layer 2 from page 44; Layer 2 stays off). Source bytes 1-16 at page 38 +$400; a 4 x 4 2D copy, A stride 4: $C3; $D7,$08; $E3 / $E7 / $EB = 4; WR0 / WR1 / WR2 / WR4; then $DF,$13 (physical, 2D, X,Y), X low, X high, Y; $82; $CF; $87. Cases: r256 ($70 = 0) at (10,10), x266 ($70 = 0) at (266,11), c320 ($70 = $10) at (300,10). The target page is cleared first and read back through slot 1.",
    "expect": "docs/DDMA.md:57: X,Y needs physical mode; the destination is row-major in 256x192 and column-major in 320x256 (640 mode X is a byte column); X,Y sets destination stride 256; send the command after the WR4 address. book ch 5 (B-N24): only X's low byte is added (in 256x192); the bank comes from $12, or $13 with the hidden-screen flag; $70 selects the mode.",
-   "needs": "core 3.03 or later (NextReg $01 >= $33), else SKIP why=no-blitter (g6.asm: JNext has no blitter, CSpect 4.5.9 has one); the suite's Layer 2 pages 44-53",
+   "needs": "the blitter seen by D09's probe this session (D09 not run this session: core 3.03 or later, NextReg $01 >= $33), else SKIP why=no-blitter (g6.asm: JNext has no blitter, CSpect 4.5.9 has one); the suite's Layer 2 pages 44-53",
    "hazard": "none (it writes the suite's own Layer 2 pages 44-53 with Layer 2 off; $12 and $70 are put back from the launch snapshot)",
-   "fields": "D14: v = r256 + x266 + c320 (bytes); r256 = wrong bytes for 256x192 at (10,10), block expected at page 44 +$0A0A; x266 = 256x192 at (266,11), expected at page 44 +$0B0A (X high byte ignored); c320 = 320x256 at (300,10), expected at page 53 +$0C0A; each = misplaced bytes of the 4 x 4 block plus other bytes of that page not 0. PASS if v = 0, else FAIL; SKIP why=no-blitter below core 3.03."
+   "fields": "D14: v = r256 + x266 + c320 (bytes); r256 = wrong bytes for 256x192 at (10,10), block expected at page 44 +$0A0A; x266 = 256x192 at (266,11), expected at page 44 +$0B0A (X high byte ignored); c320 = 320x256 at (300,10), expected at page 53 +$0C0A; each = misplaced bytes of the 4 x 4 block plus other bytes of that page not 0. PASS if v = 0, else FAIL; SKIP why=no-blitter when D09 found no blitter."
   },
   {
    "id": "D15",

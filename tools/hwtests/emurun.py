@@ -5,8 +5,8 @@
     then: python tools/hwtests/intake.py DIR/NXSUITE.TXT --platform "<emulator> <version>"
 
 Nothing here names a machine's own paths: the emulator and the SD folder are arguments, and no emulator file is kept in the repository. DIR is the SD folder: the .nex is copied there,
-the suite's NXSUITE.* files end up there. The run presses the menu key (--key, default A = RUN ALL: the
-automatic pass), waits for the suite's DONE flag ($7FFF = $A5, written after NXSUITE.TXT) or --timeout,
+the suite's NXSUITE.* files end up there. The run skips the first-start questions (S), presses the menu key
+(--key, default A = RUN ALL: the automatic pass), waits for the suite's DONE flag ($7FFF = $A5, written after NXSUITE.TXT) or --timeout,
 and stops only the emulator process it started.
 
 - JNext: headless, its esxDOS stub serves DIR (writable); --card is passed as a read-only SD image if given.
@@ -28,6 +28,7 @@ import urllib.request
 
 DONE_ADDR = 0x7FFF
 DONE_VAL = 0xA5
+PRG_FLAGS = 0x6500 + 18         # nxsuite/defs.asm PRGB + PRG_FLAGS
 
 
 # ---------------------------------------------------------------- JNext
@@ -52,7 +53,8 @@ def run_jnext(a, d):
     cmd = [a.exe, '--headless', '--esxdos-stub-root', d, '--esxdos-stub-writable',
            '--load', os.path.join(d, 'nxsuite.nex'), '--script', script,
            '--delayed-automatic-exit-frames', str(int(a.timeout * 50)),
-           '--delayed-keypress-frames', str(int(a.key_after * 50)), a.key]
+           '--delayed-keypress-frames', str(int((a.key_after - 10) * 50)), 's',
+           '--delayed-keypress-frames', str(int(a.key_after * 50)), a.key.lower()]
     if a.card:
         cmd[2:2] = ['--sdcard', a.card, '--sdcard-readonly']
     cfg = os.path.join(d, 'jnext-config')
@@ -113,6 +115,15 @@ def port_free(port):
         return k.connect_ex(('127.0.0.1', port)) != 0
 
 
+def prg_flags(m):
+    """the progress record's flag byte (PRGB $6500 + 18, bank 5): bit 2 = the first-start questions are done"""
+    r = m.tool('read_memory', {'address': '$%04X' % PRG_FLAGS, 'length': 1})
+    try:
+        return int(r['result']['content'][0]['text'].split()[1], 16)
+    except (KeyError, IndexError, ValueError, TypeError):
+        return 0
+
+
 def run_cspect(a, d):
     if not port_free(a.port):
         return 'port %d is in use (another CSpect?): not started' % a.port
@@ -138,6 +149,11 @@ def run_cspect(a, d):
                 time.sleep(1)
         while time.time() - t0 < a.key_after:
             time.sleep(1)
+        for _ in range(30):                             # the first-start questions: S skips them
+            if prg_flags(m) & 4:
+                break
+            m.tool('press_keys', {'keys': 'S'})
+            time.sleep(2)
         m.tool('press_keys', {'keys': a.key})
         while time.time() - t0 < a.timeout:
             time.sleep(5)
@@ -175,7 +191,7 @@ def main(argv=None):
     ap.add_argument('--sd', required=True, help='the SD folder (created; NXSUITE.* files end up here)')
     ap.add_argument('--nex', required=True, help='the built nxsuite.nex')
     ap.add_argument('--key', default='A', help='menu key (A = RUN ALL; 0-9 a group)')
-    ap.add_argument('--key-after', type=float, default=28, help='seconds of emulated time before the key')
+    ap.add_argument('--key-after', type=float, default=35, help='seconds of emulated time before the key')
     ap.add_argument('--timeout', type=float, default=900, help='seconds (emulated for JNext)')
     ap.add_argument('--card', help='JNext: a read-only SD image to boot with')
     ap.add_argument('--hz60', action='store_true', help='CSpect: start at 60 Hz')
