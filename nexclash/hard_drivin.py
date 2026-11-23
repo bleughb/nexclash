@@ -658,12 +658,1211 @@ def unit_tests(patch, states, neg=None):
     return c
 
 
+# ================================================================== route 2a: steps (games/hard_drivin.md "Route 2")
+# Every original update (0x9E34 .. its RET) runs as N sub-steps (N = 1, 2, 4) at 28 MHz, paced to real time:
+# asm/hard_drivin_steps.asm (profile hard_drivin_steps.json). Its reference is Spec below (the prototype's spec.py
+# Spec4, games/hard_drivin.md "Build 2a stage 1-3"); verify_steps runs the build in the host model (NextSteps) and
+# Spec from the same state over every recorded update and compares them byte for byte.
+LOOP, ESC, TOUT = 0x9E34, 0x9E12, 0xA3F2       # update entry; the escape every abort lands on; the time-out path
+CALL_SITES = (0x9E2F, 0xFC4C)                   # the loops' CALL 0x9E34 (CALL t_drv in the build)
+STEP_GATES = {                                  # one-byte data toggles the driver writes per sub-step: open, closed, when
+    0x9E38: (0x28, 0x18, 'first'),              # crash timer 958B (+ F5D5 replay start)
+    0xF4AD: (0xC0, 0xC9, 'first'),              # odometer F4A9 (the whole update's speed)
+    0xFAD6: (0x20, 0x18, 'last'),               # traffic / ghost / scripted-path move
+    0xA3B4: (0x20, 0x18, 'last'),               # clock flash XOR 5A3A
+    0xA3C4: (0x3C, 0x00, 'last'),               # clock sub-count 950B (INC A -> NOP)
+    0xFD5F: (0x20, 0x18, 'last'),               # 91DC countdown
+    0x9E94: (0xC8, 0xC9, 'last'),               # timer 91DD
+    0xA82D: (0x0C, 0x00, 'last'),               # gravity: whole, on the last sub-step
+    0xFD8E: (0x02, 0x00, 'last'),               # message timer 91CF (race)
+    0xFDA8: (0x02, 0x00, 'last'),               # message timer 91CE (practice)
+    0xFDCE: (0x02, 0x00, 'last'),               # message timer 91CF (practice)
+    0xE92E: (0x3A, 0xC9, 'last')}               # obstacle-box crash test
+THROTTLE = {0xA6A4: 500, 0xA6A8: 8000, 0xA6B7: 500}     # step / limit / step words; per N: 500 >> s, 7500 + step
+FRACS = ('PX', 'PY', 'PZ', 'A0', 'A2', 'HD', 'SP', 'VX', 'VY', 'VZ', 'ST')
+W16 = {'PX', 'PY', 'PZ', 'HD', 'SP', 'VX', 'VY', 'VZ'}
+C_RELAX = {1: None, 2: 75, 4: 41}               # (1 - C / 256) ^ N ~ 1 / 2: the original's halving per update
+C4ST, C4UP, C2ST, C2UP = 660, 600, 1350, 1200   # the adaptive N's thresholds (busy lines a sub-step; the .asm's)
+NL = 311
+STEPS_F28 = 1.2                                 # the model's 28 MHz instruction = 1.2 x its T (route 1's JNext ratio)
+BOUNCE_NOP = (0xA4A0, 0xA4B2)                   # NOPed: the collision push-out A4B2..A4DB at the first object
+PRESETS = [(300, 4), (660, 4), (661, 4), (1350, 4), (1351, 4), (600, 2), (601, 2), (1350, 2), (1351, 2), (600, 1),
+           (1200, 1), (1201, 1), (500, 2), (900, 1), (2000, 2), (1000, 2)]   # (c_sub, n_cur): every branch of the rule
+
+
+def _steps_profile_path():
+    return os.path.join(_HERE, '..', 'docs', 'profiles', 'hard_drivin_steps.json')
+
+
+_SPROF = []
+
+
+def load_steps_profile():
+    if not _SPROF:
+        _SPROF.append(json.load(open(_steps_profile_path())))
+    return _SPROF[0]
+
+
+def steps_syms():
+    return {k: int(v, 16) for k, v in load_steps_profile()['hooks']['syms'].items()}
+
+
+_TLEN = {0xC3: 3, 0xC9: 1, 0x3A: 3, 0x2A: 3, 0xE5: 1, 0x3E: 2, 0xED: 4}     # the trampolines' instructions
+
+
+def _check_slots(S, page, rom):
+    """every trampoline (both sides) ends (JP / RET / 0xFF fill) before the next slot (the prototype's stage 2 ran a
+    10-byte trampoline into the next 8-byte slot)"""
+    slots = sorted(v for k, v in S.items() if k.startswith('T_') and '.' not in k)
+    for img, base in ((rom, S['SH']), (page, 0x2000)):
+        for a, nxt in zip(slots, slots[1:]):
+            o = a - base
+            while o < len(img) and img[o] != 0xFF:
+                op = img[o]
+                o += _TLEN[op]
+                if op in (0xC3, 0xC9):
+                    break
+            assert o + base <= nxt, 'trampoline at %04X runs to %04X past %04X' % (a, o + base, nxt)
+
+
+class StepsPatch(HDPatch):
+    """Route 2a: 20 sites -> CALL / JP to the trampolines at SH (original bytes checked), the hook page (bank 18),
+    the alt ROM image (bank 12: Sinclair's ROM 1 + the ROM side of the trampolines + the start-up register block).
+    `page_edits` {page offset: bytes}: a broken build (STEPS_NEG)."""
+    name = "Hard Drivin' steps: N sub-steps an update at 28 MHz, real-time pace"
+
+    def __init__(self, page_edits=None, label='steps'):
+        prof = load_steps_profile()
+        h = prof['hooks']
+        self.S = S = steps_syms()
+        self.label = label
+        self.page_edits = dict(page_edits or {})
+        self.rom_code = bytes.fromhex(h['rom'])
+        page = bytearray.fromhex(h['page'])
+        for off, data in self.page_edits.items():
+            page[off:off + len(data)] = data
+        self.code_page = bytes(page)
+        assert len(self.code_page) == 8192
+        SH = S['SH']
+        assert self.code_page[SH - 0x2000:SH - 0x2000 + 4] == self.rom_code[:4]     # nextreg 0x51,PG_CODE: both sides
+        _check_slots(S, self.code_page, self.rom_code)
+        self.stub_extra = b''
+        self.setup_call = None
+        self.hook_page_data = b''
+        self.uses_printer_buffer = False
+        self.tail_addr = TAIL_ADDR
+        self.regblock = SH + len(self.rom_code)
+        assert self.regblock + 20 <= 0x3D00
+        self.slot1 = (2 * ALT_BANK, self.regblock)
+        self.altrom = (SH, self.regblock + 20)
+        rom = zt.rom48()
+        assert all(b == 0xFF for b in rom[SH:self.regblock + 20])
+        alt = bytearray(rom[0x2000:0x4000])
+        alt[SH - 0x2000:SH - 0x2000 + len(self.rom_code)] = self.rom_code
+        self.page = bytes(alt)
+        self.sites = [(int(a, 16), bytes.fromhex(o), bytes([int(op, 16), S[t] & 255, S[t] >> 8]))
+                      for a, o, op, t, _ in prof['sites']]
+        self.extra_banks = {}
+        self.entry = None
+
+
+def build_steps(z80, out, patch=None):
+    patch = patch or StepsPatch()
+    zt.convert(str(z80), str(out), patch=patch, quiet=True)
+    return patch
+
+
+# ------------------------------------------------------------------------------------- steps: the reference (Spec)
+def _s8(x):
+    x &= 0xFF
+    return x - 0x100 if x & 0x80 else x
+
+
+def _s16(x):
+    x &= 0xFFFF
+    return x - 0x10000 if x & 0x8000 else x
+
+
+class _Ports:
+    """The recorded update's IN values: per port its sequence, replayed from the start at every sub-step (controls
+    held); a 7FFD write pages the game's memory."""
+    def __init__(self, recorded, mem=None):
+        self.seq = collections.defaultdict(list)
+        for x in recorded:
+            self.seq[x[0]].append(x[1])
+        self.mem = mem
+        self.reset()
+
+    def reset(self):
+        self.idx = collections.Counter()
+
+    def read_port(self, regs, port):
+        s = self.seq.get(port)
+        if not s:
+            return 0xFF
+        i = self.idx[port]
+        self.idx[port] += 1
+        return s[min(i, len(s) - 1)]
+
+    def write_port(self, regs, port, value, offset=0):
+        if port & 0x8002 == 0 and self.mem is not None:
+            self.mem.out7ffd(value)
+
+
+class _Game:
+    """The original game from a captured update entry (128K banks, 7FFD, registers, the update's port reads) in
+    SkoolKit's simulator; `patches` {pc: fn(game)} are Spec's hooks (a hook that leaves PC unchanged lets the
+    original instruction run)."""
+    def __init__(self, st):
+        from skoolkit.pagingtracer import Memory
+        from skoolkit.simulator import Simulator
+        from . import simpool
+        self.mem = Memory([list(st['banks'][i * 16384:(i + 1) * 16384]) for i in range(8)], st['o7ffd'], '128K')
+        self.sim = simpool.machine(Simulator, self.mem, list(st['regs']), slot='steps_spec')
+        self.R = self.sim.registers
+        self.patches = {}
+        self.set_ports(st['ports'])
+
+    def set_ports(self, ports):
+        self.ports = _Ports(ports, self.mem)
+        self.sim.set_tracer(self.ports)
+
+    def rw(self, a):
+        return self.mem[a] | self.mem[a + 1] << 8
+
+    def wb(self, a, v):
+        self.mem[a] = v & 0xFF
+
+    def ww(self, a, v):
+        self.mem[a] = v & 0xFF
+        self.mem[a + 1] = (v >> 8) & 0xFF
+
+    def ret(self):
+        R, m = self.R, self.mem
+        R[PC] = m[R[SP]] | m[(R[SP] + 1) & 0xFFFF] << 8
+        R[SP] = (R[SP] + 2) & 0xFFFF
+
+    def call(self, target, retaddr):
+        R, m = self.R, self.mem
+        sp = (R[SP] - 2) & 0xFFFF
+        m[sp], m[(sp + 1) & 0xFFFF] = retaddr & 0xFF, retaddr >> 8
+        R[SP], R[PC] = sp, target
+
+    def state(self):
+        return [bytes(b) for b in self.mem.banks]
+
+    def run_to(self, stops, max_t=80_000_000):
+        R, mem, ops, P = self.R, self.mem, self.sim.opcodes, self.patches
+        t0, first = R[T], True
+        while True:
+            pc = R[PC]
+            if pc in P:
+                P[pc](self)
+                if R[PC] != pc:
+                    first = False
+                    continue
+            if not first and pc in stops:
+                return pc
+            first = False
+            ops[mem[pc]]()
+            if R[T] - t0 > max_t:
+                raise RuntimeError('runaway at %04X' % pc)
+
+
+class Spec:
+    """The steps build's exact integer rules (games/hard_drivin.md "Build 2a stage 1" / "stage 3"; s = log2 N).
+    Fractions: one byte F per accumulated variable below the game's value V (true value V + (F - 0x80) / 256; 0x80 at
+    boot); a shadow SH holds the V the hook last wrote: V != SH (other game code wrote it) -> F := 0x80.
+    pos   A834: [P:F] (24-bit) += (vel16 << 8) >> s per axis (exact for N | 256).
+    ang   A856: A98F / A991 [A:F] += (rate8 << 8) >> s; heading [A990:A9A5:F] += (A9A3:A9A6 << 8) >> s. Entered from
+          A7BA (return A7BD): relaxation g = target (960D / 960E) - A, gap = g * 256 + 0x80 - F (16-bit signed
+          clamp), [A:F] += (gap * C + 128) >> 8, C = 75 / 41 at N = 2 / 4.
+    vel   (skid, 965D = 1) A71B saves V0; at A793 per axis [V0:F] += ((vel - V0) << 8) >> s.
+    speed (road, 965D = 0) A8BB: [965B:F] += ((HL - 965B) << 8) >> s when the previous sub-step rebuilt the velocity
+          from the speed (A7F6 saved VR, VRF) and V0 = VR in x and z; else the whole change, F := 0x80.
+    steer A6D2 / A6DC: [96AC:F] (signed) -+= (30 << 8) >> s, clamped to +-120.0.
+    gates STEP_GATES (driver, per sub-step); throttle words 500 >> s; N = 1: every hook the original path.
+    bounce A4DB JP A834 (push-out): one WHOLE step at s > 0 (fractions kept).
+    guards (all N): CEB9 (910A) >= 12h -> RET (a clip vertex past 9E11); C7C0 a vertex y (9E01 + 2i) >= 80h -> RET
+          (span fill past row 127); A0E7 / D758 B := B & 7Fh clamped to 1..6, A := 7, on at A0EB / D75C.
+    plain the time-out update (950B = 4, 91DC = 950C = 950D = 0 at the driver entry): N = 1, no hook state change."""
+
+    def __init__(self):
+        self.N, self.s, self.I, self.C = 1, 0, 0, None
+        self.F = {k: 0x80 for k in FRACS}
+        self.SH = {k: None for k in FRACS}       # None: not written by a hook yet -> F reset at the first use
+        self.V0 = [0, 0, 0]
+        self.VR = None
+        self.VRF = False
+        self.plain = False
+        self.stats = collections.Counter()
+
+    def install(self, g):
+        p = g.patches
+        p.update({0xA834: self.h_pos, 0xA4DB: self.h_bounce, 0xA856: self.h_ang, 0xA71B: self.h_vpre,
+                  0xA793: self.h_vpost, 0xA8BB: self.h_speed, 0xA7F6: self.h_vr, 0xCEB9: self.h_guard,
+                  0xA6D2: lambda r: self.h_steer(r, -30), 0xA6DC: lambda r: self.h_steer(r, 30),
+                  0xC7C0: self.h_fill, 0xA0E7: self.h_shift, 0xD758: self.h_shift})
+        for a, (op, cl, when) in STEP_GATES.items():
+            assert g.mem[a] == op, 'gate %04X holds %02X' % (a, g.mem[a])
+        for a, v in THROTTLE.items():
+            assert g.rw(a) == v, 'throttle word %04X' % a
+
+    def fcheck(self, k, cur):
+        if self.SH[k] != cur:
+            self.F[k] = 0x80
+
+    def acc16w(self, g, addr, k, inc):
+        v = g.rw(addr)
+        self.fcheck(k, v)
+        t = (((v << 8) | self.F[k]) + inc) & 0xFFFFFF
+        g.ww(addr, t >> 8)
+        self.F[k], self.SH[k] = t & 0xFF, t >> 8
+
+    def acc8(self, g, addr, k, inc):
+        v = g.mem[addr]
+        self.fcheck(k, v)
+        t = (((v << 8) | self.F[k]) + inc) & 0xFFFF
+        g.wb(addr, t >> 8)
+        self.F[k], self.SH[k] = t & 0xFF, t >> 8
+
+    def h_pos(self, g, whole=False):
+        if self.s == 0:
+            return
+        self.stats['bounce' if whole else 'pos'] += 1
+        for p, v, k in ((0xA988, 0xA99C, 'PX'), (0xA98A, 0xA99E, 'PY'), (0xA98C, 0xA9A0, 'PZ')):
+            self.acc16w(g, p, k, (_s16(g.rw(v)) << 8) >> (0 if whole else self.s))
+        g.ret()
+
+    def h_bounce(self, g):
+        self.h_pos(g, whole=True)               # s = 0: JP A834 runs (the original)
+
+    def h_ang(self, g):
+        if self.s == 0:
+            return
+        m, sp = g.mem, g.R[SP]
+        relax = (m[sp] | m[(sp + 1) & 0xFFFF] << 8) == 0xA7BD
+        self.stats['relax' if relax else 'ang'] += 1
+        for a, rate, tgt, k in ((0xA98F, 0xA9A2, 0x960D, 'A0'), (0xA991, 0xA9A4, 0x960E, 'A2')):
+            if relax:
+                self.fcheck(k, m[a])
+                gap = max(-32768, min(32767, _s8(m[tgt] - m[a]) * 256 + 0x80 - self.F[k]))
+                inc = (gap * self.C + 128) >> 8
+            else:
+                inc = (_s8(m[rate]) << 8) >> self.s
+            self.acc8(g, a, k, inc)
+        hd = m[0xA990] << 8 | m[0xA9A5]
+        self.fcheck('HD', hd)
+        t = (((hd << 8) | self.F['HD']) + ((_s16(m[0xA9A3] << 8 | m[0xA9A6]) << 8) >> self.s)) & 0xFFFFFF
+        m[0xA990], m[0xA9A5] = t >> 16, (t >> 8) & 0xFF
+        self.F['HD'], self.SH['HD'] = t & 0xFF, t >> 8
+        g.ret()
+
+    def h_vpre(self, g):
+        if not self.plain:
+            self.V0 = [g.rw(a) for a in (0xA99C, 0xA99E, 0xA9A0)]
+
+    def h_vpost(self, g):
+        if self.s == 0 or g.mem[0x965D] != 1:
+            return
+        self.stats['skid'] += 1
+        for a, v0, k in zip((0xA99C, 0xA99E, 0xA9A0), self.V0, ('VX', 'VY', 'VZ')):
+            d = _s16(g.rw(a) - v0)
+            g.ww(a, v0)
+            self.acc16w(g, a, k, (d << 8) >> self.s)
+        g.call(0xA88B, 0xA796)
+
+    def h_vr(self, g):
+        if not self.plain:
+            self.VR = [g.rw(a) for a in (0xA99C, 0xA99E, 0xA9A0)]
+            self.VRF = True
+
+    def h_speed(self, g):
+        if self.plain:
+            return
+        if self.s == 0 or g.mem[0x965D] != 0:
+            self.VRF = False
+            return
+        vrf, self.VRF = self.VRF, False
+        if not (vrf and self.V0[0] == self.VR[0] and self.V0[2] == self.VR[2]):
+            self.stats['speed_whole'] += 1
+            self.F['SP'], self.SH['SP'] = 0x80, None
+            return
+        self.stats['speed'] += 1
+        R = g.R
+        old = g.rw(0x965B)                      # not written here: F568 erases the needle drawn for the old value
+        self.fcheck('SP', old)
+        t = (((old << 8) | self.F['SP']) + ((_s16((R[6] << 8 | R[7]) - old) << 8) >> self.s)) & 0xFFFFFF
+        self.F['SP'], self.SH['SP'] = t & 0xFF, t >> 8
+        R[6], R[7] = t >> 16, (t >> 8) & 0xFF
+        g.call(0xF568, 0xA8BE)
+
+    def h_steer(self, g, step):
+        if self.s == 0:
+            return
+        self.stats['steer'] += 1
+        v = g.mem[0x96AC]
+        self.fcheck('ST', v)
+        t = max(-120 * 256 + 0x80, min(120 * 256 + 0x80, _s8(v) * 256 + self.F['ST'] + ((step << 8) >> self.s)))
+        g.wb(0x96AC, (t >> 8) & 0xFF)
+        self.F['ST'], self.SH['ST'] = t & 0xFF, (t >> 8) & 0xFF
+        g.ret()
+
+    def h_guard(self, g):
+        if g.mem[0x910A] >= 0x12:
+            self.stats['guard_drop'] += 1
+            g.ret()
+
+    def h_fill(self, g):
+        m = g.mem
+        if any(m[0x9E01 + 2 * i] >= 0x80 for i in range(m[0x910A] // 2)):
+            self.stats['fill_skip'] += 1
+            g.ret()
+
+    def h_shift(self, g):
+        R = g.R
+        b = R[2] & 0x7F
+        if b == 0 or b > 6:
+            self.stats['shift_clamp'] += 1
+            b = 1 if b == 0 else 6
+        R[2], R[0] = b, 7
+        R[PC] += 4
+
+    def set_n(self, g, N):
+        self.N, self.s, self.C = N, {1: 0, 2: 1, 4: 2}[N], C_RELAX[N]
+        step = 500 >> self.s
+        g.ww(0xA6A4, step)
+        g.ww(0xA6B7, step)
+        g.ww(0xA6A8, 7500 + step)
+
+    def set_gates(self, g, i):
+        self.I = i
+        for a, (op, cl, when) in STEP_GATES.items():
+            g.wb(a, op if (i == 0 if when == 'first' else i == self.N - 1) else cl)
+
+    def restore(self, g):
+        for a, (op, cl, when) in STEP_GATES.items():
+            g.wb(a, op)
+        for a, v in THROTTLE.items():
+            g.ww(a, v)
+
+
+def timeout_predicted(m):
+    return m[0x950B] == 4 and m[0x91DC] == 0 and m[0x950C] == 0 and m[0x950D] == 0
+
+
+def whole_update(g, spec, N, cont=0x38D0):
+    """One original update as the build runs it, from the loop's CALL (PC 0x9E34, the loop's return address on the
+    stack): N sub-steps (gates per sub-step, (S) = cont, JP 0x9E34), every data patch back, RET to the loop, the
+    loop code once to its next CALL. -> ('ok', N) at the next entry, or ('escape', where)."""
+    R, m = g.R, g.mem
+    assert R[PC] == LOOP and m.o7ffd & 7 == 0, (hex(R[PC]), m.o7ffd)
+    sp = R[SP]
+    ret = m[sp] | m[sp + 1] << 8
+    spec.plain = timeout_predicted(m)
+    if spec.plain:                              # the original update itself (the loop's return address stays)
+        spec.stats['timeout_n1'] += 1
+        spec.set_n(g, 1)
+        spec.set_gates(g, 0)
+        g.ports.reset()
+        pc = g.run_to({ret, ESC, TOUT})
+        spec.restore(g)
+        if pc != ret:
+            return 'escape', pc
+    else:
+        R[SP] = (sp + 2) & 0xFFFF
+        spec.set_n(g, N)
+        for i in range(N):
+            spec.set_gates(g, i)
+            g.ports.reset()
+            g.call(LOOP, cont)
+            pc = g.run_to({cont, ESC, TOUT})
+            if pc != cont:
+                spec.restore(g)
+                return 'escape', pc
+        spec.restore(g)
+        g.call(ret, ret)                        # PUSH ret; RET: the slot below SP holds ret as in the original
+        g.ret()
+    pc = g.run_to(set(CALL_SITES) | {ESC})
+    if pc == ESC:
+        return 'escape', pc
+    g.call(LOOP, pc + 3)                        # the loop's CALL: the next update starts
+    return 'ok', N
+
+
+def warm_game(prev, cur, spec):
+    """The game at update `cur` with Spec installed and its hook history (VR / VRF): update `prev` run at N = 1 first
+    (= the original byte for byte); without prev (or when it escapes) the hook state at boot."""
+    if prev is not None and not prev['esc']:
+        g = _Game(prev)
+        spec.install(g)
+        try:
+            res = whole_update(g, spec, 1)
+        except (RuntimeError, AssertionError):
+            res = ('escape', None)
+        if res[0] == 'ok':
+            g.set_ports(cur['ports'])
+            spec.stats.clear()
+            return g
+        spec.__init__()
+    g = _Game(cur)
+    spec.install(g)
+    return g
+
+
+# ------------------------------------------------------------------------------------- steps: the host model
+class NextSteps(Next):
+    """Route 1's host model (MMU, alt ROM, NextRegs) for the steps build from a captured 128K state: every game bank
+    as pages 2b / 2b + 1, slot 6-7 = the 7FFD bank; the 28 MHz clock in float T (a 3.5 MHz instruction 8 x its T, a
+    28 MHz one f28 x), the video line (clock / 1824 + line0) mod 311 on NR 0x1E / 0x1F; a write to 7FFD also maps
+    the ROM in slots 0-1 (the Next; JNext); other port reads = the recorded update's (_Ports). No interrupts (play
+    runs with them off)."""
+
+    def __init__(self, st, patch, f28=STEPS_F28, line0=0):
+        from . import simpool
+        self.S = S = patch.S
+        rom = bytearray(zt.rom48())
+        rom[S['SH']:S['SH'] + len(patch.rom_code)] = patch.rom_code
+        self.rom = bytes(rom)
+        bk = [bytearray(st['banks'][i * 16384:(i + 1) * 16384]) for i in range(8)]
+        for a, old, new in patch.sites:
+            b, o = _where(a)
+            assert bytes(bk[b][o:o + len(old)]) == old, 'site %04X' % a
+            bk[b][o:o + len(new)] = new
+        self.pages = {36: list(patch.code_page), 37: [0] * 8192}
+        for b in range(8):
+            self.pages[2 * b], self.pages[2 * b + 1] = list(bk[b][:8192]), list(bk[b][8192:])
+        bank = st['o7ffd'] & 7
+        self.slots = [0xFF, 0xFF, 10, 11, 4, 5, 2 * bank, 2 * bank + 1]
+        mem = list(self.rom[:0x4000])
+        for s in range(2, 8):
+            mem += self.pages[self.slots[s]]
+            self.pages[self.slots[s]] = None
+        self.sim = simpool.machine(_sim_class(), mem, list(st['regs']), slot='steps_model', copy=True)
+        self.mem = self.sim.memory
+        self.nr = {7: 0}
+        self.sel = 0
+        self.sim.int_active = 0
+        z80n.install(self.sim, nextreg=self.nextreg)
+        self.sim.set_tracer(self)
+        self.R = self.sim.registers
+        self.clock = 0.0
+        self.f28, self.line0 = f28, line0
+        self.bad = []
+        self.ports = _Ports(st['ports'])
+
+    def line(self):
+        return int(self.clock / LINE_T + self.line0) % NL
+
+    def read_port(self, regs, port):
+        if port == 0x253B:
+            if self.sel == 7:
+                return (self.nr[7] & 3) * 0x11
+            if self.sel in (0x1E, 0x1F):
+                ln = self.line()
+                return ln >> 8 if self.sel == 0x1E else ln & 255
+            if 0x50 <= self.sel <= 0x57:
+                return self.slots[self.sel - 0x50]
+            return self.nr.get(self.sel, 0)
+        if port == 0x243B:
+            return self.sel
+        return self.ports.read_port(regs, port)
+
+    def write_port(self, regs, port, value, *x):
+        if port == 0x243B:
+            self.sel = value
+        elif port == 0x253B:
+            self.nextreg(self.sel, value)
+        elif port & 0x8002 == 0:                # 7FFD: the bank at C000; on the Next MMU slots 0-1 back to ROM
+            self.map(6, 2 * (value & 7))
+            self.map(7, 2 * (value & 7) + 1)
+            self.map(0, 0xFF)
+            self.map(1, 0xFF)
+
+    def pb(self, a):
+        return self.page(36)[a - 0x2000]
+
+    def w16(self, a):
+        p = self.page(36)
+        return p[a - 0x2000] | p[a - 0x1FFF] << 8
+
+    def setpb(self, a, v):
+        if 36 in self.slots:
+            self.mem[self.slots.index(36) * 8192 + a - 0x2000] = v & 255
+        else:
+            self.pages[36][a - 0x2000] = v & 255
+
+    def banks(self):
+        return [bytes(self.page(2 * b) + self.page(2 * b + 1)) for b in range(8)]
+
+    def run(self, stops, max_ins=200_000_000, watch=None, first=True):
+        R, m, ops, nr, f28 = self.R, self.mem, self.sim.opcodes, self.nr, self.f28
+        n, skip = 0, first
+        while True:
+            pc = R[PC]
+            if not skip and pc in stops:
+                return pc
+            skip = False
+            if watch and pc in watch:
+                watch[pc](self)
+            if R[IFF]:
+                self.bad.append('interrupts on at %04X' % pc)
+                raise RuntimeError('interrupts on at %04X' % pc)
+            t0 = R[T]
+            ops[m[pc]]()
+            self.clock += (R[T] - t0) * (f28 if nr[7] & 3 else 8)
+            n += 1
+            if n > max_ins:
+                raise RuntimeError('instruction limit at %04X' % R[PC])
+
+
+# ------------------------------------------------------------------------------------- steps: one case
+_REC = {k: 'fr_' + k.lower() for k in FRACS}
+REGS_STEPS = [i for i in range(24) if i not in (13, 15)]       # all registers but R (PC: compared on its own)
+
+
+def put_state(n, sp):
+    """Spec's hook state -> the hook page"""
+    S = n.S
+    for k in FRACS:
+        a, sh = S[_REC[k]], sp.SH[k]
+        for i, v in enumerate((sp.F[k], (sh or 0) & 255, (sh or 0) >> 8 & 255, 0 if sh is None else 1)):
+            n.setpb(a + i, v)
+    for name, vals in (('v0', sp.V0), ('vr', sp.VR or [0, 0, 0])):
+        for i, v in enumerate(vals):
+            n.setpb(S[name] + 2 * i, v & 255)
+            n.setpb(S[name] + 2 * i + 1, v >> 8 & 255)
+    n.setpb(S['vrf'], int(sp.VRF))
+
+
+def cmp_state(n, sp):
+    """the hook page vs Spec's hook state -> differences"""
+    S, out = n.S, []
+    for k in FRACS:
+        a = S[_REC[k]]
+        f, lo, hi, v = (n.pb(a + i) for i in range(4))
+        sh = sp.SH[k]
+        if f != sp.F[k]:
+            out.append('F_%s %02X/%02X' % (k, f, sp.F[k]))
+        if (sh is None) != (v == 0):
+            out.append('SH_%s valid %d/%s' % (k, v, sh))
+        elif sh is not None and (lo | (hi << 8 if k in W16 else 0)) != sh:
+            out.append('SH_%s %04X/%04X' % (k, lo | (hi << 8 if k in W16 else 0), sh))
+    if [n.w16(S['v0'] + 2 * i) for i in range(3)] != [x & 0xFFFF for x in sp.V0]:
+        out.append('V0')
+    if sp.VR is not None and [n.w16(S['vr'] + 2 * i) for i in range(3)] != [x & 0xFFFF for x in sp.VR]:
+        out.append('VR')
+    if n.pb(S['vrf']) != int(sp.VRF):
+        out.append('VRF %d/%d' % (n.pb(S['vrf']), sp.VRF))
+    return out
+
+
+def _mem_diff(n, g, patch):
+    """all 128K: the build's banks vs Spec's; a site byte may hold the site's new byte where Spec has the original"""
+    exp = {}
+    for a, old, new in patch.sites:
+        for i in range(len(old)):
+            b, o = _where(a + i)
+            exp[(b, o)] = (old[i], new[i])
+    a, b = n.banks(), g.state()
+    out = []
+    for bk in range(8):
+        if a[bk] != b[bk]:
+            for o in range(16384):
+                if a[bk][o] != b[bk][o] and exp.get((bk, o)) != (b[bk][o], a[bk][o]):
+                    out.append('%d:%04X %02X/%02X' % (bk, o, a[bk][o], b[bk][o]))
+    return out
+
+
+class _PaceRec:
+    """the model's pace records: per update the entry clock, the views (lclk at the copy vs its target), the exit"""
+    def __init__(self, S):
+        self.S, self.ups, self.cur = S, [], None
+
+    def watch(self):
+        return {self.S['T_DRV']: self.entry, 0xDC37: self.view, self.S['T_DEXIT']: self.exit}
+
+    def entry(self, n):
+        self.cur = {'E': n.clock, 'views': []}
+
+    def view(self, n):
+        if self.cur is not None and n.pb(self.S['in_drv']):
+            self.cur['views'].append((n.w16(self.S['lclk']) - n.w16(self.S['tgt']) + 32768) % 65536 - 32768)
+
+    def exit(self, n):
+        S, c = self.S, self.cur
+        if c is None or not n.pb(S['x_live']) or n.w16(S['t_exit']) != n.w16(S['lclk']) or n.pb(S['in_drv']):
+            return                              # T_DEXIT is also the guards' way back outside the driver
+        c.update(X=n.clock, N=n.pb(S['hs_n']), c_sub=n.w16(S['c_sub']), n_cur=n.pb(S['n_cur']))
+        self.ups.append(c)
+        self.cur = None
+
+
+def _z80_update(n, rec=None):
+    """the build from CALL t_drv's target to the next (or an escape: 9E12, A3F2) -> ('ok' | 'escape', pc)"""
+    S = n.S
+    w = rec.watch() if rec else {}
+
+    def spd(x):
+        if x.nr[7] != x.pb(S['g_spd']):
+            x.bad.append('NR7 %d at %04X' % (x.nr[7], x.R[PC]))
+    w[LOOP] = lambda x: x.ports.reset()
+    w[0x9E57] = w[0x9E6E] = spd
+    pc = n.run({S['T_DRV'], ESC, TOUT}, watch=w)
+    return ('ok', pc) if pc == S['T_DRV'] else ('escape', pc)
+
+
+def _esc_check(n):
+    """after an escape: the page unmapped, in_drv clear, the incoming speed; at 9E12 checked after its hook (F487),
+    x_live clear there"""
+    bad, S = [], n.S
+
+    def chk(where):
+        if n.slots[1] != 0xFF:
+            bad.append('%s: slot 1 = page %d' % (where, n.slots[1]))
+        if n.pb(S['in_drv']):
+            bad.append('%s: in_drv set' % where)
+        if n.nr[7] != 0:
+            bad.append('%s: NR7 %d' % (where, n.nr[7]))
+    if n.R[PC] == ESC:
+        try:
+            n.run({0xF487}, max_ins=2000)
+        except RuntimeError as e:
+            bad.append('9E12 hook: %s' % e)
+        chk('F487')
+        if n.pb(S['x_live']):
+            bad.append('x_live set after 9E12')
+    else:
+        chk('stop %04X' % n.R[PC])
+    return bad
+
+
+def _compare(n, g, sp, rz, rs, patch):
+    """the build (model n) vs Spec (game g, hook state sp) after an update or an escape: all 128K (site bytes as
+    built), registers but R, PC (the build at t_drv = Spec at 0x9E34), the hook state; after the driver: NR 7 back,
+    slot 1 = ROM, in_drv clear; after an escape: _esc_check"""
+    if rz[0] != rs[0] or (rz[0] == 'escape' and rz[1] != rs[1]):
+        return ['result %s / Spec %s' % (rz, rs)]
+    bad = []
+    dr = ['%s %X/%X' % (NAMES[i], n.R[i], g.R[i]) for i in REGS_STEPS if n.R[i] != g.R[i]]
+    if dr:
+        bad.append('regs ' + ' '.join(dr))
+    if rz[0] == 'ok':
+        if g.R[PC] != LOOP:
+            bad.append('Spec PC %04X' % g.R[PC])
+        if n.nr[7] != 0:
+            bad.append('NR7 %d after the driver' % n.nr[7])
+        if n.slots[1] != 0xFF:
+            bad.append('slot 1 = page %d after the driver' % n.slots[1])
+        if n.pb(n.S['in_drv']):
+            bad.append('in_drv set after the driver')
+    else:
+        if n.R[PC] != g.R[PC]:
+            bad.append('PC %04X / Spec %04X' % (n.R[PC], g.R[PC]))
+        bad += _esc_check(n)                    # at 9E12 this runs the hook (CALL F487): its return address aside
+        if n.R[PC] == 0xF487:
+            for a in (n.R[SP], (n.R[SP] + 1) & 0xFFFF):
+                n.mem[a] = g.mem[a]
+    d = _mem_diff(n, g, patch)
+    if d:
+        bad.append('RAM %d bytes: %s' % (len(d), ' '.join(d[:10])))
+    hs = cmp_state(n, sp)
+    if hs:
+        bad.append('hook state: ' + ' '.join(hs[:8]))
+    if n.bad:
+        bad.append('model: %s' % n.bad[:3])
+    return bad
+
+
+def rule(c, cur):
+    """the adaptive N from the last update's busy lines a sub-step c and the current N (the .asm's drv)"""
+    if cur == 4:
+        return 4 if c <= C4ST else 2 if c <= C2ST else 1
+    if c <= C4UP:
+        return 4
+    return 2 if c <= (C2ST if cur == 2 else C2UP) else 1
+
+
+MODS = {                                        # synthetic states (cases the recording does not reach)
+    'skid': lambda m: [(0x965D, 1)],                                    # skid mode in a road state
+    'skidv': lambda m: [(0x965D, 1), (0xA99C, 0x00), (0xA99D, 0x04), (0xA9A0, 0x00), (0xA9A1, 0xFC)],  # + velocity
+    'steerp': lambda m: [(0x96AC, 0x76)], 'steerm': lambda m: [(0x96AC, 0x8A)],     # steering past the clamps
+    'steerpl': lambda m: [(0x96AC, 0x5C)], 'steerml': lambda m: [(0x96AC, 0xA4)],   # ... at the last sub-step
+    'tilt': lambda m: [(0xA98F, (m[0xA98F] + 0x20) & 255), (0xA991, (m[0xA991] - 0x20) & 255)],   # relaxation gap
+    'hdcarry': lambda m: [(0xA9A5, 0xFF)], 'hdborrow': lambda m: [(0xA9A5, 0x00)],  # heading low byte at the edge
+    'bounce': lambda m: [(a, 0) for a in range(*BOUNCE_NOP)],         # the push-out at the first object
+    'timeout': lambda m: [(0x950B, 4), (0x950C, 0), (0x950D, 0), (0x91DC, 0)]}     # the time-out update
+
+
+def _apply_mod(g, mod):
+    for a, v in MODS[mod](g.mem) if mod in MODS else []:
+        g.mem[a] = v
+
+
+_PATCHES = {}
+
+
+def _steps_patch(edits):
+    key = tuple(sorted((k, bytes(v)) for k, v in (edits or {}).items()))
+    if key not in _PATCHES:
+        _PATCHES[key] = StepsPatch(dict(key), 'steps' if not key else 'neg')
+    return _PATCHES[key]
+
+
+def _model(g, sp, patch, nforce=0, preset=None, line0=0, f28=STEPS_F28):
+    n = NextSteps({'banks': b''.join(g.state()), 'o7ffd': g.mem.o7ffd, 'regs': list(g.R), 'ports': []}, patch,
+                  f28=f28, line0=line0)
+    n.ports = g.ports.__class__([], None)
+    n.ports.seq = g.ports.seq
+    n.R[PC] = n.S['T_DRV']
+    put_state(n, sp)
+    n.setpb(n.S['n_force'], nforce)
+    if preset:
+        n.setpb(n.S['c_sub'], preset[0] & 255)
+        n.setpb(n.S['c_sub'] + 1, preset[0] >> 8)
+        n.setpb(n.S['n_cur'], preset[1])
+    return n
+
+
+def steps_case(job):
+    """One recorded update (or a synthetic one): Spec's warm state is the start of both; the build runs the update
+    in the model (its N: n_force, or the adaptive rule from a preset (c_sub, n_cur)), then Spec with that N. job:
+    prev, cur (captured update entries: banks, o7ffd, regs, ports, esc), nxt (the next entry: N = 1 is compared
+    with the recording too), n (1 / 2 / 4, or 0 = adaptive with preset), mod, edits (a negative control's page
+    edits), line0. -> {'bad': [...], 'res', 'N', 'stats'}"""
+    patch = _steps_patch(job.get('edits'))
+    sp = Spec()
+    g = warm_game(None if job.get('mod') == 'cold' else job.get('prev'), job['cur'], sp)
+    if job.get('mod'):
+        _apply_mod(g, job['mod'])
+    nf, pre = job.get('n', 0), job.get('preset')
+    n = _model(g, sp, patch, nforce=nf, preset=pre, line0=job.get('line0', 0))
+    try:
+        rz = _z80_update(n)
+    except RuntimeError as e:
+        rz = ('error', str(e))
+    nused = n.pb(n.S['hs_n'])
+    try:
+        rs = whole_update(g, sp, nused if nused in (1, 2, 4) else 1, cont=n.S['T_CONT'])
+    except (RuntimeError, AssertionError) as e:
+        rs = ('error', repr(e))
+    bad = _compare(n, g, sp, rz, rs, patch) if rz[0] != 'error' else ['model: %s' % rz[1]]
+    if rs[0] == 'ok' and not sp.stats.get('timeout_n1'):
+        want = nf or rule(*pre)
+        if nused != want:
+            bad.append('N %d / expected %d' % (nused, want))
+    if rs[0] == 'ok' and nf == 1 and job.get('nxt') is not None and not job.get('mod'):
+        want = job['nxt']
+        st = g.state()
+        d = sum(1 for b in range(8) for o in range(16384)
+                if st[b][o] != want['banks'][b * 16384 + o]) if b''.join(st) != want['banks'] else 0
+        dr = [NAMES[i] for i in REGS_STEPS + [PC] if g.R[i] != want['regs'][i]]
+        if d or dr:
+            bad.append('Spec N = 1 vs the recording: %d bytes, regs %s' % (d, dr))
+    return {'bad': bad, 'res': rs, 'N': nused, 'stats': dict(sp.stats), 'skip': n.w16(n.S['n_skip']),
+            'drop': n.w16(n.S['n_drop']), 'clamp': n.pb(n.S['n_clamp'])}
+
+
+def steps_run(job):
+    """K consecutive updates from a captured start, both sides on their own (the same recorded inputs; the build's
+    pace state evolves: the real schedule), compared after each. job: prev, cur, ports (one list per update), n (0 =
+    adaptive from boot values), edits, mod. -> {'rows': [...], 'pace': {...}}"""
+    patch = _steps_patch(job.get('edits'))
+    sp = Spec()
+    g = warm_game(job.get('prev'), job['cur'], sp)
+    if job.get('mod'):
+        _apply_mod(g, job['mod'])
+    nf = job.get('n', 0)
+    n = _model(g, sp, patch, nforce=nf, line0=job.get('line0', 0))
+    rec = _PaceRec(n.S)
+    rows, last = [], None
+    for k, ports in enumerate(job['ports']):
+        g.set_ports(ports)
+        n.ports.seq = g.ports.seq
+        nrec = len(rec.ups)
+        try:
+            rz = _z80_update(n, rec)
+        except RuntimeError as e:
+            rz = ('error', str(e))
+        nused = n.pb(n.S['hs_n'])
+        try:
+            rs = whole_update(g, sp, nused if nused in (1, 2, 4) else 1, cont=n.S['T_CONT'])
+        except (RuntimeError, AssertionError) as e:
+            rs = ('error', repr(e))
+        bad = _compare(n, g, sp, rz, rs, patch) if rz[0] != 'error' else ['model: %s' % rz[1]]
+        cur = rec.ups[-1] if len(rec.ups) == nrec + 1 else None
+        if rs[0] == 'ok' and not sp.stats.get('timeout_n1'):
+            want = nf or (rule(last['c_sub'], last['n_cur']) if last else rule(1000, 2))
+            if nused != want:
+                bad.append('N %d / rule %d' % (nused, want))
+        last = cur or last
+        rows.append({'k': k, 'bad': bad, 'res': rs, 'N': nused, 'stats': dict(sp.stats)})
+        sp.stats.clear()
+        if bad or rs[0] != 'ok':
+            break
+    U = rec.ups
+    dur = [(b['E'] - a['E']) / (NL * LINE_T) for a, b in zip(U, U[1:])]
+    return {'rows': rows, 'pace': {'dur': dur, 'early': sum(1 for x in U for v in x['views'] if v < 0),
+                                   'views': sum(len(x['views']) for x in U), 'N': [x['N'] for x in U]}}
+
+
+def hook_case(job):
+    """A render guard alone, from a captured state with crafted inputs: the build's trampoline + hook (in or out of
+    the driver: in_drv, the page mapped as there) vs Spec's hook + the original instructions, to the first game
+    address after the replaced ones. job: cur, site (CEB9 / C7C0 / A0E7 / D758), pokes {addr: byte}, regs {index:
+    value}, in_drv, edits -> {'bad': [...]}"""
+    patch = _steps_patch(job.get('edits'))
+    site, ret = job['site'], 0x6B80             # a return address inside the unused tail area
+    stops = {0xCEB9: {0xCEBC, ret}, 0xC7C0: {0xC7C4, ret}, 0xA0E7: {0xA0EB}, 0xD758: {0xD75C}}[site]
+    sp = Spec()
+    g = _Game(job['cur'])
+    sp.install(g)
+    for a, v in job.get('pokes', {}).items():
+        g.mem[a] = v
+    for i, v in job.get('regs', {}).items():
+        g.R[i] = v
+    g.call(site, ret)
+    n = _model(g, sp, patch)
+    n.R[PC] = site
+    if job.get('in_drv'):
+        n.setpb(n.S['in_drv'], 1)
+        n.nextreg(0x51, 36)
+    try:
+        n.run(stops, max_ins=100_000)
+        pz = n.R[PC]
+    except RuntimeError as e:
+        return {'bad': ['model: %s' % e]}
+    g.run_to(stops)
+    bad = []
+    if pz != g.R[PC]:
+        bad.append('PC %04X / Spec %04X' % (pz, g.R[PC]))
+    dr = ['%s %X/%X' % (NAMES[i], n.R[i], g.R[i]) for i in REGS_STEPS if n.R[i] != g.R[i]]
+    if dr:
+        bad.append('regs ' + ' '.join(dr))
+    d = _mem_diff(n, g, patch)
+    if d:
+        bad.append('RAM %s' % d[:6])
+    if n.slots[1] != (36 if job.get('in_drv') else 0xFF):
+        bad.append('slot 1 = %d' % n.slots[1])
+    return {'bad': bad}
+
+
+def _pool_map(fn, jobs, workers):
+    if workers <= 1 or len(jobs) <= 1:
+        return [fn(j) for j in jobs]
+    from concurrent.futures import ProcessPoolExecutor
+    with ProcessPoolExecutor(max_workers=min(workers, len(jobs))) as ex:
+        return list(ex.map(fn, jobs, chunksize=1))
+
+
+def _workers():
+    return int(os.environ.get('NEXCLASH_WORKERS', 0)) or min(16, os.cpu_count() or 1)
+
+
+# ------------------------------------------------------------------------------------- steps: the verify
+_IN_RC = {0x40: 2, 0x48: 3, 0x50: 4, 0x58: 5, 0x60: 6, 0x68: 7, 0x78: 0}   # IN r,(C): the register it loads
+RUN_STARTS = (10, 40, 150, 300, 640, 1040, 1200, 1500)         # K-update runs (unit tests): spread over the RZX
+RUN_K = 20
+
+
+def capture_updates(rzx_path, on_update, stop=None):
+    """Play the recording; at every update-loop entry 0x9E34 the 128K state (banks, 7FFD, registers); per update its
+    port reads [(port, value)] in order and whether it reached 0x9E12. on_update(prev, cur, nxt) once cur's reads
+    are complete (at the next entry). -> (updates, frames)"""
+    from . import simrun
+    sim, ups, pend = [None], [], [None]
+
+    class H:
+        def on_sim(s, x):
+            sim[0] = x
+
+        def before(s, pc):
+            x = sim[0]
+            m, R = x.memory, x.registers
+            if pc == LOOP:
+                ups.append({'u': len(ups), 'banks': b''.join(bytes(b) for b in m.banks), 'o7ffd': m.o7ffd,
+                            'regs': list(R), 'ports': [], 'esc': False})
+                if len(ups) >= 2:
+                    on_update(ups[-3] if len(ups) >= 3 else None, ups[-2], ups[-1])
+                if len(ups) > 3:
+                    ups[-4] = None                  # only the last three are kept
+            if not ups:
+                return
+            if pc == ESC:
+                ups[-1]['esc'] = True
+            op = m[pc]
+            if op == 0xDB:
+                pend[0] = ((R[0] << 8) | m[(pc + 1) & 0xFFFF], 0)
+            elif op == 0xED and m[(pc + 1) & 0xFFFF] in _IN_RC:
+                pend[0] = ((R[2] << 8) | R[3], _IN_RC[m[(pc + 1) & 0xFFFF]])
+
+        def after(s, pc, dt):
+            if pend[0] is not None:
+                port, r = pend[0]
+                ups[-1]['ports'].append((port, sim[0].registers[r]))
+                pend[0] = None
+    frames = simrun.play_rzx(str(rzx_path), H(), stop=stop)
+    return len(ups), frames
+
+
+def verify_steps(patch, rzx_path, stop=None, collect=0, progress=None, workers=None, fixed=(1, 2, 4)):
+    """Differential test of the steps build over a recording (module section "route 2a"): at every update-loop entry
+    the build's update (the hooked sub-steps, the model's line clock) and Spec's from the same warm state, compared
+    byte for byte (steps_case): adaptive N (the rule's input preset per update: every branch) on every update, fixed
+    N = `fixed` on every update too; N = 1 also against the recording's next entry. -> (Counter, failures, kept);
+    kept = states for unit_tests_steps (spread, by hook event, K-update runs)."""
+    import concurrent.futures as cf
+    workers = workers or _workers()
+    c = collections.Counter()
+    fails, per = [], collections.Counter()
+    kept = {'spread': [], 'stat': collections.defaultdict(list), 'runs': []}
+    runs = {}
+    pending = {}
+    seen = collections.Counter()
+    ex = cf.ProcessPoolExecutor(max_workers=workers) if workers > 1 else None
+
+    def done(f):
+        u, kind, pair = pending.pop(f)
+        r = f.result()
+        c['cases'] += 1
+        c['case %s' % kind] += 1
+        if r['res'][0] != 'ok':
+            c['escapes (%s)' % kind] += 1
+        else:
+            c['N used %d' % r['N']] += 1
+        for k in ('skip', 'drop', 'clamp'):
+            c['guard %s' % k] += r[k]
+        if r['bad']:
+            key = '%s!' % kind
+            c[key] += 1
+            if per[key] < 5:
+                fails.append((key, u, '; '.join(r['bad'])[:400]))
+            per[key] += 1
+        if kind == 'N=4' and collect:
+            for k in ('relax', 'ang', 'speed', 'speed_whole', 'steer', 'guard_drop', 'timeout_n1', 'fill_skip',
+                      'shift_clamp'):
+                if r['stats'].get(k):
+                    seen[k] += 1                # up to 6 a hook event, 20 occurrences apart
+                    if seen[k] % 20 == 1 and len(kept['stat'][k]) < 6:
+                        kept['stat'][k].append(pair)
+
+    def submit(job, u, kind, pair):
+        if ex is None:
+            f = cf.Future()
+            f.set_result(steps_case(job))
+            pending[f] = (u, kind, pair)
+            done(f)
+            return
+        while len(pending) >= 3 * workers:
+            fin, _ = cf.wait(list(pending), return_when=cf.FIRST_COMPLETED)
+            for f in fin:
+                done(f)
+        f = ex.submit(steps_case, job)
+        pending[f] = (u, kind, pair)
+
+    def on_update(prev, cur, nxt):
+        u = cur['u']
+        c['updates'] += 1
+        lite = lambda e: None if e is None else {k: e[k] for k in ('banks', 'o7ffd', 'regs', 'ports', 'esc')}
+        p, q = lite(prev), lite(cur)
+        pair = (p, q)
+        base = {'prev': p, 'cur': q, 'line0': (u * 37) % NL}
+        submit(dict(base, n=0, preset=PRESETS[u % len(PRESETS)]), u, 'adaptive', pair)
+        for N in fixed:
+            submit(dict(base, n=N, nxt={'banks': nxt['banks'], 'regs': nxt['regs']}), u, 'N=%d' % N, pair)
+        if collect and u % 25 == 5 and len(kept['spread']) < collect:
+            kept['spread'].append(pair)
+        if u in RUN_STARTS:
+            runs[u] = {'prev': p, 'cur': q, 'ports': [], 'line0': (u * 37) % NL}
+        for r in runs.values():
+            if len(r['ports']) < RUN_K:
+                r['ports'].append(cur['ports'])
+        if progress and u % 200 == 199:
+            progress('verify    : steps u%d, %d cases done, %d fail' % (u, c['cases'], sum(
+                v for k, v in c.items() if k.endswith('!'))))
+    try:
+        n, frames = capture_updates(rzx_path, on_update, stop=stop)
+        for f in list(pending):
+            done(f)
+    finally:
+        if ex is not None:
+            ex.shutdown()
+    kept['runs'] = [r for u0, r in sorted(runs.items()) if len(r['ports']) >= 4]
+    c['frames'] = frames
+    if not c['updates']:
+        c['no update reached!'] += 1
+    return c, fails, kept
+
+
+# ------------------------------------------------------------------------------------- steps: unit tests
+def _neg(S, label, data, off=0):
+    return {S[label] - 0x2000 + off: bytes(data)}
+
+
+def steps_negatives():
+    """Broken builds (page-byte patches at labels: asm/hard_drivin_steps.asm) the unit tests must catch, with the
+    case kind that reaches each: (name, page edits, kind). The prototype's mutants (games/hard_drivin.md "Build 2a
+    stage 3"); its 13 / 14 are equivalent and not kept."""
+    S = steps_syms()
+    w = lambda v: [v & 255, v >> 8]
+    return [
+        ('h_pos: z axis not moved', _neg(S, 'h_pos.mz', [0] * 17), 'single'),
+        ('relaxation constant + 1', _neg(S, 'c_tab', [0, 76, 42]), 'relax'),
+        ('heading carry lost', _neg(S, 'h_ang.hc', [0x86]), 'ang'),
+        ('h_vpre: V0 z not saved', _neg(S, 'h_vpre.z', [0] * 6), 'single'),
+        ('h_vpost: velocity not reset to V0', _neg(S, 'vax.st', [0] * 3), 'skid'),
+        ('h_vr: VRF not set', _neg(S, 'h_vr.f', [0] * 5), 'speed'),
+        ('h_speed: VRF / VR condition ignored',
+         _neg(S, 'h_speed.vc', [0x18, (S['h_speed.scl'] - S['h_speed.vc'] - 2) & 255, 0]), 'speed_whole'),
+        ('steering clamps + 1/256', {**_neg(S, 'h_steer.hi1', [0x82], 1), **_neg(S, 'h_steer.hi2', [0x81], 1),
+                                     **_neg(S, 'h_steer.lo', [0x81], 1)}, 'steer'),
+        ('clip-vertex guard threshold 13h', _neg(S, 'h_guard.th', [0x13], 1), 'guard'),
+        ('traffic gate missing', _neg(S, 'g_last', w(0xA3B4)), 'single'),
+        ('throttle words not restored', _neg(S, 'restore.tw', [0] * 15), 'single'),
+        ('time-out predictor off', _neg(S, 'drv.tp', [0xC3] + w(S['drv.nt'])), 'timeout'),
+        ('A991 relaxes toward 960D', _neg(S, 'h_ang.t2', [0x0D], 1), 'relax'),
+        ('mkinc: one shift only', _neg(S, 'mkinc.dj', [0, 0]), 'single'),
+        ('fill guard never skips', _neg(S, 'h_fill.t', [0, 0, 0]), 'fill'),
+        ('shift guard: no clamp', _neg(S, 'h_shift.cl', [0x18, (S['h_shift.ok'] - S['h_shift.cl'] - 2) & 255]),
+         'shift'),
+        ('push-out scaled 1 / N', _neg(S, 'h_bounce.z', w(S['mkinc']), 1), 'bounce'),
+        ('no pace wait', _neg(S, 'h_copy.pv', [0, 0, 0]), 'pace'),
+        ('page not mapped again after 7FFD', _neg(S, 'h_rmap.j', w(S['T_RMEXIT']), 1), 'single'),
+        ('N rule: stay-at-4 threshold 661', _neg(S, 'drv.f4', w(C4ST + 2), 1), 'rule'),
+    ]
+
+
+def _hook_jobs(cur, kind, edits=None):
+    """the render guards' edge cases (hook_case), in and out of the driver"""
+    jobs = []
+    for in_drv in (0, 1):
+        base = {'cur': cur, 'in_drv': in_drv, 'edits': edits}
+        if kind == 'guard':
+            jobs += [dict(base, site=0xCEB9, pokes={0x910A: v}) for v in (0x10, 0x11, 0x12, 0x13, 0x30)]
+        elif kind == 'fill':
+            for ys in ((0x10, 0x20, 0x30), (0x10, 0x80, 0x30), (0x7F, 0x7F, 0xFF), (0x7F,)):
+                pk = {0x910A: 2 * len(ys)}
+                for i, y in enumerate(ys):
+                    pk[0x9E00 + 2 * i], pk[0x9E01 + 2 * i] = 0x40, y
+                jobs.append(dict(base, site=0xC7C0, pokes=pk))
+        elif kind == 'shift':
+            jobs += [dict(base, site=s, regs={2: b}) for s in (0xA0E7, 0xD758) for b in (0, 1, 6, 7, 0x80, 0x86, 0xFF)]
+    return jobs
+
+
+def _kind_jobs(kind, kept, edits=None):
+    """the cases of one kind on the collected states: [(fn, job)]"""
+    spread = kept['spread'][:8]
+    stat = lambda k: kept['stat'].get(k, [])
+    one = lambda pairs, **kw: [(steps_case, dict({'prev': p, 'cur': q, 'n': 4, 'edits': edits}, **kw))
+                               for p, q in pairs]
+    if kind == 'single':
+        return one(spread)
+    if kind == 'relax':
+        return one(stat('relax') + spread) + one(stat('relax') + spread, mod='tilt')
+    if kind == 'ang':
+        pairs = stat('ang') + stat('steer') + stat('relax') + spread
+        return one(pairs) + one(pairs, mod='hdcarry') + one(pairs, mod='hdborrow')
+    if kind == 'speed':
+        return one(stat('speed') + spread)
+    if kind == 'speed_whole':
+        return one(stat('speed_whole') + spread) + one(spread, mod='cold')
+    if kind == 'steer':
+        pairs = stat('steer') + spread
+        return [j for mod in ('steerpl', 'steerml', 'steerp', 'steerm') for j in one(pairs, mod=mod)]
+    if kind == 'skid':
+        pairs = spread + stat('steer')
+        return one(pairs, mod='skid') + one(pairs, mod='skidv')
+    if kind == 'bounce':
+        return one(spread, mod=kind)
+    if kind == 'timeout':
+        return one(spread[:3], mod='timeout') + one(stat('timeout_n1'))
+    if kind in ('guard', 'fill', 'shift'):
+        return [(hook_case, j) for j in _hook_jobs(spread[0][1], kind, edits)] + (one(stat('guard_drop'))
+                                                                                if kind == 'guard' else [])
+    if kind == 'rule':
+        return one(spread[:3], n=0, preset=(661, 4))
+    if kind == 'pace':
+        r = kept['runs'][0]
+        return [(steps_run, dict(r, n=0, edits=edits, ports=r['ports'][:8]))]
+    raise ValueError(kind)
+
+
+def _call(fj):
+    fn, job = fj
+    return fn(job)
+
+
+def _run_ok(r, adaptive):
+    """a K-update run: no mismatch; adaptive: no view before its target, updates no faster than real time"""
+    bad = [x['bad'] for x in r['rows'] if x['bad']]
+    pc = r['pace']
+    if adaptive and pc['early']:
+        bad.append('%d views before their target' % pc['early'])
+    d = sorted(pc['dur'])
+    if adaptive and len(d) >= 3 and d[len(d) // 2] < 9.9:
+        bad.append('update median %.2f frames < 10' % d[len(d) // 2])
+    return bad
+
+
+def unit_tests_steps(patch, kept, neg=None, workers=None):
+    """Cases the recording does not reach, on the collected states (verify_steps' kept), + the negative controls
+    (steps_negatives: each must fail at least one case of its kind). -> (Counter ('!' = fail), pace summary)"""
+    workers = workers or _workers()
+    c = collections.Counter()
+    if not kept['spread'] or not kept['runs']:
+        c['no states!'] += 1
+        return c, {}
+    tests = []                                  # (name, check, (fn, job))
+    for r in kept['runs']:
+        for n in (0, 4):
+            tests.append(('run of %d updates, %s' % (len(r['ports']), 'adaptive' if n == 0 else 'N=4'),
+                          'run0' if n == 0 else 'run', (steps_run, dict(r, n=n))))
+    for mod in ('skid', 'skidv', 'steerp', 'steerm', 'steerpl', 'steerml', 'tilt', 'hdcarry', 'hdborrow', 'bounce', 'cold'):
+        for p, q in kept['spread'][:6]:
+            tests.append(('synthetic %s, N=4' % mod, 'case', (steps_case, {'prev': p, 'cur': q, 'n': 4, 'mod': mod})))
+            tests.append(('synthetic %s, adaptive' % mod, 'case', (steps_case, {'prev': p, 'cur': q, 'n': 0,
+                                                                                'mod': mod, 'preset': (300, 4)})))
+    for p, q in kept['spread'][:3]:
+        tests.append(('synthetic time-out (plain update, escape)', 'esc', (steps_case, {'prev': p, 'cur': q, 'n': 4,
+                                                                                        'mod': 'timeout'})))
+    for kind in ('guard', 'fill', 'shift'):
+        for j in _hook_jobs(kept['spread'][0][1], kind):
+            tests.append(('%s guard edges' % kind, 'case', (hook_case, j)))
+    negs = neg if neg is not None else steps_negatives()
+    nj = [(name, fj) for name, edits, kind in negs for fj in _kind_jobs(kind, kept, edits)]
+    res = _pool_map(_call, [t[2] for t in tests] + [fj for _, fj in nj], workers)
+    pace = {'dur': [], 'early': 0, 'N': collections.Counter()}
+    for (name, check, _), r in zip(tests, res[:len(tests)]):
+        if check.startswith('run'):
+            bad = _run_ok(r, check == 'run0')
+            if check == 'run0':
+                pace['dur'] += r['pace']['dur']
+                pace['early'] += r['pace']['early']
+                pace['N'].update(r['pace']['N'])
+        else:
+            bad = r['bad'] + (['no escape'] if check == 'esc' and r['res'][0] != 'escape' else [])
+        c[name + ('!' if bad else '')] += 1
+    caught = collections.defaultdict(bool)
+    for (name, fj), r in zip(nj, res[len(tests):]):
+        bad = _run_ok(r, True) if fj[0] is steps_run else r['bad']
+        caught[name] |= bool(bad)
+    for name, _, _ in negs:
+        c['negative: %s %s' % (name, 'detected' if caught[name] else 'MISSED!')] += 1
+    return c, pace
+
+
 # ------------------------------------------------------------------------------------------------------- auto
-DECISIONS = {'route': 'smoother 3D view (user, 2026-11-22)', 'tail': '0x6C00'}
+DECISIONS = {'route': 'smoother 3D view (user, 2026-11-22); finer time steps (route 2a, user 2026-11-23: default)',
+             'tail': '0x6C00'}
+BOOT_OK = 'PASS (128K RAM but the tail / NEXLOAD printer buffer, registers/R, hidden ROM)'
 
 
 def auto(a, z80, name, out, say):
-    for key, value in (('publisher', 'Domark / Binary Design, 1989'), ('fix_label', 'smoother 3D view')):
+    """plain NAME.nex, route 1 NAME_smooth.nex, route 2a NAME_steps.nex (the default): builds + boot checks; with
+    recordings each route's verify, unit tests and negative controls. Result PASSED only if all pass."""
+    import time
+    for key, value in (('publisher', 'Domark / Binary Design, 1989'), ('fix_label', 'finer time steps')):
         if not getattr(a, key, None):
             setattr(a, key, value)
     ok = True
@@ -673,32 +1872,50 @@ def auto(a, z80, name, out, say):
     bad = boot_problems(plain, z80)
     ok &= not bad
     say('Plain     : %s %s' % (plain.name, hashlib.md5(plain.read_bytes()).hexdigest()))
-    say('Boot      : %s' % (bad[:3] if bad else 'PASS (128K RAM but the tail / NEXLOAD printer buffer, registers/R, hidden ROM)'))
-    smooth = out / (name + '_smooth.nex')
-    patch = build(z80, smooth)
-    bad = boot_problems(smooth, z80, patch)
-    ok &= not bad
-    say('Smooth    : %s %s' % (smooth.name, hashlib.md5(smooth.read_bytes()).hexdigest()))
-    say('Boot      : %s' % (bad[:3] if bad else 'PASS (128K RAM but the tail / NEXLOAD printer buffer, registers/R, hidden ROM)'))
-    say('Sprites   : none (this route keeps the ULA picture; games/hard_drivin.md "Decision")')
-    states = []
+    say('Boot      : %s' % (bad[:3] if bad else BOOT_OK))
+    builds = {}
+    for label, fn in (('smooth', build), ('steps', build_steps)):
+        f = out / ('%s_%s.nex' % (name, label))
+        builds[label] = fn(z80, f)
+        bad = boot_problems(f, z80, builds[label])
+        ok &= not bad
+        say('%-10s: %s %s' % (label.capitalize(), f.name, hashlib.md5(f.read_bytes()).hexdigest()))
+        say('Boot      : %s' % (bad[:3] if bad else BOOT_OK))
+    say('Sprites   : none (both routes keep the ULA picture; games/hard_drivin.md "Decision")')
+    states, skept = [], None
     for rec in getattr(a, 'rzx', []) or []:
-        counts, fails, kept = verify(patch, rec, stop=getattr(a, 'quick', None), collect=12, progress=say)
+        t0 = time.time()
+        counts, fails, kept = verify(builds['smooth'], rec, stop=getattr(a, 'quick', None), collect=12, progress=say)
         states += kept
-        bad_keys = [k for k, v in counts.items() if k.endswith('!') and v]
-        ok &= not bad_keys
-        say('Verify    : %s %s' % (dict(counts), fails[:2]))
-    if states:
-        units = unit_tests(patch, states)
+        ok &= not any(v for k, v in counts.items() if k.endswith('!'))
+        say('Verify    : smooth %s %s (%.0f s)' % (dict(counts), fails[:2], time.time() - t0))
+        t0 = time.time()
+        counts, fails, kept = verify_steps(builds['steps'], rec, stop=getattr(a, 'quick', None), collect=12,
+                                           progress=say)
+        skept = skept or kept
+        ok &= not any(v for k, v in counts.items() if k.endswith('!'))
+        say('Verify    : steps %s %s (%.0f s)' % (dict(sorted(counts.items())), fails[:2], time.time() - t0))
+    if getattr(a, 'rzx', None):
+        if states:
+            units = unit_tests(builds['smooth'], states)
+            ok &= not any(v for k, v in units.items() if k.endswith('!'))
+            say('Unit      : smooth %s' % dict(units))
+        else:
+            say('Unit      : smooth: no states (the recordings reached no render)')
+            ok = False
+        t0 = time.time()
+        units, pace = unit_tests_steps(builds['steps'], skept) if skept else ({'no states!': 1}, {})
         ok &= not any(v for k, v in units.items() if k.endswith('!'))
-        say('Unit      : %s' % dict(units))
-    elif getattr(a, 'rzx', None):
-        say('Unit      : no states (the recordings reached no render)')
-        ok = False
+        say('Unit      : steps %s (%.0f s)' % (dict(units), time.time() - t0))
+        if pace.get('dur'):
+            d = sorted(pace['dur'])
+            say('Pace      : steps model runs: update %.2f / %.2f / %.2f frames (median / p95 / max; 10 = real '
+                'time), %d views early, N used %s' % (d[len(d) // 2], d[int(0.95 * (len(d) - 1))], d[-1],
+                                                    pace['early'], dict(sorted(pace['N'].items()))))
     else:                                           # a rebuild (record recipe without recordings): builds + boot only
         say('Verify    : not run (no recording: rebuild)')
         say('Unit      : not run (no recording: rebuild)')
     (out / (name + '_outputs.json')).write_text(json.dumps(
-        {'default': name + '_smooth.nex', 'plain': name + '.nex', 'colours': {}}, indent=1) + '\n')
+        {'default': name + '_steps.nex', 'plain': name + '.nex', 'colours': {}}, indent=1) + '\n')
     say('Result    : ' + ('PASSED' if ok else 'FAILED'))
     return bool(ok)

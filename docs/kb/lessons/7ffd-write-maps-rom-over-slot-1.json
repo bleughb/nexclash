@@ -8,6 +8,12 @@
    "text": "The ISR pages by port 7FFD; on a Next (JNext at least) that resets slot 1 to the ROM and the ISR calls the ROM's IM 1, so a hook in slot 1 with interrupts on is unsafe unless the ISR puts slot 1 back.",
    "quote": "On a Next (JNext at least) that resets slot 1 to the ROM, and the ISR calls the ROM's IM 1.",
    "shown_on": "jnext"
+  },
+  {
+   "game": "games/hard_drivin.md",
+   "text": "Not only an ISR: the game's own update writes 7FFD (0x9E7C / 0x9E86) with interrupts off, and the route 2a sub-step hooks after it ran ROM bytes on JNext until a site (0x9E88) mapped the hook page again; the steps host model resets slots 0-1 on every 7FFD write.",
+   "quote": "a write to 7FFD sets MMU slots 0-1 back to ROM",
+   "shown_on": "jnext"
   }
  ],
  "level": "observed",

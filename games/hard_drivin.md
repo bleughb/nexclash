@@ -1,24 +1,25 @@
 # Hard Drivin' (Domark / Binary Design, 1989; 128K tape)
 
 ## Next session
-Stage: 1 for route 2 (feasibility)    State: route 1 (smooth views) stamped verified, hardware: plays like the original; route 2a (hd4) plays much better on hardware (user)
-Techniques: `patch.inbetween-views`, `detect.pacing-structure`, `patch.pace-limiter`, `patch.restore-speed`, `patch.whole-altrom-image`, `verify.update-locked-pace`
-Inputs: C:\1NEXT\harddrivin_work: hard_drivin.z80 (MD5 18809405, snapshot 0 of hard_drivin.rzx), hard_drivin.rzx (MD5 c649e04c, 22,116 frames), in\hd.tap (MD5 02e1f96c), in\hd.tzx (61f7d04c), in\hd.dsk ([a], 43a6bc4c). Game data: never in this repo; not yet in specnext/reference (a maintainer push: ask first).
+Stage: route 2a moved into the engine (stage 2-3 for it)    State: both routes stamped verified; hardware: route 1 plays like the original, route 2a (hard_drivin_steps.nex) "plays much better" (user)
+Techniques: `patch.substep-updates`, `patch.inbetween-views`, `detect.pacing-structure`, `patch.pace-limiter`, `patch.restore-speed`, `patch.whole-altrom-image`, `verify.update-locked-pace`
+Inputs: C:\1NEXT\harddrivin_work (and C:\1NEXT\hd_reference\hard_drivin, same MD5s): hard_drivin.z80 (MD5 18809405, snapshot 0 of hard_drivin.rzx), hard_drivin.rzx (MD5 c649e04c, 22,116 frames), in\hd.tap (MD5 02e1f96c), in\hd.tzx (61f7d04c), in\hd.dsk ([a], 43a6bc4c). Game data: never in this repo; not yet in specnext/reference (a maintainer push: ask first).
 Branch: add-hard-drivin (worktree C:\1NEXT\nexclash-hd), main merged 2026-11-23 (83cd68b)    Commit: see git log
-Engine: nexclash/hard_drivin.py (HDPatch from the profile, Next host model, verify, unit_tests, negative_patches,
-  auto, boot_problems), asm/hard_drivin_hooks.asm + asm/hard_drivin_wset.inc, docs/profiles/hard_drivin.json.
-  Builds: hard_drivin.nex (plain, tail 0x6C00) d74f75e6, hard_drivin_smooth.nex (default) 9fb23f8e: the prototype's
-  hd2 build (9fc24d7c) byte for byte + the automap_off entry auto adds to every build (docs/NXC_PATCHES.md).
-Checks: `python nexclash.py auto hard_drivin.z80 --rzx hard_drivin.rzx --quick 2000`: boot PASS (both builds, with
-  and without NEXLOAD), 146 checks, 168 in-between views, unit tests and 4 / 4 negative controls PASS, rom_paths
-  COMPLETE. Prototype evidence (C:\1NEXT\harddrivin_work): whole-RZX verify PASS (3,112 checks), 18 / 18 mutants,
-  JNext pace +3 frames / 178 updates.
+Engine: nexclash/hard_drivin.py: route 1 (HDPatch, Next, verify, unit_tests, negative_patches), route 2a (StepsPatch,
+  Spec, NextSteps, verify_steps, unit_tests_steps, steps_negatives), auto, boot_problems; asm/hard_drivin_hooks.asm +
+  hard_drivin_wset.inc -> docs/profiles/hard_drivin.json; asm/hard_drivin_steps.asm -> hard_drivin_steps.json.
+  Builds: hard_drivin.nex (plain, tail 0x6C00) d74f75e6, hard_drivin_smooth.nex 9fb23f8e, hard_drivin_steps.nex
+  (default) a2709f99 = the prototype's hd4_na (46e06774) byte for byte + auto's automap_off entry.
+Checks: `auto --quick 2000` PASSED (3 builds boot; smooth 146 checks; steps 288 cases, unit tests, 20 / 20
+  negatives; rom_paths COMPLETE). Stamp (whole RZX): selftest --verify --stamp PASSED 2026-11-23 (21 min): steps 6,220 cases (1,555 updates x
+  adaptive / N=1 / 2 / 4) = the Spec, 0 mismatches, 2 escapes per variant (u554 A3F2, u1064 9E12), 2 guard drops (207 s);
+  unit tests + 20 / 20 negatives (24 s); model pace 10.00 / 10.19 / 10.76 frames; smooth 3,112 checks (898 s).
 Pending user answers: none
-Start with: hardware test 2 results (route 2a, C:\1NEXT\harddrivin_work\hardware2). Then: move hd4 into the engine as a
-  second output (hard_drivin_steps.nex) with spec.py / hd4_verify as its verify, record, selftest stamp.
-Open: the first calibration interrupt's extra ~574 T (not subtracted, 0.06 %); sub-unit angle interpolation;
-  the CALL at 0xA402 (time-out path, not in the recording); R not preserved (patch.preserve-r: the verify excludes
-  R; no consumer of R found, not proven)
+Start with: hardware test 2's open items on hard_drivin_steps.nex (stopwatch vs race clock, crash / replay / time-out
+  / race end / menus, objects, 10-minute soak). Then, if wanted: route 2b (own renderer on the sub-stepped state).
+Open: route 1: the first calibration interrupt's extra ~574 T (0.06 %), sub-unit angle interpolation. Both: R not
+  preserved (patch.preserve-r: the verify excludes R; no consumer found, not proven). Route 2a: the model's 28 MHz
+  ratio (f28 1.2) is route 1's JNext figure; the time-out path is the recorded u554 + synthetic states only.
 
 ## Facts
 - Tape (.tap = .tzx data): BASIC `HD 128K`, code 100 bytes at 30000, 5,000 at 32960, 200 at 43616, BASIC `-`, then one 41,400-byte block at 24000. Single load, no multiload.
@@ -36,203 +37,113 @@ Open: the first calibration interrupt's extra ~574 T (not subtracted, 0.06 %); s
 
 ## Feasibility (PLAYBOOK 3d; probes in C:\1NEXT\harddrivin_work\tools, first 3,000-6,000 frames)
 ### Pacing measurement
-- Pacing (card detect.pacing-structure, observed): no frame wait; DI for most of play. Main loop 0x9E34
-  (body to 0x9E88, JR back at 0x9E32): one update = logic + render 0x9EA9 (from 0x9E54) + clock 0xA38A (from
-  0x9E5E) + view copy 0xDC37 (from 0x9E6B). Update time 7-21 frames (median 13, mean 13.6): busy scenes run
-  slower in game time, as in the original.
-- Clocks: lap clock 0xA38A counts 5 updates per clock second (38155 to 5, BCD seconds 38156, minutes 38157);
-  no real-time clock. ISR 0xC261 (IM 2, CALL from 0xC0C0) is sound only (vars 0xC2CA-0xC2CF, CALLs
-  0xCE1B / 0xCEA3; bank 3 at C000 for the music, bank 0 = main code). So a faster update = a faster game:
-  the update's original time must be kept.
-- Cost per update (loopprof.py, 229 updates): 0x9EA9 87.3 % (845k T), view copy 0xDC37 6.4 % (62k T), the rest
-  ~6 % (0xF910 3.3 %, 0xA423 1.3 %, 0xF476 0.9 %). Inside 0x9EA9 (treeprof.py): 0xD50B/0xD548 31 %, 0xD862 15 %,
-  0xD9B4 11 %, 0xD584 8 %, 0xDBBE 4 %, maths 0xC7C0 / 0xDA4C: transform, clip, fill. Object list walked with
-  SP from (38539); objects clipped against the camera 43400/43402/43404.
-- Camera (camlog.py at each 0x9EA9): x, y, z = 16-bit at 43400, 43402, 43404; orientation 3 bytes at
-  43407-43409 (copied to 43339-43341 by 0x9EA9); per-update matrix / view block 43362-43399 (0x9EA9 copies
-  43362-43370 to 43371-43379). Which routine builds the matrix: open (stage 2).
+- No frame wait; DI for most of play (detect.pacing-structure, observed). Main loop 0x9E34 (body to 0x9E88, JR back at
+  0x9E32): logic + render 0x9EA9 (from 0x9E54) + lap clock 0xA38A + view copy 0xDC37 (from 0x9E6B). Update 7-21
+  frames (median 13): busy scenes run slower in game time, as in the original.
+- The lap clock counts 5 updates a clock second (no real-time clock); the ISR (0xC261, IM 2) is sound only. So a
+  faster update = a faster game: the update's original time must be kept.
+- Cost per update (229 updates): render 87 % (845k T), copy 6 % (62k T), the rest ~6 %. Camera: x, y, z words at
+  43400 / 43402 / 43404, orientation 43407-43409.
 ### Dependency investigation
-- Render consumers (consumers.py, 2,500 frames; window 0x9EA9 .. 0x9E57, screen and back buffer excluded):
-  23 addresses read later by logic: 43373-43379 (camera copy, read by 0xA6FF-0xA8AB), 0x918E (read 0xA47E /
-  0xA4FB, written 0xEA48), 0x91CC-0x91CD, 0x951E (0xA353, 0xF4A9, 0xA71B), list 0xF02C-0xF03B (0xA48D-0xA496,
-  written 0xEA46). In-between renders must leave these as the real render leaves them: the real render runs
-  last, and these bytes are saved / restored around the extra ones; the differential test proves game RAM.
-- Back buffer 0x8000-0x8FFF (4K, write-first) -> screen 0x4000-0x4FFF by 0xDC45 (SP copy). DMA candidate:
-  the view copy only (docs/DDMA.md: zxnDMA / DDMA, core gated, plain fallback) - to measure in stage 2.
-- Open: sound in play (engine / crash sound: OUT sites, AY from the ISR only?); interrupt windows in the loop
-  (EI points) must stay at the original's times so the music tempo holds.
+- 23 addresses the render leaves are read later by logic (camera copy 43373-43379, 0x918E, 0x91CC-D, 0x951E, list
+  0xF02C-0xF03B): the real render runs last on the genuine pages; extra renders only on scratch pages.
+- Back buffer 0x8000-0x8FFF (write-first) -> screen 0x4000-0x4FFF by 0xDC45 (SP copy).
 
-## Design (stage 2)
-- Superseded by "Build" below (as built) and route 2 (finer time steps); details in git history.
-
-## Build (stage 2, hd2 as built)
-- Sites (original bytes checked): 0x9E54 CALL render -> t_render, 0x9E6B CALL copy -> t_copy, 0xD6FE CALL 0xD77D
-  (unconditional, ~100 a render, gaps under 340k T) -> t_tick (the line clock's tick inside the 28 MHz render).
-- Hook code: page 36 (bank 18) in MMU slot 1 during hooks; trampolines at 0x3870 in an alt ROM (bank 12, Sinclair's
-  ROM 1 + trampolines; 0xFF there); exit by NEXTREG 0x51,0xFF + RET from the ROM side. Own stacks 0x3FFE / 0x3D80.
-- Render facts: the matrix builder is 0xD1A5 (called by the render at 0x9EC2; orientation 43339-41, sin/cos
-  0x95AB). The render is a pure function of camera + world (a re-render with the previous camera gives the previous
-  view; time repeats within 0.015 %). It POPs ROM bytes as data (SP pages 0x00-0x16) and never executes the ROM.
-  No DI / EI / HALT / IM in it. Two update paths never return (JP 0x9E12): 28 MHz only inside the hooks.
-- Sound in play: per-update AY writes 0xEA60-0xEB20 (bank 3, called from 0x9E7E), outside the hooks; no
-  interrupts in play, so no tempo to hold inside the window. Other render callers (0x6A32, 0xF652, 0xF752) stay plain.
-- Per update: the real render first (genuine pages, original SP, planted return), slots 4-7 DMA-copied to scratch
-  pages 38-41, in-between views rendered there with the camera interpolated (fraction = display time / window),
-  each copied by the game's own copy when the beam is in lines 128-262 (no tear). Window target L = K x the real
-  render's 28 MHz lines; debt carries (signed wait goal, cap 1,200 lines). Copy target = K x the copy's lines.
-- K calibration at run time (updates 1, 3, 5, then every 16): slots 2-7 copied to scratch pages (43-44 for 2-3),
-  a RAM copy of the ROM (page 42) in slot 0, tick site restored there; the render runs again at 3.5 MHz with IM 2
-  through its own table (handler on its own stack counts frames, repairs the 2 pushed bytes from genuine memory,
-  resumes by EI + JP). K = cal lines (minus 400 T a frame for the handler) / 28 MHz lines; samples outside 4-10
-  dropped. K = the latest sample: an average of samples lagged the scene's own K changes.
-- JNext measurements (1.3.0): K 6.17-6.28 depending on the scene (contention share); hardware ratios in
-  TECHNIQUES are 6.6-7.0, hence run-time calibration. Pace vs plain, 178 updates: average of samples every 64:
-  -18 frames; every 16: -13; latest sample every 64: -9; latest sample every 16: -4 (0.16 %), 182 in-between views
-  (2-4 a moving update). No in-between views while the camera is still (e.g. stopped after a crash): by design.
+## Build (stage 2, route 1 as built)
+- Sites 0x9E54 (render), 0x9E6B (copy), 0xD6FE (the line clock's tick inside the render); hook page 36 in slot 1
+  during hooks; trampolines at 0x3870 in the alt ROM image (bank 12). The render is a pure function of camera +
+  world. It POPs ROM bytes as data (SP pages 0x00-0x16), never runs the ROM; no DI / EI in it. Sound in play: 0xEA60 per update (bank 3).
+- Per update: the real render first, then in-between views on scratch pages 38-41 with the camera interpolated,
+  each copied in lines 128-262 (no tear); window = K x the real render's 28 MHz lines, debt carried. K measured
+  at run time by a 3.5 MHz calibration render (IM 2 through the hook page, pushes repaired, a hit push abandons the
+  render); JNext K 6.17-6.28 depending on the scene (contention share) (hardware ratios 6.6-7.0). JNext pace vs plain: -4 frames / 178 updates.
 
 ## Stage log
 - 2026-11-22: stage 0 (intake) + stage 1 (route choice, feasibility), ~50 tool calls, 1 user round.
-- 2026-11-23: stage 2 build: hd1 (fixed K) then hd2 (run-time K); unit tests pass; JNext pace within 0.16 %.
-- 2026-11-23 (2): hd_verify.py (whole RZX, every loop render, normal + calibration paths: game RAM, registers, each
-  in-between view = the original render at an exactly computed camera, calibration time = the original's) and
-  hd_mutants.py (16 mutants, 16 caught over 9,000 frames). Fixed: setcam read angles from cam0+6 (every in-between
-  view's angles wrong); calibration push repair wrong in the render's write set (tables 0x9C00-0x9DFB: sample dropped,
-  bitmap hd_wset.inc, retry in 2 updates; 20 % dropped); missed first interrupt at line 240-255 (wait); calibration
-  from the post-render carry (block 0x912E-0x91CD + 43337 saved / restored); copy target = its measured 3.5 MHz time
-  (cpy35) less 3 lines of hook overhead (the render's K was 8 % short for the copy). ISR_T 1104. JNext pace: +2
-  frames over 178 updates (0.08 %), 190 in-between views. Full verify: 3,112 checks, 3 FAIL, all calibration path:
-  u605 runaway (push 7 of that render; all pushes kept = PASS; address not yet read: scratchpad push605.py), u963 /
-  u964 short renders (2-3 frames) +0.53 / +0.69 % (plan: drop samples under ~1,000 lines).
-- 2026-11-23 (3): the three open calibration fails fixed. u605: a push in the write set (0x9C39) was flagged but
-  still repaired with a stale byte; the render followed it and ran away. Now the handler abandons a hit render at
-  once (SP from cal_sp, JP cal_r1; all scratch). u963-964: renders under 1,000 lines (CAL_MIN) give no sample.
-  ISR_T 1136 (whole-RZX mean 1138). Verify rules added: a hit push must be the render's last; no sample from a short
-  render. Mutants Q (no abandon) and R (no CAL_MIN) caught. Full verify PASS; kept samples -0.14 .. +0.43 % of the
-  original render's time (median +0.06 %), 196 of 1,556 dropped.
-- 2026-11-23 (4): moved into the repo as an engine (nexclash/hard_drivin.py from hd_build / hd_next / hd_unit /
-  hd_verify; hooks asm and the write-set bitmap in asm/; profile via asm2profile, IDENTICAL). The repo's smooth build
-  equals the prototype's (MD5 9fc24d7c). Negative controls as page-byte patches at labels (sco_map, sc_angix, isr_fix,
-  isr_taint); the push-repair control was missed on 6 states at their own start line and caught once the start line
-  sweeps the frame (every 13 lines). Boot check credits the tail 0x6C00 and NEXLOAD's printer buffer (rom_paths:
-  never read before written). Main merged (shared lessons as data, docs/kb); kb entry docs/kb/games/hard_drivin.json.
+- 2026-11-23: route 1 stage 2-3: hd1 / hd2 prototypes, whole-RZX verify (every render, normal + calibration paths,
+  each in-between view = the original render at its exact camera) and 18 mutants; fixed: setcam angles, the push
+  repair in the render's write set (abandon), short calibration renders (CAL_MIN), copy target. Moved into the repo
+  (smooth build = hd2 byte for byte); stamped (3,112 checks, 3,281 views, 4 / 4 negatives); rebuild-without-
+  recording and pre-automap_off MD5 fixes.
+- 2026-11-23: route 2 (after hardware test 1): probes 1-2, build 2a stages 1-3 (hd3, hd4) by subagents in
+  C:\1NEXT\harddrivin_work\step; hardware test 2: "plays much better".
+- 2026-11-23: route 2a moved into the engine (subagent; C:\1NEXT\harddrivin_work\step\movein_results.md): see
+  "Move-in" under Route 2.
 
-- 2026-11-23 (5): selftest --game hard_drivin --verify --stamp (inputs in a local reference folder,
-  C:\1NEXT\hd_reference, not pushed): verify PASS on the whole RZX (3,112 checks, 3,281 views, unit tests on 11 states,
-  4 / 4 negatives); two FAILs fixed: auto failed a rebuild with no recording (Unit: no states), so main's automap_off
-  step never ran and the rebuild's MD5s differed from the verify's; the record held pre-automap_off MD5s.
 ## Technique use
 - detect.pacing-structure: helped: no frame wait, 7-21 frame updates, the lap clock counts updates (not time)
 - patch.inbetween-views: helped: the route itself; corrected: K is measured at run time by a calibration render (the card's fixed K from JNext would be 6-10 % off on hardware), and in-between views run on scratch copies of the game's pages instead of Layer 2 banks
-- patch.pace-limiter: used: ORIGINAL target per update (window = K x the render's 28 MHz lines, signed debt)
+- patch.pace-limiter: used: route 1 ORIGINAL per update (window = K x the render's 28 MHz lines, signed debt); route 2a REAL TIME (3,110 lines an update, absolute schedule, line clock)
 - patch.restore-speed: used: hlib_speed in every hook
-- patch.whole-altrom-image: used: Sinclair's ROM 1 + trampolines at 0x3870 (bank 12)
+- patch.whole-altrom-image: used: Sinclair's ROM 1 + trampolines at 0x3870 (bank 12), both routes
 - verify.update-locked-pace: used: JNext pace log vs the plain build, 178 updates
 - patch.preserve-r: no help: not applied; the verify excludes R (no consumer found, not proven)
+- patch.substep-updates: helped: written from this game's route 2a (candidate card, 2026-11-23); the move-in checked its contract against the engine's own verify
 
 ## Lessons
 - [kb lesson.jnext-28mhz-ratio-varies: K 6.17-6.28 by scene in JNext] observed: the render's 3.5 MHz : 28 MHz ratio moves with the scene's contention share; a fixed K lagged, the latest calibration sample tracks it.
-- [kb lesson.runtime-k-calibration: a 3.5 MHz re-render on scratch pages measures K] demonstrated: calibration render with IM 2 through the hook page, kept samples within -0.14 .. +0.43 % of the original render's time over the whole RZX.
+- [kb lesson.runtime-k-calibration: a 3.5 MHz re-render on scratch pages measures K] demonstrated: calibration render with IM 2 through the hook page, kept samples -0.14 .. +0.43 % of the original render's time over the whole RZX.
 - [kb lesson.sp-as-data-pointer: an interrupt push lands in the render's SP-walked data] demonstrated: the render POPs object lists and ROM bytes, so the calibration handler must put the 2 pushed bytes back from genuine memory.
-- [kb lesson.interrupt-push-in-write-set-abandon: a hit push cannot be repaired] demonstrated: a push into bytes the render writes (tables 0x9C00-0x9DFB) was repaired with a stale byte and the render ran away (u605); abandon the render and drop the sample.
-- [kb lesson.negative-control-phase-sweep: sweep the start line for interrupt-timed faults] demonstrated: the no-repair control passed on 6 states at their own start line and was caught once the start line swept the frame.
+- [kb lesson.interrupt-push-in-write-set-abandon: a hit push cannot be repaired] demonstrated: a push into bytes the render writes (tables 0x9C00-0x9DFB) was repaired with a stale byte and the render ran away (u605: a push in the write set (0x9C39) was flagged but repaired stale); abandon the render and drop the sample.
+- [kb lesson.negative-control-phase-sweep: sweep the start line for interrupt-timed faults] demonstrated: the push-repair control was missed on 6 states at their own start line and caught once the start line swept the frame.
 - [kb lesson.skoolkit-write-guards-below-4000: the reference re-render ran away] observed: stock SkoolKit dropped the hook page's writes below 0x4000; dizzy6._rw_simulator keeps them.
 - [kb lesson.nexload-printer-buffer: 256 bytes differ when booted as NEXLOAD] observed: both builds differ only in 0x5B00-0x5BFF and the tail; rom_paths shows neither is read before written.
 - [kb lesson.rebuild-without-recording-must-pass: a FAILED auto skips the CLI's later steps] observed: the rebuild recipe gives no recording; auto returned FAILED, so the automap_off entry was not added and the rebuild's MD5s differed from the verify's.
 - [kb lesson.asm2profile-key-prefix: profile keys from SAVEBIN names] observed: asm2profile takes the key from the SAVEBIN name up to the first underscore, so hard_drivin_page.bin gave "drivin_page"; named hdrivin_page.bin / hdrivin_rom.bin.
+- [kb lesson.7ffd-write-maps-rom-over-slot-1: the update's own 7FFD writes unmapped the hook page] observed on JNext, now in the steps host model: a write to 7FFD sets MMU slots 0-1 back to ROM, so the sub-step hooks after 0x9E7C / 0x9E86 ran ROM bytes until site 0x9E88 mapped the page again.
+- [card patch.substep-updates §Failure lookup] demonstrated: the steering-clamp mutant passed every recorded state because a later sub-step's overflow path resets the value to exactly 120.0; caught only with the clamp reached on the last sub-step (mods steerpl / steerml).
+- [card patch.substep-updates §Verification] demonstrated: the prototype's spec.py, host model and 20 mutants moved into the engine; mutants as page-byte patches at asm labels (no reassembly), fixed N by the page's n_force byte; whole RZX: 1,555 updates x 4 variants in minutes with a process pool.
 
 ## Friction
-- reuse: [kb lesson.negative-control-phase-sweep] the start-line sweep in unit_tests is generic for any interrupt-timed control
-- retries: [kb lesson.skoolkit-write-guards-below-4000] the verify reference ran away three times before the low writes were kept
+- reuse: [local: verify_steps' capture (state + port reads at each update entry) and warm start are this engine's; the general pattern is card patch.substep-updates]
+- retries: [card patch.substep-updates §Failure lookup] the steering-clamp control missed until the clamp acted on the last sub-step
 - environment: [none: git, harness and network had no workaround this stage]
-- hand-rolled: [local: the host Next model (MMU, line clock, zxnDMA, IM 2) is per engine; hooklib.NextModel has no MMU or interrupts]
-- scratch: [local: push605.py, hd_repo_quick.py dropped: one-off reproductions, the engine's verify covers them]
+- hand-rolled: [local: the prototype's two-pass ROMSIDE assembly became one source with the ROM side at 0x4000 under DISP, route 1's way, because asm2profile assembles once]
+- scratch: [local: the move-in transform and timing scripts (strip_if.py, mk2.py, tver.py, tunit.py) stayed in the session scratchpad: one-off]
 
 ## Route 2: finer time steps (proposed 2026-11-23, after hardware test 1)
-Hardware test 1 (user, 2026-11-23): the smooth build plays "just as unplayable as the original": in-between views
-smooth the picture, but the game still reads the controls and moves the car once an update (~4 a second).
-Proposal (user: "a good idea"): every update at 28 MHz, each advancing game time by 1 / N (N ~4), so controls and
-picture run ~N x as often at the same game speed. An engine rewrite (own Layer 2 renderer for pixel smoothness and
-response) to consider on top: it needs the same sub-stepped game state, so this is its first step too.
-### Probe 1 (writers of the car state, update 120-123, step/writers.py; static reads, step/hdis.py)
-- The car is explicit per-update Euler, all inside 0xA423 (called from 0x9E74, after the view copy):
-  0xA834 position x/y/z (43400/2/4) += velocity words 0xA99C / 0xA99E / 0xA9A0; 0xA856 angles 43407/8/9 += rates
-  0xA9A2 / 0xA9A3 / 0xA9A4, with a fraction byte 0xA9A6 into 0xA9A5 (carry into 43408); 0xA823 (airborne,
-  0x965D = 2) = integrate + velocity y += 12 (gravity); 0xA6F4 (on the road) = integrate, then velocity from speed
-  and heading (multiply 0xC52C). Integrate also from 0xA4DB.
-- Speed 0x965B (16-bit): set only by 0xF568 (from 0xA8BB), which also draws the speedometer. Turn rate 0xA9A3 /
-  0xA9A6 = speed (capped at 30) x steering 0x96AC (written 0xA6E2 / 0xA6E7).
-- Lap clock 0xA38A: 0x950B counts updates to 5 per clock second (BCD 0x950C-0x950E).
-- Inferred plan: keep every rate in per-original-update units (thresholds on them stay valid); scale only the
-  accumulations: position and angle += rate / N with fraction bytes, gravity 12 / N, speed change / N, clock 5 N,
-  timers x N. Open: the other car and traffic (0xA47A walks the object list 0xF02C), the crash replay buffer (per
-  update), per-update sound 0xEA60, collision tests that use one update's step.
-- Pace target (user, 2026-11-23): REAL TIME: 1 clock second = 1 s (5 original updates = 50 frames, so N sub-steps
-  share 10 frames per original update; the original's own pace varies, 7-21 frames an update).
-- Next: probe 2: from a recorded state, run 1 original update vs N patched sub-updates with the same input and
-  list the state bytes that differ beyond rounding: each is an accumulation still to scale.
-### Probe 2 (subagent, 2026-11-23; C:\1NEXT\harddrivin_work\step\probe2_results.md, scripts probe2.py / scale.py / capture.py)
-- N=1 replay of captured updates = the recording byte for byte (15 states; rechecked: state 105, 0 bytes, all 128K).
-- With the accumulations scaled (Python stand-ins), N=2 and N=4 match one original update within rounding, step-size
-  error (airborne y +4 at N=4) and earlier reactions (steering applied 1 / N update late instead of 1). Scaled:
-  position, angles (0xA7BA relaxation: gap x (1 - 0.5^(1/N)), 0.159 at N=4), heading 16-bit, gravity 12 / N, skid
-  velocity changes, speed change at 0xA8BB, steering 96AC +-30 / N, throttle 96AD +-500 / N, clock 950B to 5N, timers
-  958B / 91DD once per N, odometer DAA(speed) / N, traffic speed / N, replay records (9 bytes at 5B00, ptr 954E) once
-  per N (gate at 0xFC4F). Collision thresholds all compare velocities (per original update): unchanged.
-- Blockers: traffic interpolation 0xF92D has 4 phases only (fraction 00/40/80/C0; rechecked: Z / P / PO branches),
-  finer fractions need new code or traffic steps once per N; time: logic 55k T median, render 741k median / 1.25M
-  p95 / 1.5M max, copy 61k: budget 10 frames at 28 MHz ~4.6M T per original update: N=2 fits (max 3.2M), N=4 fits
-  the median (3.4M) but not p95 (5.45M).
-- Proposed build (route 2a): N chosen per original update from the last render's cost (4 when it fits, else 2),
-  player physics sub-stepped, traffic once per N first (its own interpolation later), replay and clock flash gated
-  once per N; verify = probe2's comparison per update + RZX equivalence of the game state at whole-update points.
-### Build 2a stage 1 (subagent, 2026-11-23; C:\1NEXT\harddrivin_work\step\stage1_results.md, spec.py, hooksites.py)
-- spec.py = the exact integer rules the hooks implement: one 8-bit fraction per accumulated variable (start 0x80,
-  adds (rate << 8) >> s; exact for N | 256; carries across N changes; a shadow copy resets it when game code writes
-  the value), relaxation 0xA7BA [A:F] += (gap x C + 128) >> 8 (C = 75 at N = 2, 41 at N = 4), speed change / N only
-  after a velocity rebuild, steering +-30 / N, throttle by data words, gravity whole on the last sub-step, 15 one-byte
-  gates the driver rewrites per sub-step (traffic, clock, timers, odometer on the first or last sub-step). Driver:
-  CALL drv at 0x9E2F and 0xFC4C, N x (PUSH CONT; JP 0x9E34). Time-out predictor at entry -> N = 1 (update 554).
-- Checked: N = 1 = the capture byte for byte for all 1,552 non-escaping updates (rerun, 0 differ); 30 sites, original
-  bytes and instruction boundaries all ok. N = 4 vs the original: position p99 31-47, speed p99 9, heading tail 672
-  (steering acts 1 / N update late instead of 1: the point of the route).
-- Risks: render overruns more likely with new camera positions: clip buffer 9E00-9E11 into 0x9E12 (guard at 0xCEB9),
-  span fill C5E0-C665 over 9000-96E5 (stage 2); skid / push-out untested (not in the capture); input quirks: centre
-  key + left / right gives 7.5 not 30, up + down nets one step.
-### Build 2a stage 2 (subagent, 2026-11-23; C:\1NEXT\harddrivin_work\step\stage2_results.md, hd3.asm / hd3_build.py / hd3_verify.py)
-- hd3.asm: driver at 0x9E2F / 0xFC4C + 14 scaling / guard hooks (1,793 bytes, page 36 in slot 1 for the whole
-  driver; alt-ROM trampolines hold the original instructions). Byte-exact vs spec.py (+ 2 guards) for 1,554 updates
-  x N = 1 / 2 / 4 / switching, the two escapes, 66 + 40 runs of 20 / 40 updates, 518 synthetic skid / steering
-  states; 17 / 17 negative controls caught (rerun 2026-11-23); the N = 4 .nex boots to the title in the host model
-  (rerun: PASS).
-- Second overrun: camera inside an object -> unclipped polygon path D9B4 -> C86C with behind-camera vertices (y >=
-  0x80) -> span fill past row 127 over 9000-96E5 (h_fill at C7C0 skips such polygons); behind it the shift stub at
-  91BA gets scale 0 (h_shift at A0E7 / D758 clamps 1..6). Latent in the original, never reached in the capture.
-- Cost (model): N = 4 with logic at 28 MHz 6.1 / 9.9 / 11.5 frames per original update (median / p95 / max) against
-  10; real 28 MHz ~1.2x slower: N must be chosen per update. Run 150 at N = 4: the car stays stuck in an object (the
-  push-out is scaled 1 / N): stage 3 makes it whole.
-### Build 2a stage 3 = hd4 (subagent, 2026-11-23; C:\1NEXT\harddrivin_work\step\stage3_results.md, hd4.asm / hd4_build.py / hd4_verify.py)
-- Pace: 3,110 lines (10 frames) per original update; sub-step i's view copied no earlier than base + (i + 1) x
-  3110 / N, in the no-tear band (lines 128-262); absolute schedule, debt carried (capped at 3 frames); whole driver at
-  28 MHz; the time-out update runs plain. N per update from the last update's busy lines per sub-step c (stay 4 while
-  c <= 660, 2 while <= 1350; up to 4 at <= 600).
-- Two hd3 defects found on JNext and fixed: an overlapping 10-byte trampoline in an 8-byte slot (slot-overlap check
-  added), and 7FFD writes (0x9E7C / 0x9E86) setting MMU slots 0-1 back to ROM mid sub-step (new site 0x9E88 maps the
-  page again; the host model now does the same reset). Push-out at A4DB whole (Spec4); run 150's stuck car was the
-  open-loop divergence, not the push-out.
-- Verify (Spec4, site bytes included): 1,554 updates x N = 1 / 2 / 4 / switching / adaptive, 176 runs of 40, synthetic
-  skid / steering / push-out: 0 mismatches; 20 / 20 negative controls (rerun 2026-11-23: 20 / 20).
-- Pace: host model per update 10.00 / 10.02 / 12.0 frames (median / p95 / max); JNext 154 s of driving: 120 clock s in
-  120.12 s, N = 4 on 534 and N = 2 on 229 of 763 updates.
+Hardware test 1: the smooth build plays "just as unplayable as the original": the game still reads the controls and
+moves the car once an update (~4 a second). Route 2a (user: "a good idea"): every update at 28 MHz as N sub-steps of
+1 / N game time, paced to real time (user: 1 clock second = 1 s). Route 2b (own Layer 2 renderer) would build on it.
+### Probes 1-2 (C:\1NEXT\harddrivin_work\step: writers.py, probe2.py / scale.py / capture.py)
+- The car is explicit per-update Euler inside 0xA423: position 0xA834 += velocity, angles 0xA856 += rates (fraction
+  0xA9A5), gravity +12 airborne, speed 0x965B set by 0xF568 (from 0xA8BB), steering 0x96AC; the lap clock 0xA38A
+  counts updates (0x950B to 5).
+- N = 1 replay of captured updates = the recording byte for byte; with the accumulations scaled, N = 2 / 4 match
+  one update within rounding and step-size error. Once an update: traffic (0xF92D has 4 phases only), clock,
+  timers, odometer, replay records. Time: N = 2 always fits 10 frames at 28 MHz, N = 4 the median render only.
+### Build 2a stages 1-3 (subagents; step\stage1-3_results.md, spec.py, hd3 / hd4)
+- Rules (spec.py, now Spec in the engine): an 8-bit fraction a variable + a shadow (game writes reset it),
+  relaxation C = 75 / 41 at N = 2 / 4, speed / N only after a velocity rebuild, steering +-30 / N, throttle words,
+  12 one-byte gates; the driver at 0x9E2F / 0xFC4C runs N x (PUSH CONT; JP 0x9E34); a time-out update runs plain.
+- Render guards for new camera positions (latent in the original): clip vertex past 0x9E11 (0xCEB9), span fill of
+  a polygon behind the camera (0xC7C0), shift-stub scale 0 / >= 7 (0xA0E7 / 0xD758). Push-out 0xA4DB whole.
+- Pace: 3,110 lines an update, sub-step i's view no earlier than base + (i + 1) x 3110 / N, in lines 128-262,
+  debt capped at 3 frames; N adaptive from the last update's busy lines a sub-step (4 while <= 660, 2 while
+  <= 1350). JNext 154 s: 120 clock s in 120.12 s, N = 4 on 534 and 2 on 229 of 763 updates.
+- On the Next a 7FFD write resets MMU slots 0-1 to ROM: site 0x9E88 maps the page again (found on JNext).
+### Move-in (2026-11-23; step\movein_results.md)
+- asm/hard_drivin_steps.asm = hd4.asm (release: adaptive N, no mutants), one pass (ROM side at 0x4000 under DISP),
+  labels for the negative controls; profile IDENTICAL; the steps build = hd4_na byte for byte before automap_off.
+- verify_steps: the RZX played once; at each update entry the 128K state and the update's port reads; each update
+  run by the build (NextSteps: route 1's model + the line clock, 7FFD -> ROM in slots 0-1, recorded port reads) and
+  by Spec from the same warm state (update u-1 at N = 1 first), compared: all 128K (site bytes as built), registers
+  but R, hook state, NR 7, slot 1, in_drv; escapes at A3F2 / 9E12. Adaptive (preset (c_sub, n_cur) per update: every
+  branch of the rule) + fixed N = 1 / 2 / 4 on every update; N = 1 also against the recording. Process pool
+  (NEXCLASH_WORKERS, default min(16, CPUs)).
+- unit_tests_steps: runs of 20 (adaptive: pace, 0 views early, median 10.00 frames), synthetic states (skid, steering
+  near / at the clamps, relaxation gap, heading carry, push-out, no warm-up, time-out), the render guards' edges in
+  and out of the driver, 20 negative controls as page-byte patches at labels (prototype mutants 1-12, 15-20, 22,
+  C4ST 661; 13 / 14 equivalent).
+- Results: full RZX 22,116 frames: 6,220 cases (counter "N used" 1 / 2 / 4:
+  1,940 / 2,232 / 2,040), 0 mismatches, 207 s on 16 workers; unit tests 24 s, 20 / 20 negatives caught; model pace update 10.00 /
+  10.19 / 10.76 frames median / p95 / max (10 = real time), 0 views early. Repo build not yet timed in JNext / on hardware.
 
 ## Hardware checklist
-Test 1 (2026-11-23), sent to the user: C:\1NEXT\harddrivin_work\hardware1 (CHECKLIST.txt + both builds: hard_drivin_smooth.nex
-9fb23f8e, hard_drivin.nex d74f75e6, the stamped record's outputs). Steps: start-up and options; smoothness (more,
-smaller steps; smooth turns; none when stopped; no tearing); speed: stopwatch over 30 race-clock seconds (the clock
-counts updates) in both builds, a quiet and a busy stretch, expected within ~1 s (JNext: +3 frames / 178 updates);
-crash replay and key 0; the out-of-time path (0xA402, not in the recording); sounds; a 10-minute soak.
-Results (user, 2026-11-23): plays "just as unplayable as the original" (smooth picture, same control rate).
-Test 2 (2026-11-23, route 2a), sent to the user: C:\1NEXT\harddrivin_work\hardware2 (CHECKLIST.txt, hard_drivin_steps.nex 46e06774 =
-hd4_na, hard_drivin.nex d74f75e6). Steps: start-up (a crash after the first view = the 7FFD paging fault JNext
-modelled), feel, tearing, stopwatch vs race clock 1:1, crash / replay / time-out / race end / menus, objects, sound,
-10-minute soak.
-Results (user, 2026-11-23): "the steps one plays much better!"; stopwatch and event items not reported yet.
+Test 1 (route 1; C:\1NEXT\harddrivin_work\hardware1: hard_drivin_smooth.nex 9fb23f8e, hard_drivin.nex d74f75e6):
+start-up, smoothness, no tearing, stopwatch vs race clock, crash replay, time-out, sounds, soak. Result (user): plays
+"just as unplayable as the original" (smooth picture, same control rate).
+Test 2 (route 2a; hardware2: hard_drivin_steps.nex 46e06774 = hd4_na, before automap_off): start-up (a crash after the
+first view = the 7FFD fault), feel, tearing, stopwatch vs race clock 1:1, crash / replay / time-out / race end / menus,
+objects, sound, 10-minute soak. Result (user): "the steps one plays much better!"; stopwatch and event items not
+reported yet. The repo's hard_drivin_steps.nex (a2709f99) is the same build + the automap_off entry.

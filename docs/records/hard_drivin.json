@@ -36,7 +36,9 @@
  "data": [
   "asm/hard_drivin_hooks.asm",
   "asm/hard_drivin_wset.inc",
-  "docs/profiles/hard_drivin.json"
+  "docs/profiles/hard_drivin.json",
+  "asm/hard_drivin_steps.asm",
+  "docs/profiles/hard_drivin_steps.json"
  ],
  "shared_data": [
   "asm/lib/hlib_speed.asm",
@@ -57,7 +59,7 @@
    "hard_drivin.rzx"
   ],
   "auto_record": false,
-  "minutes": 30
+  "minutes": 21
  },
  "outputs": {
   "plain": {
@@ -67,11 +69,16 @@
   "smooth": {
    "file": "hard_drivin_smooth.nex",
    "md5": "9fb23f8e64fa8187ba304c34af9a6016"
+  },
+  "steps": {
+   "file": "hard_drivin_steps.nex",
+   "md5": "a2709f99f2234475bf225b8016d6189c"
   }
  },
  "repro": [],
  "checks": [
-  "asm2profile:hard_drivin"
+  "asm2profile:hard_drivin",
+  "asm2profile:hard_drivin_steps"
  ],
  "techniques": [
   {
@@ -125,6 +132,34 @@
    "revision": 2,
    "target": "JNext pace log vs the plain build, 178 updates",
    "phases": []
+  },
+  {
+   "application": "hard_drivin.steps",
+   "id": "patch.substep-updates",
+   "revision": 1,
+   "target": "route 2a: update 0x9E34 as N = 1 / 2 / 4 sub-steps (adaptive) at 28 MHz; driver at 0x9E2F / 0xFC4C, physics hooks with 8-bit fractions, 12 gates, render guards",
+   "phases": [
+    "entry",
+    "commit"
+   ]
+  },
+  {
+   "application": "hard_drivin.steps-pace",
+   "id": "patch.pace-limiter",
+   "revision": 4,
+   "target": "route 2a: REAL TIME, 3,110 lines an original update; view copies on an absolute schedule (line clock NR 0x1E / 0x1F), debt capped at 3 frames",
+   "phases": [
+    "commit"
+   ]
+  },
+  {
+   "application": "hard_drivin.steps-altrom",
+   "id": "patch.whole-altrom-image",
+   "revision": 2,
+   "target": "route 2a: bank 12: Sinclair's ROM 1 + the steps trampolines at 0x3870",
+   "phases": [
+    "entry"
+   ]
   }
  ],
  "feasibility": {
@@ -148,10 +183,10 @@
  "status": {
   "title": "Hard Drivin'",
   "engine_col": "hard_drivin (hard_drivin.md)",
-  "build": "stage 2; hard_drivin_smooth.nex 9fb23f8e (default: render + copy at 28 MHz in original-time windows, in-between views, K calibrated at run time) and plain hard_drivin.nex d74f75e6 (tail 0x6C00); original pictures; automap_off entry (nxc patch) as auto applies it",
-  "software": "selftest --verify --stamp (whole RZX, 22,116 frames): 1,556 renders, 3,112 checks (normal and calibration paths), 3,281 in-between views each = the original render at its camera, calibration samples within 0.43 % (1,360 kept, 196 dropped); unit tests on 11 states, 4 / 4 negative controls; boot with and without NEXLOAD; rom_paths complete; prototype: 18 / 18 mutants; JNext pace +3 frames / 178 updates",
-  "hardware": "untested",
-  "next": "hardware checklist; R preservation (patch.preserve-r)"
+  "build": "move-in; default hard_drivin_steps.nex a2709f99 (finer time steps: each update as N = 1 / 2 / 4 sub-steps at 28 MHz, paced to real time, asm/hard_drivin_steps.asm); hard_drivin_smooth.nex 9fb23f8e (render + copy at 28 MHz, in-between views) and plain hard_drivin.nex d74f75e6 (tail 0x6C00); automap_off entry (nxc patch) as auto applies it",
+  "software": "selftest --verify --stamp (whole RZX, 22,116 frames, 21 min): steps 6,220 cases (1,555 updates x adaptive / N=1 / 2 / 4) = the Spec byte for byte, unit tests + 20 / 20 negative controls, model pace 10.00 frames median; smooth 1,556 renders, 3,112 checks, 3,281 in-between views = the original render, calibration within 0.43 %, 4 / 4 negative controls; boot with and without NEXLOAD; rom_paths complete",
+  "hardware": "steps prototype (hd4) played on hardware by the user (\"plays much better\"); the repo build untested on hardware",
+  "next": "hardware checklist for hard_drivin_steps.nex (tearing, pace); JNext pace of the repo steps build; R preservation (patch.preserve-r)"
  },
  "results": [
   {
@@ -201,15 +236,41 @@
    "build": "9fb23f8e",
    "scope": "boot_problems with and without NEXLOAD (tail and printer buffer credited to rom_paths); rom_paths COMPLETE over 2,000 frames",
    "evidence": "games/hard_drivin.md \"Next session\""
+  },
+  {
+   "application": "hard_drivin.steps",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "a2709f99",
+   "scope": "selftest --verify, whole RZX 22,116 frames: 1,555 updates x (adaptive, N=1, 2, 4) = 6,220 cases byte-exact vs the Spec from warm states (all RAM, registers but R, hook state), 2 escapes per variant, 2 guard drops; runs of 20 updates, synthetic skid / steering / tilt / heading carry / push-out / time-out states, guard edges; 20 / 20 negative controls; no hardware",
+   "evidence": "games/hard_drivin.md \"Next session\""
+  },
+  {
+   "application": "hard_drivin.steps-pace",
+   "check": "time.pace",
+   "status": "partial",
+   "build": "a2709f99",
+   "scope": "host model only (runs of 20 updates): update 10.00 / 10.19 / 10.76 frames median / p95 / max (10 = real time), 0 views early; JNext and hardware not measured for the repo build",
+   "evidence": "games/hard_drivin.md \"Next session\""
+  },
+  {
+   "application": "hard_drivin.steps-altrom",
+   "check": "boot",
+   "status": "pass",
+   "build": "a2709f99",
+   "scope": "boot check of the steps build in auto (with and without NEXLOAD); rom_paths COMPLETE over 2,000 frames",
+   "evidence": "games/hard_drivin.md \"Next session\""
   }
  ],
  "checked": {
   "deps": {
    "asm/hard_drivin_hooks.asm": "fcf860f1fd2a073f",
+   "asm/hard_drivin_steps.asm": "c7f268a12ce8fdd5",
    "asm/hard_drivin_wset.inc": "c5acb659ce276388",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
    "docs/profiles/hard_drivin.json": "4ed3e4b8fe925c11",
+   "docs/profiles/hard_drivin_steps.json": "85dfeaedec2c8d0f",
    "nexclash.py": "d9b430cef7478a38",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "dfc6f6d6e095185c",
@@ -217,7 +278,7 @@
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
    "nexclash/engines.py": "7ce4a95aeb51d4c8",
-   "nexclash/hard_drivin.py": "748344159e5eae90",
+   "nexclash/hard_drivin.py": "4eb657854e7013ae",
    "nexclash/hooklib.py": "258714a3676ee71b",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
@@ -225,13 +286,14 @@
    "nexclash/recolour.py": "28ecc65866678e42",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "17926b1a6f6a26e0",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7843b0da444ced1d",
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "2c8934b73d797405",
+   "recipe": "f7f0609778859329",
    "rom": "sinclair"
   },
   "date": "2026-11-23"
@@ -239,10 +301,12 @@
  "verified": {
   "deps": {
    "asm/hard_drivin_hooks.asm": "fcf860f1fd2a073f",
+   "asm/hard_drivin_steps.asm": "c7f268a12ce8fdd5",
    "asm/hard_drivin_wset.inc": "c5acb659ce276388",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
    "docs/profiles/hard_drivin.json": "4ed3e4b8fe925c11",
+   "docs/profiles/hard_drivin_steps.json": "85dfeaedec2c8d0f",
    "nexclash.py": "d9b430cef7478a38",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "dfc6f6d6e095185c",
@@ -250,7 +314,7 @@
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
    "nexclash/engines.py": "7ce4a95aeb51d4c8",
-   "nexclash/hard_drivin.py": "748344159e5eae90",
+   "nexclash/hard_drivin.py": "4eb657854e7013ae",
    "nexclash/hooklib.py": "258714a3676ee71b",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
@@ -258,13 +322,14 @@
    "nexclash/recolour.py": "28ecc65866678e42",
    "nexclash/records.py": "a8919d2869b77132",
    "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "17926b1a6f6a26e0",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7843b0da444ced1d",
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "2c8934b73d797405",
+   "recipe": "f7f0609778859329",
    "rom": "sinclair"
   },
   "date": "2026-11-23"
