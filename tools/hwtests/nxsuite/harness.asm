@@ -492,7 +492,10 @@ ex_kmean:
 ; ---------------------------------------------------------------- the T line
 emit_t: call w_lb
         ld hl,s_tid : call wstr
-        ld ix,(cure) : call wtid
+        ld hl,(subid) : ld a,h : or l : jr z,.mid
+        call wstr : jr .sid
+.mid:   ld ix,(cure) : call wtid
+.sid:
         ld hl,s_st : call wstr
         ld a,(R_st) : add a,a : ld l,a : ld h,0 : ld de,stnames : add hl,de
         ld a,(hl) : inc hl : ld h,(hl) : ld l,a : call wstr
@@ -514,6 +517,7 @@ emit_t: call w_lb
         ld a,10 : call wchr
         call w_len : jp txt_append
 s_tid:  db "T id=",0
+subid:  dw 0                    ; non-zero: a sub-test id string (e.g. "ih.t1") written instead of the test id
 s_st:   db " st=",0
 s_c:    db " c=",0
 s_v:    db " v=",0
