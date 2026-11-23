@@ -317,6 +317,8 @@ def verdicts(res, table):
         if 'HANG-GUARD' in st:
             v['verdict'], v['why'] = 'hung', 'the machine stopped in %s' % ','.join(
                 r['id'] for r in recs if r['status'] == 'HANG-GUARD')
+        elif all(r['status'] == 'SKIP' and r.get('why') == 'left-out' for r in recs):
+            v['verdict'], v['why'] = 'left-out', ','.join(r['id'] for r in recs)
         elif all(s in ('SKIP', 'PENDING-OPERATOR', 'VISUAL-SHOWN', 'VISUAL') for s in st):
             v['verdict'] = 'pending-operator' if 'PENDING-OPERATOR' in st else 'not-run'
             v['why'] = ','.join('%s:%s' % (r['id'], r.get('why', r['status'].lower())) for r in recs)
@@ -437,7 +439,7 @@ def write_json(res, table, path_in, data, board=None, outdir=OUTDIR, dry=False, 
 def report(doc, table, out=sys.stdout):
     v = doc['claims']
     order = {'disproved': 0, 'hung': 1, 'confirmed': 2, 'measured': 3, 'choice': 4, 'operator': 5,
-             'pending-operator': 6, 'not-run': 7}
+             'pending-operator': 6, 'not-run': 7, 'left-out': 8}
     pf = doc.get('platform', {'kind': 'board', 'name': 'board'})
     if pf['kind'] == 'board':
         print('board %s  core %s  (intake run %d)' % (doc['board']['name'], doc['core'], doc['intake_runs']),
@@ -467,6 +469,8 @@ def report(doc, table, out=sys.stdout):
                                            x['unit'] or '')
             else:
                 what = '%s %s' % ('OPERATOR' if x['verdict'] == 'operator' else 'CHOICE', x['choice'])
+        elif x['verdict'] == 'left-out':
+            what = 'LEFT OUT (%s: reason below)' % x['why']
         else:
             what = 'NOT ANSWERED (%s: %s)' % (x['verdict'], x['why'])
         print('%-34s %s  [%s]' % (cid, what.strip(), ','.join(x['tests'])), file=out)
@@ -488,6 +492,12 @@ def report(doc, table, out=sys.stdout):
         for x in na:
             print('  %-32s %s - %s' % (x['claim'], x['part'], x['status']), file=out)
         print('  reason: %s' % na[0]['reason'], file=out)
+    lo = [t for t in table['tests'] if 'left_out' in t]
+    if lo:
+        print('left out on purpose (%d tests; the file says SKIP why=left-out):' % len(lo), file=out)
+        for t in lo:
+            print('  %-4s %s [%s]' % (t['id'], t['title'], ','.join(t['claims']) or '-'), file=out)
+            print('       %s' % t['left_out'], file=out)
     dis = doc['run'].get('passes_disagree', [])
     if dis:
         print('passes disagree (%d tests; the verdict used the latest pass):' % len(dis), file=out)

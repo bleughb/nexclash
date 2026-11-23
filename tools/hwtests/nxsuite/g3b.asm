@@ -578,8 +578,12 @@ i19h:   push af : push hl
 ; ---------------------------------------------------------------- I20 one outstanding CTC interrupt
 ; CTC0 timer /16, tc 175 (~10 kHz at 28 MHz). Periods over one frame: $C9 bit 0 polled (interrupt off).
 ; Runs over one frame: hardware IM2, CTC0 only; the handler stays busy for 3 CTC0 wraps and itself counts the
-; frame (line MSB falls), switching CTC0's interrupt off after one whole frame. v = runs / periods
-; (1/3 if extra requests fold into one, more if they queue).
+; frame (line MSB falls), switching CTC0's interrupt off after one whole frame: keys runs / periods (a
+; handler busy for 3 periods cannot run more often than every 3rd period whether requests fold or queue,
+; so this ratio does not decide the claim; board run 4 measured 0.24).
+; The deciding part: 8 times, interrupts off for 5 CTC0 wraps (a request each), then EI just after the 5th
+; wrap and DI again half a period later; a handler that only counts. v = the most runs in one window:
+; 1 = the five requests folded into one (PASS), 2-5 = they queued (FAIL), 0 = no run (INFO). key least.
 @t_i20:  nextreg $07,3
         di : nextreg $C5,0
         ld bc,$183B : ld a,$07 : out (c),a : ld a,175 : out (c),a
@@ -605,17 +609,40 @@ i19h:   push af : push hl
         inc e : ld a,e : cp 3 : jr c,.c
 .e:     di
         nextreg $C5,0
+        ld hl,i20q : call g3_hwtab
+        call g3_ack
+        nextreg $C5,1
+        xor a : ld (i20mx),a : dec a : ld (i20mn),a
+        ld b,8
+.q:     push bc
+        xor a : ld (i20qn),a
+        ld bc,$183B : ld e,5 : in d,(c)
+.q1:    ld hl,4096
+.q2:    dec hl : ld a,h : or l : jr z,.qx                ; a CTC that never counts
+        in a,(c) : cp d : ld d,a : jr c,.q2 : jr z,.q2
+        dec e : jr nz,.q1
+        ei
+        ld hl,4096
+.q3:    dec hl : ld a,h : or l : jr z,.qx
+        in a,(c) : cp 88 : jr nc,.q3                    ; half a period after the wrap
+.qx:    di
+        ld a,(i20qn) : ld hl,i20mx : cp (hl) : jr c,.q4
+        ld (hl),a
+.q4:    ld hl,i20mn : cp (hl) : jr nc,.q5
+        ld (hl),a
+.q5:    pop bc : djnz .q
+        nextreg $C5,0
         ld bc,$183B : ld a,$03 : out (c),a
         call g3_hwoff
-        ld hl,(.p) : ld a,h : or l : jr z,.z
-        ld bc,(g3cnt) : ld de,100 : call mul16
-        ld bc,(.p) : call div32
-        jr .r
-.z:     ld de,0
-.r:     call res_num
-        ld hl,u_ratio : call res_unit
+        ld a,(i20mx) : ld l,a : ld h,0 : call res_int
+        ld hl,u_count : call res_unit
+        ld a,(i20mn) : ld e,a : ld d,0 : ld hl,k_min : call ex_kd
         ld de,(g3cnt) : ld hl,k_runs : call ex_kd
-        ld de,(.p) : ld hl,k_per : jp ex_kd
+        ld de,(.p) : ld hl,k_per : call ex_kd
+        ld a,(i20mx) : or a : ret z
+        cp 1 : jr nz,.f
+        ld a,ST_PASS : ld (R_st),a : ret
+.f:     ld a,ST_FAIL : ld (R_st),a : ret
 .p:     dw 0
 ; -> HL = $C9 bit 0 sightings over one frame (from a frame start)
 .per:   nextreg $C9,$FF
@@ -632,7 +659,11 @@ i19h:   push af : push hl
 .zz:    bit 0,e : jr z,.l
         ret
 k_per:  db "periods",0
-u_ratio: db "ratio",0
+k_min:  db "least",0
+i20q:   push af : ld a,(i20qn) : inc a : ld (i20qn),a : pop af : ei : reti
+i20qn:  db 0
+i20mx:  db 0
+i20mn:  db 0
 i20h:   push af : push bc : push de : push hl
         ld bc,$183B : in d,(c) : ld e,3 : ld hl,2048   ; guard: 3 periods are ~150 reads; a CTC that
 .l:     dec hl : ld a,h : or l : jr z,.x                ; never counts (CSpect 4.5.9) must not hold the frame

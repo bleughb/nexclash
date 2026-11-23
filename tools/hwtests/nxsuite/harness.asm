@@ -422,7 +422,8 @@ run_test_marked:
         call scr_mark                               ; '>' on the screen
         ld ix,(cure)
         ld l,(ix+6) : ld h,(ix+7) : ld a,h : or l : jr nz,.b
-        ld hl,why_nb : jr .skip
+        ld hl,why_nb : bit 4,(ix+5) : jr z,.skip       ; flag 16: left out on purpose (reason: claims file)
+        ld hl,why_lo : jr .skip
 .b:     ld a,(curt) : ld hl,(justhung) : cp l : jr nz,.nj
         ld a,h : or a : jr nz,.nj
         ld a,ST_HANG : ld (R_st),a
@@ -473,6 +474,8 @@ tsp:    dw 0
 why_nb: db "not-built",0
 why_hung: db "hung-last-run",0
 why_ns: db "not-selected",0
+why_lo: db "left-out",0
+why_nobl: db "no-blitter",0
 
 ; the result of the test being run (tests set these; harness writes the line)
 R_st:   db 0

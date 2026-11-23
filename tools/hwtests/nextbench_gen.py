@@ -119,6 +119,14 @@ def main(out, suite=False):
         g.add('DMA rtg', n, otir_prog(p, b), 1, n, setup='dmaset')
     b = [0x83, 0xCF, 0x87]
     g.add('DMA rrun', 256, otir_prog(prog('drr', b), b), 1, 256, setup='dmaset')
+    if suite:
+        # nxsuite only: $D3 CONTINUE + ENABLE re-run (both ports fixed, 1 byte, so the addresses never move
+        # however often it runs) and the 5-OUT re-arm (WR0 with port A's address only, LOAD, ENABLE)
+        prog('dcf1', dma(SRC, 1, DST, MEM_FIX_A, 0x60))
+        b = [0xD3, 0x87]
+        g.add('DMA cont', 1, otir_prog(prog('dcn', b), b), 0, 1, setup='dmacset')
+        b = [0x1D, SRC & 255, SRC >> 8, 0xCF, 0x87]
+        g.add('DMA arm', 256, otir_prog(prog('dra', b), b), 1, 256, setup='dmaset')
     for n in (256, 2048):
         b = dma(SRC, n, DST, MEM_INC_A, MEM_INC_B, 0xCD)
         g.add('DMA brst', n, otir_prog(prog('db%d' % n, b), b), 1, n)

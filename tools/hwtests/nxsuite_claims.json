@@ -1179,7 +1179,7 @@
    "claims": [
     "dma-blitter-2d"
    ],
-   "risk": "none",
+   "risk": "hang",
    "title": "blitter 2D",
    "auto": true,
    "operator": false,
@@ -1223,7 +1223,8 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "left_out": "The 32-ball figure is a workload, not one register behaviour. Its parts are measured: D13 clocks per byte of opaque / transparent copies and fill, D12 the 2D copies, G7 N01 the LDIR and DMA rows; drawing the figure's 320 x 256 scene and timing it per frame would add a picture, not a new hardware answer."
   },
   {
    "id": "D16",
@@ -1236,7 +1237,8 @@
    "auto": true,
    "operator": false,
    "opt_in": false,
-   "stage": 2
+   "stage": 2,
+   "left_out": "Measured by G7 N01, per call at 3.5 and 28 MHz: the nb.DMA, nb.DMA_rtg, nb.DMA_rrun and nb.DMA_brst rows and the suite-only rows nb.DMA_cont.1 ($D3 continue, $87) and nb.DMA_arm.256 (WR0 port A only $1D, $CF, $87); a second copy of the same rows here would add nothing."
   },
   {
    "id": "N01",
@@ -3065,9 +3067,9 @@
    "values": {
     "book": "as stated"
    },
-   "measure": "CTC0 at ~10 kHz in hardware IM2, handler busy for 3 periods; count handler runs vs CTC periods over one frame.",
-   "result_type": "number",
-   "unit": "count",
+   "measure": "CTC0 at ~10 kHz in hardware IM2: interrupts off for 5 CTC0 wraps (5 requests), then EI just after the 5th and DI half a period later, 8 times; a handler that only counts. 1 run = the requests folded into one, 2-5 = they queued. (A handler busy for 3 periods cannot tell the two apart: it runs at most every 3rd period either way.)",
+   "result_type": "pass-fail",
+   "unit": "runs",
    "tolerance": "exact",
    "auto": true,
    "risk": "none",
@@ -3744,7 +3746,7 @@
    "values": {
     "repo": "board 3.02.00 nextbench v2/v3"
    },
-   "measure": "nextbench DMA rows (full, rtg, rrun, brst, port uploads) re-run on 3.03 plus new rows: $D3+$87 continue, 5-OUT re-arm ($1D,lo,hi,$CF,$87).",
+   "measure": "nextbench DMA rows (full, rtg, rrun, brst, port uploads) re-run on 3.03 plus new rows: $D3+$87 continue, 5-OUT re-arm ($1D,lo,hi,$CF,$87). (suite: rows nb.DMA_cont.1 with fixed ports, nb.DMA_arm.256)",
    "result_type": "number",
    "unit": "us",
    "tolerance": "+-0.5 %",

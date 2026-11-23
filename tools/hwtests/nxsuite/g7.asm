@@ -242,6 +242,7 @@ dec5:   ld bc,10000 : call .d : ld bc,1000 : call .d : ld bc,100 : call .d : ld 
 
 ; ---------------------------------------------------------------- set-up / tear-down (nextbench v3)
 dmaset: ld hl,dc256 : ld bc,(16 << 8) | $6B : otir : ret      ; a full DMA program (ports set)
+dmacset: ld hl,dcf1 : ld bc,(16 << 8) | $6B : otir : ret     ; 1 byte, both ports fixed (DMA cont)
 copnops:                                                       ; copper list of NOPs, stopped
         nextreg $62,0 : nextreg $61,0
         ld hl,COPZ : ld de,512

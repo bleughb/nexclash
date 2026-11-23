@@ -5,7 +5,8 @@
 build.py runs it before assembling nxsuite. Writes into OUTDIR:
 - nxsuite_tests.inc: the test table from nxsuite_claims.json (the one place the .nex and intake.py both read:
   test id -> group, claims, risk), the group table and their strings. A test is BUILT when the sources define
-  its routine `t_<id>:` (lower case); every other test is written to the file as `SKIP why=not-built`.
+  its routine `t_<id>:` (lower case); a test with a "left_out" reason in the claims file is written as
+  `SKIP why=left-out` (flag 16; intake.py prints the reason); every other one as `SKIP why=not-built`.
 - z80ntest_cases.inc: z80ntest's FUNC / TIME cases (z80ntest_gen.py, the same expected values) for group G2.
 - nb_cases.inc / nb_far.inc: the nextbench v3 rows (nextbench_gen.py, suite layout) for group G7.
 - nxsuite_sysvars.inc: the 48K system variables $5C00-$5CFF as Sinclair's ROM leaves them after start-up
@@ -24,7 +25,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 sys.path.insert(0, HERE)
 
-FLAG_RISK, FLAG_OPER, FLAG_OPTIN, FLAG_OVL2 = 1, 2, 4, 8
+FLAG_RISK, FLAG_OPER, FLAG_OPTIN, FLAG_OVL2, FLAG_LEFT = 1, 2, 4, 8, 16
 STATUS = ['', 'PASS', 'FAIL', 'INFO', 'SKIP', 'HANG-GUARD', 'VISUAL', 'VISUAL-SHOWN', 'OPERATOR', 'PENDING-OPERATOR']
 
 
@@ -104,7 +105,7 @@ def tests_inc(out):
     nbuilt_all = 0
     for g in groups:
         rows = [x for x in tests if x['group'] == g['id']]
-        nb = sum(1 for x in rows if 't_' + x['id'].lower() in labels)
+        nb = sum(1 for x in rows if 't_' + x['id'].lower() in labels or 'left_out' in x)
         nbuilt_all += nb
         kind = {'auto': 0, 'operator': 1, 'opt-in': 2}[g['kind']]
         lines.append('        db %d,%d,%d,"%s",%d : dw gname_%s : db %s   ; %s' % (
@@ -118,7 +119,8 @@ def tests_inc(out):
         assert len(x['id']) <= 4, x['id']
         lab = 't_' + x['id'].lower()
         flags = (FLAG_RISK if x['risk'] != 'none' else 0) | (FLAG_OPER if x['operator'] else 0) | \
-                (FLAG_OPTIN if x['opt_in'] else 0) | (FLAG_OVL2 if lab in p2 else 0)
+                (FLAG_OPTIN if x['opt_in'] else 0) | (FLAG_OVL2 if lab in p2 else 0) |                 (FLAG_LEFT if 'left_out' in x else 0)
+        assert not ('left_out' in x and lab in labels), x['id'] + ': left out and built'
         lines.append('        db "%-4s",%d,%d : dw %s,cl_%s,ti_%s' % (
             x['id'], gidx[x['group']], flags, lab if lab in labels else '0', x['id'], x['id']))
     lines.append('ttab_end:')

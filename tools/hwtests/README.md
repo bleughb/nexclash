@@ -230,7 +230,8 @@ one `T` line per test:
 last line `END lines=<n> crc16=$hhhh` (CRC-16/CCITT over every byte before it). Sub-test lines carry the
 parent's prefix: `zf.` (Z01 cases), `zt.` / `zu.` (Z06 / Z07), `ih.` (I03 = im2hold T1-T7), `nb.` (N01 =
 the nextbench table: `nb.<name>.<size>.<35|28>`, v = microseconds per call, mean of 5 runs, min / max,
-`R=` calls per measurement; FAIL only when a copy / fill check fails); they have no `c=` (the parent's
+`R=` calls per measurement; FAIL only when a copy / fill check fails; suite-only rows `DMA_cont.1` - $D3
+continue, both ports fixed - and `DMA_arm.256` - WR0 port A only, $CF, $87); they have no `c=` (the parent's
 claims). A later
 session or pass appends to the same file. The intake keeps every pass: a test's verdict uses its latest
 pass, and every test whose passes disagree is listed (files from before the `P` line: a pass is inferred
@@ -258,7 +259,8 @@ shows the digital test card.) `geom=` is what the measurements match: line lengt
 108 = hdmi, 112 / 312 = vga48, 112 / 320 = pentagon, 114 / 311 = vga128, else other.
 
 Statuses: PASS, FAIL (the claim's expectation is wrong on this machine), INFO (a number or a choice, no
-verdict), SKIP (`why=not-built`, `not-selected`, `hung-last-run`), HANG-GUARD (the machine stopped in this
+verdict), SKIP (`why=not-built`, `not-selected`, `hung-last-run`, `no-blitter` - core below 3.03 -, `left-out` -
+on purpose: the reason is in `nxsuite_claims.json` and the intake prints it), HANG-GUARD (the machine stopped in this
 test on the run before), OPERATOR (`key=` / `means=`, answered by the person at the machine),
 PENDING-OPERATOR (an operator question left for the U pass), VISUAL / VISUAL-SHOWN (later stages).
 
