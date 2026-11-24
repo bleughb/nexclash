@@ -67,13 +67,15 @@ C_NTGT    EQU 0x21F4        ; cells: the slots the game gave out (counter - 3)
 SEEN      EQU 0x2700        ; cells: the update each slot was given back in (128)
 SLOTCTR   EQU 0xBDF1        ; the game's next free slot (from 3 each update)
 F_SP      EQU 0x21F1        ; fcolour: the next signature byte (2)
-SIGT      EQU 0x2690        ; fcolour: a figure's colour signature (10: alignment, then up to 9 cell colours)
-MSIG      EQU 0x2800        ; the signature each mutable slot was built for (16 x 10)
+SIGT      EQU 0x2690        ; fcolour: a figure's colour signature (11: alignment, up to 9 cell colours, box size)
+SLOTCLR   EQU 0x26C0        ; the colour each one-colour slot was built in (64)
+MSIG      EQU 0x2800        ; the signature each mutable slot was built for (16 x 11)
 T_INK     EQU 0x21E6        ; tile: the ink and paper pixel values (colour + 1)
 T_PAP     EQU 0x21E7
 TILEBUF   EQU 0x2200
 HSTACK    EQU 0x2400
 ATTRTAB   EQU 0x2400
+NSPRMAX   EQU 128           ; sprites ATTRTAB holds (640 bytes, then PTAB)
 
         INCLUDE "lib/hlib_speed.asm"     ; macros only
 
@@ -538,27 +540,20 @@ slot:   ld e,(ix+0)
         call hlib_pc_inval      ; its old image gone: the upload below always happens
         jp .free
 .k0:    ld de,0                 ; key 0 = mutable: always uploaded
-        jr .k
-.uni:   ld a,(ix+2)             ; one colour: + the colour baked in: the key names the image AND its colour
-        add a,a
-        add a,a
-        add a,a
-        add a,d
-        ld d,a                  ; DE = key
+        jp .mut
+.uni:   ld a,d                  ; one colour: key = graphics + pair, the colour compared from SLOTCLR on a hit
         or e
-        jr nz,.k
+        jr nz,.k1
         inc e                   ; 0 is the mutable key
-.k:     ld a,d
-        or e
-        jr z,.mut               ; mutable: any slot not serving this update
-        ld a,e
+.k1:    ld a,e
         xor d
+        xor (ix+2)
         and 63
         cp MUT0
         jr c,.h
         sub 64-MUT0             ; one-colour keys hash into 0 .. MUT0-1, clear of the mutable slots
 .h:     ld (V_HASH),a
-        ld b,PROBE              ; a slot already holding the key?
+        ld b,PROBE              ; a slot already holding the key in this colour?
 .p:     ld l,a
         ld h,high HLIB_PCACHE
         ld c,a
@@ -568,6 +563,13 @@ slot:   ld e,(ix+0)
         set 6,l
         ld a,(hl)
         cp d
+        jr nz,.n
+        ld a,c
+        add a,low SLOTCLR
+        ld l,a
+        ld h,high SLOTCLR
+        ld a,(hl)
+        cp (ix+2)
         jr nz,.n
         ld a,c                  ; hit: no upload
         jp .use
@@ -607,7 +609,7 @@ slot:   ld e,(ix+0)
         pop de
         ld c,a
         cp MUT0
-        jr c,.free
+        jr c,.ufree
         ld a,(V_HASH)           ; every one in the window serving this update: any of 0 .. MUT0-1 not serving it
         ld b,MUT0
 .qu:    ld c,a
@@ -616,15 +618,23 @@ slot:   ld e,(ix+0)
         ld h,high SLOTUSE
         ld a,(V_UPD)
         cp (hl)
-        jr nz,.free
+        jr nz,.ufree
         ld a,c
         inc a
         cp MUT0
         jr c,.qu2
         xor a
 .qu2:   djnz .qu
-        ld a,c                  ; all serving this update: reuse the last
-        jr .free
+                                ; all serving this update: reuse the last
+.ufree: ld a,c                  ; C = the slot: its colour, its old key gone (the upload always happens)
+        add a,low SLOTCLR
+        ld l,a
+        ld h,high SLOTCLR
+        ld a,(ix+2)
+        ld (hl),a
+        ld a,c
+        call hlib_pc_inval
+        jp .free
 .mut:   ld a,MUT0               ; several colours: from the mutable slots (MUT0 ..), so cached figures stay
         ld (V_HASH),a
 .q0:    ld b,64
@@ -981,13 +991,13 @@ sigput: push hl
         pop hl
         ret
 
-; sigeq: C = a mutable slot -> Z when MSIG for it equals SIGT. Keeps BC, DE, HL.
+; sigeq: C = a mutable slot -> Z when MSIG for it equals SIGT (11 bytes). Keeps BC, DE, HL.
 sigeq:  push bc
         push de
         push hl
         call sigat
         ld de,SIGT
-        ld b,10
+        ld b,11
 .q:     ld a,(de)
         cp (hl)
 .n_sig: jr nz,.x                ; (negative control: NOPped = the colours ignored, a stale image served)
@@ -1007,7 +1017,7 @@ sigsave: push bc
         call sigat
         ex de,hl
         ld hl,SIGT
-        ld b,10
+        ld b,11
 .c:     ld a,(hl)
         ld (de),a
         inc l
@@ -1018,7 +1028,7 @@ sigsave: push bc
         pop bc
         ret
 
-; sigat: C = a mutable slot -> HL = its MSIG entry (10 x (slot - MUT0)).
+; sigat: C = a mutable slot -> HL = its MSIG entry (11 x (slot - MUT0)).
 sigat:  ld a,c
         sub MUT0
         ld l,a
@@ -1026,6 +1036,7 @@ sigat:  ld a,c
         add a,a
         add a,l
         add a,a
+        add a,l                 ; 11 x (slot - MUT0)
         add a,low MSIG
         ld l,a
         ld h,high MSIG
@@ -1115,6 +1126,21 @@ fcolour:
         and 7
         or b
         ld (SIGT),a             ; x & 7 | (top & 7) << 3 | mirror << 6
+        ld a,(F_CY0)
+        ld b,a
+        ld a,(F_CY1)
+        sub b
+        rlca
+        rlca
+        rlca
+        rlca
+        ld b,a
+        ld a,(F_CX0)
+        ld c,a
+        ld a,(F_CX1)
+        sub c
+        or b
+        ld (SIGT+10),a          ; the clipped box's columns - 1 | rows - 1 << 4 (the same cells, another shape)
         ld a,0xFF
         ld (F_COL),a
         ld a,(F_CY0)
@@ -1179,7 +1205,10 @@ fcolour:
 ; attrs: the tile (C_TR, C_TC) of the figure at IX in C_SLOT -> 5 bytes at C_ATP. X = x + 32 + 16 x column (mirrored:
 ; the columns run right to left, and a 24-wide figure's box starts 8 pixels left), Y = top + 32 + 16 x row; attribute 2 = bank << 4 | mirror << 3 | X bit 8;
 ; attribute 3 = visible, attribute 4 on, pattern slot; attribute 4 = 4-bit, N6 = the tile's half, Y bit 8.
-attrs:  ld hl,(C_ATP)
+attrs:  ld a,(V_NSPR)
+        cp NSPRMAX
+        ret nc                  ; the table full: this tile not shown
+        ld hl,(C_ATP)
         ld a,(C_TC)
         ld b,a
         ld a,(ix+8)
@@ -1260,8 +1289,8 @@ attrs:  ld hl,(C_ATP)
 code_end:
         ASSERT code_end <= 0x3E00
         ASSERT (SLOTUSE & 255) + 64 <= 256
-        ASSERT (SIGT & 255) + 10 <= 256 && SIGT >= PTAB + 16 && SEEN >= SIGT + 10 && (SEEN & 255) + 128 <= 256
-        ASSERT MSIG >= SEEN + 128 && (MSIG & 255) + 160 <= 256 && MSIG + 160 <= 0x2900
+        ASSERT (SIGT & 255) + 11 <= 256 && SIGT >= PTAB + 16 && SLOTCLR >= SIGT + 11 && SEEN >= SLOTCLR + 64 && (SEEN & 255) + 128 <= 256
+        ASSERT MSIG >= SEEN + 128 && (MSIG & 255) + 176 <= 256 && MSIG + 176 <= 0x2900 && ATTRTAB + 5 * NSPRMAX <= PTAB
         ASSERT (PTAB & 15) == 0 && PTAB >= ATTRTAB + 640 && PTAB + 16 <= 0x2900
 
         SAVEBIN "jtn2_page.bin", code_start, code_end - code_start
@@ -1280,7 +1309,7 @@ setup:  nextreg 0x43,0x20
         nextreg 0x41,a
         djnz .p
         nextreg 0x4B,0
-        nextreg 0x15,0x41
+        nextreg 0x15,0x01       ; sprites visible (SLU order); bit 6 clear = sprite 127 on top: later objects over earlier
         ret
 setpal: db 0x00, 0x00, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4, 0xB6        ; 0 clear, 1-8 normal black .. white
         db 0x03, 0xE0, 0xE3, 0x1C, 0x1F, 0xFC, 0xFF                    ; 9-15 bright blue .. white

@@ -62,6 +62,7 @@ V_LATCHD  EQU 0x31E5        ; hlib_speed latch of the figure hooks
 TILEBUF   EQU 0x3200        ; 256 bytes: the two 4-bit tiles of a slot
 HSTACK    EQU 0x3400        ; hook stack top (0x3300-0x33FF)
 ATTRTAB   EQU 0x3400        ; 5 bytes a sprite (attributes 0-4)
+NSPRMAX   EQU (0x3600-ATTRTAB)/5   ; sprites ATTRTAB holds below the code (102): more are not shown
 
         INCLUDE "lib/hlib_speed.asm"     ; macros only
 
@@ -579,7 +580,10 @@ cls:    sla d
 ; attrs: the tile (C_TR, C_TC) of the figure at IX in C_SLOT -> 5 bytes at C_ATP. X = x + 32 + 16 x column (mirrored:
 ; the columns run right to left, and a 24-wide figure's box starts 8 pixels left), Y = top + 32 + 16 x row; attribute 2 = bank << 4 | mirror << 3 | X bit 8;
 ; attribute 3 = visible, attribute 4 on, pattern slot; attribute 4 = 4-bit, N6 = the tile's half, Y bit 8.
-attrs:  ld hl,(C_ATP)
+attrs:  ld a,(V_NSPR)
+        cp NSPRMAX
+        ret nc                  ; the table full: this tile not shown (never past the code)
+        ld hl,(C_ATP)
         ld a,(C_TC)
         ld b,a
         ld a,(ix+8)
@@ -683,7 +687,7 @@ setup:  nextreg 0x43,0x20       ; edit the first sprite palette, auto-increment
         jr nz,.z
         djnz .b
         nextreg 0x4B,0          ; sprite transparency index
-        nextreg 0x15,0x41       ; sprites visible (SLU order), sprite 127 on top: later objects over earlier, as the game draws
+        nextreg 0x15,0x01       ; sprites visible (SLU order); bit 6 clear = sprite 127 on top: later objects over earlier
         ret
 setpal: db 0x00, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4, 0xB6    ; RGB332: black, blue, red, magenta, green, cyan, yellow, white
          db 0x00, 0x03, 0xE0, 0xE3, 0x1C, 0x1F, 0xFC, 0xFF    ; bright

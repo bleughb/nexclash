@@ -29,6 +29,9 @@ TAIL_ADDR = 0x6F00          # the start-up tail; restore_tail puts its bytes bac
 SITES_ORIG = {0x80C9: 'e5f5a7', 0x8273: 'e5f5a7', 0x86F9: '21ff7c'}
 SITE_OP = {0x80C9: (0xC3, 'e_d16'), 0x8273: (0xC3, 'e_d24'), 0x86F9: (0xC3, 'e_cmt')}
 INTERIORS = (0x80CA, 0x80CB, 0x8274, 0x8275, 0x86FA, 0x86FB)
+INTERIOR_PREV = {0x80CA: 0x80C9, 0x80CB: 0x80CA, 0x8274: 0x8273, 0x8275: 0x8274, 0x86FA: None, 0x86FB: None}
+# the original reaches 0x80CA / 0x80CB (PUSH AF; AND A) only by running on from 0x80C9 (and 0x8274 / 0x8275 from
+# 0x8273); 0x86FA / 0x86FB are LD HL,0x7CFF's operand: never an instruction
 
 from .hooklib import CMP as _CMP
 
@@ -153,6 +156,7 @@ def build(z80, out, name, say=print):
         path = os.path.join(out, name + suffix + '.nex')
         conv = zt.convert(z80, path, None, True, quiet=True, patch=patch, keep_printer_buffer=True)
         b = check(path, z80, patch, (conv[1], conv[1] + len(conv[2])))
+        b += restored_boot_check(path, z80, patch) + restored_boot_check(path, z80, patch, nexload=True)
         say('%-10s: %s  %s  boot %s  (tail 0x%04X, %d bytes, put back)' % (
             label, os.path.basename(path), md5(path), 'OK' if not b else 'MISMATCH %s' % str(b[:3])[:200],
             conv[1], len(conv[2])))
@@ -227,12 +231,20 @@ class NextSide:
             s.events.append(('out', port, v))
 
 
-def render(ns):
-    """The visible sprites as {(X, Y): (pixel, bank)} in sprite coordinates (the screen's top-left = (32, 32)),
-    sprite 127 on top (NR 0x15 bit 6, set by setup) -> (pixels, problems)."""
+def sprite127_on_top(setup):
+    """The stacking order a build's setup bytes choose: NEXTREG 0x15,n (ED 91 15 n) with bit 6 clear puts sprite 127
+    on top, set puts sprite 0 on top (Quazatron's hardware note); no such write: the reset value 0, sprite 127."""
+    b = bytes(setup)
+    i = b.rfind(b'\xED\x91\x15')
+    return i < 0 or i + 3 >= len(b) or not b[i + 3] & 0x40
+
+
+def render(ns, top127=True):
+    """The visible sprites as {(X, Y): (pixel, bank)} in sprite coordinates (the screen's top-left = (32, 32)), the
+    on-top sprite painted last (top127: sprite 127 on top, as sprite127_on_top(setup) says) -> (pixels, problems)."""
     px, bad = {}, []
     a, pat = ns.attr, ns.pat
-    for n in range(128):
+    for n in (range(128) if top127 else range(127, -1, -1)):
         b0, b1, b2, b3, b4 = a[5 * n:5 * n + 5]
         if not b3 & 0x80:
             continue
@@ -409,14 +421,87 @@ def _hook_stores(sim, store):
     pre(dd, 0x36, lambda: [(ixd(), mem[(R[24] + 3) & 0xFFFF])])
 
 
-def _run(sim, sp0, span, limit=5000000):
-    """Step until the code has returned to its caller: PC outside span with SP above the site's SP."""
+EXEC_PCS = set()            # every hook-page PC a patched run executed (store_form_problems checks them)
+
+
+def _run(sim, sp0, span, limit=5000000, record=False):
+    """Step until the code has returned to its caller: PC outside span with SP above the site's SP. record: note the
+    hook-page PCs run (EXEC_PCS)."""
     R, ops, mem = sim.registers, sim.opcodes, sim.memory
     for _ in range(limit):
-        if not span[0] <= R[24] < span[1] and not 0x2000 <= R[24] < 0x4000 and R[12] > sp0:
+        pc = R[24]
+        if 0x2000 <= pc < 0x4000:
+            if record:
+                EXEC_PCS.add(pc)
+        elif not span[0] <= pc < span[1] and R[12] > sp0:
             return True
-        ops[mem[R[24]]]()
+        ops[mem[pc]]()
     return False
+
+
+# Memory-writing instructions by prefix, and those _writable_slot1 / _hook_stores model for the slot-1 page.
+_W_MAIN = {0x02, 0x12, 0x22, 0x32, 0x34, 0x35, 0x36, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x77, 0xE3,
+           0xC4, 0xCC, 0xD4, 0xDC, 0xE4, 0xEC, 0xF4, 0xFC, 0xCD, 0xC5, 0xD5, 0xE5, 0xF5,
+           0xC7, 0xCF, 0xD7, 0xDF, 0xE7, 0xEF, 0xF7, 0xFF}
+_W_ED = {0x43, 0x53, 0x63, 0x73, 0x67, 0x6F, 0xA0, 0xA8, 0xB0, 0xB8, 0xA2, 0xAA, 0xB2, 0xBA}
+_W_XY = {0x22, 0x34, 0x35, 0x36, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x77, 0xE3, 0xE5}
+_M_MAIN = {0x02, 0x12, 0x22, 0x32, 0x36, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x77,
+           0xC4, 0xCC, 0xD4, 0xDC, 0xE4, 0xEC, 0xF4, 0xFC, 0xCD, 0xC5, 0xD5, 0xE5, 0xF5}
+_M_ED = {0x43, 0x53, 0x63, 0x73}
+_M_DD = {0x36, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x77, 0xE5}
+_M_FD = {0x36, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x77, 0xE5}
+
+
+def store_form_problems(get, pcs):
+    """Hook-page instructions that write memory in a form the slot-1 model does not carry into the page (SkoolKit
+    would drop the write silently): [(pc, bytes)]. get(addr) -> byte; pcs: the executed PCs (EXEC_PCS)."""
+    out = []
+    for pc in sorted(pcs):
+        b0, b1, b3 = get(pc), get((pc + 1) & 0xFFFF), get((pc + 3) & 0xFFFF)
+        if b0 == 0xCB:
+            w, m = (b1 & 7) == 6 and not 0x40 <= b1 < 0x80, False
+        elif b0 == 0xED:
+            w, m = b1 in _W_ED, b1 in _M_ED
+        elif b0 in (0xDD, 0xFD):
+            if b1 == 0xCB:
+                w, m = not 0x40 <= b3 < 0x80, False
+            else:
+                w, m = b1 in _W_XY, b1 in (_M_DD if b0 == 0xDD else _M_FD)
+        else:
+            w, m = b0 in _W_MAIN, b0 in _M_MAIN
+        if w and not m:
+            out.append(('%04X' % pc, bytes(get((pc + k) & 0xFFFF) for k in range(4)).hex()))
+    return out
+
+
+def restored_boot_check(path, z80, patch, nexload=False):
+    """Boot the .nex on through the tail's restore (restore_tail) to the snapshot's own PC, and compare every register
+    and RAM 0x4000-0xFFFF, the tail's bytes too, with the snapshot (its sites patched). nextboot.check stops at the
+    restore's entry and leaves the tail out. -> problems"""
+    import copy
+    from . import z80tonex as zt, nextboot
+    s = zt.Z80Snapshot(z80)
+    p = copy.deepcopy(patch)
+    p.apply(s)
+    pc0 = getattr(p, 'original_pc', s.pc)
+    try:
+        st = nextboot.boot(path, pc0, nexload=nexload, sysrom=nextboot.system_rom3()[0])
+    except (ValueError, RuntimeError) as e:
+        return [('boot never reached the game start', '%04X' % pc0, str(e)[:120])]
+    R, mem = st['R'], st['mem']
+    w = lambda h, l: R[h] * 256 + R[l]
+    got = {'BC': w(2, 3), 'DE': w(4, 5), 'HL': w(6, 7), 'AF': w(0, 1), 'IX': w(8, 9), 'IY': w(10, 11),
+           "BC'": w(18, 19), "DE'": w(20, 21), "HL'": w(22, 23), "AF'": w(16, 17), 'SP': R[12], 'I': R[14],
+           'IM': R[27], 'IFF': R[26]}
+    exp = {'BC': s.bc, 'DE': s.de, 'HL': s.hl, 'AF': s.a * 256 + s.f, 'IX': s.ix, 'IY': s.iy,
+           "BC'": s.bc_, "DE'": s.de_, "HL'": s.hl_, "AF'": s.a_ * 256 + s.f_, 'SP': s.sp, 'I': s.i,
+           'IM': s.im, 'IFF': s.iff1}
+    bad = [('register at the game start', k, got[k], exp[k]) for k in exp if got[k] != exp[k]]
+    ram = s.banks[5] + s.banks[2] + s.banks[0]
+    diffs = [a for a in range(0x4000, 0x10000) if mem[a] != ram[a - 0x4000]]
+    if diffs:
+        bad.append(('RAM at the game start differs (the tail too)', len(diffs), ['%04X' % a for a in diffs[:6]]))
+    return bad
 
 
 RUN_ON = 400000             # dead_after: at most this many (Jack's own draw, the last of a frame: up to ~185,000)
@@ -477,9 +562,12 @@ def pair(patch, regs, base, vpage, vns, span):
     speed0 = vns.nr.get(0x07, 0)
     bad, ok, det = collections.Counter(), collections.Counter(), []
     sp0 = regs[12]
-    if not (_run(so, sp0, span) and _run(sp, sp0, span)):
+    if not (_run(so, sp0, span) and _run(sp, sp0, span, record=True)):
         bad['did not return!'] += 1
         return bad, ok, det, o.w, p.pw
+    if so.registers[24] != sp.registers[24]:
+        bad['returned elsewhere!'] += 1
+        det.append(('return PC', '%04X' % so.registers[24], '%04X' % sp.registers[24]))
     for e in p.err:
         bad[e[0] + '!'] += 1
         det.append(e)
@@ -538,6 +626,9 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
     vpage = bytearray(patch.page)
     vns = NextSide()
     upd = {'figs': [], 'pre': {}}
+    last = [None]
+    EXEC_PCS.clear()
+    sites = {a: bytes.fromhex(o) for a, o in SITES_ORIG.items()}
 
     def fail(k, info):
         c[k] += 1
@@ -545,8 +636,17 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
             ex[k].append(info)
 
     def on(pc, sim):
+        if pc in INTERIOR_PREV:             # the patched bytes' insides: only by running on from the site itself
+            if INTERIOR_PREV[pc] is None or last[0] != INTERIOR_PREV[pc]:
+                fail('jump into a patched instruction!', hex(pc))
+            last[0] = pc
+            return
+        last[0] = pc
         regs, base = list(sim.registers), bytes(sim.memory[:65536])
         get = base.__getitem__
+        for a, o in sites.items():
+            if base[a:a + len(o)] != o:
+                fail('the game rewrote a patch site!', '%04X' % a)
         c[SITE_KIND[pc]] += 1
         if pc in (0x80C9, 0x8273):
             upd['figs'].append(figure_of(pc, regs, get))
@@ -585,7 +685,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
                 fail('figure model differs from the original drawing!', ('%04X' % a, want, get(a)))
         c['picture bytes checked'] += len(pre)
         # (2) the visible sprites against the model, in the play area
-        got, bad = render(vns)
+        got, bad = render(vns, sprite127_on_top(patch.stub_extra))
         for b in bad:
             fail('sprite attributes!', b)
         want = {(x + 32, y + 32): v for (x, y), v in exp.items() if 0 <= x < PLAY[0] and 0 <= y < PLAY[1]}
@@ -596,7 +696,10 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
         c['sprite pixels compared'] += len(want)
         upd['figs'], upd['pre'] = [], {}
 
-    frames, err = RZ.trace(rzx_path, set(SITE_KIND), on, stop=stop)
+    frames, err = RZ.trace(rzx_path, set(SITE_KIND) | set(INTERIOR_PREV), on, stop=stop)
+    probs = store_form_problems(lambda a: vpage[a - 0x2000] if 0x2000 <= a < 0x4000 else 0, EXEC_PCS)
+    for pr in probs:
+        fail('unmodelled store form in the hook page!', pr)
     c['frames'] = frames
     if err:
         fail('replay desync!', err)
@@ -630,10 +733,43 @@ def negative_patches(patch=None):
     make('wrong colour bank (the mirror flag)', [(_sym(base, 'attrs.n_bank') + 2, b'\x08')])
     make('leftover sprites not hidden', [(_sym(base, 'commit.n_hide'), b'\x7A\x00\x00')])
     make("caller's speed not given back", [(_sym(base, 'e_cmt.n_spd') + 4, b'\x00\x00\x00')])
+    p = copy.deepcopy(base)                 # the setup's NR 0x15 with bit 6 set: sprite 0 on top
+    p.stub_extra = bytes(p.stub_extra).replace(b'\xED\x91\x15\x01', b'\xED\x91\x15\x41')
+    out['later figures under earlier (NR 0x15 bit 6)'] = p
     return out
 
 
-def unit_tests(patch, states, negs=(), rzx=None, neg_frames=1500):
+SPRITES_WRONG = 'SPRITE PIXEL difference!'
+NEG_EXPECT = {                              # the failure each control must give (another one is not a detection)
+    'no redirect (RES 6,H dropped)': {'patched draw wrote the real shadow!',
+                                      'scratch writes are not the shadow writes moved by 0x4000!'},
+    'never mirrored': {SPRITES_WRONG}, 'wrong colour bank (the mirror flag)': {SPRITES_WRONG},
+    'leftover sprites not hidden': {SPRITES_WRONG}, "caller's speed not given back": {'CPU speed not given back!'},
+    'later figures under earlier (NR 0x15 bit 6)': {SPRITES_WRONG}}
+
+
+def negative_results(negs, rzx, frames, expect, verify_fn):
+    """Each negative control's verify: 'DETECTED' only when it gives a failure it is expected to give. -> Counter"""
+    import collections
+    c = collections.Counter()
+    for name, np_ in negs.items():
+        cc, ex, _ = verify_fn(np_, rzx, stop=frames)
+        got = {k for k in cc if k.endswith('!')}
+        res = 'DETECTED' if got & expect.get(name, set()) else ('caught for another reason (%s)!' % sorted(got)[:2]
+                                                                   if got else 'MISSED!')
+        c['negative %s: %s' % (name, res)] += 1
+    return c
+
+
+def store_form_case():
+    """store_form_problems on LD (0x3000),IX (DD 22 00 30: unmodelled, so a hook using it would pass blind) and on
+    LD (0x3000),HL (22 00 30: modelled). -> 'ok' or a failure ending in '!'"""
+    code = {0x3000: 0xDD, 0x3001: 0x22, 0x3002: 0x00, 0x3003: 0x30, 0x3004: 0x22, 0x3005: 0x00, 0x3006: 0x30}
+    got = store_form_problems(lambda a: code.get(a, 0), {0x3000, 0x3004})
+    return 'ok' if [g[0] for g in got] == ['3000'] else 'FAIL!'
+
+
+def unit_tests(patch, states, negs=(), rzx=None, neg_frames=1500, full=False):
     """Every site at the four CPU speeds (hooklib.every_site), the copy as a hide (hooklib.hide_cases: every sprite
     shown, no figure recorded: all hidden), and the negative controls on the first neg_frames of rzx. -> Counter"""
     import collections
@@ -648,11 +784,17 @@ def unit_tests(patch, states, negs=(), rzx=None, neg_frames=1500):
         vpage, vns = bytearray(patch.page), NextSide()
         vns.nr[0x07] = clock
         bad, ok, det, ow, pw = pair(patch, regs, base, vpage, vns, DRAW if pc != 0x86F9 else COPY)
+        for k in bad:                       # a failing run is a failure, whatever the other speeds give
+            c['every site: %04X at speed %d: %s' % (pc, clock, k)] += 1
         state = (tuple(sorted(bad)), tuple(sorted(ow.items())), bytes(vns.attr), bytes(vns.pat))
         return vns.nr.get(0x07, 0), state
+    missing = [a for a in SITE_KIND if a not in first]
+    if missing:                             # a full run reaches every site; a quick one says which it did not
+        c['every site: never reached %s%s' % (' '.join('%04X' % a for a in missing), '!' if full else ' (quick run)')] += 1
     cs, rows = hooklib.every_site([pc for pc in first], run_at)
     for k, v in cs.items():
         c['every site: ' + k] += v
+    c['store-form check: ' + store_form_case()] += 1
 
     def hide_run(pc, st, speed):
         regs, base = st[1], st[2]
@@ -669,10 +811,7 @@ def unit_tests(patch, states, negs=(), rzx=None, neg_frames=1500):
         for k, v in hooklib.hide_cases(copies, {0x86F9: 'copy with no figure'}, hide_run).items():
             c[k] += v
     if rzx:
-        for name, np_ in (negs or negative_patches(patch)).items():
-            cc, ex, _ = verify(np_, rzx, stop=neg_frames)
-            caught = [k for k in cc if k.endswith('!')]
-            c['negative %s: %s' % (name, 'DETECTED' if caught else 'MISSED!')] += 1
+        c.update(negative_results(negs or negative_patches(patch), rzx, neg_frames, NEG_EXPECT, verify))
     return c
 
 
@@ -702,7 +841,7 @@ def auto(a, z80, name, out, say):
         for k, v in ex.items():
             say('            %s: %s' % (k, str(v)[:200]))
     if states:
-        u = unit_tests(patch, states, rzx=first_rzx)
+        u = unit_tests(patch, states, rzx=first_rzx, full=not getattr(a, 'quick', None))
         ufail = [k for k in u if k.endswith('!')]
         ok = ok and not ufail
         say('Unit      : %s -> %s' % (', '.join('%s %d' % kv for kv in sorted(u.items())), 'FAIL' if ufail else 'PASS'))

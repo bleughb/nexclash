@@ -11,7 +11,8 @@ rzxarchive `j/jacknipper.rzx` (108,043 frames, 36 min)    Reference: reference-l
 Branch: add-jack-the-nipper (local, with Jack the Nipper II)
 Start with: the stamp; then "Results" + the record's result, the owner's test of `~/nxc-test/Jack the Nipper 1.0
 test`, colour sheets (docs/COLOURS.md), Codex review of the engine, the PR with Jack the Nipper II
-Open: pace in JNext; the cheats not yet tried in play
+Open: pace in JNext; the cheats not yet tried in play; stage 3: colour sheets and recolour (ENGINE_CONTRACT: required for new
+engines)
 
 ## Snapshot (0b)
 48K, in game (PC 0x908B in RAM; the recording's start 0x90AD), IM 1 with interrupts OFF (DI), I = 0x3F, SP 0x7FF7,
@@ -78,8 +79,13 @@ All defaults taken: every figure a sprite (pickups included); scenery, HUD, scor
   bright) of the attribute cell under the figure's feet through the palette offset (one bank per colour), so one
   pattern serves every room; (IX+4) bit 0 = 0 draws mirrored: the X mirror bit (a mirrored 24-wide box starts 8 pixels
   left); sprite order = object order; a pattern cache keyed by graphics address + pair.
+- Depth: NR 0x15 = 0x01 (bit 6 clear: sprite 127 on top, so later objects over earlier); the first build set 0x41
+  (sprite 0 on top: the depth reversed) and the verifier, painting later sprites last whatever the setup said,
+  passed it (Codex review). render() now takes the order from the build's setup bytes.
+- ATTRTAB holds 102 sprites below the code (0x3400-0x35FF): the attribute writer stops there (18 adults of six
+  sprites would have run into the code).
 - Hooks: own stack, the caller's speed back (HLIB_SPEED_IN / OUT), the record at 28 MHz. Builds: plain 496edfe0,
-  sprites b836bba4 (record). The start-up tail at 0x6F00 is put back before the game starts (restore_tail).
+  sprites 3232643e (record; b836bba4 before the Codex review). The start-up tail at 0x6F00 is put back before the game starts (restore_tail).
 
 ## Results
 - 3,000 frames (simulator): zero failures; 860,219 sprite pixels compared against the model of the original's draws,
@@ -87,15 +93,20 @@ All defaults taken: every figure a sprite (pickups included); scenery, HUD, scor
   address proven dead by the lockstep run-on (RUN_ON 400,000 steps; Jack's own draw takes up to ~185,000).
 - auto (2,000 frames): PASSED; units: every site at four speeds, the copy as a hide; negative controls DETECTED: no
   redirect, never mirrored, wrong colour bank, leftover sprites not hidden, the caller's speed not given back.
-- The whole recording (108,043 frames): a stamp ran on the earlier module; the rerun on the final one is the
-  result (pending).
+- After the Codex review (2026-11-23): the final build verified over 1,000 frames with the added checks (the return
+  PC, no jump into a replaced instruction, no site rewritten, every hook store form modelled, the boot on through the
+  tail's restore to the game start, the stacking order from the setup); six negative controls, each by its own failure.
+- The whole recording (108,043 frames): the stamp on the final build (pending).
 - JNext 1.3.5 headless: both builds reach play, the figures show as sprites; the .nxc menu boots.
 
 ## Cheats
-Every patch carries them, off by default; the archive's (Super Collection "Pokes/Jack the Nipper.pok"), checked
-against the code: Immunity 44285 = 58 (0xACFD `CALL NZ,0xA9F2` to `LD A,(nn)`: the lose-a-life routine never runs);
-Infinite lives 43519 = 0 (0xA9FF `DEC A`: a death costs no life). Not used: the archive's second Immunity POKE
-(44278: only turns off the Q pause / quit key). Not yet tried in play.
+Every patch carries them, off by default, checked against the code: Immunity 44285 = 58 (the archive's: 0xACFD
+`CALL NZ,0xA9F2` to `LD A,(nn)`: the lose-a-life routine never runs; the death flag 0x8CFD it would clear has no other
+reader); Infinite lives 43516 = 24, 43517 = 35 (ours: `JR 0xAA21` at 0xA9FC jumps over the lives decrement and the
+lives redraw to the death sound). The first lives cheat, `DEC A` at 0xA9FF to `NOP`, left five lives, so the redraw's
+5 - lives was 0 and its DJNZ blitted 256 icons: 2,076 screen bytes changed against the original routine's 201 (the new
+one: 129, the one icon it no longer erases). Not used: the archive's second Immunity POKE (44278: only turns off the Q
+pause / quit key). The record's .pok is ours (the archive's file is kept as jack_the_nipper_archive.pok).
 
 ## Hardware checklist
 - Boots from the .nxc menu (cheats off), reaches play; every figure (Jack, the adults, pickups, the pea, smoke) a
@@ -145,6 +156,12 @@ sprites, so patterns are uploaded per figure from a cache (more figure kinds tha
   failed (EXX / EX DE,HL move the value); the lockstep run-on until every register agrees proved it dead.
 - [card patch.scratch-redirect §Failure lookup] demonstrated: the commit hooked at one copier caller (0xAA4A) never
   ran on the main loop's path (0xAC72); the copier's entry catches both.
+- [kb lesson.sprite-order-and-layers: Jack the Nipper's 0x41 reversed the depth] demonstrated: NR 0x15 bit 6 set puts
+  sprite 0 on top; a verifier that paints later sprites last whatever the setup says cannot catch it.
+- [kb lesson.archive-poke-translation: a cheat must keep what the skipped code's consumers need] demonstrated: the
+  lives NOP made the redraw's 5 - lives 0 and its DJNZ ran 256 times.
+- [kb lesson.verifier-fails-closed] demonstrated: a store form the slot-1 model leaves out, a different return PC and a
+  control caught for another reason all passed before the review; each now fails.
 - [local: this game's colours] observed: the line art is black and the body shows the paper of the cells under it;
   the clash-free default is the paper under the feet, one colour per figure.
 

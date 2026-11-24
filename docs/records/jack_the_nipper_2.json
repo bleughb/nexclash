@@ -22,9 +22,9 @@
    },
    {
     "name": "jack_the_nipper_2.pok",
-    "md5": "8a14db29b9a55e460aa3f1fcf7a341e0",
+    "md5": "3fa5c8d8a023a216fc5f89a93fdb680f",
     "path": "jack_the_nipper_2/jack_the_nipper_2.pok",
-    "note": "the cheats checked against the code: Infinite lives 43251 = 0, Infinite ammo 38306 = 0 (the archive's); Immunity 43212 = 201 (ours; the archive's two immunity sets are not used: games/jack_the_nipper_2.md)"
+    "note": "the cheats checked against the code: Infinite lives 43251 = 0, Infinite ammo 38306 = 0 (the archive's); Immunity 43219 = 201 (ours: RET after the death routine clears the fall flags; the archive's two immunity sets are not used: games/jack_the_nipper_2.md)"
    }
   ]
  },
@@ -60,7 +60,7 @@
   ],
   "auto_record": false,
   "minutes": 240,
-  "note": "Blit sites: original and patched blit from one state (registers, every write outside the cell buffer, the scratch writes = the buffer writes moved by 0xC000; IY, values read back from the scratch and E' proven dead on the first 300 blits and every 100th after). Copier entry: the commit (every slot's colour list entry the scenery's), then the figures blitted since the last copy, modelled from their graphics and masks, against the original's buffer slots and against the visible sprites pixel for pixel, each pixel in its cell's colour from the original's list. Units: every site at four speeds, the copy as a hide, the figure table full; eight negative controls."
+  "note": "Blit sites: original and patched blit from one state (registers incl. the return PC, every write outside the cell buffer, the scratch writes = the buffer writes moved by 0xC000; A, F, B, A', F' and IYh, and the copier's E', proven dead on every new exit path, the first 300 events and every 100th); no jump into a replaced instruction, no site rewritten, no hook store the slot-1 model leaves out. Copier entry: the commit (every slot's colour list entry the scenery's), then the figures blitted since the last copy, modelled from their graphics and masks, against the original's buffer slots and the visible sprites pixel for pixel (each pixel in its cell's colour from the original's list, the stacking order the setup sets). Boot: on through the tail's restore to the game start. Units: every site at four speeds (a full run reaches all), the copy as a hide, the figure table full, the store-form check; nine negative controls, each by its own failure."
  },
  "outputs": {
   "plain": {
@@ -69,7 +69,7 @@
   },
   "sprites": {
    "file": "jack_the_nipper_2_sprites.nex",
-   "md5": "5e157c0999e7d755a8daef3b93e6c384"
+   "md5": "0080e7034028149ac2643fa5f5bb9f51"
   }
  },
  "repro": [],
@@ -77,9 +77,9 @@
   "title": "Jack the Nipper II",
   "engine_col": "jack_the_nipper_2 (jack_the_nipper_2.md)",
   "build": "jack_the_nipper_2_sprites.nex: every figure (pickups and effects too) a 4-bit sprite in its cells' colours from the game's own colour list; scenery, HUD and text on the ULA",
-  "software": "RZX replay verify of the whole recording (blits, copies, picture), units + 8 negative controls; JNext: figures show as sprites",
+  "software": "RZX replay verify of 3,000 frames (blits, copies, picture; the whole recording: the stamp, pending), units + 9 negative controls; JNext: figures show as sprites",
   "hardware": "untested",
-  "next": "the owner tests in JNext / on a Next; colour sheets and recolour; cheats in the .nxc"
+  "next": "the whole-recording stamp; colour sheets and recolour (stage 3); the owner tests in JNext / on a Next"
  },
  "checks": [
   "asm2profile:jack_the_nipper_2"
@@ -143,10 +143,10 @@
   {
    "application": "jack_the_nipper_2.scratch-redirect",
    "check": "state.rzx-differential",
-   "scope": "1 human recording: 3,000 frames verified (the whole 158,593 in the stamp run); no hardware; JNext start only",
+   "scope": "1 human recording: 3,000 frames verified (the whole 158,593 in the stamp run, pending); no hardware; JNext start only",
    "evidence": "games/jack_the_nipper_2.md \"Results\"",
    "status": "partial",
-   "build": "5e157c09"
+   "build": "0080e703"
   }
  ]
 }

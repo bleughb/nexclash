@@ -10,7 +10,8 @@ Inputs: TOSEC `Jack the Nipper II - In Coconut Capers (1987)(Gremlin Graphics So
 Reference: reference-local/jack_the_nipper_2 (to bleughb/specnext with the PR)    Branch: add-jack-the-nipper (local)
 Start with: the stamp's result (rerun it if it never finished); then "Results" + the record's result `pass`, the
 owner's test of `~/nxc-test/Jack the Nipper II 1.0 test`, colour sheets (docs/COLOURS.md), the PR with Jack the Nipper
-Open: pace 4.5 % (below); Immunity untested in play; the rope (drawn another way) stays on the ULA in the scenery's
+Open: pace 4.5 % (below); the cheats not tried in play; stage 3: colour sheets and recolour (ENGINE_CONTRACT: required
+for new engines); the rope (drawn another way) stays on the ULA in the scenery's
 colours (owner question, below)
 
 ## Snapshot (0b)
@@ -81,8 +82,12 @@ colours until a painting; no pause or message window known. Not a colour run yet
   mirror, every covered cell's colour), else rebuilt.
 - Colour list: the recorded figures' boxes; the game's slot counter (0xBDF1) says when a slot lies outside them (a
   rope is drawn another way, overlapping objects orphan slots), and then the whole map.
-- Builds: plain e63f00da, sprites 5e157c09 (record). Page: state 0x2000-0x28FF, scratch 0x2900-0x2D4F, code
-  0x3000-0x3B55, the tail's backup 0x3E00, the stub's registers 0x3F00; the start-up tail at 0xBF00 is put back.
+- After the Codex review (2026-11-23): NR 0x15 = 0x01 (bit 6 clear: sprite 127 on top; the first build's 0x41 had
+  the depth reversed, 58 pixels at the first copy); a one-colour hit also compares the colour (SLOTCLR: graphics
+  + pair + colour << 11 aliased, $CF50/$43 and $C750/$44 both $E750); the signature holds the clipped box's columns
+  and rows (a 3 x 2 and a 2 x 3 box gave the same six colours); ATTRTAB stops at 128 sprites.
+- Builds: plain e63f00da, sprites 0080e703 (record; 5e157c09 before the Codex review). Page: state 0x2000-0x28FF, scratch 0x2900-0x2D4F, code
+  0x3000-0x3B87, the tail's backup 0x3E00, the stub's registers 0x3F00; the start-up tail at 0xBF00 is put back.
 
 ## Results
 - 3,000 frames (simulator): 2,768 blits, 994 copies, 165,872 figure bytes redirected and checked against the
@@ -92,7 +97,12 @@ colours until a painting; no pause or message window known. Not a colour run yet
   (16), the figure table full (4); negative controls DETECTED: no redirect, colour list not put back, one colour for
   every figure, never mirrored, wrong palette bank, leftover sprites not hidden, the caller's speed not given back;
   the eighth (the multi-colour cache ignoring the colours) caught on 1,500 frames (15 sprite pixel failures).
-- The whole recording: the stamp run (pending).
+- After the review: 3,000 frames verified with the added checks (the return PC, no jump into a replaced instruction,
+  no site rewritten, every hook store form modelled, the boot on through the tail's restore, the stacking order from
+  the setup); the leftovers allowed only as the census found them (A, F, B, A', F', IYh after a blit; E' after a copy),
+  each new exit path proven: 255 blit and 83 copy proofs, every one dead; nine negative controls, each by its own
+  failure.
+- The whole recording: the stamp (pending).
 - JNext 1.3.5 headless: both builds reach play; the figures show as sprites, the pineapple green over bright green.
 
 ## Pacing
@@ -112,12 +122,17 @@ read back from the scratch, and E' (the last copied cell's colour) dead.
 
 ## Cheats
 Every patch carries them, off by default (checked against the code; the archive's are from the Super Collection
-"Pokes"): Infinite lives 43251 = 0 (0xA8F3 `DEC (HL)` on the lives at 34886); Infinite ammo 38306 = 0 (0x95A2 `DEC
-(HL)` on the weapon's charge, whose zero drops the weapon); Immunity 43212 = 201 (ours: 0xA8CC `XOR A` to `RET` in the
-death routine 0xA8C3, so a death never starts; its ten callers all `JP` to it and its own death path returns to the
-same level). Not used: the archive's Immunity 1 (34426 = 0 freezes the flashing timer after a hit: Jack flashes for
-ever and the charge drains), Immunity 2 (a RET at 0xA8C3 with its `JP`s turned to `CALL`s: the callers run on into
-code no death reaches) and Lives 255 (34631: the one-digit lives display). Immunity is not yet tried in play.
+"Pokes"): Infinite lives 43251 = 0 (0xA8F3 `DEC (HL)` on the lives at 34886; the one-digit display clamps at 9, so a
+held count is safe); Infinite ammo 38306 = 0 (0x95A2 `DEC (HL)` on the weapon's charge, whose zero drops the weapon);
+Immunity 43219 = 201 (ours: 0xA8D3 `LD A,(34879)` to `RET` in the death routine 0xA8C3, after it clears the
+death-animation counter 34924 and the fatal-fall flag 34877, so a death never starts and a long fall lands). The first
+Immunity, a RET at 0xA8CC before those clears, left the fall flag set (Codex review): the landing check 0xA16E
+re-entered the death routine every update and Jack never landed. Test (a fatal fall made by hand: the flag set at
+0xA16E in a recorded state, then four updates with no keys): the original starts a death; RET at 0xA8CC enters the
+routine four times and never lands; RET at 0xA8D3 enters it once, then lands three times, no death, lives kept. The
+recording never loses a life (158,593 frames), so neither lives cheat was reached by it. Not used: the archive's
+Immunity 1 (34426 = 0 freezes the flashing timer after a hit), Immunity 2 (a RET at 0xA8C3 with its `JP`s turned to
+`CALL`s: the callers run on into code no death reaches) and Lives 255 (34631).
 
 ## Owner questions (raise on return; the build keeps the current behaviour)
 - The rope (a swinging line drawn by another routine, not one of the 16 blits): it stays on the ULA, and its cells
@@ -146,6 +161,12 @@ code no death reaches) and Lives 255 (34631: the one-digit lives display). Immun
   the hooks use: CALL cc was left out, the return address was dropped and the commit returned to 0x0000.
 - [card patch.scratch-redirect §Failure lookup] demonstrated: IY (moved to the scratch), the flags and A read back
   from it, and E' differed; proven dead by the lockstep run-on (memory equal apart from popped bytes).
+- [kb lesson.cache-correctness: Jack the Nipper II folded the colour into the 16-bit key] demonstrated: graphics +
+  pair + colour << 11 aliased two figures; the hash probes, the identity (colour too) is compared on a hit.
+- [kb lesson.archive-poke-translation: a RET in a death routine must come after the clears it skips] demonstrated: a
+  RET before the fall flag's clear left it set and Jack never landed.
+- [kb lesson.verifier-fails-closed] demonstrated: the leftovers were accepted unchecked on 99 of 100 blits; now only the
+  census registers, each exit path proven.
 - [local: this game's colour model] observed: an item's cells take colours from a table (0x8A36 + 4 x (IX+9)) and
   (IX+6) = 0xD0 objects two colours, so the object's own colour field is not the picture; the verifier compares every
   sprite pixel with the original's colour list instead.

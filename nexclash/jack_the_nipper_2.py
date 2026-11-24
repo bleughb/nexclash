@@ -34,7 +34,7 @@ COPIER = 0xBC62
 V_NFIG, V_SHOWN, MAXFIG = 0x21C0, 0x21C1, 24   # the hook state's figure count and sprites shown (asm)
 SITES_ORIG = {**{a: 'ed73e8bd' for a in BLITS}, COPIER: '2180fd'}
 SITE_SYM = {**{a: 'e_b%d' % i for i, a in enumerate(BLITS)}, COPIER: 'e_cmt'}
-INTERIORS = tuple(a + k for a in BLITS for k in (1, 2, 3)) + (COPIER + 1, COPIER + 2)
+INTERIORS = frozenset(a + k for a in BLITS for k in (1, 2, 3)) | {COPIER + 1, COPIER + 2}   # never instruction starts
 X_DRAWN = 0xB2D5            # the draw's x (stored at 0xB2B3)
 PLAY = (256, 160)           # the play area: 32 x 20 cells
 
@@ -101,6 +101,7 @@ def build(z80, out, name, say=print):
         path = os.path.join(out, name + suffix + '.nex')
         conv = zt.convert(z80, path, None, True, quiet=True, patch=patch, keep_printer_buffer=True)
         b = check(path, z80, patch, (conv[1], conv[1] + len(conv[2])))
+        b += J1.restored_boot_check(path, z80, patch) + J1.restored_boot_check(path, z80, patch, nexload=True)
         say('%-10s: %s  %s  boot %s  (tail 0x%04X, %d bytes, put back)' % (
             label, os.path.basename(path), md5(path), 'OK' if not b else 'MISMATCH %s' % str(b[:3])[:200],
             conv[1], len(conv[2])))
@@ -175,7 +176,9 @@ def dead_regs(base, writes, ro, rp, n=RUN_ON):
     its end state, once as it is and once with the patched values, in lockstep (the same PC at every step) until every
     register agrees and memory agrees too, apart from popped bytes below SP (a pushed copy may be popped and reloaded
     on the way: 0x9D91 pushes IY, the next object pops it, then loads IY afresh). A different path: live; no agreement
-    within n: live."""
+    within n: live. Bytes below SP count as free: no interrupt is ever accepted in the recording and the game reads no
+    stack byte except by POP. Both sides start from the original's memory (only the registers differ), and port
+    effects are not compared: the proof is about the registers."""
     from skoolkit.simulator import Simulator
     mem = bytearray(base)
     for a, v in writes.items():
@@ -203,6 +206,9 @@ def dead_regs(base, writes, ro, rp, n=RUN_ON):
 
 
 _BLITS_SEEN = [0]
+_PROVEN = set()             # exits (kind, return PC, registers) whose leftovers were proved dead
+DRAW_LEFT = {0, 1, 2, 10, 16, 17}  # A, F, B, A', F' (read back from the scratch), IYh (moved): the census, 3,000 frames
+COPY_LEFT = {21}            # E'
 
 
 def pair(patch, regs, base, vpage, vns, span):
@@ -226,20 +232,12 @@ def pair(patch, regs, base, vpage, vns, span):
     bad, ok, det = collections.Counter(), collections.Counter(), []
     sp0 = regs[12]
 
-    def ran(sim):
-        R, ops, mem = sim.registers, sim.opcodes, sim.memory
-        for _ in range(5000000):
-            pc = R[24]
-            if span is DRAW and not 0x2000 <= pc < 0x4000 and pc in BLITS:      # the next blit of this object, or
-                if R[12] == sp0 and sim is not sp and False:
-                    return True
-            if not span[0] <= pc < span[1] and not 0x2000 <= pc < 0x4000 and R[12] > sp0:
-                return True
-            ops[mem[pc]]()
-        return False
-    if not (ran(so) and ran(sp)):
+    if not (J1._run(so, sp0, span) and J1._run(sp, sp0, span, record=True)):
         bad['did not return!'] += 1
         return bad, ok, det, o.w, p.pw
+    if so.registers[24] != sp.registers[24]:
+        bad['returned elsewhere!'] += 1
+        det.append(('return PC', '%04X' % so.registers[24], '%04X' % sp.registers[24]))
     jb = patch.syms['j_back'] + 1
     for e in p.err:
         k = e[0]
@@ -254,23 +252,23 @@ def pair(patch, regs, base, vpage, vns, span):
         bad['CPU speed not given back!'] += 1
     ro, rp = so.registers, sp.registers
     diff = [i for i in CMP if ro[i] != rp[i]]
-    if diff and span is DRAW and 10 in diff and rp[10] == ro[10] & 0x3F:
-        # IY moved to the scratch buffer, and what the blit read back from there (A, the flags): dead if the game sets
-        # them before it reads them (the next object loads IY afresh); proved on a sample (DEAD_FIRST, DEAD_EVERY)
+    blit_moved = span is DRAW and 10 in diff and rp[10] == ro[10] & 0x3F and set(diff) <= DRAW_LEFT
+    if diff and (blit_moved or span is COPY and set(diff) <= COPY_LEFT):
+        # after a blit: IY moved to the scratch buffer, and what the blit read back from there (A, F; A', F'); after a
+        # copy: E', the last copied cell's colour (the scenery's here). Dead if the game sets them before reading them.
+        # Proved for every new exit (return PC, registers that differ), the first DEAD_FIRST events and every
+        # DEAD_EVERY-th; an exit proved before covers the same registers again (a proof costs ~1 s).
+        what = 'IY moved, and values read from the scratch' if span is DRAW else "E' cell colour"
+        key = (span is DRAW, ro[24], frozenset(diff))
         n = _BLITS_SEEN[0] = _BLITS_SEEN[0] + 1
-        if n > DEAD_FIRST and n % DEAD_EVERY:
-            ok['IY moved (not sampled)'] += 1
+        if key in _PROVEN and n > DEAD_FIRST and n % DEAD_EVERY:
+            ok[what + ' (exit proved before)'] += 1
         elif dead_regs(base, o.w, ro, rp):
-            ok['IY moved, and values read from the scratch (dead)'] += 1
+            _PROVEN.add(key)
+            ok[what + ' (dead)'] += 1
         else:
-            bad['moved IY or scratch values read later!'] += 1
+            bad[what + ': read later!'] += 1
             det.append(('registers', diff, [ro[i] for i in diff], [rp[i] for i in diff]))
-    elif diff and span is COPY and set(diff) <= {21}:
-        # E' holds the last copied cell's colour, the scenery's here: dead if the game sets it before reading it
-        if dead_regs(base, o.w, ro, rp):
-            ok["E' cell colour (dead)"] += 1
-        else:
-            bad["E' cell colour read later!"] += 1
     elif diff:
         bad['registers differ!'] += 1
         det.append(('registers', diff, [ro[i] for i in diff], [rp[i] for i in diff]))
@@ -334,6 +332,9 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
     vns = J1.NextSide()
     upd = {'figs': [], 'pre': {}}
     _BLITS_SEEN[0] = 0
+    _PROVEN.clear()
+    J1.EXEC_PCS.clear()
+    sites = {a: bytes(old) for a, old, new in patch.sites}
 
     def fail(k, info):
         c[k] += 1
@@ -341,8 +342,14 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
             ex[k].append(info)
 
     def on(pc, sim):
+        if pc in INTERIORS:                 # inside a replaced instruction (an LD (nn),SP or LD HL,nn operand)
+            fail('jump into a patched instruction!', hex(pc))
+            return
         regs, base = list(sim.registers), _snap64(sim)
         get = base.__getitem__
+        for a, o in sites.items():
+            if bytes(base[a:a + len(o)]) != o:
+                fail('the game rewrote a patch site!', '%04X' % a)
         c[SITE_KIND[pc]] += 1
         if pc in BLITS:
             upd['figs'].append(figure_of(regs, get))
@@ -383,7 +390,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
             if want != get(a):
                 fail('figure model differs from the original drawing!', ('%04X' % a, want, get(a)))
         c['picture bytes checked'] += len(pre)
-        got, bad = J1.render(vns)
+        got, bad = J1.render(vns, J1.sprite127_on_top(patch.stub_extra))
         for b in bad:
             fail('sprite attributes!', b)
         want = {}
@@ -401,7 +408,9 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
         c['sprite pixels compared'] += len(want)
         upd['figs'], upd['pre'] = [], {}
 
-    frames, err = RZ.trace(rzx_path, set(SITE_KIND), on, stop=stop)
+    frames, err = RZ.trace(rzx_path, set(SITE_KIND) | INTERIORS, on, stop=stop)
+    for pr in J1.store_form_problems(lambda a: vpage[a - 0x2000] if 0x2000 <= a < 0x4000 else 0, J1.EXEC_PCS):
+        fail('unmodelled store form in the hook page!', pr)
     c['frames'] = frames
     if err:
         fail('replay desync!', err)
@@ -434,10 +443,23 @@ def negative_patches(patch=None):
     make('wrong palette bank', [(_sym(base, 'attrs.n_bank') + 1, b'\x01')])
     make('leftover sprites not hidden', [(_sym(base, 'commit.n_hide'), b'\x7A\x00\x00')])
     make("caller's speed not given back", [(_sym(base, 'e_cmt.n_spd') + 4, b'\x00\x00\x00')])
+    p = copy.deepcopy(base)                 # the setup's NR 0x15 with bit 6 set: sprite 0 on top
+    p.stub_extra = bytes(p.stub_extra).replace(b'\xED\x91\x15\x01', b'\xED\x91\x15\x41')
+    out['later figures under earlier (NR 0x15 bit 6)'] = p
     return out
 
 
-def unit_tests(patch, states, negs=(), rzx=None, neg_frames=1500):
+NEG_EXPECT = {                              # the failure each control must give (another one is not a detection)
+    'no redirect (AND 0xFF)': {'patched blit wrote the cell buffer!',
+                               'scratch writes are not the buffer writes moved by 0xC000!'},
+    'colour list not put back': {"colour list not the scenery's!"},
+    'one colour for every figure': {J1.SPRITES_WRONG}, 'multi-colour cache ignores the colours': {J1.SPRITES_WRONG},
+    'never mirrored': {J1.SPRITES_WRONG}, 'wrong palette bank': {J1.SPRITES_WRONG},
+    'leftover sprites not hidden': {J1.SPRITES_WRONG}, "caller's speed not given back": {'CPU speed not given back!'},
+    'later figures under earlier (NR 0x15 bit 6)': {J1.SPRITES_WRONG}}
+
+
+def unit_tests(patch, states, negs=(), rzx=None, neg_frames=1500, full=False):
     """Every site at the four CPU speeds (hooklib.every_site); the copy as a hide (hooklib.hide_cases: every sprite
     shown, no figure recorded: all hidden); a blit with the figure table full (refused, the table untouched); the
     negative controls on the first neg_frames of rzx. -> Counter"""
@@ -453,11 +475,17 @@ def unit_tests(patch, states, negs=(), rzx=None, neg_frames=1500):
         vpage, vns = bytearray(patch.page), J1.NextSide()
         vns.nr[0x07] = clock
         bad, ok, det, ow, pw = pair(patch, regs, base, vpage, vns, COPY if pc == COPIER else DRAW)
+        for k in bad:                       # a failing run is a failure, whatever the other speeds give
+            c['every site: %04X at speed %d: %s' % (pc, clock, k)] += 1
         state = (tuple(sorted(bad)), tuple(sorted(ow.items())), bytes(vns.attr), bytes(vns.pat))
         return vns.nr.get(0x07, 0), state
+    missing = [a for a in SITE_KIND if a not in first]
+    if missing:                             # a full run reaches every site; a quick one says which it did not
+        c['every site: never reached %s%s' % (' '.join('%04X' % a for a in missing), '!' if full else ' (quick run)')] += 1
     cs, rows = hooklib.every_site(list(first), run_at)
     for k, v in cs.items():
         c['every site: ' + k] += v
+    c['store-form check: ' + J1.store_form_case()] += 1
 
     def hide_run(pc, st, speed):
         regs, base = st[1], st[2]
@@ -477,13 +505,12 @@ def unit_tests(patch, states, negs=(), rzx=None, neg_frames=1500):
         vpage, vns = bytearray(patch.page), J1.NextSide()      # the table full: the record refused, nothing written
         vpage[V_NFIG - 0x2000] = MAXFIG
         before = bytes(vpage[:V_NFIG - 0x2000 + 1])
-        pair(patch, regs, base, vpage, vns, DRAW)
+        bad = pair(patch, regs, base, vpage, vns, DRAW)[0]
+        for k in bad:
+            c['figure table full: ' + k] += 1
         c['figure table full ' + ('ok' if bytes(vpage[:V_NFIG - 0x2000 + 1]) == before else 'FAIL!')] += 1
     if rzx:
-        for name, np_ in (negs or negative_patches(patch)).items():
-            cc, ex, _ = verify(np_, rzx, stop=neg_frames)
-            caught = [k for k in cc if k.endswith('!')]
-            c['negative %s: %s' % (name, 'DETECTED' if caught else 'MISSED!')] += 1
+        c.update(J1.negative_results(negs or negative_patches(patch), rzx, neg_frames, NEG_EXPECT, verify))
     return c
 
 
@@ -514,7 +541,7 @@ def auto(a, z80, name, out, say):
         for k, v in ex.items():
             say('            %s: %s' % (k, str(v)[:200]))
     if states:
-        u = unit_tests(patch, states, rzx=first_rzx)
+        u = unit_tests(patch, states, rzx=first_rzx, full=not getattr(a, 'quick', None))
         ufail = [k for k in u if k.endswith('!')]
         ok = ok and not ufail
         say('Unit      : %s -> %s' % (', '.join('%s %d' % kv for kv in sorted(u.items())), 'FAIL' if ufail else 'PASS'))

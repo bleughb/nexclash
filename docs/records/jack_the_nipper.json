@@ -22,9 +22,9 @@
    },
    {
     "name": "jack_the_nipper.pok",
-    "md5": "a9d7b16ecae981bf483bc733adf1c373",
+    "md5": "0ab81024d52ec7f4c108c6788d9239b8",
     "path": "jack_the_nipper/jack_the_nipper.pok",
-    "note": "the archive's POKEs: 44285 = 58 is the Immunity cheat; 44278 (Q pause / quit off) is not used (games/jack_the_nipper.md)"
+    "note": "the cheats checked against the code: Immunity 44285 = 58 (the archive's); Infinite lives 43516 = 24, 43517 = 35 (ours: JR over the decrement and the lives redraw; the archive's file pairs 44278 with 44285 and has no lives trainer)"
    }
   ]
  },
@@ -59,7 +59,7 @@
   ],
   "auto_record": false,
   "minutes": 80,
-  "note": "Figure sites: original and patched draw from one state (registers, every write outside the shadow, none to the real shadow, the scratch writes = the shadow writes moved by 0x4000; H' and stack bytes proven dead). Copier entry: the commit, then the figures drawn since the last copy, modelled from their graphics and masks, against the original's shadow bytes and against the visible sprites pixel for pixel. Units: every site at four speeds, the copy as a hide; five negative controls."
+  "note": "Figure sites: original and patched draw from one state (registers, every write outside the shadow, none to the real shadow, the scratch writes = the shadow writes moved by 0x4000; H' and stack bytes proven dead). Copier entry: the commit, then the figures drawn since the last copy, modelled from their graphics and masks, against the original's shadow bytes and against the visible sprites pixel for pixel. Also the return PC, no jump into a replaced instruction (0x80CA / 0x80CB only after 0x80C9), no site rewritten, no hook store the slot-1 model leaves out; the boot on through the tail's restore to the game start; the stacking order the setup sets. Units: every site at four speeds (a full run reaches all), the copy as a hide, the store-form check; six negative controls, each by its own failure."
  },
  "outputs": {
   "plain": {
@@ -68,7 +68,7 @@
   },
   "sprites": {
    "file": "jack_the_nipper_sprites.nex",
-   "md5": "b836bba4eebd119fc04179178bd22d3a"
+   "md5": "3232643edacbf59513aaeaf30f82a1d3"
   }
  },
  "repro": [],
@@ -76,9 +76,9 @@
   "title": "Jack the Nipper",
   "engine_col": "jack_the_nipper (jack_the_nipper.md)",
   "build": "jack_the_nipper_sprites.nex: every figure (pickups and effects too) a 4-bit sprite, black lines, the body in the paper of the cell under its feet; scenery, HUD and text on the ULA",
-  "software": "RZX replay verify of the whole recording (draws, copies, picture), units + 5 negative controls; JNext: figures show as sprites",
+  "software": "RZX replay verify (draws, copies, picture), units + 6 negative controls; the whole recording on the final build: the stamp, pending; JNext: figures show as sprites",
   "hardware": "untested",
-  "next": "the owner tests in JNext / on a Next; colour sheets and recolour; cheats in the .nxc"
+  "next": "the whole-recording stamp; colour sheets and recolour (stage 3); the owner tests in JNext / on a Next"
  },
  "checks": [
   "asm2profile:jack_the_nipper"
@@ -142,10 +142,10 @@
   {
    "application": "jack_the_nipper.scratch-redirect",
    "check": "state.rzx-differential",
-   "scope": "1 human recording, 108,043 frames; no hardware; JNext start only",
+   "scope": "1 human recording (108,043 frames): the final build verified over 1,000 frames, the whole recording in the stamp (pending); no hardware; JNext start only",
    "evidence": "games/jack_the_nipper.md \"Results\"",
-   "status": "pass",
-   "build": "b836bba4"
+   "status": "partial",
+   "build": "3232643e"
   }
  ]
 }
