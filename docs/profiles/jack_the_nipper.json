@@ -13,11 +13,18 @@
  "hooks": {
   "source": "asm/jack_the_nipper_hooks.asm",
   "syms": {
+   "attrs.n_bank": "0x39AB",
+   "attrs.n_mir": "0x39B8",
    "code_start": "0x3600",
    "commit": "0x3753",
+   "commit.n_hide": "0x379E",
    "e_cmt": "0x3714",
+   "e_cmt.n_spd": "0x373B",
+   "e_cmt.n_spd_end": "0x3743",
    "e_d16": "0x3600",
+   "e_d16.n_res16": "0x3621",
    "e_d24": "0x3629",
+   "e_d24.n_res24": "0x3654",
    "record": "0x365C",
    "setup": "0xD000"
   },

@@ -86,7 +86,7 @@ e_d16:  ld (V_HSP),sp
         pop bc
         pop af
         ld sp,(V_HSP)
-        res 6,h
+.n_res16: res 6,h                ; (negative control: NOPs = no redirect)
         push hl
         push af
         and a
@@ -112,7 +112,7 @@ e_d24:  ld (V_HSP),sp
         pop bc
         pop af
         ld sp,(V_HSP)
-        res 6,h
+.n_res24: res 6,h                ; (negative control: NOPs = no redirect)
         push hl
         push af
         and a
@@ -252,7 +252,8 @@ e_cmt:  ld (V_HSP),sp
         push ix
         HLIB_SPEED_IN V_LATCH
         call commit
-        HLIB_SPEED_OUT V_LATCH
+.n_spd:  HLIB_SPEED_OUT V_LATCH  ; (negative control: its NEXTREG 7 NOPped = the caller's speed not given back)
+.n_spd_end:
         pop ix
         pop hl
         pop de
@@ -299,7 +300,8 @@ commit: ld a,(V_UPD)
         otir                    ; attributes 0-4 of one sprite
         dec e
         jr nz,.w
-.hide:  ld a,(V_SHOWN)
+.hide:
+.n_hide: ld a,(V_SHOWN)          ; (negative control: LD A,D here = nothing hidden)
         sub d
         jr c,.done
         jr z,.done
@@ -618,14 +620,14 @@ attrs:  ld hl,(C_ATP)
         add a,32
         ld (hl),a               ; attribute 1 (rows above the screen wrap far below it: off screen)
         inc hl
-        ld a,(ix+9)
+.n_bank: ld a,(ix+9)             ; (negative control: INC A after it = the wrong bank)
         add a,a
         add a,a
         add a,a
         add a,a                 ; bank << 4
         bit 0,(ix+8)
         jr z,.n2
-        or 8                    ; X mirror
+.n_mir:  or 8                    ; X mirror (negative control: OR 0 = never mirrored)
 .n2:    or d                    ; X bit 8
         ld (hl),a               ; attribute 2
         inc hl

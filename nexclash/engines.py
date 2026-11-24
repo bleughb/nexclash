@@ -127,6 +127,7 @@ ENGINES = [
     ('arkanoid', 'is_arkanoid', None),                                    # Arkanoid (48K)
     ('cybernoid', 'is_cybernoid', None),                                  # Cybernoid (48K)
     ('pentagram', 'is_pentagram', None),                                 # Pentagram (48K), original presentation + optional Enhanced
+    ('jack_the_nipper', 'is_jack_the_nipper', None),                      # Jack the Nipper (48K)
 ]
 
 

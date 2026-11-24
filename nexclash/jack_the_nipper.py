@@ -548,7 +548,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
         for k, n in bad.items():
             for _ in range(n):
                 fail(k, (hex(pc), det))
-        if collect and len(states) < collect:
+        if collect and sum(1 for x in states if x[0] == pc) < collect:      # up to collect states per site
             states.append((pc, regs, base))
 
     def picture(get):
@@ -586,3 +586,113 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
     if err:
         fail('replay desync!', err)
     return c, dict(ex), states
+
+
+# ---------------------------------------------------------------------------------------------
+# Unit tests and negative controls (CLAUDE.md: paths the recording does not reach, and broken builds caught)
+# ---------------------------------------------------------------------------------------------
+
+def _sym(patch, name):
+    return patch.syms[name] - 0x2000
+
+
+def negative_patches(patch=None):
+    """Broken builds the verifier must catch: {name: patch}."""
+    import copy
+    base = patch or JtnPatch()
+    out = {}
+
+    def make(name, edits):
+        p = copy.deepcopy(base)
+        pg = bytearray(p.page)
+        for off, b in edits:
+            pg[off:off + len(b)] = b
+        p.page = bytes(pg)
+        p.extra_banks = {JTN_PAGE // 2: p.page + bytes(8192)}
+        out[name] = p
+    make('no redirect (RES 6,H dropped)', [(_sym(base, 'e_d16.n_res16'), b'\x00\x00'), (_sym(base, 'e_d24.n_res24'), b'\x00\x00')])
+    make('never mirrored', [(_sym(base, 'attrs.n_mir') + 1, b'\x00')])
+    make('wrong colour bank (the mirror flag)', [(_sym(base, 'attrs.n_bank') + 2, b'\x08')])
+    make('leftover sprites not hidden', [(_sym(base, 'commit.n_hide'), b'\x7A\x00\x00')])
+    make("caller's speed not given back", [(_sym(base, 'e_cmt.n_spd') + 4, b'\x00\x00\x00')])
+    return out
+
+
+def unit_tests(patch, states, negs=(), rzx=None, neg_frames=1500):
+    """Every site at the four CPU speeds (hooklib.every_site), the copy as a hide (hooklib.hide_cases: every sprite
+    shown, no figure recorded: all hidden), and the negative controls on the first neg_frames of rzx. -> Counter"""
+    import collections
+    from . import hooklib
+    c = collections.Counter()
+    first = {}
+    for pc, regs, base in states:
+        first.setdefault(pc, (regs, base))
+
+    def run_at(pc, clock):
+        regs, base = first[pc]
+        vpage, vns = bytearray(patch.page), NextSide()
+        vns.nr[0x07] = clock
+        bad, ok, det, ow, pw = pair(patch, regs, base, vpage, vns, DRAW if pc != 0x86F9 else COPY)
+        state = (tuple(sorted(bad)), tuple(sorted(ow.items())), bytes(vns.attr), bytes(vns.pat))
+        return vns.nr.get(0x07, 0), state
+    cs, rows = hooklib.every_site([pc for pc in first], run_at)
+    for k, v in cs.items():
+        c['every site: ' + k] += v
+
+    def hide_run(pc, st, speed):
+        regs, base = st[1], st[2]
+        vpage, vns = bytearray(patch.page), NextSide()
+        vns.nr[0x07] = speed
+        for n in range(16):                 # sprites on show from an earlier update
+            vns.attr[5 * n:5 * n + 5] = bytes([40 + n, 40, 0, 0xC0, 0x80])
+        vpage[0x31C1 - 0x2000] = 16         # V_SHOWN
+        bad, ok, det, ow, pw = pair(patch, regs, base, vpage, vns, COPY)
+        shown = [n for n in range(128) if vns.attr[5 * n + 3] & 0x80]
+        return [k for k in bad], shown
+    if 0x86F9 in first:
+        copies = [s for s in states if s[0] == 0x86F9]
+        for k, v in hooklib.hide_cases(copies, {0x86F9: 'copy with no figure'}, hide_run).items():
+            c[k] += v
+    if rzx:
+        for name, np_ in (negs or negative_patches(patch)).items():
+            cc, ex, _ = verify(np_, rzx, stop=neg_frames)
+            caught = [k for k in cc if k.endswith('!')]
+            c['negative %s: %s' % (name, 'DETECTED' if caught else 'MISSED!')] += 1
+    return c
+
+
+def auto(a, z80, name, out, say):
+    """The whole run: plain + sprite builds with boot checks, verify each recording, unit tests + negative controls."""
+    import os as _os
+    say('Game      : %s' % name)
+    say('Engine    : jack_the_nipper (the game\'s own figure draws into a scratch shadow; figures as 4-bit sprites)')
+    plain, spr, bad = build(z80, out, name, say)
+    ok = not bad
+    patch = JtnPatch()
+    from . import z80tonex as zt
+    patch.apply(zt.Z80Snapshot(z80))
+    states, first_rzx = [], None
+    for r in list(getattr(a, 'rzx', None) or []):
+        first_rzx = first_rzx or r
+        c, ex, st = verify(patch, r, stop=getattr(a, 'quick', None), collect=12)
+        states += st
+        fails = {k: v for k, v in c.items() if k.endswith('!')}
+        ok = ok and not fails and c.get('copy', 0) > 0
+        say('Verify    : %s  %d frames, draws %d (16-wide %d, 24-wide %d), copies %d, figure bytes redirected %d, '
+            'picture bytes %d, sprite pixels %d -> %s' % (
+                _os.path.basename(r), c['frames'], c['draw16'] + c['draw24'], c['draw16'], c['draw24'], c['copy'],
+                c['figure bytes redirected'], c['picture bytes checked'], c['sprite pixels compared'],
+                'IDENTICAL' if not fails else 'FAILED %s' % fails))
+        say('Allowed   : %s  %s' % (_os.path.basename(r), {k: v for k, v in c.items() if '(dead)' in k}))
+        for k, v in ex.items():
+            say('            %s: %s' % (k, str(v)[:200]))
+    if states:
+        u = unit_tests(patch, states, rzx=first_rzx)
+        ufail = [k for k in u if k.endswith('!')]
+        ok = ok and not ufail
+        say('Unit      : %s -> %s' % (', '.join('%s %d' % kv for kv in sorted(u.items())), 'FAIL' if ufail else 'PASS'))
+    else:
+        ok = False
+        say('Unit      : no states (no recording): not run')
+    say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
+    return ok
