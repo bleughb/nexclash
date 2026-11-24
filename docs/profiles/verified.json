@@ -1016,8 +1016,8 @@
    "game": "Green Beret",
    "doc": "green_beret.md",
    "nex": {
-    "plain": "c55d3d8303928a1dbddca65059674575",
-    "sprites": "8e0d11e37eb93495a1b8d85a75292224"
+    "plain": "0679156534b3372bfb2280262b39bcb1",
+    "sprites": "bdfaa782be7651d631fb1eabd2b51598"
    },
    "proof": "differential",
    "variants": [
@@ -1028,8 +1028,8 @@
      "args": [],
      "proof": "differential",
      "nex": {
-      "plain": "c55d3d8303928a1dbddca65059674575",
-      "sprites": "8e0d11e37eb93495a1b8d85a75292224"
+      "plain": "0679156534b3372bfb2280262b39bcb1",
+      "sprites": "bdfaa782be7651d631fb1eabd2b51598"
      }
     }
    ]
@@ -1104,6 +1104,34 @@
       "loading": "7cb1984f1758022536799ce706d73597",
       "enhanced": "2b8991079d665f55ebf523e58a781d05",
       "enhanced_loading": "f509de2eb7fff67cbd12d1afb91ec3fe"
+     }
+    }
+   ]
+  },
+  "18809405ae5fdacbf254c4ed5029b76c": {
+   "game": "Hard Drivin'",
+   "doc": "hard_drivin.md",
+   "nex": {
+    "plain": "d74f75e6995eb0f54eaec2122a5164d0",
+    "smooth": "9fb23f8e64fa8187ba304c34af9a6016",
+    "steps": "9cc6f829055ca1f17c491609de22b016",
+    "loading": "9d1a130d7e723c9395cca8266181da4b",
+    "smooth_loading": "f789a1c70aaa5f889f64c128a67527a0"
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "hard_drivin",
+     "game": "Hard Drivin'",
+     "doc": "hard_drivin.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "d74f75e6995eb0f54eaec2122a5164d0",
+      "smooth": "9fb23f8e64fa8187ba304c34af9a6016",
+      "steps": "9cc6f829055ca1f17c491609de22b016",
+      "loading": "9d1a130d7e723c9395cca8266181da4b",
+      "smooth_loading": "f789a1c70aaa5f889f64c128a67527a0"
      }
     }
    ]

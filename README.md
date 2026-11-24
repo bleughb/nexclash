@@ -8,6 +8,15 @@ Tried with Sonnet 5.5 on MEDIUM and it actually uses MORE tokens / overly verbos
 Haven't yet tried with lower models on other AI's
 Please post your success stories
 
+Note, optional is to install a developer directory on your computer and give the AI app access.
+upon doing so, a suite of tools, including cspect, skoolkit, jnext, z88dk and dozens of python scripts can be
+installed locally to save significant token use.
+Nexclash can do this entirely within the context window, BUT complex games WILL eat multiple sesions of tokens.
+A significant amonut of work has gone into optimising the toolchain, internal agent learnings and prompts so you will find 
+that the more games you convert, the more local tools get developed and the less tokens you use.
+the system is designed to self improve, so do allow it to make contributions
+
+
 ```
 Add GAME NAME to nexclash. Snapshot and my RZX are attached.
 Clone bleughb/nexclash and bleughb/specnext side by side and follow nexclash/CLAUDE.md

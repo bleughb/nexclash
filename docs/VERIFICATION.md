@@ -61,7 +61,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Inferno (inferno): `inferno.nex` 0a3bde4734c5b3f15ad0f2a55cc81e19; verified never
 - Altered Beast (128K) (altered_beast): `altered_beast.nex` 3a40cd83e14bad535b3f147708b2284e, `altered_beast_sprites.nex` 87afba14d9243c82397ab0c201bfac8c; verified 2026-11-22
 - Ghosts 'n Goblins (ghosts_n_goblins): `ghosts_n_goblins.nex` 61b31a77638e7c6393695f61473a518b, `ghosts_n_goblins_sprites.nex` 49b9383466196c36335b50943e6101b4, `ghosts_n_goblins_enhanced.nex` fff9a32e8e4ab38f395550639c8af3b7, `ghosts_n_goblins_sprites_loading.nex` 5f2bd47639ddecd8960998536be05f79, `ghosts_n_goblins_enhanced_loading.nex` d1627c16e3edf7f691f24d73614bf64f; verified 2026-11-20
-- Green Beret (green_beret): `green_beret.nex` c55d3d8303928a1dbddca65059674575, `green_beret_sprites.nex` 8e0d11e37eb93495a1b8d85a75292224; verified 2026-11-03
+- Green Beret (green_beret): `green_beret.nex` 0679156534b3372bfb2280262b39bcb1, `green_beret_sprites.nex` bdfaa782be7651d631fb1eabd2b51598; verified 2026-11-23
 - Nightshade (nightshade): `nightshade.nex` c2555ad8f43e1ebda5f07094a48bd041, `nightshade_sprites.nex` 37a5c792172120f2c5f5406e476e83bf, `nightshade_enhanced.nex` a09286f6c193f4f911a87a2a2317ebb8; verified 2026-11-21
 - Knight Tyme (128K) (knight_tyme): `knight_tyme.nex` ec43a9c6bd1ac6631ab7c8dde3ee36dd, `knight_tyme_sprites.nex` 8baef8197af76204c12356931837daf5; verified 2026-11-04
 - Spellbound (128K, Magic Knight 2) (spellbound_magic_knight): `spellbound_magic_knight.nex` a3a71c4bc642afb58842e368ebf64682, `spellbound_magic_knight_sprites.nex` 9e1cf675b59a4c1f555b0870d414818b, `spellbound_magic_knight_enhanced.nex` 1fa636cdb0c2c2a1f36a2a29eb880b42; verified 2026-11-20
@@ -138,6 +138,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Finders Keepers (finders_keepers): `finders_keepers.nex` b434bc905a813514567d3cbd38dbe670, `finders_keepers_sprites.nex` ba99b0cb1058987d0ab4549eac9ce46e; verified 2026-11-22
 - Monty on the Run (monty_on_the_run): `monty_on_the_run.nex` 86c30493dbd683b5076dfa43098180bb, `monty_on_the_run_sprites.nex` 7fdb25d99b58c4413042f4b7a7f919c8; verified 2026-11-22
 - Auf Wiedersehen Monty (auf_wiedersehen_monty): `auf_wiedersehen_monty.nex` a29cf9b873dec7c71238c90004b8df9c, `auf_wiedersehen_monty_sprites.nex` ad20fe1d69ccc920798b6c1dc5ba89d9; verified 2026-11-22
+- Hard Drivin' (hard_drivin): `hard_drivin.nex` d74f75e6995eb0f54eaec2122a5164d0, `hard_drivin_smooth.nex` 9fb23f8e64fa8187ba304c34af9a6016, `hard_drivin_steps.nex` 9cc6f829055ca1f17c491609de22b016, `hard_drivin_steps_loading.nex` 9d1a130d7e723c9395cca8266181da4b, `hard_drivin_smooth_loading.nex` f789a1c70aaa5f889f64c128a67527a0; verified 2026-11-24
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13

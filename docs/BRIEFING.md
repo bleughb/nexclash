@@ -104,8 +104,9 @@ $08 bit 7 semantics, 48K timing vs 7FFD decoding (see A1, LEARNINGS 1.2-1.4).
 ### A1. What we rely on
 | Item | Setting / fact |
 |---|---|
+| Core | 3.03 only (owner, 2026-11-24): no 28 MHz read wait on 3.03.00 (docs/kb/hardware/n-go-3.03.00.json, nxsuite C01), so 28 MHz budgets may use the full 8x of 3.5 MHz; the x1.4 / 8-over-6.5 factors are a 3.02 allowance, dropped per build when it is next revised (and its checks pass). 3.02 figures in the docs are history |
 | CPU speed | NextReg $07 = 0 (3.5 MHz) |
-| Video | 50Hz forced (NextReg $05) unless `--allow-60hz` (nexclash.py convert / auto / patch / new / verify: sets z80tonex.ALLOW_60HZ, every build path; outputs then differ from the verified MD5s). "50 Hz" is exact only at VGA timing 0 and HDMI: VGA timings 1-6 (NextReg $11, the user's setting) run the frame at up to 58.93 Hz, so a converted game runs up to ~18 % fast there (TECHNIQUES 2.6, clock table: clk28 per mode from the register notes, frame rate = clk28 / clocks per frame; not measured on a board). Ask for the video mode with any "runs too fast" hardware report |
+| Video | 50Hz forced (NextReg $05) unless `--allow-60hz` (nexclash.py convert / auto / patch / new / verify: sets z80tonex.ALLOW_60HZ, every build path; outputs then differ from the verified MD5s). "50 Hz" = clk28 / clocks per frame: 50.08 Hz at our 48K timing and VGA 0 (28e6 / (312 x 1792), computed), 49.36 at 128K timing (measured: N-Go 3.03.00, nxsuite F01 / F02); VGA timings 1-6 (NextReg $11, the user's setting) run up to ~18 % fast (TECHNIQUES 2.6 clock table, register notes). Ask for the video mode with any "runs too fast" hardware report |
 | 48K fidelity | NextReg $03 = 48K timing (written after the legacy paging writes; VHDL: this does NOT stop 7FFD/1FFD decoding - with 48K/128K timing 7FFD decodes as A15=0, A1:0=01, A14 ignored; timing only changes contention); NextReg $08 contention on; 7FFD lock via the tail's own 7FFD write (bit 5) |
 | DivMMC | The stub clears NextReg $06 bit 4 and unmaps DivMMC memory (OUT $E3,0; z80tonex.build_stub). That bit turned DivMMC automap off only up to core 3.01.05: from core 3.01.10 it is the DRIVE-button NMI alone, the automap enable is NextReg $0A bit 4, and $BB bit 7 (set at reset) automaps on any instruction fetch at $3Dxx while ROM3 is selected - which the alt ROM image 1 is (core 3.02.05 nextreg.txt, varmfskii zx_next_notes; NEXT_REGISTERS). NextZXOS and NEXLOAD leave it ON: $0A read 0x11, $B8 0x82 (entry points 0x0008, 0x0038) on a Tang board, 2026-11-20, so every IM 1 interrupt mapped DivMMC over 0000-3FFF under our games: Bubbler (hook stack 0x3EF4) crashed with automap on, played with it off (jattree/nxc #3); Commando 541e34e2 (code at 0x3D00-0x3DFF) likely too (C2 #24). Since 2026-11-20 every build (auto/convert/recolour, z80tonex CLI) starts with z80tonex.automap_off (DI, $0A bit 4 off, JP the stub: 19 bytes at entry-bank 0x1E00, header PC on them), applied last by nexclash.py finish_outputs, each file booted by nextboot.automap_check from $0A = 0x11, so nothing of a build moves. Rule kept: never put code at 0x3D00-0x3DFF |
 | Interrupt length | Next /INT outlasts a 128K's 36 T: an EI-first handler re-enters (Tang: op after EI ends 38 T after ack: yes; 42: no). games/altered_beast.md |
@@ -378,16 +379,13 @@ Hardware to confirm
    $64,0 / $22,0 / $C4 bit 0 / $68,0 / $26,0 / $27,0 + $06 AND $5F in the stub - changes every .nex: a
    maintainer decision (full `selftest.py --stamp`). Check ped7g NEXLOAD2's reset list first.
 27. Alt image 0: a copy of ROM 0 on the Next is NextZXOS's (Target Renegade's sound bytes, Knight
-   Tyme's star map). New engines: `patch.altrom0` (128K ROM 0 + hooks). Unconfirmed on hardware, as OUT
-   (0x1FFD) in 128K timing (LEARNINGS 1.2). `scan` cannot split ROM reads by ROM.
-28. Copper facts to confirm before an engine relies on the copper: a WAIT for a LINE already passed
-   holds the rest of the list until the next frame (inferred from guide r3; an h passed on the
-   CURRENT line does not wait - hardware-tested, TECHNIQUES "Hardware ground truth"); $64 = 33 aligns
-   copper line 0 with the top of 320x256 Layer 2 (a developer's note and the register text say 32:
-   ULA row 0 = line 32, line 0 = first tilemap / sprite row - test both); with $64 = 0 a WAIT for a line the mode lacks (311 at 60 Hz) never fires (TECHNIQUES
-   "Raster numbering": the freeze trap).
-   How to test any of these: tools/hwtests/README.md (one test .nex per question, a results table in
-   fixed RAM, one coloured block per test; Dean photographs the board, MAME runs the same file).
+   Tyme's star map). New engines: `patch.altrom0` (128K ROM 0 + hooks). OUT 0x1FFD picks the ROM pair in
+   128K timing (N-Go 3.03.00, nxsuite XT5); the image unconfirmed. `scan` cannot split ROM reads by ROM.
+28. DONE (N-Go 3.03.00, docs/kb/hardware/n-go-3.03.00.json): a WAIT for a LINE already passed
+   holds the list until next frame (nxsuite P01; an h passed on the CURRENT line does not wait);
+   neither $64 = 33 nor 32 puts copper line 0 on 320x256 Layer 2 row 0 (V18); a 60 Hz frame has 264
+   lines (F03), so with $64 = 0 a WAIT for 311 never fires there (TECHNIQUES "Raster numbering").
+   Tests: tools/hwtests/README.md (nxsuite).
 38. NEXLOAD overwrites the 48K printer buffer (0x5B00-0x5BFF: NextZXOS paging routines + system
    variables) after loading bank 5 (Match Day, hardware 2026-10-20: icons and team names lost, plain
    build too). Fixed per game by z80tonex `keep_printer_buffer` (opt-in, so no other output changed).
@@ -407,7 +405,7 @@ Designs not built yet (use when a game needs them)
    with it against today's OUTI / OTIR loops, where the source pattern is linear in memory.
 32. Per-cell depth with no masking (TECHNIQUES "Sprites BETWEEN the ULA and the tilemap"): $15 layer
    mode %110 + $68 bits 6:5 = %01 should put ULA + tilemap in front of the sprites, and tile attribute
-   bit 0 single tiles behind them. Confirm in CSpect, then hardware, against core nextreg.txt.
+   bit 0 single tiles behind them. Seen on an N-Go (3.03.00, nxsuite V13).
 33. Hook page with interrupts on when the game's ISR touches every slot (no free slot for midres'
    slot-5 trick): NextMasterSystem's trampoline (TECHNIQUES) - the IM2 entry maps the game's page back
    under the ISR and puts a trampoline in its return slot that maps the hook page again. Needs: verify
@@ -431,7 +429,7 @@ Designs not built yet (use when a game needs them)
    the same block every alt-ROM engine fills with hooks (Cyclone 0x3AFF, Match Day 0x3BFF handle it
    per engine). A shared check belongs in nextboot.check / the alt ROM build: IM 2 and I*256+0xFF in
    the altrom range -> refuse unless both vector bytes are unchanged or deliberately redirected.
-   Unconfirmed: that the Next's bus reads $FF in pulse mode on every core (we rely on it).
+   The bus reads $FF in pulse mode on an N-Go (3.03.00, nxsuite I01); other cores unmeasured.
 36. `inspect` should warn when CODE runs in the printer buffer (0x5B00-0x5BFF): NEXLOAD overwrites it,
    so the build needs keep_printer_buffer (Match Day: data; Cyclone: the main loop - its first plain
    build, without it, would not run on hardware). `auto` warns (new builds). Read first, not put back:
@@ -443,10 +441,6 @@ Designs not built yet (use when a game needs them)
    on the next frame: the game's sound at the original timing whatever speed the code runs at
    (one frame late; 11 kHz quantises fast tones). Needs: a T clock in the hooks (or the game loop's
    own count), the DAC enable (NextReg $08 bit 3), a hardware listen test. Not tried.
-38. selftest.push_access() treats a git WORKTREE as "no push access": it tests isdir(HERE/.git), and in
-   a worktree .git is a file. LEARNINGS 2.6 says to run stamping / --affected runs in a worktree, so
-   they stop with exit 3 there (Fireman, 2026-10-25; ran with NEXCLASH_MAINTAINER=1). Fix: test
-   os.path.exists, or ask `git rev-parse --git-dir`; add a selftest --tools case with a worktree.
 39. `isr` should list, for every routine the ISR's call tree reaches, the main-code callers too, and
    the original's slack at each (T from the main-code call's return to the next interrupt, over an
    RZX): a routine on both lists with little slack is a nesting risk once hooks add cost (LEARNINGS
@@ -465,6 +459,9 @@ Designs not built yet (use when a game needs them)
 45. Spellbound's _boot and three_weeks.boot_check still copy the raster line (+ 128K paging) nextboot has
    now: drop them at their next rework. nextboot.boot ignores a NEX's entry bank: a _loading.nex's picture
    stub runs only in its engine's loading_check.
+46. scan with several --rzx keeps one first access over all of them, so "write-first" means first in the
+   run, not in every recording. A tail site needs bytes no recording reads before writing (Green Beret
+   2026-11-23: four scans by hand plus a scratch intersection). Add a per-recording view; tools_check case.
 
 ### C3b. Two verification levels (agreed with Dean 2026-09-29; how to run them: PLAYBOOK 6)
 - ITERATE (per change): original bytes at every site, boot check, unit tests (with negative

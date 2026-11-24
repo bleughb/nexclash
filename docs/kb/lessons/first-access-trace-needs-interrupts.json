@@ -12,6 +12,9 @@
  ],
  "level": "observed",
  "area": "method",
+ "facts": {
+  "interrupts": "on"
+ },
  "words": [
   "first access",
   "trace",

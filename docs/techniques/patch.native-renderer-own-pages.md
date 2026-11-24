@@ -38,7 +38,7 @@ bytes at the same addresses in the renderer's page); the game's tables can be co
 
 ## Recognise
 - survey: updates take many frames, no frame wait (detect.pacing-structure); one copier writes the view.
-- The renderer's inputs are a list at a fixed address. Budget from simulator T x 1.4 (TECHNIQUES 1.0).
+- The renderer's inputs are a list at a fixed address. Budget from simulator T x 1 (TECHNIQUES 1.0).
 
 ## Probe and stop
 1. The copier's own pointer gives the exact view buffer (the survey's range may include variables).

@@ -12,7 +12,7 @@ engine's own verifier calls - verifiers stay per engine (CLAUDE.md), these are p
   CMP_R, r_span, r_delta, r_check     preserving R (card patch.preserve-r)
   lines16, pace_check     the pace limiter's target and its check (card patch.pace-limiter)
   pcache_key              a content-cache key (card optimise.pattern-cache)
-  iff_audit()             every LD A,I / LD A,R in asm/ that decides on P/V: read twice (card patch.iff-safe-read)
+  iff_audit()             every LD A,I / LD A,R in asm/ that decides on P/V: read twice, or '; IFF once: <reason>' (card patch.iff-safe-read)
   speed_audit()           every NEXTREG 7 in asm/: only 28 MHz in or the caller's speed back (card patch.restore-speed)
   hide_cases(...)         unit cases for hide-type hooks (room set-up, clear screen, window): all sprites shown
                           first, from captured states, at each CPU speed - not left to a recording reaching them
@@ -103,8 +103,8 @@ def pcache_key(page, row):
 
 class NextModel(object):
     """The Next as a hook sees it, for a SkoolKit Simulator: z80n installed with this NextReg model, the
-    port tracer set. Time runs at the current NR 7 clock (fast = 28 MHz's real factor: 8, or about 6.5
-    with the wait states, LEARNINGS 2.1f); the video line follows it (t_line T a line at 3.5 MHz, lines a
+    port tracer set. Time runs at the current NR 7 clock (fast = 28 MHz's real factor: 8 on core 3.03, the target;
+    about 6.5 with core 3.02's read wait states, LEARNINGS 2.1f); the video line follows it (t_line T a line at 3.5 MHz, lines a
     frame). Not modelled: contention, interrupts, the bus-idle latch of a speed change."""
 
     def __init__(self, sim, speed=0, t_line=224, lines=312, fast=8.0, line=0):
@@ -617,7 +617,8 @@ _IFF_RE = re.compile(r'^\s*(?:[A-Za-z_.][\w.]*:?)?\s*ld\s+a\s*,\s*([ir])\s*(?:;.
 _PV_RE = re.compile(r'\b(?:jp|ret|call)\s+p[oe]\b', re.I)
 _I_VALUE_RE = re.compile(r';.*\bI as a value\b')                 # the source's own mark on a LD A,I that saves I
 _STORE_A_RE = re.compile(r'ld\s+\([^)]+\)\s*,\s*a$', re.I)        # ... and the store that must follow it at once
-_IFF_OFF_RE = re.compile(r';.*\bIFF known off\b.{12,}')       # a single LD A,I where interrupts are always off, with why
+_IFF_ONCE_RE = re.compile(r';.*\bIFF once:\s*\S')              # an audited single LD A,I: the reason must follow
+_FLAGS_RE = re.compile(r'(add|adc|sub|sbc|and|or|xor|cp|inc|dec|rl|rr|sl|sr|bit|neg|daa)\b')   # not POP AF: may give back the read's flags
 _CODE_RE = re.compile(r'^(?:[A-Za-z_.][\w.]*:?)?\s+([a-z].*?)\s*(?:;.*)?$', re.I)   # a label only in column 0
 
 
@@ -801,12 +802,12 @@ def iff_audit(root=ROOT):
     """Every LD A,I / LD A,R in asm/*.asm and asm/lib/*.asm: 'twice' (the second read only after a JP PE past
     it: safe), 'pair' (two reads back to back, the second trusted: an interrupt at the end of the second
     still reads as off),
-    'value' (LD A,R with no P/V condition before the next flag-setting code: R as a value; or a LD A,I marked
-    "; I as a value" and stored to memory by the next instruction: I saved, not IFF), 'once' (a single
-    LD A,I - hooks read I for IFF - or LD A,R tested on P/V: an interrupt during the read leaves interrupts off),
-    'off' (a single LD A,I marked "; IFF known off: <why>": it only runs with interrupts off, so no interrupt can meet
-    the read; the reason is the source's claim, reviewed with it). The harness's NEG_IFF1 control is the one
-    expected 'once'. -> [(file, line, register, verdict)]."""
+    'value' (LD A,R with no P/V condition before the next flag-setting code: R as a value, never part of a
+    pair; or a LD A,I marked "; I as a value" and stored to memory by the next instruction: I saved, not IFF),
+    'exempt' (a single LD A,I marked "; IFF once: <reason>": the source shows interrupts are always off there,
+    so a misread can only leave them off where they were off), 'once' (a single LD A,I - hooks read I for
+    IFF - or LD A,R tested on P/V: an interrupt during the read leaves interrupts off).
+    The harness's NEG_IFF1 control is the one expected 'once'. -> [(file, line, register, verdict)]."""
     out = []
     files = sorted(glob.glob(os.path.join(root, 'asm', '*.asm')) + glob.glob(os.path.join(root, 'asm', 'lib', '*.asm')))
     for path in files:
@@ -816,14 +817,27 @@ def iff_audit(root=ROOT):
             mc = _CODE_RE.match(ln)
             if mc and not ln.lstrip().startswith(';'):
                 code.append((i + 1, mc.group(1).strip().lower(), ln))
+        def r_value(k):
+            """LD A,R at code[k] whose flags are overwritten before any P/V condition: R read as a value."""
+            if _IFF_RE.match(code[k][2]).group(1).upper() != 'R':
+                return False
+            for _, ins2, _ in code[k + 1:k + 13]:
+                if _PV_RE.search(ins2):
+                    return False
+                if _FLAGS_RE.match(ins2) and not re.match(r'(inc|dec)\s+(bc|de|hl|sp|ix|iy)$', ins2):
+                    return True
+            return True
         for k, (num, ins, ln) in enumerate(code):
             mi = _IFF_RE.match(ln)
             if not mi:
                 continue
             reg = mi.group(1).upper()
-            pair = [j for j in range(max(0, k - 4), min(len(code), k + 5)) if j != k and _IFF_RE.match(code[j][2])
-                    and not any(re.match(r'(else|endif|ifdef|ifndef)\b', x[1])
-                                for x in code[min(j, k) + 1:max(j, k)])]
+            # two reads near each other are a pair only when both can decide on P/V: an LD A,R whose flags
+            # are overwritten first (R as a random value) is no partner, nor paired itself
+            pair = [] if r_value(k) else [
+                j for j in range(max(0, k - 4), min(len(code), k + 5)) if j != k and _IFF_RE.match(code[j][2])
+                and not r_value(j) and not any(re.match(r'(else|endif|ifdef|ifndef)\b', x[1])
+                                               for x in code[min(j, k) + 1:max(j, k)])]
             if pair:
                 lo, hi = sorted((k, pair[0]))
                 # safe only when the second read runs ONLY after the first read said off (JP PE past it): two
@@ -831,20 +845,42 @@ def iff_audit(root=ROOT):
                 verdict = 'twice' if any(_PV_RE.search(x[1]) for x in code[lo + 1:hi]) else 'pair'
             elif reg == 'I' and _I_VALUE_RE.search(ln) and k + 1 < len(code) and _STORE_A_RE.match(code[k + 1][1]):
                 verdict = 'value'           # I itself, saved to memory at once and marked so in the source (Bruce Lee)
-            elif reg == 'I' and _IFF_OFF_RE.search(ln):
-                verdict = 'off'             # interrupts are off wherever this runs (the source says why: Arkanoid)
+            elif reg == 'I' and _IFF_ONCE_RE.search(ln):
+                verdict = 'exempt'          # one read, audited: the source's reason says interrupts are off there
             elif reg == 'I':
                 verdict = 'once'            # LD A,I is read for IFF (pushed, tested later): one read is the fault
-            else:
-                verdict = 'value'           # LD A,R: R as a value unless a P/V condition follows at once
-                for _, ins2, _ in code[k + 1:k + 13]:
-                    if _PV_RE.search(ins2):
-                        verdict = 'once'
-                        break
-                    if re.match(r'(add|adc|sub|sbc|and|or|xor|cp|inc|dec|rl|rr|sl|sr|bit|neg|daa|pop\s+af)\b', ins2):
-                        break
+            else:                           # LD A,R: R as a value unless a P/V condition follows at once
+                verdict = 'value' if r_value(k) else 'once'
             out.append((os.path.relpath(path, root).replace(os.sep, '/'), num, reg, verdict))
     return out
+
+
+_IFF_AUDIT_CASES = (            # made-up sources and the verdicts iff_audit must give them, in order
+    ('        ld a,r\n        and 15\n        jr nz,.s\n        push bc\n        ld a,r\n        and 7\n',
+     ['value', 'value']),       # R as a random value twice, close together: not a pair (inferno drv_bar)
+    ('        ld a,r\n        jp pe,.y\n        ld a,r\n.y:     push af\n        di\n        pop af\n        ret po\n',
+     ['twice', 'twice']),
+    ('        ld a,r\n        ld a,r\n        push af\n        di\n        pop af\n        ret po\n',
+     ['pair', 'pair']),         # IFF read twice, but the second read trusted
+    ('        ld a,i          ; IFF once: interrupts always off here\n        push af\n', ['exempt']),
+    ('        ld a,i          ; IFF once:\n        push af\n', ['once']),         # a marker with no reason
+    ('        ld a,i\n        push af\n        ld a,r\n        and 7\n', ['once', 'value']))   # R value: no partner
+
+
+def _t_iff_audit_rules():
+    """iff_audit on _IFF_AUDIT_CASES (each fenced by NOPs) -> the cases it gets wrong."""
+    nops = '        nop\n' * 6
+    with tempfile.TemporaryDirectory() as d:
+        os.mkdir(os.path.join(d, 'asm'))
+        with open(os.path.join(d, 'asm', 't.asm'), 'w') as f:
+            f.write(nops.join(src for src, _ in _IFF_AUDIT_CASES) + nops)
+        got = [v for *_, v in iff_audit(d)]
+    bad, at = [], 0
+    for src, want in _IFF_AUDIT_CASES:
+        if got[at:at + len(want)] != want:
+            bad.append('IFF audit rule wrong: %s -> %s, not %s!' % (src.split('\n')[0].strip(), got[at:at + len(want)], want))
+        at += len(want)
+    return bad
 
 
 def _t_iff_fixed(code, syms):
@@ -1099,15 +1135,11 @@ def selfcheck():
                 [] if unpadded['IFF capture M1 count differs!'] else ['unpadded IFF read not caught!']))
     au = iff_audit()
     once = ['%s:%d' % (f, n) for f, n, _, v in au if v in ('once', 'pair') and not f.endswith('hlib_selftest.asm')]
-    with tempfile.TemporaryDirectory() as d:          # the "IFF known off" mark needs its reason; unmarked stays 'once'
-        os.makedirs(os.path.join(d, 'asm'))
-        open(os.path.join(d, 'asm', 'm1.asm'), 'w').write('a:      ld a,i      ; IFF known off: runs with DI only\n')
-        open(os.path.join(d, 'asm', 'm2.asm'), 'w').write('b:      ld a,i      ; IFF known off\n')
-        if [v for *_, v in iff_audit(d)] != ['off', 'once']:
-            once.append('the IFF known off mark (with a reason; without one it stays once)')
-    out.append(('hooklib IFF audit: %d LD A,I / LD A,R in asm/ (%d read twice, %d values), none trusted after one read'
-                % (len(au), sum(v == 'twice' for *_, v in au), sum(v == 'value' for *_, v in au)),
-                ['IFF read once: %s!' % x for x in once]))
+    out.append(('hooklib IFF audit: %d LD A,I / LD A,R in asm/ (%d read twice, %d values, %d exempt with a reason), '
+                'none trusted after one read; %d made-up cases'
+                % (len(au), sum(v == 'twice' for *_, v in au), sum(v == 'value' for *_, v in au),
+                   sum(v == 'exempt' for *_, v in au), len(_IFF_AUDIT_CASES)),
+                ['IFF read once: %s!' % x for x in once] + _t_iff_audit_rules()))
     out.append(speed_audit_check())
     li = line_isr_cases(code, syms)
     out.append(('hooklib line read under a selection-moving ISR (C7): hlib_line_di exact %s; hlib_line %s'

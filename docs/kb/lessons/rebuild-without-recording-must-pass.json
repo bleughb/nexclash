@@ -1,0 +1,27 @@
+{
+ "id": "lesson.rebuild-without-recording-must-pass",
+ "kind": "pitfall",
+ "claim": "An engine's auto must return PASSED on a rebuild with no recording (the record's rebuild recipe): a FAILED auto skips the CLI's later steps such as automap_off, so rebuild and verify MD5s differ.",
+ "evidence": [
+  {
+   "game": "games/hard_drivin.md",
+   "text": "auto failed with no recording (Unit: no states); the rebuild's .nex lacked the automap_off entry the verify run's had (19 bytes, header PC)",
+   "quote": "auto returned FAILED, so the automap_off entry was not added",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "next_check": "selftest could rebuild every new record once with no recording and require Result PASSED.",
+ "words": [
+  "auto",
+  "rebuild",
+  "recording",
+  "automap",
+  "md5",
+  "selftest",
+  "passed"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

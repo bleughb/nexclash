@@ -1,0 +1,31 @@
+{
+ "id": "lesson.interrupt-push-in-write-set-abandon",
+ "kind": "pitfall",
+ "claim": "An interrupt push into bytes a routine will write cannot be repaired from genuine memory (the routine may have changed them): abandon that run and drop the measurement, or the routine follows a stale byte.",
+ "limit": "Needs a map of the routine's write set (here 16-byte blocks, 134 of them).",
+ "evidence": [
+  {
+   "game": "games/hard_drivin.md",
+   "text": "a push into the render's tables 0x9C00-0x9DFB was repaired with a stale byte and the calibration render ran away (update 605); abandoning hit renders fixed it, 196 of 1,556 samples dropped",
+   "quote": "a push in the write set (0x9C39) was flagged but",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "facts": {
+  "interrupts": "on"
+ },
+ "next_check": "A verify rule: a hit push must be the routine's last push.",
+ "words": [
+  "interrupt",
+  "push",
+  "stack",
+  "repair",
+  "write",
+  "abandon",
+  "calibration"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}
