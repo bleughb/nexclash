@@ -138,6 +138,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Finders Keepers (finders_keepers): `finders_keepers.nex` b434bc905a813514567d3cbd38dbe670, `finders_keepers_sprites.nex` ba99b0cb1058987d0ab4549eac9ce46e; verified 2026-11-22
 - Monty on the Run (monty_on_the_run): `monty_on_the_run.nex` 86c30493dbd683b5076dfa43098180bb, `monty_on_the_run_sprites.nex` 7fdb25d99b58c4413042f4b7a7f919c8; verified 2026-11-22
 - Auf Wiedersehen Monty (auf_wiedersehen_monty): `auf_wiedersehen_monty.nex` a29cf9b873dec7c71238c90004b8df9c, `auf_wiedersehen_monty_sprites.nex` ad20fe1d69ccc920798b6c1dc5ba89d9; verified 2026-11-22
+- Jack the Nipper (jack_the_nipper): `jack_the_nipper.nex` 496edfe068623f9a3c3fe5895784d97d, `jack_the_nipper_sprites.nex` b836bba4eebd119fc04179178bd22d3a; verified never
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13

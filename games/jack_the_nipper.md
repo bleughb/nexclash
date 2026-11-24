@@ -1,5 +1,7 @@
 # Jack the Nipper (Gremlin Graphics, 1986) - stage 1 done (design decided 2026-11-23); engine not yet written
 
+Techniques: `patch.scratch-redirect`, `optimise.pattern-cache`, `patch.restore-speed`, `detect.pacing-structure`, `detect.gameplay-screen-readers`
+
 ## Next session
 Stage: 2 (build)             State: design decided by the owner 2026-11-23 (all defaults; "Design decisions" below)
 Inputs: TOSEC `Jack the Nipper (1986)(Gremlin Graphics Software).z80` (md5 adcdb8f9bb5e72218392aab8fd44e78e) and its

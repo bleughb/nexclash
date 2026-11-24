@@ -695,8 +695,10 @@ def auto(a, z80, name, out, say):
         ufail = [k for k in u if k.endswith('!')]
         ok = ok and not ufail
         say('Unit      : %s -> %s' % (', '.join('%s %d' % kv for kv in sorted(u.items())), 'FAIL' if ufail else 'PASS'))
+    elif getattr(a, 'rzx', None):
+        ok = False                          # a verify run that reached no site covers nothing
+        say('Unit      : no states from the recordings: FAIL')
     else:
-        ok = False
-        say('Unit      : no states (no recording): not run')
+        say('Unit      : not run (no recording: a rebuild)')
     say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
     return ok

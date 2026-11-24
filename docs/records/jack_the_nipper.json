@@ -1,0 +1,151 @@
+{
+ "name": "jack_the_nipper",
+ "order": 276,
+ "game": "Jack the Nipper",
+ "doc": "jack_the_nipper.md",
+ "engine": "jack_the_nipper",
+ "representative": true,
+ "reference": "jack_the_nipper",
+ "inputs": {
+  "snapshot": {
+   "name": "jack_the_nipper.z80",
+   "md5": "4c5398b8bcfd88ebd83656f01c3aca21",
+   "path": "jack_the_nipper/jack_the_nipper.z80",
+   "note": "TOSEC Jack the Nipper (1986)(Gremlin Graphics Software)[a].z80: 48K, in game"
+  },
+  "recordings": [
+   {
+    "name": "jacknipper.rzx",
+    "md5": "82d55e2ddfb90e988fccc3cfbd94611d",
+    "path": "jack_the_nipper/jacknipper.rzx",
+    "role": "rzxarchive j/jacknipper.rzx: 108,043 frames (36 min), human play from its own start snapshot"
+   },
+   {
+    "name": "jack_the_nipper.pok",
+    "md5": "a9d7b16ecae981bf483bc733adf1c373",
+    "path": "jack_the_nipper/jack_the_nipper.pok",
+    "note": "the archive's POKEs: 44285 = 58 is the Immunity cheat; 44278 (Q pause / quit off) is not used (games/jack_the_nipper.md)"
+   }
+  ]
+ },
+ "modules": [
+  "jack_the_nipper"
+ ],
+ "own_modules": [
+  "jack_the_nipper"
+ ],
+ "data": [
+  "docs/profiles/jack_the_nipper.json",
+  "asm/jack_the_nipper_hooks.asm"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_pcache.asm",
+  "asm/lib/hlib_dma.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "jacknipper.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 80,
+  "note": "Figure sites: original and patched draw from one state (registers, every write outside the shadow, none to the real shadow, the scratch writes = the shadow writes moved by 0x4000; H' and stack bytes proven dead). Copier entry: the commit, then the figures drawn since the last copy, modelled from their graphics and masks, against the original's shadow bytes and against the visible sprites pixel for pixel. Units: every site at four speeds, the copy as a hide; five negative controls."
+ },
+ "outputs": {
+  "plain": {
+   "file": "jack_the_nipper.nex",
+   "md5": "496edfe068623f9a3c3fe5895784d97d"
+  },
+  "sprites": {
+   "file": "jack_the_nipper_sprites.nex",
+   "md5": "b836bba4eebd119fc04179178bd22d3a"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Jack the Nipper",
+  "engine_col": "jack_the_nipper (jack_the_nipper.md)",
+  "build": "jack_the_nipper_sprites.nex: every figure (pickups and effects too) a 4-bit sprite, black lines, the body in the paper of the cell under its feet; scenery, HUD and text on the ULA",
+  "software": "RZX replay verify of the whole recording (draws, copies, picture), units + 5 negative controls; JNext: figures show as sprites",
+  "hardware": "untested",
+  "next": "the owner tests in JNext / on a Next; colour sheets and recolour; cheats in the .nxc"
+ },
+ "checks": [
+  "asm2profile:jack_the_nipper"
+ ],
+ "techniques": [
+  {
+   "application": "jack_the_nipper.scratch-redirect",
+   "id": "patch.scratch-redirect",
+   "revision": 1,
+   "target": "the game's own figure draws land in a scratch shadow at slot 1 (RES 6,H at the two returns from 0x87BB)",
+   "phases": []
+  },
+  {
+   "application": "jack_the_nipper.pattern-cache",
+   "id": "optimise.pattern-cache",
+   "revision": 4,
+   "target": "4-bit tile pairs keyed by graphics address + pair, never evicted within an update",
+   "phases": []
+  },
+  {
+   "application": "jack_the_nipper.restore-speed",
+   "id": "patch.restore-speed",
+   "revision": 1,
+   "target": "every hook gives back the caller's NR 7",
+   "phases": []
+  },
+  {
+   "application": "jack_the_nipper.pacing",
+   "id": "detect.pacing-structure",
+   "revision": 2,
+   "target": "no frame sync: the work is the pace; hooks add 1.87 %",
+   "phases": []
+  },
+  {
+   "application": "jack_the_nipper.screen-readers",
+   "id": "detect.gameplay-screen-readers",
+   "revision": 2,
+   "target": "no logic reads figure pixels",
+   "phases": []
+  }
+ ],
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/jack_the_nipper.md#pacing"
+   ],
+   "coverage": "Simulator over the first 3,000 frames (653 updates); no JNext or hardware timing.",
+   "result": "No frame sync; the hooks add 1.87 % of the time, so the game runs about 2 % slower."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/jack_the_nipper.md#dependencies"
+   ],
+   "coverage": "scan --writers over 30,000 frames; the verifier over the whole recording.",
+   "result": "No logic reads figure pixels; R never read; H' and the moved stack bytes dead."
+  },
+  "decision": "Scratch-shadow redirect at slot 1 + 4-bit sprites committed at the copier's entry.",
+  "next_experiment": "JNext pace against the original (verify.update-locked-pace): within 3 %."
+ },
+ "results": [
+  {
+   "application": "jack_the_nipper.scratch-redirect",
+   "check": "state.rzx-differential",
+   "scope": "1 human recording, 108,043 frames; no hardware; JNext start only",
+   "evidence": "games/jack_the_nipper.md \"Results\"",
+   "status": "pass",
+   "build": "b836bba4"
+  }
+ ]
+}

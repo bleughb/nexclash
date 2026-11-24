@@ -408,6 +408,14 @@
     "enhanced_loading": "58f2f433bd283220aa89da2f0145e41c"
    }
   },
+  "4c5398b8bcfd88ebd83656f01c3aca21": {
+   "game": "Jack the Nipper",
+   "doc": "jack_the_nipper.md",
+   "nex": {
+    "plain": "496edfe068623f9a3c3fe5895784d97d",
+    "sprites": "b836bba4eebd119fc04179178bd22d3a"
+   }
+  },
   "a4963e747af1145fe0f2710da592abc6": {
    "game": "Jet Set Willy",
    "doc": "jet_set_willy.md",
