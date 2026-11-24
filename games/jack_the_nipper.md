@@ -91,7 +91,7 @@ No interrupt accepted in 108,043 frames: nothing syncs the game to the frame, so
 card detect.pacing-structure). The figure draws still run whole (redirected, not replaced), as do the copier and the
 restore, so the game's own work per update is the original's. The time added is the hooks': the record at each draw
 (at the caller's speed) and the commit at each copy (28 MHz; tiles uploaded only on a cache miss). Not yet measured in
-JNext (verify.update-locked-pace): open.
+JNext (verify.update-locked-pace): open. Simulator, first 3,000 frames (653 updates): the hooks add 1.87 % of the time (about 6,000 T a game update at 3.5 MHz terms: the record and the commit at 28 MHz, tiles uploaded only on a cache miss); 2.95 % before the record moved to 28 MHz. So the game runs about 2 % slower than the original.
 
 ## Dependencies
 Readers of the shadow and the display (`scan --writers`, 30,000 frames): the copier, the room-entry blit (0xAE14), fills

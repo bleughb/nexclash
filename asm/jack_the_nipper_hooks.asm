@@ -58,6 +58,7 @@ T_COL     EQU 0x31E0        ; tile: byte column of its first byte
 T_G       EQU 0x31E1        ; tile: graphics byte address (2)
 C_T       EQU 0x31E3        ; figure: the current tile index
 V_HASH    EQU 0x31E4        ; slot: the key's hash
+V_LATCHD  EQU 0x31E5        ; hlib_speed latch of the figure hooks
 TILEBUF   EQU 0x3200        ; 256 bytes: the two 4-bit tiles of a slot
 HSTACK    EQU 0x3400        ; hook stack top (0x3300-0x33FF)
 ATTRTAB   EQU 0x3400        ; 5 bytes a sprite (attributes 0-4)
@@ -72,6 +73,7 @@ code_start:
 ; its own stack); the three displaced bytes then run on the scratch address.
 e_d16:  ld (V_HSP),sp
         ld sp,HSTACK
+        HLIB_SPEED_IN V_LATCHD     ; the record at 28 MHz (it would cost the game ~1,170 T a draw at 3.5)
         push af
         push bc
         push de
@@ -85,6 +87,7 @@ e_d16:  ld (V_HSP),sp
         pop de
         pop bc
         pop af
+        HLIB_SPEED_OUT V_LATCHD
         ld sp,(V_HSP)
 .n_res16: res 6,h                ; (negative control: NOPs = no redirect)
         push hl
@@ -94,6 +97,7 @@ e_d16:  ld (V_HSP),sp
 
 e_d24:  ld (V_HSP),sp
         ld sp,HSTACK
+        HLIB_SPEED_IN V_LATCHD     ; the record at 28 MHz (it would cost the game ~1,170 T a draw at 3.5)
         push af
         push bc
         push de
@@ -111,6 +115,7 @@ e_d24:  ld (V_HSP),sp
         pop de
         pop bc
         pop af
+        HLIB_SPEED_OUT V_LATCHD
         ld sp,(V_HSP)
 .n_res24: res 6,h                ; (negative control: NOPs = no redirect)
         push hl
