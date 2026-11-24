@@ -28,8 +28,8 @@
 ```
 
 ## Use / do not use
-Reuse a slot when the same image shows again and the working set fits. Not when graphics change in
-place with no stable key, or the worst scene's distinct images exceed the cache. NEW engines: the library's content cache (`hlib_pc_upload`):
+Reuse a slot when an image shows again and the working set fits; not when graphics change in place
+with no stable key, or the worst scene's distinct images exceed the cache. NEW engines: the library's content cache (`hlib_pc_upload`):
 - an immutable image's key names its bytes for good (`hooklib.pcache_key(page, row)`, never 0);
 - a mutable image (a work buffer the hook rebuilds): key 0, always uploaded, the slot's key invalidated;
 - free, hide and clear keep pattern RAM and the keys; other pattern writers call `hlib_pc_inval` / `_reset`.
@@ -46,16 +46,17 @@ place with no stable key, or the worst scene's distinct images exceed the cache.
 ## Probe and stop
 1. `cost GAME.z80 --rzx R --at PLOTTER --group IX`: draws per frame and per object.
 2. Distinct images per frame in the worst scene; graphics changed in place?
-Stop when the worst scene's working set is known.
+Stop at the worst scene's working set.
 
 ## Contract
 - State: none.
 - Time: hit = 101 T, attributes only; miss = 256 OUTI (4,096 T; `HLIB_PC_OTIR`: 5,371 T, 508 bytes less code).
   Hook stack: 2 bytes; interrupt headroom: as the hook.
-- Display: a slot shown this frame is never overwritten; eviction round robin among unshown slots.
+- Display: a slot shown this frame is never overwritten; a miss takes its probe window's oldest unshown
+  slot, not the first from the hash (that thrashed animation frames: Jack the Nipper II).
 
 ## Resources owned
-Pattern slots (or a pattern store in Next pages), the cache table (HLIB_PCACHE: 128 bytes, 256-aligned).
+Pattern slots (or a store in Next pages); HLIB_PCACHE (128 bytes, 256-aligned).
 
 ## Failure lookup
 | Symptom | Cause | Probe | Fix | Rejected |
@@ -73,14 +74,14 @@ reused. Negative control: the invalidation removed (`hooklib.NEGATIVES`
 ### Measurements
 | Game | Workload | Payload | Hits / misses | Worst scene | CPU, core |
 |---|---|---|---|---|---|
-| Commando | RZX | 4-bit patterns, 32 slots of 4 | 2,764 reused / 4,332 plots | not recorded | 28 MHz hooks |
-| Midnight Resistance | 2 RZX | 16 entries | not recorded | tank: 340-410K T (thrash) | 28 MHz hooks |
-| Cyclone | RZX + bookmarks | mask cache, 3 entries | 157 distinct in 682 renders | - | 28 MHz hooks |
-| Atic Atac v1.1 | walk1, 1,300 frames | 4-bit pairs by page + row | not recorded; draw 2.98M -> 0.25M T | setup 20 ms | JNext 1.1.104 |
+| Commando | RZX | 4-bit patterns, 32 slots of 4 | 2,764 reused / 4,332 plots | - | 28 MHz |
+| Midnight Resistance | 2 RZX | 16 entries | - | tank: 340-410K T (thrash) | 28 MHz |
+| Cyclone | RZX + bookmarks | mask cache, 3 entries | 157 distinct in 682 renders | - | 28 MHz |
+| Atic Atac v1.1 | 1,300 frames | 4-bit pairs | draw 2.98M -> 0.25M T | setup 20 ms | JNext |
 | Ghosts 'n Goblins | c8 | 32 groups | 3,073 / 747 | hooks -42% T | 28 MHz |
 | Inferno | gate | 128 slots, recency | 0 evictions | L1 | 28 MHz |
 
 ## Evidence
-- games/commando.md, midnight_resistance.md, cyclone.md; LEARNINGS 2.1e.
+- games/commando.md, midnight_resistance.md, cyclone.md, jack_the_nipper_2.md; LEARNINGS 2.1e.
 - asm labels `alloc`, `sigadr`, `sigeq`, `mksig`: asm/midres_hooks.asm; `alloc`, `pat`: asm/commando_hooks.asm;
   `hlib_pc_upload`, `.inv`: asm/lib/hlib_pcache.asm.
