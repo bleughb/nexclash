@@ -20,6 +20,9 @@ repo's spec/NXC-FORMAT.md; its README covers `nxc.py` commands.
 - Verify each variant's own state on at least one recording (Cisco Heat: V2 with the car's sprites off,
   stage 1; with the 25 cadence, stage 3). Name toggles by what the player sees (at most 25 characters).
 - Options belong in the patch, not as extra builds: one patch, one menu.
+- A whole other build of the same length and bank layout can be a toggle too: `auto` packages what the
+  engine declares in NAME_outputs.json "toggles" (Hard Drivin': the smooth route, 3 sites, over the steps
+  default, 20; the .nxc 28,861 bytes).
 
 ## 2. A tape target
 - `nxc.py make BASE.nex GAME.tap --start START.z80 --tape-bank N,N -o OUT.nxc`: the start is the
@@ -37,6 +40,9 @@ repo's spec/NXC-FORMAT.md; its README covers `nxc.py` commands.
   the key is made). Needs the loader with build_screen (nxc PR 9 until merged); older ones keep the menu.
 - The owner's rule (2026-11-22): no hold of the screen after loading in the NXC build (Cisco Heat:
   boot_frames 0; the bare .nex keeps 4 s or a key).
+- A snapshot target (what `auto` packages) or a tape without a SCREEN$ block has no screen in the
+  player's file: stage the screen file beside the snapshot as a record input and build the `_loading`
+  variant; the .nxc carries it as SCR1 (Chase H.Q.; Hard Drivin', the user's .scr).
 
 ## 4. Cheats
 - The archive .pok: spectrumcomputing.co.uk/zxdb/sinclair/pokes/<letter>/<Title (Year)(Publisher)>.pok,
@@ -46,7 +52,10 @@ repo's spec/NXC-FORMAT.md; its README covers `nxc.py` commands.
   updates). Leave out a POKE that does not help the player and say why in `trainers_played` (Cisco Heat:
   No Time Bonus only skips the stage-end bonus).
 - `nxc.py import-pok PATCH GAME.pok GAME -o OUT --only "Name"`; a POKE in bank 8 at 0xC000+ on a 128K
-  game needs `--top-bank`.
+  game needs `--top-bank`, or the bank named in the .pok (Hard Drivin': code at 0xC000 up runs from bank 0,
+  the snapshot is saved with bank 3 there). An engine that writes the .pok (exolon, hard_drivin
+  `trainer_pok`) checks each original byte first; compare `nxc.apply(..., chosen=[T])` with the engine's
+  own trainer-on build.
 
 ## 5. Text and order
 - `--proof-file` takes PRF1 keys only (replay, emulator, hardware, coverage, pace...). INF1 notes

@@ -1590,12 +1590,12 @@ def setup_check(nex_bytes, pats, setup_at=0xD000, printer=None, tiles=None):
     class Mem(list):
         def __getitem__(s, a):
             m = mmu[a >> 13]
-            return 0 if m == 0xFF else pages.setdefault(m, bytearray(8192))[a & 0x1FFF]
+            return 0 if m == 0xFF else (pages.get(m) or pages.setdefault(m, bytearray(8192)))[a & 0x1FFF]
 
         def __setitem__(s, a, v):
             m = mmu[a >> 13]
             if m != 0xFF:
-                pages.setdefault(m, bytearray(8192))[a & 0x1FFF] = v
+                (pages.get(m) or pages.setdefault(m, bytearray(8192)))[a & 0x1FFF] = v
     sim = _rw()(Mem([0] * 65536), {'PC': setup_at, 'SP': 0xDFF0})
     R, ed, mem = sim.registers, sim.after_ED, sim.memory
     mem[0xDFF0], mem[0xDFF1] = 0xFE, 0xFF                  # return address 0xFFFE = done

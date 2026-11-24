@@ -17,6 +17,12 @@
    "game": "games/magicland_dizzy.md",
    "text": "The eraser uses SP as a pointer, so the stack low-water measurement is unreliable.",
    "shown_on": "unknown"
+  },
+  {
+   "game": "games/hard_drivin.md",
+   "text": "the render walks object lists and ROM bytes by POP, so an interrupt push during a 3.5 MHz calibration render overwrites its data; the handler puts the 2 bytes back from genuine memory",
+   "quote": "It POPs ROM bytes as data (SP pages 0x00-0x16)",
+   "shown_on": "simulator"
   }
  ],
  "level": "observed",

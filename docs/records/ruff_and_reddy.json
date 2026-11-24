@@ -78,7 +78,12 @@
   "asm/ruff_and_reddy_enh_hooks.asm",
   "docs/profiles/ruff_and_reddy_enh.json"
  ],
- "shared_data": [],
+ "shared_data": [
+  "asm/lib/hlib_iff.asm",
+  "asm/lib/hlib_pace.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_speed.asm"
+ ],
  "rebuild": {
   "args": [
    "--no-record"

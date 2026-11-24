@@ -22,7 +22,9 @@ V_SP EQU 0x3E32
 V_IN EQU 0x3BF0                 ; 1 in this page while a hook runs; always 0 in the hidden ROM's copy (below the font)
 V_ILEAVE EQU 0x3E3D             ; I when a hook leaves: 3B in a room
 I_GAME EQU 0xF4
-V_ROOMSP EQU 0x3E35             ; the game's clock while a room is drawn at 28 MHz
+V_ROOMSP EQU 0x3E35             ; the game's clock while a room is drawn at 28 MHz; 3 outside a room
+ROOM_CLK EQU 0x6000             ; its copy in game RAM, where isr_w finds it from either page copy (untouched by the game
+                                ; in every recording: scan of a1, rooms, die, hid, over)
 V_R0 EQU 0x3E36
 PLAY_BANK EQU 16
 TITLE_BANK EQU 19
@@ -58,21 +60,28 @@ rom_start:
         push bc
         push de
         push hl
+        ld bc,0x243B            ; the caller's speed published BEFORE the hook's ISR vector goes in: an interrupt
+        ld a,7                  ; between the two reads V_SPEED, so it must already be this hook's (Codex C5); the
+        out (c),a               ; game's own ISR (I still F4) runs until then, and HLIB_SPEED_IN_ABC's
+        inc b                   ; instructions are all here (same R count), the switch to 28 MHz last
+        in a,(c)
+        and 3
+        ld (V_SPEED),a
         ld a,1
         ld (V_IN),a
         ld a,3Bh
         ld i,a
-        HLIB_SPEED_IN_ABC V_SPEED
+        nextreg 0x07,3
         ENDM
         MACRO LEAVE_R
         pop hl
         pop de
         pop bc
         HLIB_SPEED_OUT_A V_SPEED
+        ld a,(V_ILEAVE)         ; I back before the hook flag goes: an interrupt between them read V_IN = 0 as a
+        ld i,a                  ; room and ran the game's ISR at 3.5 MHz, whatever the caller's clock (Codex C5)
         xor a
         ld (V_IN),a
-        ld a,(V_ILEAVE)
-        ld i,a
         pop af
         ld sp,(V_SP)
         HLIB_R_OUT
@@ -171,10 +180,10 @@ h_cll:
         pop de
         pop bc
         HLIB_SPEED_OUT_A V_SPEED
+        ld a,(V_ILEAVE)         ; I back before the hook flag goes: an interrupt between them read V_IN = 0 as a
+        ld i,a                  ; room and ran the game's ISR at 3.5 MHz, whatever the caller's clock (Codex C5)
         xor a
         ld (V_IN),a
-        ld a,(V_ILEAVE)
-        ld i,a
         pop af
         ld sp,(V_SP)
         HLIB_R_OUT
@@ -205,6 +214,7 @@ h_room:
         ld (V_ILEAVE),a
         ld a,(V_SPEED)
         ld (V_ROOMSP),a
+        ld (ROOM_CLK),a         ; the ISR's room path reads it (the hidden copy cannot hold it)
         ld hl,W_ROOM
         ld a,(0x5BD3)
         or a
@@ -231,6 +241,8 @@ h_re:
         ld a,(V_ROOMSP)
         ld (V_SPEED),a
         nextreg 0x07,a
+        ld a,3                  ; out of a room V_ROOMSP is 3, so a hook latched at 28 MHz is the caller's own clock
+        ld (V_ROOMSP),a         ; (isr_w reads V_ROOMSP when V_SPEED says 28 MHz; the page starts with 3 too)
         ld hl,(V_WAIT)          ; what the room took the original, less what it took here: at the game's clock, so the ISR
 .s:     dec hl                  ; takes its share of it as it did of the original's
         ld a,h
@@ -313,10 +325,10 @@ h_comp:
         pop bc
         ld bc,(V_R0 + 2)
         HLIB_SPEED_OUT_A V_SPEED
+        ld a,(V_ILEAVE)         ; I back before the hook flag goes: an interrupt between them read V_IN = 0 as a
+        ld i,a                  ; room and ran the game's ISR at 3.5 MHz, whatever the caller's clock (Codex C5)
         xor a
         ld (V_IN),a
-        ld a,(V_ILEAVE)
-        ld i,a
         pop af
         ld sp,(V_SP)
         HLIB_R_OUT
@@ -669,13 +681,13 @@ isr_w:  push af
         nextreg 0x7F,a
         ld a,(V_IN)
         or a
-        jr z,.z                 ; a room: V_SPEED and this variable are the hidden copy's; the game's clock is 3.5 MHz, near enough
+        jr z,.z                 ; a room: V_SPEED and this variable are the hidden copy's; the room's clock is in game RAM
         ld a,(V_SPEED)
         cp 3                    ; a hook inside a room latched 28 MHz: the game's clock is V_ROOMSP
         jr nz,.s
         ld a,(V_ROOMSP)
         jr .s
-.z:     xor a
+.z:     ld a,(ROOM_CLK)         ; the game's clock in a room (h_room), not a fixed 3.5 MHz (Codex review C5)
 .s:     nextreg 0x07,a
         pop bc
         pop af

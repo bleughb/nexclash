@@ -47,7 +47,8 @@
  "shared_data": [
   "asm/lib/hlib_speed.asm",
   "asm/lib/hlib_r.asm",
-  "asm/lib/hlib_pace.asm"
+  "asm/lib/hlib_pace.asm",
+  "asm/lib/hlib_iff.asm"
  ],
  "rebuild": {
   "args": [],

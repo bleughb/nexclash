@@ -1,5 +1,5 @@
 {
- "_note": "GENERATED from docs/records by `python -m nexclash.records views` - do not edit. Snapshots whose sprite build was differentially verified against a recording. nex = MD5s `nexclash.py patch` reproduces.",
+ "_note": "GENERATED from docs/records by `python -m nexclash.records views` - do not edit. Snapshots with a recorded build: nex = the MD5s `nexclash.py patch` reproduces for the default release; variants = every release of that snapshot (args: how it is selected; proof: differential = replayed against a recording, otherwise not).",
  "snapshots": {
   "56f151581bbcada775bb9e180bf4df9d": {
    "game": "3D Stock Car Championship",
@@ -7,7 +7,21 @@
    "nex": {
     "plain": "1e5d9d12cce23a4dac0e146576f2a2d9",
     "sprites": "413b1ec2c76898abd7ec96aa3b274e7a"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "3d_stock_car_championship",
+     "game": "3D Stock Car Championship",
+     "doc": "3d_stock_car_championship.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "1e5d9d12cce23a4dac0e146576f2a2d9",
+      "sprites": "413b1ec2c76898abd7ec96aa3b274e7a"
+     }
+    }
+   ]
   },
   "2909c2f0f18eca08479a74ad6dc8d193": {
    "game": "Abu Simbel Profanation",
@@ -18,7 +32,24 @@
     "enhanced": "8f8aec94d62cbcf37c7c2e10c803d79a",
     "english": "0678b953370ede18d99a326a10b4ee5b",
     "english_enhanced": "1661e9c766c7284b6961623caf145ec5"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "abu_simbel",
+     "game": "Abu Simbel Profanation",
+     "doc": "abu_simbel.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "1cb4729ad763c147625bec0a8ce6b14f",
+      "sprites": "75ed5dbfa892de1188d51bfc9d53e3d6",
+      "enhanced": "8f8aec94d62cbcf37c7c2e10c803d79a",
+      "english": "0678b953370ede18d99a326a10b4ee5b",
+      "english_enhanced": "1661e9c766c7284b6961623caf145ec5"
+     }
+    }
+   ]
   },
   "9df49e056fdf38a2f6da21fc4dfbf34f": {
    "game": "Altered Beast (128K)",
@@ -26,7 +57,21 @@
    "nex": {
     "plain": "3a40cd83e14bad535b3f147708b2284e",
     "sprites": "87afba14d9243c82397ab0c201bfac8c"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "altered_beast",
+     "game": "Altered Beast (128K)",
+     "doc": "altered_beast.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "3a40cd83e14bad535b3f147708b2284e",
+      "sprites": "87afba14d9243c82397ab0c201bfac8c"
+     }
+    }
+   ]
   },
   "f58236395e737aaa0fac1f8476711ad8": {
    "game": "The Arc of Yesod",
@@ -37,7 +82,24 @@
     "enhanced": "dcbc7fa189c093aa4d728f358546a9ba",
     "sprites_loading": "858ec5cda7dc2782664ed2247310589c",
     "enhanced_loading": "62b922d83ab47c6abf8f895c7a7af110"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "arc_of_yesod",
+     "game": "The Arc of Yesod",
+     "doc": "arc_of_yesod.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "cf3ad5b7ab250bd9e0400febd046990c",
+      "sprites": "93c1ac4a53c5d0db83b451ed53d727bb",
+      "enhanced": "dcbc7fa189c093aa4d728f358546a9ba",
+      "sprites_loading": "858ec5cda7dc2782664ed2247310589c",
+      "enhanced_loading": "62b922d83ab47c6abf8f895c7a7af110"
+     }
+    }
+   ]
   },
   "1f0faef52a701cfc9434e2745ccb7fc2": {
    "game": "Arkanoid",
@@ -45,7 +107,21 @@
    "nex": {
     "plain": "636dcef8d4e456e35bfc1b63f46c8298",
     "sprites": "cf5589795b281d555be085094bd10f41"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "arkanoid",
+     "game": "Arkanoid",
+     "doc": "arkanoid.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "636dcef8d4e456e35bfc1b63f46c8298",
+      "sprites": "cf5589795b281d555be085094bd10f41"
+     }
+    }
+   ]
   },
   "9c14e2564e3f9956ff6ff973dac77537": {
    "game": "Army Moves",
@@ -53,7 +129,40 @@
    "nex": {
     "sprites": "fd03197076dc02dd70516a8219e63c3d",
     "loading": "a2edd6afce2aadb34e6153895fc8080c"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "army_moves",
+     "game": "Army Moves",
+     "doc": "army_moves.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "sprites": "fd03197076dc02dd70516a8219e63c3d",
+      "loading": "a2edd6afce2aadb34e6153895fc8080c"
+     }
+    },
+    {
+     "record": "army_moves rework enhanced",
+     "game": "Army Moves",
+     "doc": "army_moves.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "sprites": "fd03197076dc02dd70516a8219e63c3d",
+      "loading": "a2edd6afce2aadb34e6153895fc8080c",
+      "enhanced": "d4036a0470468377c53bca4081678ce6",
+      "enhanced_loading": "bda41aa5c62aff2f85d682f619d2976e",
+      "enhanced_nobd": "0e37f4e69cd92db2e3fd78eb943bb158",
+      "enhanced_nobd_loading": "f7a264a5f3933c6fcc855f245faf3861"
+     },
+     "rework": true,
+     "env": {
+      "NEXCLASH_ARMY_MOVES_ENHANCED": "1"
+     }
+    }
+   ]
   },
   "06b11e63d60401666332a61626a5789c": {
    "game": "Atic Atac",
@@ -61,7 +170,55 @@
    "nex": {
     "plain": "3a10ced8b127d09de3c68b411f8283da",
     "sprites": "5ec3d88fb2a28ab604aa9f0bdf42d667"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "atic_atac",
+     "game": "Atic Atac",
+     "doc": "atic_atac.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "3a10ced8b127d09de3c68b411f8283da",
+      "sprites": "5ec3d88fb2a28ab604aa9f0bdf42d667"
+     }
+    },
+    {
+     "record": "atic_atac rework v13",
+     "game": "Atic Atac",
+     "doc": "atic_atac.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "sprites": "976d48b6d6849e2ae0a57248cbca422f",
+      "enhanced": "a02f6018ebd1aad58023b56d80cd99b2",
+      "sprites_qaop": "90adf4a7055dbc66e2f07408109bfee3",
+      "enhanced_qaop": "645eb2568dd1b44d2abc1a2dc383352c"
+     },
+     "rework": true,
+     "env": {
+      "NEXCLASH_REWORK": "atic_atac_v13"
+     }
+    },
+    {
+     "record": "atic_atac rework v14",
+     "game": "Atic Atac",
+     "doc": "atic_atac.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "sprites": "7acb0d3dab51ec6bae5050511b279ce3",
+      "enhanced": "40c94903ef29dd287c857b93dcb758d2",
+      "sprites_qaop": "bbd70cad2756667301692da9ed4dadb0",
+      "enhanced_qaop": "cb66f86d3af333cf30ec8de1074d926a"
+     },
+     "rework": true,
+     "env": {
+      "NEXCLASH_REWORK": "atic_atac_v14"
+     }
+    }
+   ]
   },
   "2ae624d49075367226a59766c860ea21": {
    "game": "Atom Ant",
@@ -71,7 +228,23 @@
     "loading": "90d513dc30b322aa46b0c49d58179e54",
     "enhanced": "32ecbdebb2aaa1c17fa5c51b5057b8a4",
     "enhanced_loading": "9add845f2ed6d7b2237d4f93b8db4646"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "atom_ant",
+     "game": "Atom Ant",
+     "doc": "atom_ant.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "b9652c798a834eb130e14f905a7932d1",
+      "loading": "90d513dc30b322aa46b0c49d58179e54",
+      "enhanced": "32ecbdebb2aaa1c17fa5c51b5057b8a4",
+      "enhanced_loading": "9add845f2ed6d7b2237d4f93b8db4646"
+     }
+    }
+   ]
   },
   "f9a864d1fec2a17e88d8e3259861182d": {
    "game": "Auf Wiedersehen Monty",
@@ -79,7 +252,21 @@
    "nex": {
     "plain": "a29cf9b873dec7c71238c90004b8df9c",
     "sprites": "ad20fe1d69ccc920798b6c1dc5ba89d9"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "auf_wiedersehen_monty",
+     "game": "Auf Wiedersehen Monty",
+     "doc": "auf_wiedersehen_monty.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "a29cf9b873dec7c71238c90004b8df9c",
+      "sprites": "ad20fe1d69ccc920798b6c1dc5ba89d9"
+     }
+    }
+   ]
   },
   "1c1af4775bc0114f7b94edb7de2d4070": {
    "game": "Beyond the Ice Palace (128K)",
@@ -87,7 +274,21 @@
    "nex": {
     "sprites": "54f755bd59ee680e5ed4c7f6060ba177",
     "sprites_loading": "5b05d5236cac7e451d9a6f59bbc2f609"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "beyond_the_ice_palace",
+     "game": "Beyond the Ice Palace (128K)",
+     "doc": "beyond_the_ice_palace.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "sprites": "54f755bd59ee680e5ed4c7f6060ba177",
+      "sprites_loading": "5b05d5236cac7e451d9a6f59bbc2f609"
+     }
+    }
+   ]
   },
   "08e760e82721540898b57b8a1f277659": {
    "game": "Bomb Jack",
@@ -95,7 +296,21 @@
    "nex": {
     "plain": "55a84a1452b6624d726f682917027d34",
     "sprites": "3494df60c092860d2c9ad18987d92920"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "bomb_jack",
+     "game": "Bomb Jack",
+     "doc": "bomb_jack.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "55a84a1452b6624d726f682917027d34",
+      "sprites": "3494df60c092860d2c9ad18987d92920"
+     }
+    }
+   ]
   },
   "0b2cb0c5a033e853d62c3a5e492f8bc0": {
    "game": "Booty",
@@ -103,9 +318,25 @@
    "nex": {
     "plain": "91f8b0c6a627bb3f93aa3a06b6f6848a",
     "loading": "5fa9ab15cd91d6041cc67521cd5cf6c5",
-    "enhanced": "42f9a3e98e2aa5c2968e92a652c5227d",
-    "enhanced_loading": "f0a38e93ba4b8abf1efb1be61cf43d68"
-   }
+    "enhanced": "0ffd319cd2693cc607303f71ae376420",
+    "enhanced_loading": "2982ad3b1e4ba850fcb1eeb03975ca29"
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "booty",
+     "game": "Booty",
+     "doc": "booty.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "91f8b0c6a627bb3f93aa3a06b6f6848a",
+      "loading": "5fa9ab15cd91d6041cc67521cd5cf6c5",
+      "enhanced": "0ffd319cd2693cc607303f71ae376420",
+      "enhanced_loading": "2982ad3b1e4ba850fcb1eeb03975ca29"
+     }
+    }
+   ]
   },
   "6e088cc665d1cdbcd32effa061ad6e8e": {
    "game": "Bruce Lee",
@@ -116,7 +347,26 @@
     "enhanced": "45d870293a6c0b3fb4feb682c27242de",
     "loading": "a1fedc58046f2e6c2bbf405e75ae7528",
     "enhanced_loading": "d3fcb6b84ac571b605e770a9a5418567"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "bruce_lee",
+     "game": "Bruce Lee",
+     "doc": "bruce_lee.md",
+     "args": [
+      "--no-nxc"
+     ],
+     "proof": "differential",
+     "nex": {
+      "plain": "7906d5691b504f78c040a28ef6690437",
+      "sprites": "1b9e3d4474d480877908817e651cc006",
+      "enhanced": "45d870293a6c0b3fb4feb682c27242de",
+      "loading": "a1fedc58046f2e6c2bbf405e75ae7528",
+      "enhanced_loading": "d3fcb6b84ac571b605e770a9a5418567"
+     }
+    }
+   ]
   },
   "85d7841306333321838d372ea8797ff2": {
    "game": "Bubbler",
@@ -125,7 +375,22 @@
     "plain": "bbd7dda43b96377795776c8e6cdf52fd",
     "sprites": "1a4bcd4eaeabd335559e2db20d060452",
     "enhanced": "31be2226ce2867037c792680dbe7a889"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "bubbler",
+     "game": "Bubbler",
+     "doc": "bubbler.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "bbd7dda43b96377795776c8e6cdf52fd",
+      "sprites": "1a4bcd4eaeabd335559e2db20d060452",
+      "enhanced": "31be2226ce2867037c792680dbe7a889"
+     }
+    }
+   ]
   },
   "00ee637a4f63ffe61fc3503de42d7822": {
    "game": "Cauldron",
@@ -133,7 +398,21 @@
    "nex": {
     "plain": "b2de3ca3afe037e39e95d3050cb2d197",
     "sprites": "5e9065eff473ed7c7868b9ce6d12c389"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "cauldron",
+     "game": "Cauldron",
+     "doc": "cauldron.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "b2de3ca3afe037e39e95d3050cb2d197",
+      "sprites": "5e9065eff473ed7c7868b9ce6d12c389"
+     }
+    }
+   ]
   },
   "cedb31d5860815ef7e871ee249744de5": {
    "game": "Chase H.Q.",
@@ -142,7 +421,24 @@
     "plain": "26d072e215166d94b4a1050b9b1afb50",
     "speed": "440824a836c77a29abbf5690f66265f8",
     "orig_pace": "a6a78043039c4b98bebaaf13e2f1942f"
-   }
+   },
+   "proof": "rebuild only",
+   "variants": [
+    {
+     "record": "chase_hq",
+     "game": "Chase H.Q.",
+     "doc": "chase_hq.md",
+     "args": [
+      "--no-nxc"
+     ],
+     "proof": "rebuild only",
+     "nex": {
+      "plain": "26d072e215166d94b4a1050b9b1afb50",
+      "speed": "440824a836c77a29abbf5690f66265f8",
+      "orig_pace": "a6a78043039c4b98bebaaf13e2f1942f"
+     }
+    }
+   ]
   },
   "cddc0cfea8259d0c497b50fae0acd27e": {
    "game": "Chuckie Egg",
@@ -150,7 +446,21 @@
    "nex": {
     "plain": "daa588edf9cd3a913689da0439f32081",
     "sprites": "dcd7f744a73eb59e7ce3236b57c8cef9"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "chuckie_egg",
+     "game": "Chuckie Egg",
+     "doc": "chuckie_egg.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "daa588edf9cd3a913689da0439f32081",
+      "sprites": "dcd7f744a73eb59e7ce3236b57c8cef9"
+     }
+    }
+   ]
   },
   "ff69b2836af7163b521d2ee2469c5a8c": {
    "game": "Cisco Heat",
@@ -158,7 +468,21 @@
    "nex": {
     "plain": "5a30200632338bbbf64c4e60f2174440",
     "orig_pace": "6ebeabd1a687b6e6ad3f061f87b70037"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "cisco_heat",
+     "game": "Cisco Heat",
+     "doc": "cisco_heat.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "5a30200632338bbbf64c4e60f2174440",
+      "orig_pace": "6ebeabd1a687b6e6ad3f061f87b70037"
+     }
+    }
+   ]
   },
   "0268fb4d76200708849269c9747b65ff": {
    "game": "Cobra",
@@ -166,7 +490,21 @@
    "nex": {
     "plain": "bcc8a3e0a4829dba251d0aabbbb96ecb",
     "sprites": "d5096a93c4052f2737bcc535af48209d"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "cobra",
+     "game": "Cobra",
+     "doc": "cobra.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "bcc8a3e0a4829dba251d0aabbbb96ecb",
+      "sprites": "d5096a93c4052f2737bcc535af48209d"
+     }
+    }
+   ]
   },
   "47ff99afedc9f0af0030b63d1fa4d098": {
    "game": "Comando Quatro",
@@ -174,7 +512,21 @@
    "nex": {
     "sprites": "4c043b47801164617477c423da9b9ff8",
     "loading": "4d5b233a4e42580fd2993ea5089ab1ca"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "comando_quatro",
+     "game": "Comando Quatro",
+     "doc": "comando_quatro.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "sprites": "4c043b47801164617477c423da9b9ff8",
+      "loading": "4d5b233a4e42580fd2993ea5089ab1ca"
+     }
+    }
+   ]
   },
   "c9af5668191462d77c5859900268c24b": {
    "game": "Commando",
@@ -182,7 +534,21 @@
    "nex": {
     "plain": "509b4ad6c9ef57ea95dedc91f0830a48",
     "sprites": "04b29c6403638def8f74c3971f70bd81"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "commando",
+     "game": "Commando",
+     "doc": "commando.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "509b4ad6c9ef57ea95dedc91f0830a48",
+      "sprites": "04b29c6403638def8f74c3971f70bd81"
+     }
+    }
+   ]
   },
   "be8173da315689ba0aa6e9e1643a0f23": {
    "game": "Cookie",
@@ -191,7 +557,22 @@
     "plain": "f79626650e54545a5818fd0067e33ee5",
     "sprites": "350767afe81d88de4126c88db1e5d7df",
     "enhanced": "cd1ec11109c2fd8833178d33527310a7"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "cookie",
+     "game": "Cookie",
+     "doc": "cookie.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "f79626650e54545a5818fd0067e33ee5",
+      "sprites": "350767afe81d88de4126c88db1e5d7df",
+      "enhanced": "cd1ec11109c2fd8833178d33527310a7"
+     }
+    }
+   ]
   },
   "92ad5a23acfe06f0756ae2d503ab31cc": {
    "game": "Cybernoid - The Fighting Machine",
@@ -199,7 +580,21 @@
    "nex": {
     "plain": "7c7bd61154709c7c0ac37ef63e59e165",
     "sprites": "c08867f3174b9b8c73cbad5af84d25c7"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "cybernoid",
+     "game": "Cybernoid - The Fighting Machine",
+     "doc": "cybernoid.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "7c7bd61154709c7c0ac37ef63e59e165",
+      "sprites": "c08867f3174b9b8c73cbad5af84d25c7"
+     }
+    }
+   ]
   },
   "745cb8f59f865db5118e6dc98d09e385": {
    "game": "Cyclone",
@@ -207,15 +602,67 @@
    "nex": {
     "plain": "0497202d81162430984beb99d2903794",
     "sprites": "75110dbddf06df41baad6f8d3ca81905"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "cyclone",
+     "game": "Cyclone",
+     "doc": "cyclone.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "0497202d81162430984beb99d2903794",
+      "sprites": "75110dbddf06df41baad6f8d3ca81905"
+     }
+    }
+   ]
   },
   "0659328fd54fd446e39d1740bafd02e7": {
    "game": "Dizzy: The Ultimate Cartoon Adventure",
    "doc": "dizzy_ultimate_cartoon_adventure.md",
    "nex": {
     "plain": "7714c95e4d1c43d37f7b7e292770274a",
-    "sprites": "47212772fe612ea0c9c5b14e51c73c60"
-   }
+    "sprites": "90e4ce0e37bdd1f9f542dd4066450172"
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "dizzy1",
+     "game": "Dizzy: The Ultimate Cartoon Adventure",
+     "doc": "dizzy_ultimate_cartoon_adventure.md",
+     "args": [
+      "--altrom-fill",
+      "whole"
+     ],
+     "proof": "differential",
+     "nex": {
+      "plain": "7714c95e4d1c43d37f7b7e292770274a",
+      "sprites": "90e4ce0e37bdd1f9f542dd4066450172"
+     }
+    },
+    {
+     "record": "dizzy1 rework enhanced",
+     "game": "Dizzy: The Ultimate Cartoon Adventure",
+     "doc": "dizzy_ultimate_cartoon_adventure.md",
+     "args": [
+      "--altrom-fill",
+      "whole"
+     ],
+     "proof": "differential",
+     "nex": {
+      "plain": "7714c95e4d1c43d37f7b7e292770274a",
+      "sprites": "90e4ce0e37bdd1f9f542dd4066450172",
+      "enhanced": "94c3479cbc80f905a59bf2805a0016c0",
+      "sprites_loading": "ae15c5dd8e030291febaf13a20a7d1a5",
+      "enhanced_loading": "3aba69634675a735979a67805a9c30c8"
+     },
+     "rework": true,
+     "env": {
+      "NEXCLASH_DIZZY_ENHANCED": "dizzy1-enhanced-art.json"
+     }
+    }
+   ]
   },
   "703c934aa64c1c1d37d5041dd28cf9c7": {
    "game": "Spellbound Dizzy (Dizzy V)",
@@ -223,7 +670,21 @@
    "nex": {
     "plain": "11d43878aaea551e4ddc10f76a6b5b38",
     "sprites": "3c676bbdae0b762d244240c14da11110"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "dizzy5",
+     "game": "Spellbound Dizzy (Dizzy V)",
+     "doc": "spellbound_dizzy.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "11d43878aaea551e4ddc10f76a6b5b38",
+      "sprites": "3c676bbdae0b762d244240c14da11110"
+     }
+    }
+   ]
   },
   "dd6cd7a3af47a520a260376c6ad4b459": {
    "game": "Prince of the Yolkfolk (Dizzy 6)",
@@ -231,7 +692,21 @@
    "nex": {
     "plain": "0b29b580915cb360df5837cff95032d2",
     "sprites": "6f22200d2cbd27d07ae0273f34dba6fc"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "dizzy6",
+     "game": "Prince of the Yolkfolk (Dizzy 6)",
+     "doc": "prince_of_the_yolkfolk.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "0b29b580915cb360df5837cff95032d2",
+      "sprites": "6f22200d2cbd27d07ae0273f34dba6fc"
+     }
+    }
+   ]
   },
   "3470d12b21edb24d6b665dfac5e8d84d": {
    "game": "Dynamite Dan",
@@ -239,7 +714,36 @@
    "nex": {
     "plain": "772dc3336f75dc8ba1f28ac62871cb18",
     "sprites": "8125daa979a8cfd4cd32f0796a7e2afb"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "dynamite_dan",
+     "game": "Dynamite Dan",
+     "doc": "dynamite_dan.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "772dc3336f75dc8ba1f28ac62871cb18",
+      "sprites": "8125daa979a8cfd4cd32f0796a7e2afb"
+     }
+    },
+    {
+     "record": "dynamite_dan rework v11",
+     "game": "Dynamite Dan",
+     "doc": "dynamite_dan.md",
+     "args": [],
+     "proof": "rebuild only",
+     "nex": {
+      "plain": "772dc3336f75dc8ba1f28ac62871cb18",
+      "sprites": "b4aa27d5f08f28e59fca5566173c68cd"
+     },
+     "rework": true,
+     "env": {
+      "NEXCLASH_REWORK": "dynamite_dan_v11"
+     }
+    }
+   ]
   },
   "800d9e11bfd7d01d1478abfe3a7b2406": {
    "game": "Elite",
@@ -247,22 +751,77 @@
    "nex": {
     "plain": "e611573d6c45159be56936fc09dfd84d",
     "sprites": "93c35409631f7682e8e505dcd0284139"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "elite",
+     "game": "Elite",
+     "doc": "elite.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "e611573d6c45159be56936fc09dfd84d",
+      "sprites": "93c35409631f7682e8e505dcd0284139"
+     }
+    }
+   ]
   },
   "8d08854de249de00f32819cf7afd07c4": {
    "game": "Elite (standard Firebird release)",
    "doc": "elite_std.md",
    "nex": {
     "plain": "4e176c9cf03bb207782221ac05396899"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "elite_std",
+     "game": "Elite (standard Firebird release)",
+     "doc": "elite_std.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "4e176c9cf03bb207782221ac05396899"
+     }
+    }
+   ]
   },
   "a9eeb555a327e5794b0ba19bc80dccf0": {
-   "game": "Everyone's a Wally",
-   "doc": "everyones_a_wally.md",
+   "game": "Everyone's a Wally (updated)",
+   "doc": "everyones_a_wally_updated.md",
    "nex": {
-    "plain": "2e615b3e7ae995e6d6a6ed9e3f586d4d",
-    "sprites": "8c05c0be92150c29153ed28c41b44842"
-   }
+    "plain": "d4e66ebf9ea8c1ff3d6d758eb4786e04",
+    "sprites": "2ea43029d47a2c502c7bc2004182a9e8"
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "everyones_a_wally_updated",
+     "game": "Everyone's a Wally (updated)",
+     "doc": "everyones_a_wally_updated.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "d4e66ebf9ea8c1ff3d6d758eb4786e04",
+      "sprites": "2ea43029d47a2c502c7bc2004182a9e8"
+     }
+    },
+    {
+     "record": "wally",
+     "game": "Everyone's a Wally",
+     "doc": "everyones_a_wally.md",
+     "args": [
+      "--engine",
+      "wally"
+     ],
+     "proof": "differential",
+     "nex": {
+      "plain": "2e615b3e7ae995e6d6a6ed9e3f586d4d",
+      "sprites": "8c05c0be92150c29153ed28c41b44842"
+     }
+    }
+   ]
   },
   "87515df87645c4179a9ef90663774c7f": {
    "game": "Exolon",
@@ -273,7 +832,26 @@
     "enhanced": "2d15ad71bd55dd916f9a7b8afd6e5e09",
     "loading": "34e7926e29f814e4f23b469f4fef99e4",
     "enhanced_loading": "728acef4bee079a65145ff37d8fccc27"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "exolon",
+     "game": "Exolon",
+     "doc": "exolon.md",
+     "args": [
+      "--no-nxc"
+     ],
+     "proof": "differential",
+     "nex": {
+      "plain": "5f4cf8992995ef622cdd2d4422b32a89",
+      "sprites": "12d5e1d27aad98ce961d2f9703145471",
+      "enhanced": "2d15ad71bd55dd916f9a7b8afd6e5e09",
+      "loading": "34e7926e29f814e4f23b469f4fef99e4",
+      "enhanced_loading": "728acef4bee079a65145ff37d8fccc27"
+     }
+    }
+   ]
   },
   "876f474b3441c08ed8ff25bd43d616a3": {
    "game": "Fantasy World Dizzy",
@@ -281,14 +859,41 @@
    "nex": {
     "plain": "1f0c272a669c8d557f8ee21d8d7a93b9",
     "sprites": "7e972f511ceb19c707b1e0358b7d4231"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "fantasy_world_dizzy",
+     "game": "Fantasy World Dizzy",
+     "doc": "fantasy_world_dizzy.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "1f0c272a669c8d557f8ee21d8d7a93b9",
+      "sprites": "7e972f511ceb19c707b1e0358b7d4231"
+     }
+    }
+   ]
   },
   "71dd57b2ece2787dfff915bf3ba50d3f": {
    "game": "The Official Father Christmas Game",
    "doc": "father_christmas.md",
    "nex": {
     "sprites": "0a9357198747b9db78648c36b8bb25a4"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "father_christmas",
+     "game": "The Official Father Christmas Game",
+     "doc": "father_christmas.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "sprites": "0a9357198747b9db78648c36b8bb25a4"
+     }
+    }
+   ]
   },
   "0244e9b61aa18d6a9f1e77d102da1ea9": {
    "game": "Finders Keepers",
@@ -296,14 +901,41 @@
    "nex": {
     "plain": "b434bc905a813514567d3cbd38dbe670",
     "sprites": "ba99b0cb1058987d0ab4549eac9ce46e"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "finders_keepers",
+     "game": "Finders Keepers",
+     "doc": "finders_keepers.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "b434bc905a813514567d3cbd38dbe670",
+      "sprites": "ba99b0cb1058987d0ab4549eac9ce46e"
+     }
+    }
+   ]
   },
   "c545645a8688f24428492937125fbfcd": {
    "game": "Flying Shark",
    "doc": "flying_shark.md",
    "nex": {
     "sprites": "62def398462731ce0e858bb73ab909b5"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "flying_shark",
+     "game": "Flying Shark",
+     "doc": "flying_shark.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "sprites": "62def398462731ce0e858bb73ab909b5"
+     }
+    }
+   ]
   },
   "e1c2ff3cfbd4f6f5a84034d57b666acf": {
    "game": "Game Over",
@@ -311,7 +943,40 @@
    "nex": {
     "sprites": "c2879a731b23ff57e6f47064fb4769e1",
     "loading": "df968f3774d4c577fd74ac1ae4f60d14"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "game_over",
+     "game": "Game Over",
+     "doc": "game_over.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "sprites": "c2879a731b23ff57e6f47064fb4769e1",
+      "loading": "df968f3774d4c577fd74ac1ae4f60d14"
+     }
+    },
+    {
+     "record": "game_over rework enhanced",
+     "game": "Game Over",
+     "doc": "game_over.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "sprites": "c2879a731b23ff57e6f47064fb4769e1",
+      "loading": "df968f3774d4c577fd74ac1ae4f60d14",
+      "enhanced": "48a0cf28221e56b0e64233e5a1abfbe6",
+      "enhanced_loading": "c8d9d6056825c85b278b0a678261ea98",
+      "enhanced_nobd": "07646f4a72cb9cd317fa3ddbdf9e2510",
+      "enhanced_nobd_loading": "a4701a450326649f9f2dfce97b40018a"
+     },
+     "rework": true,
+     "env": {
+      "NEXCLASH_GAME_OVER_ENHANCED": "1"
+     }
+    }
+   ]
   },
   "b665f16dee469ee766a4ebccdccc03f6": {
    "game": "Gauntlet",
@@ -320,7 +985,22 @@
     "plain": "24d0b7b932ccfef4119beb8d686d5283",
     "sprites": "f3b03d0a507a3c88f3c9e37127ab04cd",
     "steady": "86ee51d2857b3260738aaca66296c5b5"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "gauntlet",
+     "game": "Gauntlet",
+     "doc": "gauntlet.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "24d0b7b932ccfef4119beb8d686d5283",
+      "sprites": "f3b03d0a507a3c88f3c9e37127ab04cd",
+      "steady": "86ee51d2857b3260738aaca66296c5b5"
+     }
+    }
+   ]
   },
   "596acf039452f18c2b052671886279bf": {
    "game": "Gauntlet",
@@ -328,7 +1008,21 @@
    "nex": {
     "sprites": "6d5cc48a5cbe39322780d061f4c38bb2",
     "steady": "2f074c37282bcef8ae1c46915590f236"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "gauntlet_tape",
+     "game": "Gauntlet",
+     "doc": "gauntlet.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "sprites": "6d5cc48a5cbe39322780d061f4c38bb2",
+      "steady": "2f074c37282bcef8ae1c46915590f236"
+     }
+    }
+   ]
   },
   "23d69f517506104c36ba429cb2148fa5": {
    "game": "Ghosts 'n Goblins",
@@ -339,15 +1033,48 @@
     "enhanced": "fff9a32e8e4ab38f395550639c8af3b7",
     "loading": "5f2bd47639ddecd8960998536be05f79",
     "enhanced_loading": "d1627c16e3edf7f691f24d73614bf64f"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "ghosts_n_goblins",
+     "game": "Ghosts 'n Goblins",
+     "doc": "ghosts_n_goblins.md",
+     "args": [
+      "--no-nxc"
+     ],
+     "proof": "differential",
+     "nex": {
+      "plain": "61b31a77638e7c6393695f61473a518b",
+      "sprites": "49b9383466196c36335b50943e6101b4",
+      "enhanced": "fff9a32e8e4ab38f395550639c8af3b7",
+      "loading": "5f2bd47639ddecd8960998536be05f79",
+      "enhanced_loading": "d1627c16e3edf7f691f24d73614bf64f"
+     }
+    }
+   ]
   },
   "c1a76349d08289810323bae0e62a9102": {
    "game": "Green Beret",
    "doc": "green_beret.md",
    "nex": {
-    "plain": "c55d3d8303928a1dbddca65059674575",
-    "sprites": "8e0d11e37eb93495a1b8d85a75292224"
-   }
+    "plain": "0679156534b3372bfb2280262b39bcb1",
+    "sprites": "bdfaa782be7651d631fb1eabd2b51598"
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "green_beret",
+     "game": "Green Beret",
+     "doc": "green_beret.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "0679156534b3372bfb2280262b39bcb1",
+      "sprites": "bdfaa782be7651d631fb1eabd2b51598"
+     }
+    }
+   ]
   },
   "fdab5fb61b2cb01ce38edcfa85ea9e80": {
    "game": "Gryzor",
@@ -356,7 +1083,22 @@
     "plain": "23dcc64340b83477b1a289d1d01fd547",
     "sprites": "f956832d10fa5592423bfaf563beaaf2",
     "outline": "33c0296d5b725560557e3ae52551df31"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "gryzor",
+     "game": "Gryzor",
+     "doc": "gryzor.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "23dcc64340b83477b1a289d1d01fd547",
+      "sprites": "f956832d10fa5592423bfaf563beaaf2",
+      "outline": "33c0296d5b725560557e3ae52551df31"
+     }
+    }
+   ]
   },
   "0cd9e86a2c6c7afa22025f8d593af093": {
    "game": "Gunfright",
@@ -364,7 +1106,23 @@
    "nex": {
     "plain": "a0893534af6db797084760dbe867e407",
     "enhanced": "90a75069a4dbec52349c574f101300f6"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "gunfright",
+     "game": "Gunfright",
+     "doc": "gunfright.md",
+     "args": [
+      "--no-nxc"
+     ],
+     "proof": "differential",
+     "nex": {
+      "plain": "a0893534af6db797084760dbe867e407",
+      "enhanced": "90a75069a4dbec52349c574f101300f6"
+     }
+    }
+   ]
   },
   "c9d8ff6b87d413df486a42c988c7079e": {
    "game": "Gunrunner",
@@ -374,7 +1132,51 @@
     "loading": "7cb1984f1758022536799ce706d73597",
     "enhanced": "2b8991079d665f55ebf523e58a781d05",
     "enhanced_loading": "f509de2eb7fff67cbd12d1afb91ec3fe"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "gunrunner",
+     "game": "Gunrunner",
+     "doc": "gunrunner.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "91ac6cc6ef836637fd225cae6fb600d7",
+      "loading": "7cb1984f1758022536799ce706d73597",
+      "enhanced": "2b8991079d665f55ebf523e58a781d05",
+      "enhanced_loading": "f509de2eb7fff67cbd12d1afb91ec3fe"
+     }
+    }
+   ]
+  },
+  "18809405ae5fdacbf254c4ed5029b76c": {
+   "game": "Hard Drivin'",
+   "doc": "hard_drivin.md",
+   "nex": {
+    "plain": "d74f75e6995eb0f54eaec2122a5164d0",
+    "smooth": "9fb23f8e64fa8187ba304c34af9a6016",
+    "steps": "9cc6f829055ca1f17c491609de22b016",
+    "loading": "9d1a130d7e723c9395cca8266181da4b",
+    "smooth_loading": "f789a1c70aaa5f889f64c128a67527a0"
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "hard_drivin",
+     "game": "Hard Drivin'",
+     "doc": "hard_drivin.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "d74f75e6995eb0f54eaec2122a5164d0",
+      "smooth": "9fb23f8e64fa8187ba304c34af9a6016",
+      "steps": "9cc6f829055ca1f17c491609de22b016",
+      "loading": "9d1a130d7e723c9395cca8266181da4b",
+      "smooth_loading": "f789a1c70aaa5f889f64c128a67527a0"
+     }
+    }
+   ]
   },
   "07bfa8f74d60a53ab64e5b092ffd6cca": {
    "game": "Heartland",
@@ -383,7 +1185,22 @@
     "plain": "62ee38aed9832c67c07dd3b4e088db2e",
     "sprites": "8ffaeb05bd51a15ec871a5c99c4df7d7",
     "enhanced": "c51b0e80e16ece6b7902f7e36c4bea9e"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "heartland",
+     "game": "Heartland",
+     "doc": "heartland.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "62ee38aed9832c67c07dd3b4e088db2e",
+      "sprites": "8ffaeb05bd51a15ec871a5c99c4df7d7",
+      "enhanced": "c51b0e80e16ece6b7902f7e36c4bea9e"
+     }
+    }
+   ]
   },
   "ecfe7da10ba9aa395ae54c44301be1af": {
    "game": "Highway Encounter",
@@ -394,7 +1211,26 @@
     "enhanced": "9f6bb5d11bfab37a8f6fdde76b88c9f3",
     "loading": "b8dc556e720a634df900dd84f80efbea",
     "enhanced_loading": "7d8cbc58efffb6a8b2c5cfaab12e7dff"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "highway_encounter",
+     "game": "Highway Encounter",
+     "doc": "highway_encounter.md",
+     "args": [
+      "--no-nxc"
+     ],
+     "proof": "differential",
+     "nex": {
+      "plain": "4f605db1f8aa398cdb857af572a06687",
+      "sprites": "0f217be33787446e8ec645802cb25b75",
+      "enhanced": "9f6bb5d11bfab37a8f6fdde76b88c9f3",
+      "loading": "b8dc556e720a634df900dd84f80efbea",
+      "enhanced_loading": "7d8cbc58efffb6a8b2c5cfaab12e7dff"
+     }
+    }
+   ]
   },
   "54ad66af6678df22a9d4443e3d04aadb": {
    "game": "Ikari Warriors (48K form)",
@@ -403,7 +1239,22 @@
     "plain": "ac6de2c937b824f92167616d3aad6960",
     "sprites": "3a063dfb187e60010525ea2528dd0985",
     "enhanced": "def27c350118aaee48b4216a3418d6da"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "ikari_warriors",
+     "game": "Ikari Warriors (48K form)",
+     "doc": "ikari_warriors.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "ac6de2c937b824f92167616d3aad6960",
+      "sprites": "3a063dfb187e60010525ea2528dd0985",
+      "enhanced": "def27c350118aaee48b4216a3418d6da"
+     }
+    }
+   ]
   },
   "fc8e7535fc42afb60c12625b5fdfd064": {
    "game": "The Incredible Shrinking Fireman",
@@ -411,7 +1262,32 @@
    "nex": {
     "plain": "9acfda921f6bd72387f1bca61caec186",
     "sprites": "f0d136e446f1091be16b51b5de1a9cf9"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "incredible_shrinking_fireman-add-GPT6_ASTRA",
+     "game": "The Incredible Shrinking Fireman (GPT6_ASTRA)",
+     "doc": "incredible_shrinking_fireman-add-GPT6_ASTRA.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "3b5fb60c50e7b2cc1391a02e0c2f4adb",
+      "sprites": "a96d5d9b45de8e28eb59ac81d89fc4f2"
+     }
+    },
+    {
+     "record": "incredible_shrinking_fireman-add-OPUS",
+     "game": "The Incredible Shrinking Fireman",
+     "doc": "incredible_shrinking_fireman-add-OPUS.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "9acfda921f6bd72387f1bca61caec186",
+      "sprites": "f0d136e446f1091be16b51b5de1a9cf9"
+     }
+    }
+   ]
   },
   "0566e3b37d49c6fa6f62e81eb883ad0c": {
    "game": "Into the Eagle's Nest",
@@ -419,9 +1295,25 @@
    "nex": {
     "plain": "9cb2840fd7312db1b793c6014703359d",
     "loading": "c042ccfd28323cbdbe1a293b389bd48d",
-    "enhanced": "40b427317b4a431a3d8372155af4c040",
-    "enhanced_loading": "58f2f433bd283220aa89da2f0145e41c"
-   }
+    "enhanced": "829c1eba9bf1a785cfb407bcb717d688",
+    "enhanced_loading": "0f84e47244f250c84cfe4efb202e72f3"
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "into_the_eagles_nest",
+     "game": "Into the Eagle's Nest",
+     "doc": "into_the_eagles_nest.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "9cb2840fd7312db1b793c6014703359d",
+      "loading": "c042ccfd28323cbdbe1a293b389bd48d",
+      "enhanced": "829c1eba9bf1a785cfb407bcb717d688",
+      "enhanced_loading": "0f84e47244f250c84cfe4efb202e72f3"
+     }
+    }
+   ]
   },
   "a4963e747af1145fe0f2710da592abc6": {
    "game": "Jet Set Willy",
@@ -429,7 +1321,21 @@
    "nex": {
     "plain": "e6da94d233366f87aec67f9da2358859",
     "sprites": "e7e16baae5df2b97ec66d615a0579f78"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "jet_set_willy",
+     "game": "Jet Set Willy",
+     "doc": "jet_set_willy.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "e6da94d233366f87aec67f9da2358859",
+      "sprites": "e7e16baae5df2b97ec66d615a0579f78"
+     }
+    }
+   ]
   },
   "5875d535442974a0de82737652854f1f": {
    "game": "Jetpac",
@@ -437,7 +1343,37 @@
    "nex": {
     "plain": "abbbaae6b77a27b8b89d272d33d32327",
     "sprites": "cd416e6392e44423646e2f78ce849269"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "jetpac",
+     "game": "Jetpac",
+     "doc": "jetpac.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "abbbaae6b77a27b8b89d272d33d32327",
+      "sprites": "cd416e6392e44423646e2f78ce849269"
+     }
+    },
+    {
+     "record": "jetpac rework v11",
+     "game": "Jetpac",
+     "doc": "jetpac.md",
+     "args": [
+      "--altrom-fill",
+      "whole"
+     ],
+     "proof": "differential",
+     "nex": {
+      "plain": "abbbaae6b77a27b8b89d272d33d32327",
+      "sprites": "64a7d15f57a6150e0652bee2cae51c3e",
+      "enhanced": "7087a09f94e0ca5175f2d5bf75b9a7a0"
+     },
+     "rework": true
+    }
+   ]
   },
   "34e23d4a382e4187de49eb77a33a4758": {
    "game": "Jilly's Farm Volume 1 - SokoBAArn!",
@@ -447,7 +1383,23 @@
     "loading": "7414c1e97d936421998d89c8bed5e774",
     "enhanced": "57dfada5da227093a3adc00b2768a5af",
     "enhanced_loading": "04450eafe454c5fb60cf5621c8993355"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "jillys_farm",
+     "game": "Jilly's Farm Volume 1 - SokoBAArn!",
+     "doc": "jillys_farm.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "db45ec7ca0d109dde32c51071122090f",
+      "loading": "7414c1e97d936421998d89c8bed5e774",
+      "enhanced": "57dfada5da227093a3adc00b2768a5af",
+      "enhanced_loading": "04450eafe454c5fb60cf5621c8993355"
+     }
+    }
+   ]
   },
   "8e720b5cc11fe0d9445fe0af4825c8bf": {
    "game": "Knight Tyme (128K)",
@@ -455,7 +1407,21 @@
    "nex": {
     "plain": "ec43a9c6bd1ac6631ab7c8dde3ee36dd",
     "sprites": "8baef8197af76204c12356931837daf5"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "knight_tyme",
+     "game": "Knight Tyme (128K)",
+     "doc": "knight_tyme.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "ec43a9c6bd1ac6631ab7c8dde3ee36dd",
+      "sprites": "8baef8197af76204c12356931837daf5"
+     }
+    }
+   ]
   },
   "47c265e30f51a9b7eb5c98db6cd994c5": {
    "game": "Lode Runner",
@@ -463,7 +1429,21 @@
    "nex": {
     "plain": "96b073771a9f712f37f3ff97f2dafb44",
     "sprites": "49a1719bdf70d5db3da4eaf4c0d66b34"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "lode_runner",
+     "game": "Lode Runner",
+     "doc": "lode_runner.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "96b073771a9f712f37f3ff97f2dafb44",
+      "sprites": "49a1719bdf70d5db3da4eaf4c0d66b34"
+     }
+    }
+   ]
   },
   "426084d3d941fd7452d6bebf726d9746": {
    "game": "Lunar Jetman",
@@ -474,7 +1454,24 @@
     "sprites_loading": "28f580cbdd2dcd33e0eb9c9846ffd116",
     "enhanced": "6074adc6bd4790af80726a465e7410bb",
     "enhanced_loading": "15e141194a6788449ab1d9018bebd779"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "lunar_jetman",
+     "game": "Lunar Jetman",
+     "doc": "lunar_jetman.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "033e72dcbe37bb59d7e8041006b0e1bb",
+      "sprites": "9fade3f20c63e8ef3e3f47207df55877",
+      "sprites_loading": "28f580cbdd2dcd33e0eb9c9846ffd116",
+      "enhanced": "6074adc6bd4790af80726a465e7410bb",
+      "enhanced_loading": "15e141194a6788449ab1d9018bebd779"
+     }
+    }
+   ]
   },
   "f5f5262f7a41d3c55408b45878c31d00": {
    "game": "Mad Mix 2 - en el Castillo de los Fantasmas",
@@ -484,7 +1481,25 @@
     "loading": "1c1d116585a067ecdaa89c3fc1a38762",
     "enhanced": "532c47182be034001b0e6398efb98352",
     "enhanced_loading": "edc192338a25df497455260c684ac46e"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "mad_mix_2",
+     "game": "Mad Mix 2 - en el Castillo de los Fantasmas",
+     "doc": "mad_mix_2.md",
+     "args": [
+      "--no-nxc"
+     ],
+     "proof": "differential",
+     "nex": {
+      "sprites": "259a464a36cf4c68d385d6705d5b9ad0",
+      "loading": "1c1d116585a067ecdaa89c3fc1a38762",
+      "enhanced": "532c47182be034001b0e6398efb98352",
+      "enhanced_loading": "edc192338a25df497455260c684ac46e"
+     }
+    }
+   ]
   },
   "53078ac60141cd808b609600b85f4094": {
    "game": "Magicland Dizzy",
@@ -492,7 +1507,21 @@
    "nex": {
     "plain": "d4209fa73afd96c05936b3b90bf496a6",
     "sprites": "f0e32785990472fb01a8370e3a187e78"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "magicland_dizzy",
+     "game": "Magicland Dizzy",
+     "doc": "magicland_dizzy.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "d4209fa73afd96c05936b3b90bf496a6",
+      "sprites": "f0e32785990472fb01a8370e3a187e78"
+     }
+    }
+   ]
   },
   "d8face31a18a9543b093443b6f115f84": {
    "game": "Manic Miner",
@@ -500,7 +1529,21 @@
    "nex": {
     "plain": "6b205fc37cc5791dc07d5caa4df5b139",
     "sprites": "57e9b6df0fc78205566d09648a9553a5"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "manic_miner",
+     "game": "Manic Miner",
+     "doc": "manic_miner.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "6b205fc37cc5791dc07d5caa4df5b139",
+      "sprites": "57e9b6df0fc78205566d09648a9553a5"
+     }
+    }
+   ]
   },
   "5df07fbd5dabdcb9a909b86cf690a4e8": {
    "game": "Martianoids",
@@ -509,7 +1552,22 @@
     "plain": "1c1204e84911a63e37d3b80d2b1d6832",
     "sprites": "a222a3dd8b632184998cdee9ed9b041c",
     "enhanced": "73e08730f0216e0a43133157c77abf57"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "martianoids",
+     "game": "Martianoids",
+     "doc": "martianoids.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "1c1204e84911a63e37d3b80d2b1d6832",
+      "sprites": "a222a3dd8b632184998cdee9ed9b041c",
+      "enhanced": "73e08730f0216e0a43133157c77abf57"
+     }
+    }
+   ]
   },
   "d5ea19e487141ce922d0e96c02fd9054": {
    "game": "Match Day",
@@ -517,7 +1575,54 @@
    "nex": {
     "plain": "7241054fac66f2752c4f7375de91a874",
     "sprites": "f7a8e6ad4f2e8c7ff7c9f3e37c955cfc"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "match_day",
+     "game": "Match Day",
+     "doc": "match_day.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "7241054fac66f2752c4f7375de91a874",
+      "sprites": "f7a8e6ad4f2e8c7ff7c9f3e37c955cfc"
+     }
+    },
+    {
+     "record": "match_day rework v2",
+     "game": "Match Day",
+     "doc": "match_day.md",
+     "args": [
+      "--altrom-fill",
+      "whole"
+     ],
+     "proof": "differential",
+     "nex": {
+      "plain": "d6d9e6252c3b69215b7b984bd49a776c",
+      "sprites": "fc855f723d7106527481698c762fbf6c"
+     },
+     "rework": true
+    },
+    {
+     "record": "match_day rework v21",
+     "game": "Match Day",
+     "doc": "match_day.md",
+     "args": [
+      "--altrom-fill",
+      "whole"
+     ],
+     "proof": "differential",
+     "nex": {
+      "plain": "d6d9e6252c3b69215b7b984bd49a776c",
+      "sprites": "c2af178d812ee50fdd5cafad7c60d964"
+     },
+     "rework": true,
+     "env": {
+      "NEXCLASH_REWORK": "matchday_v21"
+     }
+    }
+   ]
   },
   "67bf05d356d51b2b402d88c5f0cdfb21": {
    "game": "Midnight Resistance (128K)",
@@ -525,7 +1630,21 @@
    "nex": {
     "plain": "6d489652889fcfbadb7980c4fe92806e",
     "sprites": "f28fbbc0e861c5aebcfd47b9de583837"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "midnight_resistance",
+     "game": "Midnight Resistance (128K)",
+     "doc": "midnight_resistance.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "6d489652889fcfbadb7980c4fe92806e",
+      "sprites": "f28fbbc0e861c5aebcfd47b9de583837"
+     }
+    }
+   ]
   },
   "cc90fbe7e7b6568e5f9d00c3226f215b": {
    "game": "Monty is Innocent",
@@ -533,7 +1652,21 @@
    "nex": {
     "plain": "673011349213f7feceff3f528bf9b4ea",
     "sprites": "a776f3429f34364eb7263a1cde03b1c8"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "monty_is_innocent",
+     "game": "Monty is Innocent",
+     "doc": "monty_is_innocent.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "673011349213f7feceff3f528bf9b4ea",
+      "sprites": "a776f3429f34364eb7263a1cde03b1c8"
+     }
+    }
+   ]
   },
   "0acdc707ef4cf3b4aaf94316bd0f285c": {
    "game": "Monty on the Run",
@@ -541,7 +1674,21 @@
    "nex": {
     "plain": "86c30493dbd683b5076dfa43098180bb",
     "sprites": "7fdb25d99b58c4413042f4b7a7f919c8"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "monty_on_the_run",
+     "game": "Monty on the Run",
+     "doc": "monty_on_the_run.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "86c30493dbd683b5076dfa43098180bb",
+      "sprites": "7fdb25d99b58c4413042f4b7a7f919c8"
+     }
+    }
+   ]
   },
   "facf9b90032759b7012abd91602b4b45": {
    "game": "Movie",
@@ -552,7 +1699,24 @@
     "enhanced": "85639bf0956d54bde4e764fadc1063a3",
     "loading": "efb645298dd12a25a6ba6f320e7ff902",
     "enhanced_loading": "58ba78940b60c9e23cda63dbbda136fb"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "movie",
+     "game": "Movie",
+     "doc": "movie.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "c5c6775ae89e87942fc6e916647af212",
+      "sprites": "ca40e11410641189f5dcbd190bb5a2a4",
+      "enhanced": "85639bf0956d54bde4e764fadc1063a3",
+      "loading": "efb645298dd12a25a6ba6f320e7ff902",
+      "enhanced_loading": "58ba78940b60c9e23cda63dbbda136fb"
+     }
+    }
+   ]
   },
   "f7d376977b93b515feaff1672c212b12": {
    "game": "Nemesis the Warlock",
@@ -560,7 +1724,21 @@
    "nex": {
     "plain": "d1f685c80642ca96b8f454b7171f34b8",
     "sprites": "9e20d8e7cf40ae4d654bdc59ba7111dd"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "nemesis_the_warlock",
+     "game": "Nemesis the Warlock",
+     "doc": "nemesis_the_warlock.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "d1f685c80642ca96b8f454b7171f34b8",
+      "sprites": "9e20d8e7cf40ae4d654bdc59ba7111dd"
+     }
+    }
+   ]
   },
   "7b4e8280896d7ff34b93e83ddba9d01c": {
    "game": "Nightshade",
@@ -569,7 +1747,22 @@
     "plain": "c2555ad8f43e1ebda5f07094a48bd041",
     "sprites": "37a5c792172120f2c5f5406e476e83bf",
     "enhanced": "a09286f6c193f4f911a87a2a2317ebb8"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "nightshade",
+     "game": "Nightshade",
+     "doc": "nightshade.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "c2555ad8f43e1ebda5f07094a48bd041",
+      "sprites": "37a5c792172120f2c5f5406e476e83bf",
+      "enhanced": "a09286f6c193f4f911a87a2a2317ebb8"
+     }
+    }
+   ]
   },
   "4dd5e967592f0eabd20f113cb64f740e": {
    "game": "Nodes of Yesod",
@@ -584,7 +1777,28 @@
     "enhanced_loading": "cee16a75581f01be8a7c3623cac610a4",
     "backdrops_loading": "b325e2ea42bcadd1159486a53f75eda4",
     "enhanced_backdrops_loading": "7d1e685a6dcc3d0b68159cb7e3e8f30f"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "nodes_of_yesod",
+     "game": "Nodes of Yesod",
+     "doc": "nodes_of_yesod.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "7f24d66a5c649eab0b9202287c62af8d",
+      "sprites": "5303d5e8866f4123cb9e30ec6cde91e4",
+      "enhanced": "8553f1e57019b63e348ec35b2e1dbf46",
+      "backdrops": "efbde4756feaa085f64837948c8a36a8",
+      "enhanced_backdrops": "b98f2a7213c566b3364ca1743ca07bc6",
+      "sprites_loading": "c129b0decc7c11971581ea57b7337857",
+      "enhanced_loading": "cee16a75581f01be8a7c3623cac610a4",
+      "backdrops_loading": "b325e2ea42bcadd1159486a53f75eda4",
+      "enhanced_backdrops_loading": "7d1e685a6dcc3d0b68159cb7e3e8f30f"
+     }
+    }
+   ]
   },
   "5967a2ea00bd0ff5cea81778fb72eb0e": {
    "game": "Olli and Lissa: The Ghost of Shilmoore Castle",
@@ -593,7 +1807,22 @@
     "plain": "cc6e717b9aa35e6d08d5a772bd5c7310",
     "sprites": "76d0bbf64039237d7270eb181f7c4919",
     "enhanced": "75c66a0ddedf6c218b5d55cde3bc51a0"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "olli_and_lissa",
+     "game": "Olli and Lissa: The Ghost of Shilmoore Castle",
+     "doc": "olli_and_lissa.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "cc6e717b9aa35e6d08d5a772bd5c7310",
+      "sprites": "76d0bbf64039237d7270eb181f7c4919",
+      "enhanced": "75c66a0ddedf6c218b5d55cde3bc51a0"
+     }
+    }
+   ]
   },
   "27523b55f786a871ba4bf7fae1be255a": {
    "game": "Olli and Lissa II: Halloween",
@@ -602,7 +1831,22 @@
     "plain": "2713f076427d909706660b204c27e1a1",
     "sprites": "5b710e071b0623cab32e48c8966863f2",
     "enhanced": "ae8c4eaa53adf3286c768cc78e4c3347"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "olli_and_lissa_2",
+     "game": "Olli and Lissa II: Halloween",
+     "doc": "olli_and_lissa_2.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "2713f076427d909706660b204c27e1a1",
+      "sprites": "5b710e071b0623cab32e48c8966863f2",
+      "enhanced": "ae8c4eaa53adf3286c768cc78e4c3347"
+     }
+    }
+   ]
   },
   "ae77b4f151932e0228b99f6a257ea4de": {
    "game": "Olli and Lissa III: The Candlelight Adventure",
@@ -611,7 +1855,22 @@
     "plain": "bed57f9136b944c575ab52f9f6f8c525",
     "sprites": "a536ceb5a6e77b0fcb1b52ec3deddfaf",
     "enhanced": "d529d4139e9adbb4a105369533575e9f"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "olli_and_lissa_3",
+     "game": "Olli and Lissa III: The Candlelight Adventure",
+     "doc": "olli_and_lissa_3.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "bed57f9136b944c575ab52f9f6f8c525",
+      "sprites": "a536ceb5a6e77b0fcb1b52ec3deddfaf",
+      "enhanced": "d529d4139e9adbb4a105369533575e9f"
+     }
+    }
+   ]
   },
   "e9cb908bc86661ff81732665741393cc": {
    "game": "Pac-Mania (128K)",
@@ -619,7 +1878,21 @@
    "nex": {
     "sprites": "90ea1da25f0cdf6c8dd5b86bf34f67ae",
     "enhanced": "a131a2abc9617b478d2d23b889fc2bfc"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "pac_mania",
+     "game": "Pac-Mania (128K)",
+     "doc": "pac_mania.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "sprites": "90ea1da25f0cdf6c8dd5b86bf34f67ae",
+      "enhanced": "a131a2abc9617b478d2d23b889fc2bfc"
+     }
+    }
+   ]
   },
   "5d884aa2608879727e43589dfba44bb7": {
    "game": "Page and the Curse of the Pharaoh",
@@ -629,7 +1902,23 @@
     "loading": "75b7ae1bdb9038f610c39765283399d0",
     "enhanced": "f9f705e610465dcc2f42c99f4de73763",
     "enhanced_loading": "fb742cd5b18e72c6dda1a5a46e870642"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "page_pharaoh",
+     "game": "Page and the Curse of the Pharaoh",
+     "doc": "page_pharaoh.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "sprites": "6763c47a878852bba0020412d170bcc7",
+      "loading": "75b7ae1bdb9038f610c39765283399d0",
+      "enhanced": "f9f705e610465dcc2f42c99f4de73763",
+      "enhanced_loading": "fb742cd5b18e72c6dda1a5a46e870642"
+     }
+    }
+   ]
   },
   "75b969b9da612b72c7780e11a862dbdd": {
    "game": "Pentagram",
@@ -641,7 +1930,25 @@
     "plain_loading": "eccd4ef26576435ed8a29c7da29e86cb",
     "sprites_loading": "795ff97eba947bd9ad3e2a9c976f03cb",
     "enhanced_loading": "c69d345bc266693dd0d83eb0fcd9c061"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "pentagram",
+     "game": "Pentagram",
+     "doc": "pentagram.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "718d6a4fd3ece6df3db60c53434b3415",
+      "sprites": "8fa89e9acb35245bd0695ab067a059b7",
+      "enhanced": "e2b342b349b1cdbfc3bcc28a75683ea5",
+      "plain_loading": "eccd4ef26576435ed8a29c7da29e86cb",
+      "sprites_loading": "795ff97eba947bd9ad3e2a9c976f03cb",
+      "enhanced_loading": "c69d345bc266693dd0d83eb0fcd9c061"
+     }
+    }
+   ]
   },
   "c39caed696ba547f693546b707c9cee8": {
    "game": "Phantis / Game Over 2, part 1",
@@ -651,7 +1958,25 @@
     "loading": "f54f7969be2f6aa68930dc165cbfb27a",
     "enhanced": "7b754be4bb97a99bff3429839c526853",
     "enhanced_loading": "873aa581572cd978c3ac7a6fb4947952"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "phantis",
+     "game": "Phantis / Game Over 2, part 1",
+     "doc": "phantis.md",
+     "args": [
+      "--no-nxc"
+     ],
+     "proof": "differential",
+     "nex": {
+      "sprites": "9bc7be780ee378c9d42bbd18f5e8829a",
+      "loading": "f54f7969be2f6aa68930dc165cbfb27a",
+      "enhanced": "7b754be4bb97a99bff3429839c526853",
+      "enhanced_loading": "873aa581572cd978c3ac7a6fb4947952"
+     }
+    }
+   ]
   },
   "55c89bb16ffde2f58a43ed3be7b95bcf": {
    "game": "Phantis / Game Over 2, part 2",
@@ -659,7 +1984,23 @@
    "nex": {
     "sprites": "684bdadd06394e0409a3ae347335f7e2",
     "loading": "fc07a3048883981f6f620730285ee4b6"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "phantis2",
+     "game": "Phantis / Game Over 2, part 2",
+     "doc": "phantis.md",
+     "args": [
+      "--no-nxc"
+     ],
+     "proof": "differential",
+     "nex": {
+      "sprites": "684bdadd06394e0409a3ae347335f7e2",
+      "loading": "fc07a3048883981f6f620730285ee4b6"
+     }
+    }
+   ]
   },
   "6515eb52c5216370de6f1ef2bbcaad4c": {
    "game": "Pssst",
@@ -668,7 +2009,22 @@
     "plain": "acb40bf686174fcfc9ae2b68375faf2d",
     "sprites": "275dcd59c5d7fc9563913619f2f117f2",
     "enhanced": "1a45b565ee8eb3e56b98be2e171fd0f0"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "pssst",
+     "game": "Pssst",
+     "doc": "pssst.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "acb40bf686174fcfc9ae2b68375faf2d",
+      "sprites": "275dcd59c5d7fc9563913619f2f117f2",
+      "enhanced": "1a45b565ee8eb3e56b98be2e171fd0f0"
+     }
+    }
+   ]
   },
   "1ff279754d0730e503816199ac6976f3": {
    "game": "Pyjamarama",
@@ -677,7 +2033,22 @@
     "plain": "43c5611cd261b568aaf15908bf46cff6",
     "sprites": "878bd94454869e5457941a0af03cbd3b",
     "enhanced": "bc6c6d85bb625d80c5f90d63505f5a2e"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "pyjamarama",
+     "game": "Pyjamarama",
+     "doc": "pyjamarama.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "43c5611cd261b568aaf15908bf46cff6",
+      "sprites": "878bd94454869e5457941a0af03cbd3b",
+      "enhanced": "bc6c6d85bb625d80c5f90d63505f5a2e"
+     }
+    }
+   ]
   },
   "4c98b980b1726af545fccc99665ef29b": {
    "game": "Rainbow Islands (128K, Z80N)",
@@ -686,7 +2057,53 @@
     "plain": "7ac543fb51c7a3c4137778eeb3cdc175",
     "sprites": "e8ea8b0b1372671c6d40a5e865c15f3e",
     "diagnostic": "997ffc529c33f8f7fe872df22c04b22d"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "rainbow",
+     "game": "Rainbow Islands (128K)",
+     "doc": "rainbow_islands.md",
+     "args": [
+      "--engine",
+      "rainbow"
+     ],
+     "proof": "differential",
+     "nex": {
+      "plain": "7ac543fb51c7a3c4137778eeb3cdc175",
+      "sprites": "df95daa5ef60116c994ffbde1f5f8fbb",
+      "diagnostic": "afe331001c58e21cd7a4524ed045f229"
+     }
+    },
+    {
+     "record": "rainbow_z80n",
+     "game": "Rainbow Islands (128K, Z80N)",
+     "doc": "rainbow_z80n.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "7ac543fb51c7a3c4137778eeb3cdc175",
+      "sprites": "e8ea8b0b1372671c6d40a5e865c15f3e",
+      "diagnostic": "997ffc529c33f8f7fe872df22c04b22d"
+     }
+    },
+    {
+     "record": "rainbow_z80n rework sky",
+     "game": "Rainbow Islands (128K, Z80N)",
+     "doc": "rainbow_z80n.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "7ac543fb51c7a3c4137778eeb3cdc175",
+      "sprites": "e66297fcaf5f22c919ddc52e69510051",
+      "diagnostic": "5acf25256c7f75672e01cb9ea348213a"
+     },
+     "rework": true,
+     "env": {
+      "NEXCLASH_REWORK": "rainbow_z80n_sky"
+     }
+    }
+   ]
   },
   "3eb7a65e19c9ffa82a49654d31a41886": {
    "game": "Rambo",
@@ -695,7 +2112,22 @@
     "plain": "415bec0fff4c750e7e9847a3e42fbf9c",
     "sprites": "f2dcfb9dc70a9f334402faf098509032",
     "enhanced": "42c234ddd73912b69e8954315ed1a422"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "rambo",
+     "game": "Rambo",
+     "doc": "rambo.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "415bec0fff4c750e7e9847a3e42fbf9c",
+      "sprites": "f2dcfb9dc70a9f334402faf098509032",
+      "enhanced": "42c234ddd73912b69e8954315ed1a422"
+     }
+    }
+   ]
   },
   "1a931038f3d0152477b7d7e30390f997": {
    "game": "Renegade (128K)",
@@ -706,7 +2138,24 @@
     "sprites_nooutline": "99f6d3abbb8f34ff8d6c1d28e6497b53",
     "sprites_blackoutline": "4e9b74e76a5467ce4556bc04cb7366c2",
     "enhanced": "d032ec5d0286ad68d32fef2f96b4018f"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "renegade",
+     "game": "Renegade (128K)",
+     "doc": "renegade.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "59c50d991f292728f95a59170196959c",
+      "sprites": "10070d06abbc98f25160b119e2f9cc80",
+      "sprites_nooutline": "99f6d3abbb8f34ff8d6c1d28e6497b53",
+      "sprites_blackoutline": "4e9b74e76a5467ce4556bc04cb7366c2",
+      "enhanced": "d032ec5d0286ad68d32fef2f96b4018f"
+     }
+    }
+   ]
   },
   "d2fa7f2eeb8ccb75c30edbacb432a8b5": {
    "game": "Robin of the Wood (128K)",
@@ -717,7 +2166,24 @@
     "sprites": "6a7b1bc5601b0446eaee6514bf5ad77c",
     "enhanced_raw": "06d4ad74f551530b92a7e1d63ad9127b",
     "enhanced": "639782ad4c646de640aac15234693bca"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "robin_of_the_wood",
+     "game": "Robin of the Wood (128K)",
+     "doc": "robin_of_the_wood.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "39a5b46fee82a921384a412d6508c4ce",
+      "sprites_raw": "b768afb1388eae992aa9de0c94a6a206",
+      "sprites": "6a7b1bc5601b0446eaee6514bf5ad77c",
+      "enhanced_raw": "06d4ad74f551530b92a7e1d63ad9127b",
+      "enhanced": "639782ad4c646de640aac15234693bca"
+     }
+    }
+   ]
   },
   "4b6c490438881cb23d0993d4b32788a2": {
    "game": "Ruff and Reddy in the Space Adventure",
@@ -727,7 +2193,23 @@
     "loading": "174008d46ed1b4dac423c14d2e25a461",
     "enhanced": "e8017c93011341ec41acecbf417a949e",
     "enhanced_loading": "e6b3a2e82407295ad217947b6e1f1e09"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "ruff_and_reddy",
+     "game": "Ruff and Reddy in the Space Adventure",
+     "doc": "ruff_and_reddy.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "5ffde90e442cc5b7c30fbc2271c9ea06",
+      "loading": "174008d46ed1b4dac423c14d2e25a461",
+      "enhanced": "e8017c93011341ec41acecbf417a949e",
+      "enhanced_loading": "e6b3a2e82407295ad217947b6e1f1e09"
+     }
+    }
+   ]
   },
   "d8fb649ba5d8fa086cac43d0cd1c497e": {
    "game": "Sabre Wulf",
@@ -735,7 +2217,21 @@
    "nex": {
     "plain": "774de1f0205a19b3cdd107203cdc73fe",
     "sprites": "70e9ea08a649c3b562b3ed9674d43016"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "sabre_wulf",
+     "game": "Sabre Wulf",
+     "doc": "sabre_wulf.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "774de1f0205a19b3cdd107203cdc73fe",
+      "sprites": "70e9ea08a649c3b562b3ed9674d43016"
+     }
+    }
+   ]
   },
   "8a82e06f6829a2a1c30781491cfbc42e": {
    "game": "Scooby Doo in the Castle Mystery",
@@ -745,7 +2241,25 @@
     "loading": "d0cc766ed1cf99af5b4764d4b35008c1",
     "enhanced": "03425207a4562dc6de85cbee19a2434e",
     "enhanced_loading": "66f664b0198e7beef5ec783513ffdbdd"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "scooby_doo",
+     "game": "Scooby Doo in the Castle Mystery",
+     "doc": "scooby_doo.md",
+     "args": [
+      "--no-nxc"
+     ],
+     "proof": "differential",
+     "nex": {
+      "plain": "4554d6885e020aad0524671b299a8546",
+      "loading": "d0cc766ed1cf99af5b4764d4b35008c1",
+      "enhanced": "03425207a4562dc6de85cbee19a2434e",
+      "enhanced_loading": "66f664b0198e7beef5ec783513ffdbdd"
+     }
+    }
+   ]
   },
   "8fad50cd8c218ade32bf3c2332c8ee03": {
    "game": "Silkworm",
@@ -753,9 +2267,25 @@
    "nex": {
     "plain": "ebfedb75fe5d04df236e3e28bb0d58c2",
     "loading": "696d4c1811af50f822fdcbd0080602cb",
-    "enhanced": "b90dbd935048c4d63f4f0ae18778b244",
-    "enhanced_loading": "48fc71b1f87b360ec497e8d787f7f522"
-   }
+    "enhanced": "98bb762e2023873e09ef911851135113",
+    "enhanced_loading": "366ebf7b0116b32c887f666dd81370a8"
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "silkworm",
+     "game": "Silkworm",
+     "doc": "silkworm.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "ebfedb75fe5d04df236e3e28bb0d58c2",
+      "loading": "696d4c1811af50f822fdcbd0080602cb",
+      "enhanced": "98bb762e2023873e09ef911851135113",
+      "enhanced_loading": "366ebf7b0116b32c887f666dd81370a8"
+     }
+    }
+   ]
   },
   "14ee8b0b105fbf8b58bfeaed03e97a13": {
    "game": "The Simpsons: Bart vs. the Space Mutants",
@@ -764,7 +2294,22 @@
     "plain": "550b5e66e48fea5b86e244400680e146",
     "sprites": "2ca0c918cccacc4de78ced515164f6ff",
     "enhanced": "fee0540c463a383b7af513cc6ab5c15d"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "simpsons_l1",
+     "game": "The Simpsons: Bart vs. the Space Mutants",
+     "doc": "simpsons.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "550b5e66e48fea5b86e244400680e146",
+      "sprites": "2ca0c918cccacc4de78ced515164f6ff",
+      "enhanced": "fee0540c463a383b7af513cc6ab5c15d"
+     }
+    }
+   ]
   },
   "158c2124965358c39522f131d680ca55": {
    "game": "The Simpsons: Bart vs. the Space Mutants",
@@ -773,7 +2318,22 @@
     "plain": "b3a0365e78f6ac5d9b03240b0245646f",
     "sprites": "3479fe6f18c92c31ec8586c8493787f9",
     "enhanced": "27db6520e93230788b7ff1d5bc3f430d"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "simpsons_l2",
+     "game": "The Simpsons: Bart vs. the Space Mutants",
+     "doc": "simpsons.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "b3a0365e78f6ac5d9b03240b0245646f",
+      "sprites": "3479fe6f18c92c31ec8586c8493787f9",
+      "enhanced": "27db6520e93230788b7ff1d5bc3f430d"
+     }
+    }
+   ]
   },
   "86666cbdb6b702b83454dd1fb7d041b4": {
    "game": "The Simpsons: Bart vs. the Space Mutants",
@@ -782,7 +2342,22 @@
     "plain": "b126213428643bd14d968451e33c01df",
     "sprites": "0fd724c79f63ebfdeaff2bba6624de9e",
     "enhanced": "0bb06480bdda67a094328ea483b39db7"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "simpsons_l3",
+     "game": "The Simpsons: Bart vs. the Space Mutants",
+     "doc": "simpsons.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "b126213428643bd14d968451e33c01df",
+      "sprites": "0fd724c79f63ebfdeaff2bba6624de9e",
+      "enhanced": "0bb06480bdda67a094328ea483b39db7"
+     }
+    }
+   ]
   },
   "e5e2f2ef480f31f602f6574015a27bd8": {
    "game": "The Simpsons: Bart vs. the Space Mutants",
@@ -791,7 +2366,22 @@
     "plain": "0ead1c229f029f4a3233b557665f4787",
     "sprites": "6e0a23e9ea0a3a722f19f9c28da38256",
     "enhanced": "dff5e185e031e6b0742de631e1f77dbf"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "simpsons_l4",
+     "game": "The Simpsons: Bart vs. the Space Mutants",
+     "doc": "simpsons.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "0ead1c229f029f4a3233b557665f4787",
+      "sprites": "6e0a23e9ea0a3a722f19f9c28da38256",
+      "enhanced": "dff5e185e031e6b0742de631e1f77dbf"
+     }
+    }
+   ]
   },
   "7702fa208c2096445f0372c3ad37e833": {
    "game": "The Simpsons: Bart vs. the Space Mutants",
@@ -800,7 +2390,22 @@
     "plain": "10d969b7422baa73a56d6ca966d5ab1a",
     "sprites": "bd94f22adc91666f0f246aa59d6dd14e",
     "enhanced": "05a6527d7607b730667358be7fd2fea5"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "simpsons_l5",
+     "game": "The Simpsons: Bart vs. the Space Mutants",
+     "doc": "simpsons.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "10d969b7422baa73a56d6ca966d5ab1a",
+      "sprites": "bd94f22adc91666f0f246aa59d6dd14e",
+      "enhanced": "05a6527d7607b730667358be7fd2fea5"
+     }
+    }
+   ]
   },
   "3b89344c6d7e6433bf044bef1880a2f1": {
    "game": "Smash TV",
@@ -808,7 +2413,21 @@
    "nex": {
     "plain": "68b2f357221f36338d7ec704b15560b4",
     "sprites": "af7a59f22315e03299bda91758fbe20e"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "smash_tv",
+     "game": "Smash TV",
+     "doc": "smash_tv.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "68b2f357221f36338d7ec704b15560b4",
+      "sprites": "af7a59f22315e03299bda91758fbe20e"
+     }
+    }
+   ]
   },
   "23ee5b2123dbc8a9a5daccbd51db4db0": {
    "game": "Solomon's Key",
@@ -816,7 +2435,21 @@
    "nex": {
     "plain": "c537a1c7dc6223a42b9e9d015971db36",
     "sprites": "e01332fe4eda912929e7535a132e9968"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "solomons_key",
+     "game": "Solomon's Key",
+     "doc": "solomons_key.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "c537a1c7dc6223a42b9e9d015971db36",
+      "sprites": "e01332fe4eda912929e7535a132e9968"
+     }
+    }
+   ]
   },
   "3bca7e72f3c9c3abd104b8c92f35d5d4": {
    "game": "Spellbound (128K, Magic Knight 2)",
@@ -825,7 +2458,22 @@
     "plain": "a3a71c4bc642afb58842e368ebf64682",
     "sprites": "9e1cf675b59a4c1f555b0870d414818b",
     "enhanced": "1fa636cdb0c2c2a1f36a2a29eb880b42"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "spellbound_magic_knight",
+     "game": "Spellbound (128K, Magic Knight 2)",
+     "doc": "spellbound_magic_knight.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "a3a71c4bc642afb58842e368ebf64682",
+      "sprites": "9e1cf675b59a4c1f555b0870d414818b",
+      "enhanced": "1fa636cdb0c2c2a1f36a2a29eb880b42"
+     }
+    }
+   ]
   },
   "b94691b08d31386d3e5661d04e6c164f": {
    "game": "Starquake",
@@ -834,7 +2482,22 @@
     "plain": "85ae15cc51b64c370489185dde3ab48a",
     "sprites": "a6033f392f2164eaa8219dc5b4208909",
     "loading": "ab0ed1b4fa860c10747d950d0ade1756"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "starquake",
+     "game": "Starquake",
+     "doc": "starquake.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "85ae15cc51b64c370489185dde3ab48a",
+      "sprites": "a6033f392f2164eaa8219dc5b4208909",
+      "loading": "ab0ed1b4fa860c10747d950d0ade1756"
+     }
+    }
+   ]
   },
   "d462589b7b7e63cb7e958323d00d165a": {
    "game": "Stormbringer (128K)",
@@ -842,7 +2505,21 @@
    "nex": {
     "plain": "74f64c674eda981e940da907018aa9b2",
     "sprites": "218f92e530c6c658f37e51d6c24ce641"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "stormbringer",
+     "game": "Stormbringer (128K)",
+     "doc": "stormbringer.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "74f64c674eda981e940da907018aa9b2",
+      "sprites": "218f92e530c6c658f37e51d6c24ce641"
+     }
+    }
+   ]
   },
   "1895877d638a4a5f37a9402bed18f59a": {
    "game": "Target Renegade (128K)",
@@ -850,7 +2527,36 @@
    "nex": {
     "plain": "452e75d8ba20171f9a4a3dc6f7b451d6",
     "sprites": "d8e3e19f2d92cad896b4931fa0c9162a"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "target_renegade",
+     "game": "Target Renegade (128K)",
+     "doc": "target_renegade.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "452e75d8ba20171f9a4a3dc6f7b451d6",
+      "sprites": "d8e3e19f2d92cad896b4931fa0c9162a"
+     }
+    },
+    {
+     "record": "target_renegade rework v12",
+     "game": "Target Renegade (128K)",
+     "doc": "target_renegade.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "speed": "12ab14c77d80c110ecd113abbd4ac572",
+      "enhanced": "1da0bff51cc138f07f1037c13f3d1b74"
+     },
+     "rework": true,
+     "env": {
+      "NEXCLASH_REWORK": "target_renegade_v12"
+     }
+    }
+   ]
   },
   "ff400566fee18b14e2b52647ae64eaae": {
    "game": "That Sinking Feeling",
@@ -860,7 +2566,23 @@
     "loading": "8c5de872254801323acd7c1fd2916cce",
     "enhanced": "eb9baa5c0a847826b5d47daa72eff769",
     "enhanced_loading": "c7d2a28d655190b7c7aae295641aa236"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "that_sinking_feeling",
+     "game": "That Sinking Feeling",
+     "doc": "that_sinking_feeling.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "sprites": "95585c91e3603dc68deaffde7fee7664",
+      "loading": "8c5de872254801323acd7c1fd2916cce",
+      "enhanced": "eb9baa5c0a847826b5d47daa72eff769",
+      "enhanced_loading": "c7d2a28d655190b7c7aae295641aa236"
+     }
+    }
+   ]
   },
   "72bcb108d7baec2ee10ede47594010dd": {
    "game": "Three Weeks in Paradise (128K)",
@@ -869,7 +2591,22 @@
     "plain": "40e4041f450f383f993cb1b230d403f2",
     "sprites": "5b88f445504109556daa668a084ae07e",
     "enhanced": "be261a89bf4680280bafd5dfe0d45f54"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "three_weeks",
+     "game": "Three Weeks in Paradise (128K)",
+     "doc": "three_weeks.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "40e4041f450f383f993cb1b230d403f2",
+      "sprites": "5b88f445504109556daa668a084ae07e",
+      "enhanced": "be261a89bf4680280bafd5dfe0d45f54"
+     }
+    }
+   ]
   },
   "8dc717670aa7fc8817e83e8f63a22f72": {
    "game": "Tranz Am",
@@ -878,7 +2615,22 @@
     "plain": "5b7ed517c752b2899bddd6539aaedfc9",
     "sprites": "62b76f0325fec6055b068f57434bf602",
     "enhanced": "2d9e69880cf7a8c9a8a8fc27303bc0b3"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "tranz_am",
+     "game": "Tranz Am",
+     "doc": "tranz_am.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "5b7ed517c752b2899bddd6539aaedfc9",
+      "sprites": "62b76f0325fec6055b068f57434bf602",
+      "enhanced": "2d9e69880cf7a8c9a8a8fc27303bc0b3"
+     }
+    }
+   ]
   },
   "7578947fcc8dbc4ba822e2c565499d54": {
    "game": "Treasure Island Dizzy (in game)",
@@ -886,7 +2638,21 @@
    "nex": {
     "plain": "6dc4fec1e4dd2bd28882d520c70456dc",
     "sprites": "7251663345f34cef7f3b1626a57a8c9c"
-   }
+   },
+   "proof": "not differential",
+   "variants": [
+    {
+     "record": "treasure_island_dizzy",
+     "game": "Treasure Island Dizzy (in game)",
+     "doc": "treasure_island_dizzy.md",
+     "args": [],
+     "proof": "not differential",
+     "nex": {
+      "plain": "6dc4fec1e4dd2bd28882d520c70456dc",
+      "sprites": "7251663345f34cef7f3b1626a57a8c9c"
+     }
+    }
+   ]
   },
   "9443f0cc4c32415849b0419750f1bff3": {
    "game": "Treasure Island Dizzy (title)",
@@ -894,7 +2660,21 @@
    "nex": {
     "plain": "cc8fcb90942d294d66d33c0b836f24c1",
     "sprites": "3f887a8475fc214d7174cd59259f8fb4"
-   }
+   },
+   "proof": "not differential",
+   "variants": [
+    {
+     "record": "treasure_island_title",
+     "game": "Treasure Island Dizzy (title)",
+     "doc": "treasure_island_dizzy.md",
+     "args": [],
+     "proof": "not differential",
+     "nex": {
+      "plain": "cc8fcb90942d294d66d33c0b836f24c1",
+      "sprites": "3f887a8475fc214d7174cd59259f8fb4"
+     }
+    }
+   ]
   },
   "9f2db0ec44da647aa1d7469f1f25ed67": {
    "game": "Underwurlde",
@@ -902,15 +2682,43 @@
    "nex": {
     "plain": "8b57d05dd0dff7c43d5f461076957237",
     "sprites": "e45d07f5650fc6b718092e611cd5d9e7"
-   }
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "underwurlde",
+     "game": "Underwurlde",
+     "doc": "underwurlde.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "8b57d05dd0dff7c43d5f461076957237",
+      "sprites": "e45d07f5650fc6b718092e611cd5d9e7"
+     }
+    }
+   ]
   },
   "1a961b20f59e1bac9d88973f4e600ea9": {
    "game": "Winter Sports",
    "doc": "winter_sports.md",
    "nex": {
-    "plain": "8dc688fa980454c63f98bc0e802d5f88",
-    "sprites": "eab9ae6fc1ba2e5184b57a7796140cd7"
-   }
+    "plain": "518144ff82bc534b5fa33a7df8d49176",
+    "sprites": "dc0711f0a74c3e3025059010c99b0d5d"
+   },
+   "proof": "not differential",
+   "variants": [
+    {
+     "record": "winter_sports",
+     "game": "Winter Sports",
+     "doc": "winter_sports.md",
+     "args": [],
+     "proof": "not differential",
+     "nex": {
+      "plain": "518144ff82bc534b5fa33a7df8d49176",
+      "sprites": "dc0711f0a74c3e3025059010c99b0d5d"
+     }
+    }
+   ]
   }
  }
 }

@@ -18,6 +18,83 @@ KEMPSTON = {'K:RIGHT': 1, 'K:LEFT': 2, 'K:DOWN': 4, 'K:UP': 8, 'K:FIRE': 16}
 ALL_INPUTS = list(KEYPOS) + list(KEMPSTON)
 
 
+class Refused(ValueError):
+    """An input the shared path does not support; nexclash.py prints the message without a traceback."""
+
+
+def is_128k(snap):
+    """A 128K / +2 / +3 snapshot (eight RAM banks), a SkoolKit Snapshot."""
+    return len(snap.ram(-1)) > 49152
+
+
+def refuse_128k(snap, what, name=''):
+    """The shared recorder, analyse and verify are 48K only: this Machine has no 7FFD paging, so a 128K game's
+    banks and paging writes are not modelled and the run is wrong or stops with port readings left. Refuse such
+    a snapshot loudly instead (lesson recorder-128k-not-in-toolkit)."""
+    if snap is not None and is_128k(snap):
+        raise Refused('%s128K snapshot (%s): %s is 48K only (nexclash/machine.py has no 7FFD paging). A 128K game '
+                         'needs an engine with its own paging model: its own recorder (Recorder(..., machine=<a Machine '
+                         'with 7FFD paging>)) and its own verifier copy (as fwd128.py and tid128.py carry); or record in '
+                         'an emulator and leave out --rzx for the plain build (docs/PLAYBOOK.md)' % (
+                             name + ': ' if name else '', snap.machine, what))
+
+
+def refuse_128k_rzx(path, what):
+    """refuse_128k for an RZX's first snapshot (the state its replay starts from)."""
+    from .rzx import read_segments
+    segs = read_segments(path)
+    refuse_128k(segs[0][0] if segs else None, what, os.path.basename(path))
+
+
+def selfcheck():
+    """The 48K-only paths refuse a 128K snapshot and pass a 48K one (made-up snapshots and recordings; selftest
+    --tools). -> failures"""
+    import shutil
+    from .rzx import write_rzx
+    from .recorder import Recorder
+    from .analyse import analyse
+    from .verify import verify
+    bad, t = [], tempfile.mkdtemp(prefix='nexclash_m128_')
+    try:
+        files = {}
+        for mach, ram, state in (('48K', [0] * 49152, ()), ('128K', [[0] * 16384 for _ in range(8)], ('7ffd=16',))):
+            z = os.path.join(t, mach + '.z80')
+            write_snapshot(z, ram, ('pc=32768', 'sp=65000'), state, mach)
+            r = os.path.join(t, mach + '.rzx')
+            write_rzx(r, [(open(z, 'rb').read(), [(100, [])])])
+            files[mach] = z, r
+        z48, r48 = files['48K']
+        z128, r128 = files['128K']
+        for label, call in (('recorder', lambda: Recorder(z128, log=None)),
+                            ('analyse', lambda: analyse(None, r128, 65000)),
+                            ('verify', lambda: verify({}, None, r128))):
+            try:
+                call()
+                bad.append('%s took a 128K snapshot' % label)
+            except Exception as e:              # noqa: BLE001 - only the refusal itself counts
+                if '128K snapshot' not in str(e) or '48K only' not in str(e):
+                    bad.append('%s: %s' % (label, e))
+        try:                                    # negative control: the 48K snapshot and recording pass the same guards
+            Recorder(z48, log=None)
+            refuse_128k_rzx(r48, 'analyse')
+        except ValueError as e:
+            bad.append('48K refused: %s' % e)
+
+        class Paged:                            # an engine's own paging model: the recorder takes it
+            def __init__(self, snap):
+                pass
+
+            def z80_bytes(self):
+                return b''
+        try:
+            Recorder(z128, log=None, machine=Paged)
+        except ValueError as e:
+            bad.append('a paging model refused: %s' % e)
+    finally:
+        shutil.rmtree(t, ignore_errors=True)
+    return bad
+
+
 def parse_inputs(text):
     """'Q+SPACE' / 'K:RIGHT+K:FIRE' / '-' -> set of input names."""
     if not text or text == '-':

@@ -255,7 +255,7 @@ class NextState:
         self.bad = []
         self.speed = 0              # NR 7 bits 1:0: the clock now
         self.speed_in = 0           # the clock a hook is entered at (the every-site matrix)
-        self.sel = 7                # port 0x243B's register
+        self.sel = 8                # port 0x243B's register: the stub's last read leaves NR 8 (Codex review C8)
 
     def nextreg(self, reg, val):
         self.nr[reg] = val
@@ -464,9 +464,10 @@ def _speed(eng, kind, fl):
     if eng.ns.speed != eng.ns.speed_in:
         fl.append(('%s: exit speed is not the incoming one' % kind, eng.ns.speed, eng.ns.speed_in))
         eng.ns.speed = eng.ns.speed_in
-    if eng.ns.sel != 7:
+    if eng.ns.sel not in (7, getattr(eng.ns, 'sel_in', 8)):     # NR 7 selected, or the selection as the hook found it
         fl.append(('%s: port 0x243B left on another register' % kind,))
-        eng.ns.sel = 7
+    eng.ns.n_sel = getattr(eng.ns, 'n_sel', 0) + 1  # the next hook finds 0x243B on NR 8, 0x53 or 7 in turn: a read selects 7
+    eng.ns.sel = eng.ns.sel_in = (0x08, 0x53, 0x07)[eng.ns.n_sel % 3]
 
 
 def _common(eng, kind, p, fl):

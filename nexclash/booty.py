@@ -27,7 +27,9 @@ ALL_SITES = {**SITES, **ROM_SITES}
 ALT_PAGE, LOW_PAGE = 24, 26
 PLAY_PAGE, TITLE_PAGE, FONT_PAGE, TABLE_PAGE = 32, 38, 44, 46
 V_IN = 0x3BF0
+ROOM_CLK = 0x6000                # h_room's copy of the room clock for isr_w (untouched by the game: scan, 5 recordings)
 V_ILEAVE = 0x3E3D
+V_ROOMSP = 0x3E35                    # the game's clock while a room is drawn at 28 MHz; 3 outside a room
 VECTOR = 0x3BFF                     # I = 3B in a hook or a room
 I_GAME = 0xF4
 DECISIONS = {'figures': 'unchanged: whole cells with their own attribute', 'scenery': 'unchanged', 'pace': 'original: no hook in the default look',
@@ -162,6 +164,7 @@ class Patch:
         self.ram[V_IN - 0x2000] = 0
         self.ram[0x1E00:0x2000] = bytes(512)
         self.ram[V_ILEAVE - 0x2000] = I_GAME
+        self.ram[V_ROOMSP - 0x2000] = 3          # no room yet: a hook at 28 MHz is the caller's clock (isr_w)
         self.ram[VECTOR - 0x2000:VECTOR - 0x2000 + 2] = self.syms['isr_w'].to_bytes(2, 'little')
         low = bytearray(rom[0:0x2000])
         self.rom_sites = []
@@ -308,7 +311,7 @@ class State:
             self.l2[m][o] = v
 
 
-def run_hook(patch, st, mem, regs, stop_pc, stop_sp=None, limit=20000000, speed=0, iff_in=None):
+def run_hook(patch, st, mem, regs, stop_pc, stop_sp=None, limit=20000000, speed=0, iff_in=None, each=None):
     Sim = _rw()
     v = View(mem, patch, st)
     s = simpool.machine(Sim, v, list(regs), 'booty-hook')
@@ -320,6 +323,8 @@ def run_hook(patch, st, mem, regs, stop_pc, stop_sp=None, limit=20000000, speed=
     while n == 0 or R[24] != stop_pc or (stop_sp is not None and R[12] != stop_sp):
         s.opcodes[v[R[24]]]()
         n += 1
+        if each is not None:
+            each(R, v)
         if n > limit:
             raise AssertionError('hook did not terminate at %04X' % R[24])
     st.line = m.line()
@@ -490,6 +495,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=64, first
         actual = bytearray(v.mem[0x4000:0x10000])
         for a, _, new in patch.sites:
             expected[a - 0x4000:a - 0x4000 + len(new)] = new
+        expected[ROOM_CLK - 0x4000] = actual[ROOM_CLK - 0x4000]   # the hooks' copy of the room clock (the game never uses it)
         for a in range(max(0x4000, min(sp, got[12]) - 32), min(sp, got[12])):
             expected[a - 0x4000] = actual[a - 0x4000]
         if actual != expected:
@@ -598,10 +604,30 @@ def unit_tests(patch, states, neg=True):
                 ref.opcodes[ref.memory[R[24]]]()
                 n += 1
         return ref, stop_pc, hsp
+    def window(kind, game, out=c):
+        """An interrupt at every instruction boundary (Codex C5): while the hook's vector (I = 3B) and flag (V_IN = 1)
+        are in, isr_w must run the game's ISR at `game`, the clock the test gave the game (the caller's; for the room's
+        end, the one h_room saved), never one worked out from the hook's own variables; and once the flag has gone the
+        vector must be the game's again (a room is the one hook that leaves it)."""
+        seen = [False]
+
+        def each(R, v):
+            if v[V_IN] == 1:
+                seen[0] = True
+                if R[14] == 0x3B:
+                    sp_, room = v[0x3E30], v[V_ROOMSP]
+                    if (room if sp_ == 3 else sp_) != game:
+                        out['ISR in the hook window: not the game\'s clock!'] += 1
+            elif seen[0] and R[14] == 0x3B and kind != 'room':
+                out['ISR after the hook flag: room path, game\'s clock lost!'] += 1
+            out['ISR window boundaries'] += 1
+        return each
+    stale = None
     for pc, regs, mem in states:
         old, sym, kind, stop_pc = ALL_SITES[pc]
         p = patched(mem)
-        for speed in range(4):
+        for speed in range(4):          # the game's clock; h_re is entered from a room at 28 MHz, the game's clock saved
+            caller = 3 if kind == 'roomend' else speed
             for iff in (0, 1):
                 for refresh in (0, 1, 126, 127, 128, 129, 254, 255):
                     rr = list(regs)
@@ -609,32 +635,50 @@ def unit_tests(patch, states, neg=True):
                     rr[26] = iff
                     ref, stop, hsp = meet(mem, rr, kind, stop_pc)
                     st = State(patch)
-                    got, v, model = run_hook(patch, st, p, rr, stop, hsp, speed=speed)
+                    st.page[0x3E30 - 0x2000] = (caller + 1) % 4     # a stale latch: the last hook's clock
+                    if kind == 'roomend':
+                        st.page[V_ROOMSP - 0x2000] = speed          # h_room saved the game's clock
+                    win = window(kind, speed) if iff and refresh == 0 else None
+                    got, v, model = run_hook(patch, st, p, rr, stop, hsp, speed=caller, each=win)
                     if any(((bool(ref.registers[i]) != bool(got[i])) if i == 26 else ref.registers[i] != got[i]) for i in CMP if i != 14):
                         c['ABI registers differ!'] += 1
-                    want = {'room': 3}.get(kind, speed)
-                    if kind == 'roomend':
-                        want = st.page[0x3E35 - 0x2000]
-                    if model.nr[7] != want:
+                    if model.nr[7] != {'room': 3}.get(kind, speed):
                         c['incoming clock not restored!'] += 1
+                    if kind == 'roomend' and st.page[V_ROOMSP - 0x2000] != 3:
+                        c['V_ROOMSP left at the room\'s clock after the room!'] += 1
                     if model.nr[0x51] != 255 or model.nr[0x54] != 4 or model.nr[0x55] != 5 or model.nr[0x56] != 0:
                         c['MMU not restored!'] += 1
                     c['ABI cases'] += 1
+            if stale is None and kind not in ('room', 'roomend') and speed == 3:
+                stale = (p, regs, mem, kind, stop_pc)
+    if stale:                           # negative: a 28 MHz caller outside a room with V_ROOMSP stale (0), as before the fix
+        p, regs, mem, kind, stop_pc = stale
+        rr = list(regs)
+        rr[15], rr[26] = 0, 1
+        ref, stop, hsp = meet(mem, rr, kind, stop_pc)
+        st = State(patch)
+        st.page[V_ROOMSP - 0x2000] = 0
+        neg = Counter()
+        run_hook(patch, st, p, rr, stop, hsp, speed=3, each=window(kind, 3, neg))
+        c['negative: stale V_ROOMSP at 28 MHz ' + ('caught' if neg['ISR in the hook window: not the game\'s clock!'] else 'NOT caught!')] += 1
     # an interrupt inside a hook, and inside a room: the handler at the game's clock, the interrupted clock back after it
     if states:
         pc, regs, mem = states[0]
         p = patched(mem)
         isr_w, isr_r = patch.syms['isr_w'], patch.syms['isr_r']
         for in_hook in (1, 0):
-            for game in range(3 if in_hook else 1):
+            for game in range(3):               # a room too: its clock comes from ROOM_CLK, not a fixed 3.5 MHz (C5)
                 st = State(patch)
                 if in_hook:
                     st.nr[0x51] = 24
                     st.page[V_IN - 0x2000] = 1
                     st.page[0x3E30 - 0x2000] = game
+                pm = bytearray(p)
+                if not in_hook:
+                    pm[ROOM_CLK] = game
                 rr = list(regs)
                 rr[24] = isr_w
-                got, v, model = run_hook(patch, st, p, rr, 0xFE69, None, speed=3)
+                got, v, model = run_hook(patch, st, pm, rr, 0xFE69, None, speed=3)
                 if model.nr[7] != game or model.nr.get(0x7F) != 3:
                     c['ISR clock wrong in a hook!'] += 1
                 if any(got[i] != rr[i] for i in (0, 1, 2, 3)):

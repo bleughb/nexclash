@@ -70,7 +70,8 @@
  ],
  "shared_data": [
   "tools/sjasmplus/pin.json",
-  "tools/sjasmplus/sjasm.py"
+  "tools/sjasmplus/sjasm.py",
+  "asm/lib/hlib_pace.asm"
  ],
  "rebuild": {
   "args": [],

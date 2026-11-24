@@ -7,6 +7,7 @@ the 32 x 20 play window up by its 8 bytes and its attribute and shows a painted 
 (asm/gauntlet_hooks.asm); the copies run at 28 MHz and their own time is waited out. "Steady speed" (an option of the
 build) runs the game at 28 MHz and shows every update a fixed number of frames after the last.
 """
+from . import l2pal
 import collections
 import hashlib
 import json
@@ -225,6 +226,7 @@ def colour_tables(cmap, syms):
     if panel:
         pages[DPAGE + ndp] = bytes(panel).ljust(8192, b'\0')
     pal2 = [0x1C7] + [rgb9(c) for c in cmap['colours']]          # colour 0: the transparent magenta (0xE3)
+    pal2 = l2pal.fix(pal2, '9bit', keep=(0,))                 # opaque 0xE3 -> 0xE7 (a Next shows it see-through)
     return bytes(heads), pages, pal, want, pal2 + [0] * (256 - len(pal2))
 
 

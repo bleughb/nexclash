@@ -283,7 +283,10 @@
   "assets/nodes_of_yesod/hud_map.json",
   "assets/nodes_of_yesod/hud.png"
  ],
- "shared_data": [],
+ "shared_data": [
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_speed.asm"
+ ],
  "rebuild": {
   "args": [],
   "rzx": []

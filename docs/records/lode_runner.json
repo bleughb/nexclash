@@ -38,7 +38,11 @@
   "asm/loderunner_v3_loading.asm",
   "docs/profiles/lode_runner_v3_loading.json"
  ],
- "shared_data": [],
+ "shared_data": [
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/loading_stub.inc"
+ ],
  "rebuild": {
   "args": [
    "--no-record"

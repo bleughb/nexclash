@@ -29,6 +29,7 @@ snapshot is laid out. Private inputs beside the snapshot, game data, never in th
 the tape's loading screen (loading_nex, bank 29); ENH_COLOURS + ENH_PALETTE build the Enhanced set (the
 same canvas code with that colour map, and that Layer 2 palette) as <name>_sprites_enhanced.nex.
 """
+from . import l2pal
 import collections
 import json
 import os
@@ -355,7 +356,9 @@ def enhanced_inputs(folder):
     pal = bytes.fromhex(open(pf).read().strip())
     if len(pal) != 16:
         raise ValueError('%s: %d palette bytes, not 16' % (ENH_PALETTE, len(pal)))
-    return cs.load(cf), [0xE3] + list(pal[1:])
+    out = [0xE3] + list(pal[1:])
+    out = l2pal.fix(out, '8bit', keep=(0,))                  # opaque 0xE3 -> 0xE7 (a Next shows it see-through)
+    return cs.load(cf), out
 
 
 class Wally2Patch:

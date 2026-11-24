@@ -1,0 +1,9028 @@
+{
+ "schema": 2,
+ "platform": {
+  "kind": "board",
+  "name": "N-GO",
+  "hardware_evidence": true
+ },
+ "board": {
+  "name": "n-go",
+  "named_from": "operator",
+  "nr00": "nr00:$0A",
+  "nr0f": "nr0f:$00",
+  "ram": "distinct",
+  "video": "unknown",
+  "geom": "vga128"
+ },
+ "core": "3.03.00",
+ "operator": {
+  "model": "NG",
+  "model_name": "N-GO",
+  "conn": "HDMI",
+  "disp": "monitor",
+  "ramq": "2 MB",
+  "pi": "yes",
+  "label": null,
+  "label_note": "withheld at intake"
+ },
+ "intake_runs": 2,
+ "intakes": [
+  {
+   "date": "2026-11-24",
+   "file_sha256": "7bef8a3ca997e88905a181cc382d0d7f155e015035e642b6209053e96f61c1dd"
+  },
+  {
+   "date": "2026-11-24",
+   "file_sha256": "45a099d1b5cec09fdaea8b274fd7bf4f27fecee288c6d86e0e26ee1ac02f59f6"
+  }
+ ],
+ "run": {
+  "suite": "1.0",
+  "src": "754bd120",
+  "file": "NXSUITE.TXT",
+  "file_sha256": "45a099d1b5cec09fdaea8b274fd7bf4f27fecee288c6d86e0e26ee1ac02f59f6",
+  "sessions": [
+   {
+    "suite": "1.0",
+    "src": "754bd120",
+    "built": "2026-11-24",
+    "run": "1",
+    "mode": "ALL",
+    "resumed_from": "-",
+    "core": "3.03.00",
+    "nr01": "$33",
+    "nr0e": "$00",
+    "machine": "nr00:$0A",
+    "board": "nr0f:$00",
+    "ram": "distinct",
+    "video": "unknown",
+    "nr11": "$00",
+    "timing": "nr03:$33",
+    "hz": "50",
+    "nr05": "$5B",
+    "lines": "311",
+    "line_t": "228.02",
+    "geom": "vga128",
+    "speed_start": "nr07:$33",
+    "cal35": "683",
+    "cal_ctc": "114.01",
+    "t_per_line": "227.88",
+    "nr0a": "$11",
+    "nrb8": "$82",
+    "nrb9": "$00",
+    "nrba": "$00",
+    "nrbb": "$F2",
+    "model": "NG",
+    "conn": "1",
+    "disp": "1",
+    "ramq": "2",
+    "pi": "1",
+    "label": "-"
+   },
+   {
+    "suite": "1.0",
+    "src": "754bd120",
+    "built": "2026-11-24",
+    "run": "2",
+    "mode": "GROUP:XH",
+    "resumed_from": "-",
+    "core": "3.03.00",
+    "nr01": "$33",
+    "nr0e": "$00",
+    "machine": "nr00:$0A",
+    "board": "nr0f:$00",
+    "ram": "distinct",
+    "video": "unknown",
+    "nr11": "$00",
+    "timing": "nr03:$33",
+    "hz": "50",
+    "nr05": "$5B",
+    "lines": "311",
+    "line_t": "228.02",
+    "geom": "vga128",
+    "speed_start": "nr07:$33",
+    "cal35": "683",
+    "cal_ctc": "114.01",
+    "t_per_line": "227.88",
+    "nr0a": "$11",
+    "nrb8": "$82",
+    "nrb9": "$00",
+    "nrba": "$00",
+    "nrbb": "$F2",
+    "model": "NG",
+    "conn": "1",
+    "disp": "1",
+    "ramq": "2",
+    "pi": "1",
+    "label": "-"
+   },
+   {
+    "suite": "1.0",
+    "src": "754bd120",
+    "built": "2026-11-24",
+    "run": "3",
+    "mode": "GROUP:XH",
+    "resumed_from": "-",
+    "core": "3.03.00",
+    "nr01": "$33",
+    "nr0e": "$00",
+    "machine": "nr00:$0A",
+    "board": "nr0f:$00",
+    "ram": "distinct",
+    "video": "unknown",
+    "nr11": "$00",
+    "timing": "nr03:$33",
+    "hz": "50",
+    "nr05": "$5B",
+    "lines": "311",
+    "line_t": "228.02",
+    "geom": "vga128",
+    "speed_start": "nr07:$33",
+    "cal35": "682",
+    "cal_ctc": "114.01",
+    "t_per_line": "228.22",
+    "nr0a": "$11",
+    "nrb8": "$82",
+    "nrb9": "$00",
+    "nrba": "$00",
+    "nrbb": "$F2",
+    "model": "NG",
+    "conn": "1",
+    "disp": "1",
+    "ramq": "2",
+    "pi": "1",
+    "label": "-"
+   }
+  ],
+  "nextregs": {
+   "$00": "$0A",
+   "$01": "$33",
+   "$02": "$02",
+   "$03": "$33",
+   "$04": "$00",
+   "$05": "$5B",
+   "$06": "$A8",
+   "$07": "$33",
+   "$08": "$DE",
+   "$09": "$00",
+   "$0A": "$11",
+   "$0B": "$01",
+   "$0C": "$00",
+   "$0D": "$00",
+   "$0E": "$00",
+   "$0F": "$00",
+   "$10": "$04",
+   "$11": "$00",
+   "$12": "$09",
+   "$13": "$0C",
+   "$14": "$E3",
+   "$15": "$01",
+   "$16": "$00",
+   "$17": "$00",
+   "$18": "$00",
+   "$19": "$00",
+   "$1A": "$00",
+   "$1B": "$00",
+   "$1C": "$00",
+   "$1D": "$00",
+   "$1E": "$00",
+   "$1F": "$65",
+   "$20": "$40",
+   "$21": "$00",
+   "$22": "$00",
+   "$23": "$00",
+   "$24": "$00",
+   "$25": "$00",
+   "$26": "$00",
+   "$27": "$00",
+   "$28": "$FF",
+   "$29": "$00",
+   "$2A": "$00",
+   "$2B": "$00",
+   "$2C": "$80",
+   "$2D": "$00",
+   "$2E": "$80",
+   "$2F": "$00",
+   "$30": "$00",
+   "$31": "$00",
+   "$32": "$00",
+   "$33": "$00",
+   "$34": "$00",
+   "$35": "$00",
+   "$36": "$00",
+   "$37": "$00",
+   "$38": "$00",
+   "$39": "$00",
+   "$3A": "$00",
+   "$3B": "$00",
+   "$3C": "$00",
+   "$3D": "$00",
+   "$3E": "$00",
+   "$3F": "$00",
+   "$40": "$00",
+   "$41": "$00",
+   "$42": "$0F",
+   "$43": "$20",
+   "$44": "$00",
+   "$45": "$00",
+   "$46": "$00",
+   "$47": "$00",
+   "$48": "$00",
+   "$49": "$00",
+   "$4A": "$00",
+   "$4B": "$E3",
+   "$4C": "$0F",
+   "$4D": "$00",
+   "$4E": "$00",
+   "$4F": "$00",
+   "$50": "$FF",
+   "$51": "$FF",
+   "$52": "$0A",
+   "$53": "$0B",
+   "$54": "$04",
+   "$55": "$05",
+   "$56": "$00",
+   "$57": "$01",
+   "$58": "$00",
+   "$59": "$00",
+   "$5A": "$00",
+   "$5B": "$00",
+   "$5C": "$00",
+   "$5D": "$00",
+   "$5E": "$00",
+   "$5F": "$00",
+   "$60": "$00",
+   "$61": "$00",
+   "$62": "$00",
+   "$63": "$00",
+   "$64": "$00",
+   "$65": "$00",
+   "$66": "$00",
+   "$67": "$00",
+   "$68": "$00",
+   "$69": "$00",
+   "$6A": "$00",
+   "$6B": "$00",
+   "$6C": "$00",
+   "$6D": "$00",
+   "$6E": "$2C",
+   "$6F": "$0C",
+   "$70": "$00",
+   "$71": "$00",
+   "$72": "$00",
+   "$73": "$00",
+   "$74": "$00",
+   "$75": "$00",
+   "$76": "$00",
+   "$77": "$00",
+   "$78": "$00",
+   "$79": "$00",
+   "$7A": "$00",
+   "$7B": "$00",
+   "$7C": "$00",
+   "$7D": "$00",
+   "$7E": "$00",
+   "$7F": "$FF",
+   "$80": "$00",
+   "$81": "$00",
+   "$82": "$FF",
+   "$83": "$FF",
+   "$84": "$FF",
+   "$85": "$8F",
+   "$86": "$FF",
+   "$87": "$FF",
+   "$88": "$FF",
+   "$89": "$8F",
+   "$8A": "$00",
+   "$8B": "$00",
+   "$8C": "$00",
+   "$8D": "$00",
+   "$8E": "$0B",
+   "$8F": "$00",
+   "$90": "$00",
+   "$91": "$00",
+   "$92": "$00",
+   "$93": "$00",
+   "$94": "$00",
+   "$95": "$00",
+   "$96": "$00",
+   "$97": "$00",
+   "$98": "$FF",
+   "$99": "$C1",
+   "$9A": "$00",
+   "$9B": "$00",
+   "$9C": "$00",
+   "$9D": "$00",
+   "$9E": "$00",
+   "$9F": "$00",
+   "$A0": "$00",
+   "$A1": "$00",
+   "$A2": "$02",
+   "$A3": "$00",
+   "$A4": "$00",
+   "$A5": "$00",
+   "$A6": "$00",
+   "$A7": "$00",
+   "$A8": "$00",
+   "$A9": "$05",
+   "$AA": "$00",
+   "$AB": "$00",
+   "$AC": "$00",
+   "$AD": "$00",
+   "$AE": "$00",
+   "$AF": "$00",
+   "$B0": "$00",
+   "$B1": "$00",
+   "$B2": "$00",
+   "$B3": "$00",
+   "$B4": "$00",
+   "$B5": "$00",
+   "$B6": "$00",
+   "$B7": "$00",
+   "$B8": "$82",
+   "$B9": "$00",
+   "$BA": "$00",
+   "$BB": "$F2",
+   "$BC": "$00",
+   "$BD": "$00",
+   "$BE": "$00",
+   "$BF": "$00",
+   "$C0": "$0A",
+   "$C1": "$00",
+   "$C2": "$00",
+   "$C3": "$00",
+   "$C4": "$81",
+   "$C5": "$00",
+   "$C6": "$00",
+   "$C7": "$00",
+   "$C8": "$01",
+   "$C9": "$00",
+   "$CA": "$47",
+   "$CB": "$00",
+   "$CC": "$00",
+   "$CD": "$00",
+   "$CE": "$00",
+   "$CF": "$00",
+   "$D0": "$00",
+   "$D1": "$00",
+   "$D2": "$00",
+   "$D3": "$00",
+   "$D4": "$00",
+   "$D5": "$00",
+   "$D6": "$00",
+   "$D7": "$00",
+   "$D8": "$01",
+   "$D9": "$00",
+   "$DA": "$00",
+   "$DB": "$00",
+   "$DC": "$00",
+   "$DD": "$00",
+   "$DE": "$00",
+   "$DF": "$00",
+   "$E0": "$00",
+   "$E1": "$00",
+   "$E2": "$00",
+   "$E3": "$00",
+   "$E4": "$00",
+   "$E5": "$00",
+   "$E6": "$00",
+   "$E7": "$00",
+   "$E8": "$00",
+   "$E9": "$00",
+   "$EA": "$00",
+   "$EB": "$00",
+   "$EC": "$00",
+   "$ED": "$00",
+   "$EE": "$00",
+   "$EF": "$00",
+   "$F0": "$00",
+   "$F1": "$00",
+   "$F2": "$00",
+   "$F3": "$00",
+   "$F4": "$00",
+   "$F5": "$00",
+   "$F6": "$00",
+   "$F7": "$00",
+   "$F8": "$00",
+   "$F9": "$00",
+   "$FA": "$00",
+   "$FB": "$00",
+   "$FC": "$00",
+   "$FD": "$00",
+   "$FE": "$00",
+   "$FF": "$00"
+  },
+  "tests": {
+   "S00": {
+    "id": "S00",
+    "status": "INFO",
+    "line": 266,
+    "pass": 1,
+    "v": "0",
+    "u": "bytes",
+    "n": "1",
+    "min": "0",
+    "max": "0",
+    "c": "sys-nexload-printer-buffer",
+    "extra": {}
+   },
+   "S01": {
+    "id": "S01",
+    "status": "INFO",
+    "line": 267,
+    "pass": 1,
+    "v": "$DE",
+    "u": "-",
+    "n": "1",
+    "min": "$DE",
+    "max": "$DE",
+    "c": "sys-launch-nextreg-state,sys-launch-divmmc-regs,sys-launch-7ffd-unlocked,lay-l2-default-banks,lay-tilemap-reset-bases",
+    "extra": {
+     "nr0a": "$11",
+     "nrb8": "$82",
+     "nrb9": "$00",
+     "nrba": "$00",
+     "nrbb": "$F2",
+     "nr8c": "$00",
+     "nr12": "$09",
+     "nr13": "$0C",
+     "nr6e": "$2C",
+     "nr6f": "$0C",
+     "nr05": "$5B",
+     "nr07": "$33",
+     "nrc0": "$0A",
+     "nrc4": "$81",
+     "p7ffd": "PASS"
+    }
+   },
+   "S02": {
+    "id": "S02",
+    "status": "INFO",
+    "line": 268,
+    "pass": 1,
+    "v": "3.03.00",
+    "u": "-",
+    "n": "1",
+    "min": "3.03.00",
+    "max": "3.03.00",
+    "c": "sys-core-version-regs,sys-board-id",
+    "extra": {
+     "nr00": "$0A",
+     "nr0f": "$00",
+     "core303": "1"
+    }
+   },
+   "S03": {
+    "id": "S03",
+    "status": "INFO",
+    "line": 269,
+    "pass": 1,
+    "v": "distinct",
+    "u": "-",
+    "n": "1",
+    "min": "distinct",
+    "max": "distinct",
+    "c": "sys-ram-size",
+    "extra": {
+     "crc96": "$DB31",
+     "crc0": "$1149",
+     "crcrom0": "$3CA9"
+    }
+   },
+   "S04": {
+    "id": "S04",
+    "status": "INFO",
+    "line": 270,
+    "pass": 1,
+    "v": "$EEE2",
+    "u": "-",
+    "n": "1",
+    "min": "$EEE2",
+    "max": "$EEE2",
+    "c": "sys-rom3-bytes-386e",
+    "extra": {
+     "crc386e": "$9C22",
+     "b0038": "F5E52A785C2322785C7CB52003FD3440C5D5CD6E38D1C1E1F1",
+     "b386e": "C3BF02FFFFFFFFFFFFFFFFFFFFFFFFFFD6A5D2"
+    }
+   },
+   "S05": {
+    "id": "S05",
+    "status": "PASS",
+    "line": 271,
+    "pass": 1,
+    "v": "0",
+    "u": "-",
+    "n": "1",
+    "min": "0",
+    "max": "0",
+    "c": "sys-nextreg-keeps-select",
+    "extra": {
+     "r35n": "$5A",
+     "r35a": "$5A",
+     "r28n": "$5A",
+     "r28a": "$5A"
+    }
+   },
+   "S06": {
+    "id": "S06",
+    "status": "PASS",
+    "line": 272,
+    "pass": 1,
+    "v": "0",
+    "u": "-",
+    "n": "1",
+    "min": "0",
+    "max": "0",
+    "c": "sys-cpu-speed-readback",
+    "extra": {
+     "i0": "$00",
+     "f0": "$00",
+     "i1": "$11",
+     "f1": "$11",
+     "i2": "$22",
+     "f2": "$22",
+     "i3": "$33",
+     "f3": "$33"
+    }
+   },
+   "S07": {
+    "id": "S07",
+    "status": "PASS",
+    "line": 273,
+    "pass": 1,
+    "v": "64",
+    "u": "-",
+    "n": "1",
+    "min": "64",
+    "max": "64",
+    "c": "sys-sd-write-rst8",
+    "extra": {}
+   },
+   "C01": {
+    "id": "C01",
+    "status": "PASS",
+    "line": 276,
+    "pass": 1,
+    "v": "4",
+    "u": "clocks",
+    "n": "5",
+    "min": "4",
+    "max": "4",
+    "c": "cpu-28-wait-sram-fetch",
+    "extra": {
+     "nop": "4",
+     "lda": "12.99",
+     "pop": "9.98",
+     "ldixn": "19",
+     "ldir": "21",
+     "nr07": "$33",
+     "choice": "no-wait"
+    }
+   },
+   "C02": {
+    "id": "C02",
+    "status": "INFO",
+    "line": 277,
+    "pass": 1,
+    "v": "4",
+    "u": "clocks",
+    "n": "5",
+    "min": "4",
+    "max": "4",
+    "c": "cpu-28-wait-bank5",
+    "extra": {
+     "ldhl": "7.01"
+    }
+   },
+   "C03": {
+    "id": "C03",
+    "status": "INFO",
+    "line": 278,
+    "pass": 1,
+    "v": "4",
+    "u": "clocks",
+    "n": "5",
+    "min": "4",
+    "max": "4",
+    "c": "cpu-28-wait-page0e",
+    "extra": {
+     "ldhl": "7.01"
+    }
+   },
+   "C04": {
+    "id": "C04",
+    "status": "INFO",
+    "line": 279,
+    "pass": 1,
+    "v": "4",
+    "u": "clocks",
+    "n": "5",
+    "min": "4",
+    "max": "4",
+    "c": "cpu-28-wait-page0f",
+    "extra": {
+     "ldhl": "7.01"
+    }
+   },
+   "C05": {
+    "id": "C05",
+    "status": "INFO",
+    "line": 280,
+    "pass": 1,
+    "v": "7.01",
+    "u": "clocks",
+    "n": "5",
+    "min": "7.01",
+    "max": "7.01",
+    "c": "cpu-28-wait-reads-only",
+    "extra": {
+     "outc": "11.98",
+     "inc": "11.98"
+    }
+   },
+   "C06": {
+    "id": "C06",
+    "status": "INFO",
+    "line": 281,
+    "pass": 1,
+    "v": "4",
+    "u": "clocks",
+    "n": "5",
+    "min": "4",
+    "max": "4",
+    "c": "cpu-speed-scaling-7-14",
+    "extra": {
+     "nop7": "4",
+     "lda7": "12.99",
+     "pop7": "10.01",
+     "ldixn7": "19",
+     "ldir7": "21",
+     "nop14": "4",
+     "lda14": "13.01",
+     "pop14": "9.98",
+     "ldixn14": "19",
+     "ldir14": "20.97"
+    }
+   },
+   "C07": {
+    "id": "C07",
+    "status": "INFO",
+    "line": 282,
+    "pass": 1,
+    "v": "0",
+    "u": "T",
+    "n": "5",
+    "min": "0",
+    "max": "0",
+    "c": "cpu-speed-switch-cost",
+    "extra": {}
+   },
+   "C08": {
+    "id": "C08",
+    "status": "INFO",
+    "line": 283,
+    "pass": 1,
+    "v": "0.03",
+    "u": "T",
+    "n": "5",
+    "min": "0.03",
+    "max": "0.03",
+    "c": "cpu-contention-bank5-3m5",
+    "extra": {
+     "off": "0",
+     "c7": "0"
+    }
+   },
+   "C09": {
+    "id": "C09",
+    "status": "INFO",
+    "line": 284,
+    "pass": 1,
+    "v": "23",
+    "u": "T",
+    "n": "8",
+    "min": "0",
+    "max": "23",
+    "c": "cpu-contention-08b6-latch",
+    "extra": {
+     "t0": "2"
+    }
+   },
+   "C10": {
+    "id": "C10",
+    "status": "INFO",
+    "line": 285,
+    "pass": 1,
+    "v": "10.99",
+    "u": "T",
+    "n": "5",
+    "min": "10.96",
+    "max": "11.01",
+    "c": "cpu-io-contention",
+    "extra": {
+     "border": "10.96"
+    }
+   },
+   "C11": {
+    "id": "C11",
+    "status": "INFO",
+    "line": 286,
+    "pass": 1,
+    "v": "8.01",
+    "u": "T",
+    "n": "5",
+    "min": "8.01",
+    "max": "8.01",
+    "c": "cpu-undoc-timings",
+    "extra": {
+     "ed63": "19.99",
+     "ed6b": "20",
+     "dd00": "8"
+    }
+   },
+   "C12": {
+    "id": "C12",
+    "status": "PASS",
+    "line": 287,
+    "pass": 1,
+    "v": "$00",
+    "u": "-",
+    "n": "1",
+    "min": "$00",
+    "max": "$00",
+    "c": "cpu-out-c-0",
+    "extra": {}
+   },
+   "C13": {
+    "id": "C13",
+    "status": "INFO",
+    "line": 288,
+    "pass": 1,
+    "v": "50",
+    "u": "-",
+    "n": "1",
+    "min": "50",
+    "max": "50",
+    "c": "cpu-block-io-flags",
+    "extra": {
+     "outi": "42423E3E8282BBBB1A1A0202",
+     "outd": "42423E3E8282BBBB1A1A0202",
+     "ini": "42423E3E8282BBBB1A1A0202",
+     "ind": "42423E3E8282BBBB1A1A0202",
+     "otir2": "4242"
+    }
+   },
+   "C14": {
+    "id": "C14",
+    "status": "INFO",
+    "line": 289,
+    "pass": 1,
+    "v": "24",
+    "u": "-",
+    "n": "1",
+    "min": "24",
+    "max": "24",
+    "c": "cpu-undoc-flags-xy",
+    "extra": {
+     "bit": "54555455",
+     "scf": "29ED01C5",
+     "ccf": "29FC01D4",
+     "cpi": "6E6FBEBF",
+     "inc": "042D84AD",
+     "ldai": "002980A9",
+     "wz": "$E9"
+    }
+   },
+   "C15": {
+    "id": "C15",
+    "status": "PASS",
+    "line": 290,
+    "pass": 1,
+    "v": "20.97",
+    "u": "clocks",
+    "n": "5",
+    "min": "20.97",
+    "max": "20.97",
+    "c": "lay-l2-no-cpu-wait",
+    "extra": {
+     "off": "20.97"
+    }
+   },
+   "Z01": {
+    "id": "Z01",
+    "status": "FAIL",
+    "line": 339,
+    "pass": 1,
+    "v": "44",
+    "u": "count",
+    "n": "1",
+    "min": "44",
+    "max": "44",
+    "c": "z80n-func-suite,z80n-ldix-flags,z80n-ldpirx-fixed,z80n-jpc-flags,z80n-test-nf",
+    "extra": {}
+   },
+   "Z02": {
+    "id": "Z02",
+    "status": "PASS",
+    "line": 340,
+    "pass": 1,
+    "v": "0",
+    "u": "count",
+    "n": "1",
+    "min": "0",
+    "max": "0",
+    "c": "z80n-add-rr-a-carry",
+    "extra": {
+     "f1": "$00",
+     "f2": "$FE",
+     "f3": "$00",
+     "f4": "$FE",
+     "f5": "$00",
+     "f6": "$FE",
+     "f7": "$00",
+     "f8": "$FE",
+     "f9": "$00",
+     "fA": "$FF",
+     "choice": "clears-CF"
+    }
+   },
+   "Z03": {
+    "id": "Z03",
+    "status": "INFO",
+    "line": 341,
+    "pass": 1,
+    "v": "ADD-D-1",
+    "u": "-",
+    "n": "1",
+    "min": "ADD-D-1",
+    "max": "ADD-D-1",
+    "c": "z80n-ldws-flags",
+    "extra": {
+     "f1": "$94",
+     "f2": "$94",
+     "f3": "$51",
+     "f4": "$51",
+     "choice": "ADD-D-1"
+    }
+   },
+   "Z04": {
+    "id": "Z04",
+    "status": "INFO",
+    "line": 342,
+    "pass": 1,
+    "v": "same-as-LDIRX",
+    "u": "-",
+    "n": "1",
+    "min": "same-as-LDIRX",
+    "max": "same-as-LDIRX",
+    "c": "z80n-ed-b6",
+    "extra": {
+     "hl": "$F018",
+     "de": "$F118",
+     "bc": "$0000",
+     "dst": "1122004455667788",
+     "choice": "same-as-LDIRX"
+    }
+   },
+   "Z05": {
+    "id": "Z05",
+    "status": "INFO",
+    "line": 343,
+    "pass": 1,
+    "v": "8",
+    "u": "count",
+    "n": "1",
+    "min": "8",
+    "max": "8",
+    "c": "z80n-pixel-edges",
+    "extra": {
+     "dn57ff": "$581F",
+     "dn57e0": "$5800",
+     "ad192_0": "$5800",
+     "ad192_255": "$581F",
+     "ad200_0": "$5820",
+     "ad200_255": "$583F",
+     "ad255_0": "$5FE0",
+     "ad255_255": "$5FFF"
+    }
+   },
+   "Z06": {
+    "id": "Z06",
+    "status": "PASS",
+    "line": 375,
+    "pass": 1,
+    "v": "31",
+    "u": "count",
+    "n": "1",
+    "min": "31",
+    "max": "31",
+    "c": "cpu-z80n-tstates-3m5",
+    "extra": {}
+   },
+   "Z07": {
+    "id": "Z07",
+    "status": "PASS",
+    "line": 407,
+    "pass": 1,
+    "v": "31",
+    "u": "count",
+    "n": "1",
+    "min": "31",
+    "max": "31",
+    "c": "cpu-z80n-tstates-28",
+    "extra": {}
+   },
+   "I01": {
+    "id": "I01",
+    "status": "PASS",
+    "line": 410,
+    "pass": 1,
+    "v": "5",
+    "u": "count",
+    "n": "1",
+    "min": "5",
+    "max": "5",
+    "c": "irq-pulse-bus-ff",
+    "extra": {
+     "b": "0"
+    }
+   },
+   "I02": {
+    "id": "I02",
+    "status": "PASS",
+    "line": 411,
+    "pass": 1,
+    "v": "5",
+    "u": "count",
+    "n": "1",
+    "min": "5",
+    "max": "5",
+    "c": "cpu-ed7e-im2",
+    "extra": {
+     "b": "0"
+    }
+   },
+   "I03": {
+    "id": "I03",
+    "status": "PASS",
+    "line": 419,
+    "pass": 1,
+    "v": "6",
+    "u": "count",
+    "n": "1",
+    "min": "6",
+    "max": "6",
+    "c": "irq-im2hold-suite",
+    "extra": {}
+   },
+   "I04": {
+    "id": "I04",
+    "status": "INFO",
+    "line": 420,
+    "pass": 1,
+    "v": "-1",
+    "u": "T",
+    "n": "1",
+    "min": "-1",
+    "max": "-1",
+    "c": "irq-pulse-length-3m5",
+    "extra": {
+     "reentered": "0",
+     "hi22": "1",
+     "skip": "k1-3,5"
+    }
+   },
+   "I05": {
+    "id": "I05",
+    "status": "INFO",
+    "line": 421,
+    "pass": 1,
+    "v": "-1",
+    "u": "clocks",
+    "n": "1",
+    "min": "-1",
+    "max": "-1",
+    "c": "irq-pulse-length-28",
+    "extra": {
+     "k7": "-1",
+     "k14": "-1",
+     "hi22_7": "0",
+     "hi22_14": "1",
+     "hi22_28": "1"
+    }
+   },
+   "I06": {
+    "id": "I06",
+    "status": "PASS",
+    "line": 422,
+    "pass": 1,
+    "v": "$F6",
+    "u": "-",
+    "n": "1",
+    "min": "$F6",
+    "max": "$F6",
+    "c": "irq-hwim2-vector-layout",
+    "extra": {
+     "ctc0": "$E6",
+     "wrong": "0"
+    }
+   },
+   "I07": {
+    "id": "I07",
+    "status": "PASS",
+    "line": 423,
+    "pass": 1,
+    "v": "$01",
+    "u": "-",
+    "n": "1",
+    "min": "$01",
+    "max": "$01",
+    "c": "irq-status-bit-diagnostics",
+    "extra": {
+     "pdi": "$01",
+     "pw0": "$01",
+     "pw1": "$00",
+     "hdi": "$01",
+     "hw1": "$01",
+     "c0": "$0A",
+     "c4": "$01",
+     "nr22": "$00"
+    }
+   },
+   "I08": {
+    "id": "I08",
+    "status": "INFO",
+    "line": 424,
+    "pass": 1,
+    "v": "23",
+    "u": "clocks",
+    "n": "5",
+    "min": "23",
+    "max": "23",
+    "c": "irq-22-bit7-int-low",
+    "extra": {
+     "linemin": "23"
+    }
+   },
+   "I09": {
+    "id": "I09",
+    "status": "INFO",
+    "line": 425,
+    "pass": 1,
+    "v": "248",
+    "u": "lines",
+    "n": "250",
+    "min": "248",
+    "max": "248",
+    "c": "irq-ula-int-line",
+    "extra": {
+     "ctcmin": "0",
+     "ctcmax": "255"
+    }
+   },
+   "I10": {
+    "id": "I10",
+    "status": "INFO",
+    "line": 426,
+    "pass": 1,
+    "v": "-150",
+    "u": "T",
+    "n": "1",
+    "min": "-150",
+    "max": "-150",
+    "c": "irq-line-int-position",
+    "extra": {
+     "p0": "-17",
+     "s0": "38",
+     "p100": "-150",
+     "s100": "0",
+     "p191": "-149",
+     "s191": "2",
+     "plast2": "-131",
+     "slast2": "36"
+    }
+   },
+   "I11": {
+    "id": "I11",
+    "status": "PASS",
+    "line": 427,
+    "pass": 1,
+    "v": "5",
+    "u": "count",
+    "n": "1",
+    "min": "5",
+    "max": "5",
+    "c": "irq-line-int-numbering",
+    "extra": {
+     "last2": "0",
+     "line2": "65535",
+     "l511": "0",
+     "line3": "65535",
+     "at": "311"
+    }
+   },
+   "I12": {
+    "id": "I12",
+    "status": "PASS",
+    "line": 428,
+    "pass": 1,
+    "v": "2216.37",
+    "u": "ticks",
+    "n": "1",
+    "min": "2216.37",
+    "max": "2216.37",
+    "c": "irq-ctc-rate-fixed",
+    "extra": {
+     "s7": "2216.12",
+     "s14": "2215.87",
+     "s28": "2215.87"
+    }
+   },
+   "I13": {
+    "id": "I13",
+    "status": "PASS",
+    "line": 429,
+    "pass": 1,
+    "v": "16136",
+    "u": "count",
+    "n": "1",
+    "min": "16136",
+    "max": "16136",
+    "c": "irq-ctc-time-constant,irq-ctc-status-polled",
+    "extra": {
+     "c219": "8094",
+     "c256": "6924",
+     "r": "11689",
+     "choice": "16xtc"
+    }
+   },
+   "I14": {
+    "id": "I14",
+    "status": "INFO",
+    "line": 430,
+    "pass": 1,
+    "v": "33.46",
+    "u": "T",
+    "n": "1",
+    "min": "33.46",
+    "max": "33.46",
+    "c": "irq-ack-cost",
+    "extra": {
+     "c28": "33.5",
+     "s1": "216",
+     "s0": "82",
+     "im1": "skipped-needs-rom"
+    }
+   },
+   "I15": {
+    "id": "I15",
+    "status": "INFO",
+    "line": 431,
+    "pass": 1,
+    "v": "0",
+    "u": "count",
+    "n": "1",
+    "min": "0",
+    "max": "0",
+    "c": "cpu-ld-a-i-pv",
+    "extra": {
+     "runs": "500"
+    }
+   },
+   "I16": {
+    "id": "I16",
+    "status": "PASS",
+    "line": 432,
+    "pass": 1,
+    "v": "100",
+    "u": "count",
+    "n": "1",
+    "min": "100",
+    "max": "100",
+    "c": "irq-line-shares-int",
+    "extra": {}
+   },
+   "I17": {
+    "id": "I17",
+    "status": "PASS",
+    "line": 433,
+    "pass": 1,
+    "v": "5",
+    "u": "count",
+    "n": "1",
+    "min": "5",
+    "max": "5",
+    "c": "irq-ula-enable-shared",
+    "extra": {
+     "b": "0",
+     "nr22a": "$00",
+     "nrc4a": "$01",
+     "nr22b": "$04",
+     "nrc4b": "$00"
+    }
+   },
+   "I18": {
+    "id": "I18",
+    "status": "INFO",
+    "line": 434,
+    "pass": 1,
+    "v": "2",
+    "u": "count",
+    "n": "1",
+    "min": "2",
+    "max": "2",
+    "c": "irq-hwim2-im1-fallback",
+    "extra": {
+     "o1": "$00",
+     "o2": "$06",
+     "o3": "$FF",
+     "c8": "$02",
+     "c9": "$01"
+    }
+   },
+   "I19": {
+    "id": "I19",
+    "status": "PASS",
+    "line": 435,
+    "pass": 1,
+    "v": "1",
+    "u": "count",
+    "n": "1",
+    "min": "1",
+    "max": "1",
+    "c": "irq-reti-retn-rules",
+    "extra": {
+     "im1": "$0B",
+     "im2": "$0D"
+    }
+   },
+   "I20": {
+    "id": "I20",
+    "status": "PASS",
+    "line": 436,
+    "pass": 1,
+    "v": "1",
+    "u": "count",
+    "n": "1",
+    "min": "1",
+    "max": "1",
+    "c": "irq-one-outstanding",
+    "extra": {
+     "least": "1",
+     "runs": "50",
+     "periods": "203"
+    }
+   },
+   "I21": {
+    "id": "I21",
+    "status": "INFO",
+    "line": 437,
+    "pass": 1,
+    "v": "1",
+    "u": "count",
+    "n": "1",
+    "min": "1",
+    "max": "1",
+    "c": "irq-nr20-generate",
+    "extra": {
+     "poff": "1",
+     "hon": "1",
+     "hoff": "1",
+     "c8pon": "$01",
+     "c8poff": "$01",
+     "c8hon": "$01",
+     "c8hoff": "$01"
+    }
+   },
+   "I22": {
+    "id": "I22",
+    "status": "PASS",
+    "line": 438,
+    "pass": 1,
+    "v": "0",
+    "u": "count",
+    "n": "1",
+    "min": "0",
+    "max": "0",
+    "c": "dma-pulse-lost",
+    "extra": {
+     "r28": "0",
+     "c8": "$01",
+     "c8_28": "$01",
+     "bad": "0",
+     "bad28": "0"
+    }
+   },
+   "I23": {
+    "id": "I23",
+    "status": "PASS",
+    "line": 439,
+    "pass": 1,
+    "v": "12",
+    "u": "count",
+    "n": "1",
+    "min": "12",
+    "max": "12",
+    "c": "dma-burst-prescaler-int",
+    "extra": {
+     "frames": "12",
+     "bad": "0"
+    }
+   },
+   "I24": {
+    "id": "I24",
+    "status": "PASS",
+    "line": 440,
+    "pass": 1,
+    "v": "1211",
+    "u": "bytes",
+    "n": "1",
+    "min": "1211",
+    "max": "1211",
+    "c": "dma-hwim2-yield",
+    "extra": {
+     "ran": "1",
+     "bad": "0",
+     "dbad": "15205",
+     "start": "243",
+     "pend": "2",
+     "di": "paused-at-request"
+    }
+   },
+   "F01": {
+    "id": "F01",
+    "status": "PASS",
+    "line": 443,
+    "pass": 1,
+    "v": "311",
+    "u": "lines",
+    "n": "1",
+    "min": "311",
+    "max": "311",
+    "exp": "311",
+    "c": "frame-lines-50",
+    "extra": {
+     "nr03": "$33"
+    }
+   },
+   "F02": {
+    "id": "F02",
+    "status": "INFO",
+    "line": 444,
+    "pass": 1,
+    "v": "228.02",
+    "u": "T",
+    "n": "1",
+    "min": "228.02",
+    "max": "228.02",
+    "c": "frame-line-length",
+    "extra": {
+     "ticks256": "29188"
+    }
+   },
+   "F03": {
+    "id": "F03",
+    "status": "INFO",
+    "line": 445,
+    "pass": 1,
+    "v": "264",
+    "u": "lines",
+    "n": "1",
+    "min": "264",
+    "max": "264",
+    "c": "frame-lines-60,sys-60hz-switch-timing",
+    "extra": {
+     "to": "60",
+     "nr05": "$5F",
+     "f1": "264",
+     "f2": "23",
+     "j2": "0",
+     "f3": "264",
+     "f4": "264",
+     "line_t": "228.02"
+    }
+   },
+   "F04": {
+    "id": "F04",
+    "status": "PASS",
+    "line": 446,
+    "pass": 1,
+    "v": "0",
+    "u": "count",
+    "n": "1",
+    "min": "0",
+    "max": "0",
+    "c": "frame-raster-read",
+    "extra": {
+     "bad35": "0",
+     "bad28": "0",
+     "maxline": "310"
+    }
+   },
+   "F05": {
+    "id": "F05",
+    "status": "INFO",
+    "line": 447,
+    "pass": 1,
+    "v": "100",
+    "u": "lines",
+    "n": "1",
+    "min": "100",
+    "max": "100",
+    "c": "frame-64-offset",
+    "extra": {
+     "before": "100",
+     "f1": "311",
+     "f2": "311",
+     "li0": "31",
+     "li32": "31",
+     "cp0": "32",
+     "cp32": "32",
+     "parts": "raster,line-int,copper"
+    }
+   },
+   "F06": {
+    "id": "F06",
+    "status": "INFO",
+    "line": 448,
+    "pass": 1,
+    "v": "264",
+    "u": "lines",
+    "n": "1",
+    "min": "264",
+    "max": "264",
+    "c": "frame-60hz-display-start",
+    "extra": {
+     "l50": "311",
+     "t50": "228.02",
+     "i50": "248",
+     "l60": "264",
+     "t60": "228.02",
+     "i60": "224"
+    }
+   },
+   "P01": {
+    "id": "P01",
+    "status": "INFO",
+    "line": 451,
+    "pass": 1,
+    "v": "holds",
+    "u": "-",
+    "n": "1",
+    "min": "holds",
+    "max": "holds",
+    "c": "copper-wait-passed-line",
+    "extra": {
+     "l1": "10",
+     "l2": "150",
+     "l3": "49",
+     "l3n": "50",
+     "frames23": "1"
+    }
+   },
+   "P02": {
+    "id": "P02",
+    "status": "PASS",
+    "line": 452,
+    "pass": 1,
+    "v": "100",
+    "u": "-",
+    "n": "1",
+    "min": "100",
+    "max": "100",
+    "c": "copper-wait-h-same-line",
+    "extra": {
+     "l1": "-",
+     "l2": "100",
+     "l3": "-"
+    }
+   },
+   "P03": {
+    "id": "P03",
+    "status": "INFO",
+    "line": 453,
+    "pass": 1,
+    "v": "$3F",
+    "u": "-",
+    "n": "1",
+    "min": "$3F",
+    "max": "$3F",
+    "c": "copper-wait-max-h",
+    "extra": {
+     "hits": "33023"
+    }
+   },
+   "P04": {
+    "id": "P04",
+    "status": "PASS",
+    "line": 454,
+    "pass": 1,
+    "v": "1",
+    "u": "-",
+    "n": "1",
+    "min": "1",
+    "max": "1",
+    "c": "copper-line-vs-raster",
+    "extra": {
+     "l0": "0",
+     "o0": "0",
+     "s0": "0",
+     "l120": "120",
+     "o120": "0",
+     "s120": "0",
+     "l191": "191",
+     "o191": "-60",
+     "s191": "0",
+     "l250": "250",
+     "o250": "0",
+     "s250": "0"
+    }
+   },
+   "P05": {
+    "id": "P05",
+    "status": "INFO",
+    "line": 455,
+    "pass": 1,
+    "v": "1.88",
+    "u": "clocks",
+    "n": "1",
+    "min": "1.88",
+    "max": "1.88",
+    "c": "copper-instruction-time",
+    "extra": {
+     "wait": "0.94",
+     "mt": "118",
+     "wt": "59"
+    }
+   },
+   "P06": {
+    "id": "P06",
+    "status": "INFO",
+    "line": 456,
+    "pass": 1,
+    "v": "0",
+    "u": "-",
+    "n": "1",
+    "min": "0",
+    "max": "0",
+    "c": "copper-restart-line",
+    "extra": {}
+   },
+   "P07": {
+    "id": "P07",
+    "status": "PASS",
+    "line": 457,
+    "pass": 1,
+    "v": "$A5",
+    "u": "-",
+    "n": "1",
+    "min": "$A5",
+    "max": "$A5",
+    "c": "copper-move-44-pair",
+    "extra": {
+     "b9": "$01"
+    }
+   },
+   "P08": {
+    "id": "P08",
+    "status": "PASS",
+    "line": 458,
+    "pass": 1,
+    "v": "0",
+    "u": "-",
+    "n": "1",
+    "min": "0",
+    "max": "0",
+    "c": "copper-cpu-coexist",
+    "extra": {
+     "a35": "0",
+     "a28": "0",
+     "s35": "255",
+     "s28": "255"
+    }
+   },
+   "P09": {
+    "id": "P09",
+    "status": "INFO",
+    "line": 459,
+    "pass": 1,
+    "v": "21.75",
+    "u": "clocks",
+    "n": "1",
+    "min": "21.75",
+    "max": "21.75",
+    "c": "copper-nextreg-collision",
+    "extra": {
+     "mv": "21.75",
+     "mp": "21.75",
+     "t0": "174",
+     "t1": "174",
+     "t2": "174",
+     "l0": "24",
+     "l1": "24",
+     "l2": "24"
+    }
+   },
+   "P10": {
+    "id": "P10",
+    "status": "PASS",
+    "line": 460,
+    "pass": 1,
+    "v": "$00",
+    "u": "-",
+    "n": "1",
+    "min": "$00",
+    "max": "$00",
+    "c": "copper-same-mode-no-restart",
+    "extra": {}
+   },
+   "D01": {
+    "id": "D01",
+    "status": "PASS",
+    "line": 463,
+    "pass": 1,
+    "v": "0",
+    "u": "-",
+    "n": "1",
+    "min": "0",
+    "max": "0",
+    "c": "dma-correct-3m5",
+    "extra": {
+     "c35": "0",
+     "f35": "0",
+     "c28": "0",
+     "f28": "0"
+    }
+   },
+   "D02": {
+    "id": "D02",
+    "status": "PASS",
+    "line": 464,
+    "pass": 1,
+    "v": "5.92",
+    "u": "clocks",
+    "n": "1",
+    "min": "5.92",
+    "max": "5.92",
+    "c": "dma-cost-per-byte,dma-default-cycle-length",
+    "extra": {
+     "ma35": "48",
+     "m335": "48",
+     "m435": "64",
+     "m235": "32",
+     "pa35": "48",
+     "p335": "48",
+     "p435": "64",
+     "p235": "32",
+     "ma28": "5.92",
+     "m328": "5.92",
+     "m428": "8",
+     "m228": "4.96",
+     "pa28": "5.92",
+     "p328": "5.92",
+     "p428": "8",
+     "p228": "4.96"
+    }
+   },
+   "D03": {
+    "id": "D03",
+    "status": "PASS",
+    "line": 465,
+    "pass": 1,
+    "v": "16",
+    "u": "bytes",
+    "n": "1",
+    "min": "16",
+    "max": "16",
+    "c": "dma-length-rule",
+    "extra": {
+     "p6b0": "1",
+     "p6b1": "1",
+     "p6b16": "16",
+     "p0b0": "1",
+     "p0b1": "2",
+     "p0b16": "17"
+    }
+   },
+   "D04": {
+    "id": "D04",
+    "status": "INFO",
+    "line": 466,
+    "pass": 1,
+    "v": "3195.36",
+    "u": "clocks",
+    "n": "1",
+    "min": "3195.36",
+    "max": "3195.36",
+    "c": "dma-prescaler-rate",
+    "extra": {
+     "p0_35": "51.36",
+     "p1_35": "112.32",
+     "p12_35": "467.04",
+     "p55_35": "1814.4",
+     "p100_35": "3250.24",
+     "p144_35": "4650.08",
+     "p0_28": "5.28",
+     "p1_28": "39.84",
+     "p12_28": "390.4",
+     "p55_28": "1760.64",
+     "p100_28": "3195.36",
+     "p144_28": "4597.76"
+    }
+   },
+   "D05": {
+    "id": "D05",
+    "status": "INFO",
+    "line": 467,
+    "pass": 1,
+    "v": "99.37",
+    "u": "%",
+    "n": "1",
+    "min": "99.37",
+    "max": "99.37",
+    "c": "dma-burst-cpu-share",
+    "extra": {
+     "cont": "0"
+    }
+   },
+   "D06": {
+    "id": "D06",
+    "status": "PASS",
+    "line": 468,
+    "pass": 1,
+    "v": "$3A",
+    "u": "-",
+    "n": "1",
+    "min": "$3A",
+    "max": "$3A",
+    "c": "dma-read-status",
+    "extra": {
+     "s1": "$1A",
+     "r0": "$1A",
+     "r1": "$10",
+     "r2": "$00",
+     "r3": "$10",
+     "r4": "$00",
+     "r5": "$10",
+     "r6": "$20"
+    }
+   },
+   "D07": {
+    "id": "D07",
+    "status": "PASS",
+    "line": 469,
+    "pass": 1,
+    "v": "7.68",
+    "u": "clocks",
+    "n": "1",
+    "min": "7.68",
+    "max": "7.68",
+    "c": "dma-c3-reset-keeps",
+    "extra": {
+     "first": "6.72",
+     "bad1": "0",
+     "bad2": "0"
+    }
+   },
+   "D08": {
+    "id": "D08",
+    "status": "PASS",
+    "line": 470,
+    "pass": 1,
+    "v": "0",
+    "u": "bytes",
+    "n": "1",
+    "min": "0",
+    "max": "0",
+    "c": "dma-overlap-fill",
+    "extra": {}
+   },
+   "D09": {
+    "id": "D09",
+    "status": "INFO",
+    "line": 471,
+    "pass": 1,
+    "v": "blitter",
+    "u": "-",
+    "n": "1",
+    "min": "blitter",
+    "max": "blitter",
+    "c": "dma-blitter-detect",
+    "extra": {
+     "old": "$00",
+     "phys": "$22"
+    }
+   },
+   "D10": {
+    "id": "D10",
+    "status": "PASS",
+    "line": 472,
+    "pass": 1,
+    "v": "0",
+    "u": "bytes",
+    "n": "1",
+    "min": "0",
+    "max": "0",
+    "c": "dma-blitter-physical",
+    "extra": {
+     "cross": "0"
+    }
+   },
+   "D11": {
+    "id": "D11",
+    "status": "PASS",
+    "line": 473,
+    "pass": 1,
+    "v": "twin",
+    "u": "-",
+    "n": "1",
+    "min": "twin",
+    "max": "twin",
+    "c": "dma-blitter-bram",
+    "extra": {
+     "p0e": "twin",
+     "p0f": "shows"
+    }
+   },
+   "D12": {
+    "id": "D12",
+    "status": "PASS",
+    "line": 474,
+    "pass": 1,
+    "v": "0",
+    "u": "bytes",
+    "n": "1",
+    "min": "0",
+    "max": "0",
+    "c": "dma-blitter-2d",
+    "extra": {
+     "a": "0",
+     "b": "0",
+     "z0l": "1",
+     "z0r": "1"
+    }
+   },
+   "D13": {
+    "id": "D13",
+    "status": "PASS",
+    "line": 475,
+    "pass": 1,
+    "v": "2.88",
+    "u": "clocks",
+    "n": "1",
+    "min": "2.88",
+    "max": "2.88",
+    "c": "dma-blitter-transparent-fill",
+    "extra": {
+     "op": "5.92",
+     "tr": "5.92",
+     "fi": "2.88",
+     "fx": "5.92",
+     "bad": "0"
+    }
+   },
+   "D14": {
+    "id": "D14",
+    "status": "PASS",
+    "line": 476,
+    "pass": 1,
+    "v": "0",
+    "u": "bytes",
+    "n": "1",
+    "min": "0",
+    "max": "0",
+    "c": "dma-blitter-l2-xy",
+    "extra": {
+     "r256": "0",
+     "x266": "0",
+     "c320": "0"
+    }
+   },
+   "D15": {
+    "id": "D15",
+    "status": "SKIP",
+    "line": 477,
+    "pass": 1,
+    "v": "-",
+    "u": "-",
+    "n": "0",
+    "min": "-",
+    "max": "-",
+    "why": "left-out",
+    "c": "dma-blitter-cost",
+    "extra": {}
+   },
+   "D16": {
+    "id": "D16",
+    "status": "SKIP",
+    "line": 478,
+    "pass": 1,
+    "v": "-",
+    "u": "-",
+    "n": "0",
+    "min": "-",
+    "max": "-",
+    "why": "left-out",
+    "c": "dma-setup-costs",
+    "extra": {}
+   },
+   "N01": {
+    "id": "N01",
+    "status": "INFO",
+    "line": 661,
+    "pass": 1,
+    "v": "90",
+    "u": "count",
+    "n": "1",
+    "min": "90",
+    "max": "90",
+    "c": "cpu-speed-ratio-routines,dma-setup-costs,dma-correct-3m5,copper-cpu-coexist,copper-line-vs-raster",
+    "extra": {
+     "fails": "0",
+     "cal": "683",
+     "dma35": "PASS"
+    }
+   },
+   "SP01": {
+    "id": "SP01",
+    "status": "PASS",
+    "line": 664,
+    "pass": 1,
+    "v": "$01",
+    "u": "-",
+    "n": "1",
+    "min": "$01",
+    "max": "$01",
+    "c": "spr-collision-rules",
+    "extra": {
+     "side": "0",
+     "same": "1",
+     "clip": "1",
+     "off": "1",
+     "second": "0",
+     "alone": "0"
+    }
+   },
+   "SP02": {
+    "id": "SP02",
+    "status": "PASS",
+    "line": 665,
+    "pass": 1,
+    "v": "$01",
+    "u": "-",
+    "n": "1",
+    "min": "$01",
+    "max": "$01",
+    "c": "spr-303b-shared-index",
+    "extra": {}
+   },
+   "SP03": {
+    "id": "SP03",
+    "status": "PASS",
+    "line": 666,
+    "pass": 1,
+    "v": "3",
+    "u": "-",
+    "n": "1",
+    "min": "3",
+    "max": "3",
+    "c": "spr-34-vs-303b",
+    "extra": {
+     "bit4": "9"
+    }
+   },
+   "SP04": {
+    "id": "SP04",
+    "status": "PASS",
+    "line": 667,
+    "pass": 1,
+    "v": "$01",
+    "u": "-",
+    "n": "1",
+    "min": "$01",
+    "max": "$01",
+    "c": "spr-4byte-records",
+    "extra": {
+     "x40": "1",
+     "x60": "1",
+     "x80": "1"
+    }
+   },
+   "SP05": {
+    "id": "SP05",
+    "status": "PASS",
+    "line": 668,
+    "pass": 1,
+    "v": "$01",
+    "u": "-",
+    "n": "1",
+    "min": "$01",
+    "max": "$01",
+    "c": "spr-nr-postinc",
+    "extra": {
+     "x100": "1",
+     "x150": "1"
+    }
+   },
+   "SP06": {
+    "id": "SP06",
+    "status": "PASS",
+    "line": 669,
+    "pass": 1,
+    "v": "$01",
+    "u": "-",
+    "n": "1",
+    "min": "$01",
+    "max": "$01",
+    "c": "spr-4bit-attr4-halves",
+    "extra": {
+     "a80": "$01",
+     "ac0": "$02"
+    }
+   },
+   "SP07": {
+    "id": "SP07",
+    "status": "PASS",
+    "line": 670,
+    "pass": 1,
+    "v": "$00",
+    "u": "-",
+    "n": "1",
+    "min": "$00",
+    "max": "$00",
+    "c": "spr-transparency-before-offset",
+    "extra": {}
+   },
+   "SP08": {
+    "id": "SP08",
+    "status": "INFO",
+    "line": 671,
+    "pass": 1,
+    "v": "relative",
+    "u": "-",
+    "n": "1",
+    "min": "relative",
+    "max": "relative",
+    "c": "spr-relative-accidental",
+    "extra": {
+     "x160": "1",
+     "x10": "0"
+    }
+   },
+   "SP09": {
+    "id": "SP09",
+    "status": "PASS",
+    "line": 672,
+    "pass": 1,
+    "v": "$0F",
+    "u": "-",
+    "n": "1",
+    "min": "$0F",
+    "max": "$0F",
+    "c": "spr-position-wrap",
+    "extra": {}
+   },
+   "SP10": {
+    "id": "SP10",
+    "status": "INFO",
+    "line": 673,
+    "pass": 1,
+    "v": "106",
+    "u": "count",
+    "n": "1",
+    "min": "106",
+    "max": "106",
+    "c": "spr-line-limit",
+    "extra": {
+     "s2": "53",
+     "s4": "27",
+     "s8": "14",
+     "moved": "23"
+    }
+   },
+   "SP11": {
+    "id": "SP11",
+    "status": "PASS",
+    "line": 674,
+    "pass": 1,
+    "v": "$01",
+    "u": "-",
+    "n": "1",
+    "min": "$01",
+    "max": "$01",
+    "c": "spr-port-low-byte",
+    "extra": {}
+   },
+   "M01": {
+    "id": "M01",
+    "status": "PASS",
+    "line": 677,
+    "pass": 1,
+    "v": "$06",
+    "u": "-",
+    "n": "1",
+    "min": "$06",
+    "max": "$06",
+    "c": "mem-7ffd-unlocked-remap",
+    "extra": {
+     "m0": "$FF",
+     "m1": "$FF",
+     "m2": "$2A",
+     "m3": "$2B",
+     "m4": "$04",
+     "m5": "$05",
+     "m6": "$06",
+     "m7": "$07",
+     "after57": "$2F"
+    }
+   },
+   "M02": {
+    "id": "M02",
+    "status": "PASS",
+    "line": 678,
+    "pass": 1,
+    "v": "$00",
+    "u": "-",
+    "n": "1",
+    "min": "$00",
+    "max": "$00",
+    "c": "mem-7ffd-locked",
+    "extra": {
+     "m0": "$FF",
+     "m1": "$FF",
+     "m2": "$0A",
+     "m3": "$0B",
+     "m4": "$04",
+     "m5": "$05",
+     "m6": "$00",
+     "m7": "$01",
+     "nr08w0": "$5E",
+     "m6w0": "$00",
+     "nr08w1": "$DE",
+     "m6w1": "$06"
+    }
+   },
+   "M03": {
+    "id": "M03",
+    "status": "PASS",
+    "line": 679,
+    "pass": 1,
+    "v": "$3D",
+    "u": "-",
+    "n": "1",
+    "min": "$3D",
+    "max": "$3D",
+    "c": "div-automap-off-0a,mem-altrom-select",
+    "extra": {
+     "a3d00": "$3D",
+     "arst38": "$38",
+     "altw": "$3E",
+     "other38": "$F5"
+    }
+   },
+   "M04": {
+    "id": "M04",
+    "status": "PASS",
+    "line": 680,
+    "pass": 1,
+    "v": "$5A",
+    "u": "-",
+    "n": "1",
+    "min": "$5A",
+    "max": "$5A",
+    "c": "lay-l2-writemap-over-altrom",
+    "extra": {
+     "before": "$57",
+     "after": "$57"
+    }
+   },
+   "M05": {
+    "id": "M05",
+    "status": "INFO",
+    "line": 681,
+    "pass": 1,
+    "v": "$C0",
+    "u": "-",
+    "n": "1",
+    "min": "$C0",
+    "max": "$C0",
+    "c": "mem-high-pages",
+    "extra": {
+     "r0": "$C0",
+     "alias": "$FF"
+    }
+   },
+   "M06": {
+    "id": "M06",
+    "status": "PASS",
+    "line": 682,
+    "pass": 1,
+    "v": "$77",
+    "u": "-",
+    "n": "1",
+    "min": "$77",
+    "max": "$77",
+    "c": "mem-fetch-wrap-ffff",
+    "extra": {}
+   },
+   "V01": {
+    "id": "V01",
+    "status": "OPERATOR",
+    "line": 724,
+    "pass": 2,
+    "v": "two-late",
+    "u": "book",
+    "n": "1",
+    "min": "two-late",
+    "max": "two-late",
+    "c": "spr-clip-units,spr-change-one-line-late",
+    "extra": {
+     "l": "two-late",
+     "means": "book-two-late"
+    }
+   },
+   "V02": {
+    "id": "V02",
+    "status": "OPERATOR",
+    "line": 725,
+    "pass": 2,
+    "v": "red",
+    "u": "-",
+    "n": "1",
+    "min": "red",
+    "max": "red",
+    "c": "spr-order-bit6",
+    "extra": {
+     "b0": "green",
+     "b1": "red",
+     "means": "green-red"
+    }
+   },
+   "V03": {
+    "id": "V03",
+    "status": "OPERATOR",
+    "line": 726,
+    "pass": 2,
+    "v": "tl",
+    "u": "-",
+    "n": "1",
+    "min": "tl",
+    "max": "tl",
+    "c": "spr-scale-rotate",
+    "extra": {
+     "s": "wide",
+     "o": "tl",
+     "means": "wide-tl"
+    }
+   },
+   "V04": {
+    "id": "V04",
+    "status": "OPERATOR",
+    "line": 727,
+    "pass": 2,
+    "v": "claim",
+    "u": "-",
+    "n": "1",
+    "min": "claim",
+    "max": "claim",
+    "c": "lay-transparency-rules",
+    "extra": {
+     "key": "1",
+     "means": "claim"
+    }
+   },
+   "V05": {
+    "id": "V05",
+    "status": "OPERATOR",
+    "line": 728,
+    "pass": 2,
+    "v": "lower-green",
+    "u": "-",
+    "n": "1",
+    "min": "lower-green",
+    "max": "lower-green",
+    "c": "lay-border-transparent",
+    "extra": {
+     "key": "2",
+     "means": "lower-green"
+    }
+   },
+   "V06": {
+    "id": "V06",
+    "status": "OPERATOR",
+    "line": 729,
+    "pass": 2,
+    "v": "claim",
+    "u": "-",
+    "n": "1",
+    "min": "claim",
+    "max": "claim",
+    "c": "lay-l2-priority-bit",
+    "extra": {
+     "key": "1",
+     "means": "claim"
+    }
+   },
+   "V07": {
+    "id": "V07",
+    "status": "OPERATOR",
+    "line": 730,
+    "pass": 2,
+    "v": "both",
+    "u": "-",
+    "n": "1",
+    "min": "both",
+    "max": "both",
+    "c": "lay-l2-wide-clip-default",
+    "extra": {
+     "c0": "top",
+     "c1": "both",
+     "means": "top-both"
+    }
+   },
+   "V08": {
+    "id": "V08",
+    "status": "OPERATOR",
+    "line": 731,
+    "pass": 2,
+    "v": "none",
+    "u": "-",
+    "n": "1",
+    "min": "none",
+    "max": "none",
+    "c": "lay-l2-640-whole-pixels",
+    "extra": {
+     "s0": "none",
+     "s1": "none",
+     "means": "none-none"
+    }
+   },
+   "V09": {
+    "id": "V09",
+    "status": "OPERATOR",
+    "line": 732,
+    "pass": 2,
+    "v": "on",
+    "u": "-",
+    "n": "1",
+    "min": "on",
+    "max": "on",
+    "c": "lay-l2-scroll-ranges",
+    "extra": {
+     "a": "on",
+     "w": "on",
+     "means": "on-on"
+    }
+   },
+   "V10": {
+    "id": "V10",
+    "status": "OPERATOR",
+    "line": 733,
+    "pass": 2,
+    "v": "split-clean",
+    "u": "-",
+    "n": "1",
+    "min": "split-clean",
+    "max": "split-clean",
+    "c": "lay-l2-flip-not-synced",
+    "extra": {
+     "key": "1",
+     "means": "split-clean"
+    }
+   },
+   "V11": {
+    "id": "V11",
+    "status": "OPERATOR",
+    "line": 734,
+    "pass": 2,
+    "v": "wrap",
+    "u": "-",
+    "n": "1",
+    "min": "wrap",
+    "max": "wrap",
+    "c": "lay-tilemap-bank7-wrap",
+    "extra": {
+     "key": "1",
+     "means": "wrap"
+    }
+   },
+   "V12": {
+    "id": "V12",
+    "status": "OPERATOR",
+    "line": 735,
+    "pass": 2,
+    "v": "lower",
+    "u": "-",
+    "n": "1",
+    "min": "lower",
+    "max": "lower",
+    "c": "lay-tilemap-text-and-6b",
+    "extra": {
+     "t": "grey",
+     "f": "lower",
+     "means": "grey-lower"
+    }
+   },
+   "V13": {
+    "id": "V13",
+    "status": "OPERATOR",
+    "line": 736,
+    "pass": 2,
+    "v": "claim",
+    "u": "-",
+    "n": "1",
+    "min": "claim",
+    "max": "claim",
+    "c": "lay-sprites-between-ula-tilemap",
+    "extra": {
+     "key": "1",
+     "means": "claim"
+    }
+   },
+   "V14": {
+    "id": "V14",
+    "status": "OPERATOR",
+    "line": 737,
+    "pass": 2,
+    "v": "match",
+    "u": "-",
+    "n": "1",
+    "min": "match",
+    "max": "match",
+    "c": "lay-blend-stencil",
+    "extra": {
+     "key": "1",
+     "means": "match"
+    }
+   },
+   "V15": {
+    "id": "V15",
+    "status": "OPERATOR",
+    "line": 738,
+    "pass": 2,
+    "v": "stays",
+    "u": "-",
+    "n": "1",
+    "min": "stays",
+    "max": "stays",
+    "c": "lay-ula-reads-bank5",
+    "extra": {
+     "key": "Y",
+     "means": "stays"
+    }
+   },
+   "V16": {
+    "id": "V16",
+    "status": "OPERATOR",
+    "line": 739,
+    "pass": 2,
+    "v": "changed",
+    "u": "-",
+    "n": "1",
+    "min": "changed",
+    "max": "changed",
+    "c": "lay-port-ff-timex",
+    "extra": {
+     "key": "1",
+     "means": "changed"
+    }
+   },
+   "V17": {
+    "id": "V17",
+    "status": "OPERATOR",
+    "line": 740,
+    "pass": 2,
+    "v": "inside",
+    "u": "-",
+    "n": "1",
+    "min": "inside",
+    "max": "inside",
+    "c": "copper-15-resets-clip",
+    "extra": {
+     "key": "1",
+     "means": "inside"
+    }
+   },
+   "V18": {
+    "id": "V18",
+    "status": "OPERATOR",
+    "line": 741,
+    "pass": 2,
+    "v": "part-left",
+    "u": "-",
+    "n": "1",
+    "min": "part-left",
+    "max": "part-left",
+    "c": "frame-64-33-l2-top",
+    "extra": {
+     "o33": "part-left",
+     "o32": "part-left",
+     "means": "part-left-part-left"
+    }
+   },
+   "V19": {
+    "id": "V19",
+    "status": "PENDING-OPERATOR",
+    "line": 742,
+    "pass": 2,
+    "v": "hdmi",
+    "u": "-",
+    "n": "1",
+    "min": "hdmi",
+    "max": "hdmi",
+    "c": "sys-video-timing-frame-rate",
+    "extra": {
+     "cable": "hdmi"
+    }
+   },
+   "XT1": {
+    "id": "XT1",
+    "status": "PASS",
+    "line": 796,
+    "pass": 10,
+    "v": "4",
+    "u": "count",
+    "n": "1",
+    "min": "4",
+    "max": "4",
+    "c": "frame-ula-int-per-timing,frame-lines-50",
+    "extra": {
+     "l1": "312",
+     "i1": "248",
+     "r1": "$13",
+     "l2": "311",
+     "i2": "248",
+     "r2": "$23",
+     "l3": "311",
+     "i3": "248",
+     "r3": "$33",
+     "l4": "320",
+     "i4": "239",
+     "r4": "$43"
+    }
+   },
+   "XT2": {
+    "id": "XT2",
+    "status": "FAIL",
+    "line": 797,
+    "pass": 10,
+    "v": "320",
+    "u": "lines",
+    "n": "1",
+    "min": "320",
+    "max": "320",
+    "c": "frame-timing-change-frame-end",
+    "extra": {
+     "f2": "7",
+     "f3": "320",
+     "j1": "0",
+     "exp0": "311",
+     "exp1": "320",
+     "to": "4"
+    }
+   },
+   "XT3": {
+    "id": "XT3",
+    "status": "INFO",
+    "line": 798,
+    "pass": 10,
+    "v": "book",
+    "u": "-",
+    "n": "1",
+    "min": "book",
+    "max": "book",
+    "c": "cpu-contention-by-timing",
+    "extra": {
+     "nr08": "$DE",
+     "c1": "0,0,0,4,0",
+     "c2": "5,5,0,5,5",
+     "c3": "0,0,5,5,5",
+     "c4": "0,0,0,0,0",
+     "lim": "3"
+    }
+   },
+   "XT4": {
+    "id": "XT4",
+    "status": "INFO",
+    "line": 799,
+    "pass": 10,
+    "v": "$06",
+    "u": "-",
+    "n": "1",
+    "min": "$06",
+    "max": "$06",
+    "c": "mem-48k-timing-7ffd",
+    "extra": {
+     "a6": "$06",
+     "a7": "$07",
+     "b6": "$FF",
+     "b7": "$FF",
+     "nrd8": "$01",
+     "p3ffd": "skipped"
+    }
+   },
+   "XT5": {
+    "id": "XT5",
+    "status": "PASS",
+    "line": 800,
+    "pass": 10,
+    "v": "$DFF3",
+    "u": "-",
+    "n": "1",
+    "min": "$DFF3",
+    "max": "$DFF3",
+    "c": "mem-1ffd-128k-timing",
+    "extra": {
+     "r0": "$DFF3",
+     "r1": "$0CF7",
+     "r2": "$199C",
+     "r3": "$EEE2",
+     "s04": "$EEE2"
+    }
+   },
+   "XT6": {
+    "id": "XT6",
+    "status": "PASS",
+    "line": 801,
+    "pass": 10,
+    "v": "311",
+    "u": "lines",
+    "n": "1",
+    "min": "311",
+    "max": "311",
+    "exp": "311",
+    "c": "-",
+    "extra": {
+     "nr03": "$33",
+     "start03": "$33"
+    }
+   },
+   "XD1": {
+    "id": "XD1",
+    "status": "INFO",
+    "line": 779,
+    "pass": 8,
+    "v": "set-enables",
+    "u": "-",
+    "n": "1",
+    "min": "set-enables",
+    "max": "set-enables",
+    "c": "div-bb-bit6",
+    "extra": {
+     "nrbb": "$F2",
+     "map": "$01",
+     "dv": "F1C9C9E7E1F1FBC9",
+     "off": "$01",
+     "ra": "$F9",
+     "mapflip": "$01"
+    }
+   },
+   "XD2": {
+    "id": "XD2",
+    "status": "PASS",
+    "line": 780,
+    "pass": 8,
+    "v": "instant",
+    "u": "-",
+    "n": "1",
+    "min": "instant",
+    "max": "instant",
+    "c": "div-3dxx-instant-automap",
+    "extra": {
+     "ram": "$01",
+     "map": "$01"
+    }
+   },
+   "XD3": {
+    "id": "XD3",
+    "status": "PASS",
+    "line": 781,
+    "pass": 8,
+    "v": "trap",
+    "u": "-",
+    "n": "1",
+    "min": "trap",
+    "max": "trap",
+    "c": "div-rst38-trap-hidden-rom",
+    "extra": {
+     "map": "$01",
+     "frames": "$00"
+    }
+   },
+   "XH1": {
+    "id": "XH1",
+    "status": "PASS",
+    "line": 791,
+    "pass": 9,
+    "v": "1",
+    "u": "count",
+    "n": "1",
+    "min": "1",
+    "max": "1",
+    "c": "dma-autorestart-freeze",
+    "extra": {
+     "irq": "2",
+     "bad": "0"
+    }
+   },
+   "XH2": {
+    "id": "XH2",
+    "status": "PASS",
+    "line": 792,
+    "pass": 9,
+    "v": "deaf",
+    "u": "-",
+    "n": "1",
+    "min": "deaf",
+    "max": "deaf",
+    "c": "dma-wr4-interrupt-lock",
+    "extra": {
+     "before": "$01",
+     "after": "$00"
+    },
+    "follow": [
+     {
+      "id": "XH2",
+      "status": "OPERATOR",
+      "line": 776,
+      "pass": 7,
+      "v": "reset-frees",
+      "u": "-",
+      "n": "1",
+      "min": "reset-frees",
+      "max": "reset-frees",
+      "c": "dma-wr4-interrupt-lock",
+      "extra": {
+       "reset": "soft"
+      }
+     }
+    ]
+   }
+  },
+  "subtests": {
+   "Z01": {
+    "zf.SWAPNIB": {
+     "id": "zf.SWAPNIB",
+     "status": "PASS",
+     "line": 293,
+     "pass": 1,
+     "v": "$A5",
+     "u": "-",
+     "n": "1",
+     "min": "$A5",
+     "max": "$A5",
+     "extra": {
+      "f": "$A5",
+      "fexp": "$A5"
+     }
+    },
+    "zf.MIRROR": {
+     "id": "zf.MIRROR",
+     "status": "PASS",
+     "line": 294,
+     "pass": 1,
+     "v": "$A5",
+     "u": "-",
+     "n": "1",
+     "min": "$A5",
+     "max": "$A5",
+     "extra": {
+      "f": "$A5",
+      "fexp": "$A5"
+     }
+    },
+    "zf.TESTz0": {
+     "id": "zf.TESTz0",
+     "status": "PASS",
+     "line": 295,
+     "pass": 1,
+     "v": "$54",
+     "u": "-",
+     "n": "1",
+     "min": "$54",
+     "max": "$54",
+     "extra": {
+      "f": "$54",
+      "fexp": "$54"
+     }
+    },
+    "zf.TESTzF": {
+     "id": "zf.TESTzF",
+     "status": "PASS",
+     "line": 296,
+     "pass": 1,
+     "v": "$54",
+     "u": "-",
+     "n": "1",
+     "min": "$54",
+     "max": "$54",
+     "extra": {
+      "f": "$54",
+      "fexp": "$54"
+     }
+    },
+    "zf.TESTnz": {
+     "id": "zf.TESTnz",
+     "status": "PASS",
+     "line": 297,
+     "pass": 1,
+     "v": "$B4",
+     "u": "-",
+     "n": "1",
+     "min": "$B4",
+     "max": "$B4",
+     "extra": {
+      "f": "$B4",
+      "fexp": "$B4"
+     }
+    },
+    "zf.BSLA": {
+     "id": "zf.BSLA",
+     "status": "PASS",
+     "line": 298,
+     "pass": 1,
+     "v": "$A5",
+     "u": "-",
+     "n": "1",
+     "min": "$A5",
+     "max": "$A5",
+     "extra": {
+      "f": "$A5",
+      "fexp": "$A5"
+     }
+    },
+    "zf.BSRA": {
+     "id": "zf.BSRA",
+     "status": "PASS",
+     "line": 299,
+     "pass": 1,
+     "v": "$A5",
+     "u": "-",
+     "n": "1",
+     "min": "$A5",
+     "max": "$A5",
+     "extra": {
+      "f": "$A5",
+      "fexp": "$A5"
+     }
+    },
+    "zf.BSRL": {
+     "id": "zf.BSRL",
+     "status": "PASS",
+     "line": 300,
+     "pass": 1,
+     "v": "$A5",
+     "u": "-",
+     "n": "1",
+     "min": "$A5",
+     "max": "$A5",
+     "extra": {
+      "f": "$A5",
+      "fexp": "$A5"
+     }
+    },
+    "zf.BSRF": {
+     "id": "zf.BSRF",
+     "status": "PASS",
+     "line": 301,
+     "pass": 1,
+     "v": "$A5",
+     "u": "-",
+     "n": "1",
+     "min": "$A5",
+     "max": "$A5",
+     "extra": {
+      "f": "$A5",
+      "fexp": "$A5"
+     }
+    },
+    "zf.BSRF20": {
+     "id": "zf.BSRF20",
+     "status": "PASS",
+     "line": 302,
+     "pass": 1,
+     "v": "$A5",
+     "u": "-",
+     "n": "1",
+     "min": "$A5",
+     "max": "$A5",
+     "extra": {
+      "f": "$A5",
+      "fexp": "$A5"
+     }
+    },
+    "zf.BRLC": {
+     "id": "zf.BRLC",
+     "status": "PASS",
+     "line": 303,
+     "pass": 1,
+     "v": "$A5",
+     "u": "-",
+     "n": "1",
+     "min": "$A5",
+     "max": "$A5",
+     "extra": {
+      "f": "$A5",
+      "fexp": "$A5"
+     }
+    },
+    "zf.MUL": {
+     "id": "zf.MUL",
+     "status": "PASS",
+     "line": 304,
+     "pass": 1,
+     "v": "$A5",
+     "u": "-",
+     "n": "1",
+     "min": "$A5",
+     "max": "$A5",
+     "extra": {
+      "f": "$A5",
+      "fexp": "$A5"
+     }
+    },
+    "zf.ADDHLA0": {
+     "id": "zf.ADDHLA0",
+     "status": "PASS",
+     "line": 305,
+     "pass": 1,
+     "v": "$00",
+     "u": "-",
+     "n": "1",
+     "min": "$00",
+     "max": "$00",
+     "extra": {
+      "f": "$00",
+      "fexp": "$00"
+     }
+    },
+    "zf.ADDHLAF": {
+     "id": "zf.ADDHLAF",
+     "status": "PASS",
+     "line": 306,
+     "pass": 1,
+     "v": "$FE",
+     "u": "-",
+     "n": "1",
+     "min": "$FE",
+     "max": "$FE",
+     "extra": {
+      "f": "$FE",
+      "fexp": "$FE"
+     }
+    },
+    "zf.ADDDEA0": {
+     "id": "zf.ADDDEA0",
+     "status": "PASS",
+     "line": 307,
+     "pass": 1,
+     "v": "$00",
+     "u": "-",
+     "n": "1",
+     "min": "$00",
+     "max": "$00",
+     "extra": {
+      "f": "$00",
+      "fexp": "$00"
+     }
+    },
+    "zf.ADDDEAF": {
+     "id": "zf.ADDDEAF",
+     "status": "PASS",
+     "line": 308,
+     "pass": 1,
+     "v": "$FE",
+     "u": "-",
+     "n": "1",
+     "min": "$FE",
+     "max": "$FE",
+     "extra": {
+      "f": "$FE",
+      "fexp": "$FE"
+     }
+    },
+    "zf.ADDBCA": {
+     "id": "zf.ADDBCA",
+     "status": "PASS",
+     "line": 309,
+     "pass": 1,
+     "v": "$A4",
+     "u": "-",
+     "n": "1",
+     "min": "$A4",
+     "max": "$A4",
+     "extra": {
+      "f": "$A4",
+      "fexp": "$A4"
+     }
+    },
+    "zf.ADDHLnn": {
+     "id": "zf.ADDHLnn",
+     "status": "PASS",
+     "line": 310,
+     "pass": 1,
+     "v": "$A5",
+     "u": "-",
+     "n": "1",
+     "min": "$A5",
+     "max": "$A5",
+     "extra": {
+      "f": "$A5",
+      "fexp": "$A5"
+     }
+    },
+    "zf.ADDDEnn": {
+     "id": "zf.ADDDEnn",
+     "status": "PASS",
+     "line": 311,
+     "pass": 1,
+     "v": "$A5",
+     "u": "-",
+     "n": "1",
+     "min": "$A5",
+     "max": "$A5",
+     "extra": {
+      "f": "$A5",
+      "fexp": "$A5"
+     }
+    },
+    "zf.ADDBCnn": {
+     "id": "zf.ADDBCnn",
+     "status": "PASS",
+     "line": 312,
+     "pass": 1,
+     "v": "$A5",
+     "u": "-",
+     "n": "1",
+     "min": "$A5",
+     "max": "$A5",
+     "extra": {
+      "f": "$A5",
+      "fexp": "$A5"
+     }
+    },
+    "zf.PUSHnn": {
+     "id": "zf.PUSHnn",
+     "status": "PASS",
+     "line": 313,
+     "pass": 1,
+     "v": "$A5",
+     "u": "-",
+     "n": "1",
+     "min": "$A5",
+     "max": "$A5",
+     "extra": {
+      "f": "$A5",
+      "fexp": "$A5"
+     }
+    },
+    "zf.NEXTRGn": {
+     "id": "zf.NEXTRGn",
+     "status": "PASS",
+     "line": 314,
+     "pass": 1,
+     "v": "$A5",
+     "u": "-",
+     "n": "1",
+     "min": "$A5",
+     "max": "$A5",
+     "extra": {
+      "f": "$A5",
+      "fexp": "$A5"
+     }
+    },
+    "zf.NEXTRGA": {
+     "id": "zf.NEXTRGA",
+     "status": "PASS",
+     "line": 315,
+     "pass": 1,
+     "v": "$A5",
+     "u": "-",
+     "n": "1",
+     "min": "$A5",
+     "max": "$A5",
+     "extra": {
+      "f": "$A5",
+      "fexp": "$A5"
+     }
+    },
+    "zf.PXDN1": {
+     "id": "zf.PXDN1",
+     "status": "PASS",
+     "line": 316,
+     "pass": 1,
+     "v": "$A5",
+     "u": "-",
+     "n": "1",
+     "min": "$A5",
+     "max": "$A5",
+     "extra": {
+      "f": "$A5",
+      "fexp": "$A5"
+     }
+    },
+    "zf.PXDN2": {
+     "id": "zf.PXDN2",
+     "status": "PASS",
+     "line": 317,
+     "pass": 1,
+     "v": "$A5",
+     "u": "-",
+     "n": "1",
+     "min": "$A5",
+     "max": "$A5",
+     "extra": {
+      "f": "$A5",
+      "fexp": "$A5"
+     }
+    },
+    "zf.PXDN3": {
+     "id": "zf.PXDN3",
+     "status": "PASS",
+     "line": 318,
+     "pass": 1,
+     "v": "$A5",
+     "u": "-",
+     "n": "1",
+     "min": "$A5",
+     "max": "$A5",
+     "extra": {
+      "f": "$A5",
+      "fexp": "$A5"
+     }
+    },
+    "zf.PXDN4": {
+     "id": "zf.PXDN4",
+     "status": "PASS",
+     "line": 319,
+     "pass": 1,
+     "v": "$A5",
+     "u": "-",
+     "n": "1",
+     "min": "$A5",
+     "max": "$A5",
+     "extra": {
+      "f": "$A5",
+      "fexp": "$A5"
+     }
+    },
+    "zf.PXAD1": {
+     "id": "zf.PXAD1",
+     "status": "PASS",
+     "line": 320,
+     "pass": 1,
+     "v": "$A5",
+     "u": "-",
+     "n": "1",
+     "min": "$A5",
+     "max": "$A5",
+     "extra": {
+      "f": "$A5",
+      "fexp": "$A5"
+     }
+    },
+    "zf.PXAD2": {
+     "id": "zf.PXAD2",
+     "status": "PASS",
+     "line": 321,
+     "pass": 1,
+     "v": "$A5",
+     "u": "-",
+     "n": "1",
+     "min": "$A5",
+     "max": "$A5",
+     "extra": {
+      "f": "$A5",
+      "fexp": "$A5"
+     }
+    },
+    "zf.SETAE": {
+     "id": "zf.SETAE",
+     "status": "PASS",
+     "line": 322,
+     "pass": 1,
+     "v": "$A5",
+     "u": "-",
+     "n": "1",
+     "min": "$A5",
+     "max": "$A5",
+     "extra": {
+      "f": "$A5",
+      "fexp": "$A5"
+     }
+    },
+    "zf.LDIX0": {
+     "id": "zf.LDIX0",
+     "status": "PASS",
+     "line": 323,
+     "pass": 1,
+     "v": "$04",
+     "u": "-",
+     "n": "1",
+     "min": "$04",
+     "max": "$04",
+     "extra": {
+      "f": "$04",
+      "fexp": "$04"
+     }
+    },
+    "zf.LDIXF": {
+     "id": "zf.LDIXF",
+     "status": "PASS",
+     "line": 324,
+     "pass": 1,
+     "v": "$C5",
+     "u": "-",
+     "n": "1",
+     "min": "$C5",
+     "max": "$C5",
+     "extra": {
+      "f": "$C5",
+      "fexp": "$C5"
+     }
+    },
+    "zf.LDIRX0": {
+     "id": "zf.LDIRX0",
+     "status": "PASS",
+     "line": 325,
+     "pass": 1,
+     "v": "$00",
+     "u": "-",
+     "n": "1",
+     "min": "$00",
+     "max": "$00",
+     "extra": {
+      "f": "$00",
+      "fexp": "$00"
+     }
+    },
+    "zf.LDIRXF": {
+     "id": "zf.LDIRXF",
+     "status": "PASS",
+     "line": 326,
+     "pass": 1,
+     "v": "$C1",
+     "u": "-",
+     "n": "1",
+     "min": "$C1",
+     "max": "$C1",
+     "extra": {
+      "f": "$C1",
+      "fexp": "$C1"
+     }
+    },
+    "zf.LDDX0": {
+     "id": "zf.LDDX0",
+     "status": "PASS",
+     "line": 327,
+     "pass": 1,
+     "v": "$04",
+     "u": "-",
+     "n": "1",
+     "min": "$04",
+     "max": "$04",
+     "extra": {
+      "f": "$04",
+      "fexp": "$04"
+     }
+    },
+    "zf.LDDXF": {
+     "id": "zf.LDDXF",
+     "status": "PASS",
+     "line": 328,
+     "pass": 1,
+     "v": "$C5",
+     "u": "-",
+     "n": "1",
+     "min": "$C5",
+     "max": "$C5",
+     "extra": {
+      "f": "$C5",
+      "fexp": "$C5"
+     }
+    },
+    "zf.LDDRX0": {
+     "id": "zf.LDDRX0",
+     "status": "PASS",
+     "line": 329,
+     "pass": 1,
+     "v": "$00",
+     "u": "-",
+     "n": "1",
+     "min": "$00",
+     "max": "$00",
+     "extra": {
+      "f": "$00",
+      "fexp": "$00"
+     }
+    },
+    "zf.LDDRXF": {
+     "id": "zf.LDDRXF",
+     "status": "PASS",
+     "line": 330,
+     "pass": 1,
+     "v": "$C1",
+     "u": "-",
+     "n": "1",
+     "min": "$C1",
+     "max": "$C1",
+     "extra": {
+      "f": "$C1",
+      "fexp": "$C1"
+     }
+    },
+    "zf.LDPIRX0": {
+     "id": "zf.LDPIRX0",
+     "status": "FAIL",
+     "line": 331,
+     "pass": 1,
+     "v": "$00",
+     "u": "-",
+     "n": "1",
+     "min": "$00",
+     "max": "$00",
+     "extra": {
+      "f": "$00",
+      "fexp": "$08",
+      "code": "F"
+     }
+    },
+    "zf.LDPIRXF": {
+     "id": "zf.LDPIRXF",
+     "status": "FAIL",
+     "line": 332,
+     "pass": 1,
+     "v": "$C1",
+     "u": "-",
+     "n": "1",
+     "min": "$C1",
+     "max": "$C1",
+     "extra": {
+      "f": "$C1",
+      "fexp": "$C9",
+      "code": "F"
+     }
+    },
+    "zf.LDWS7F": {
+     "id": "zf.LDWS7F",
+     "status": "PASS",
+     "line": 333,
+     "pass": 1,
+     "v": "$94",
+     "u": "-",
+     "n": "1",
+     "min": "$94",
+     "max": "$94",
+     "extra": {
+      "f": "$94",
+      "fexp": "$94"
+     }
+    },
+    "zf.LDWSFF": {
+     "id": "zf.LDWSFF",
+     "status": "PASS",
+     "line": 334,
+     "pass": 1,
+     "v": "$51",
+     "u": "-",
+     "n": "1",
+     "min": "$51",
+     "max": "$51",
+     "extra": {
+      "f": "$51",
+      "fexp": "$51"
+     }
+    },
+    "zf.OUTINB0": {
+     "id": "zf.OUTINB0",
+     "status": "PASS",
+     "line": 335,
+     "pass": 1,
+     "v": "$00",
+     "u": "-",
+     "n": "1",
+     "min": "$00",
+     "max": "$00",
+     "extra": {
+      "f": "$00",
+      "fexp": "$00"
+     }
+    },
+    "zf.OUTINBF": {
+     "id": "zf.OUTINBF",
+     "status": "PASS",
+     "line": 336,
+     "pass": 1,
+     "v": "$FF",
+     "u": "-",
+     "n": "1",
+     "min": "$FF",
+     "max": "$FF",
+     "extra": {
+      "f": "$FF",
+      "fexp": "$FF"
+     }
+    },
+    "zf.JPC": {
+     "id": "zf.JPC",
+     "status": "PASS",
+     "line": 337,
+     "pass": 1,
+     "v": "$A5",
+     "u": "-",
+     "n": "1",
+     "min": "$A5",
+     "max": "$A5",
+     "extra": {
+      "f": "$A5",
+      "fexp": "$A5"
+     }
+    },
+    "zf.JPCedge": {
+     "id": "zf.JPCedge",
+     "status": "PASS",
+     "line": 338,
+     "pass": 1,
+     "v": "$A5",
+     "u": "-",
+     "n": "1",
+     "min": "$A5",
+     "max": "$A5",
+     "extra": {
+      "f": "$A5",
+      "fexp": "$A5"
+     }
+    }
+   },
+   "Z06": {
+    "zt.NEGz80": {
+     "id": "zt.NEGz80",
+     "status": "PASS",
+     "line": 344,
+     "pass": 1,
+     "v": "7.99",
+     "u": "clocks",
+     "n": "5",
+     "min": "7.98",
+     "max": "8.01",
+     "exp": "8",
+     "extra": {}
+    },
+    "zt.LDIz80": {
+     "id": "zt.LDIz80",
+     "status": "PASS",
+     "line": 345,
+     "pass": 1,
+     "v": "15.99",
+     "u": "clocks",
+     "n": "5",
+     "min": "15.99",
+     "max": "15.99",
+     "exp": "16",
+     "extra": {}
+    },
+    "zt.LDIRz80": {
+     "id": "zt.LDIRz80",
+     "status": "PASS",
+     "line": 346,
+     "pass": 1,
+     "v": "20.98",
+     "u": "clocks",
+     "n": "5",
+     "min": "20.94",
+     "max": "21",
+     "exp": "21",
+     "extra": {}
+    },
+    "zt.SWAPNIB": {
+     "id": "zt.SWAPNIB",
+     "status": "PASS",
+     "line": 347,
+     "pass": 1,
+     "v": "7.98",
+     "u": "clocks",
+     "n": "5",
+     "min": "7.98",
+     "max": "7.98",
+     "exp": "8",
+     "extra": {}
+    },
+    "zt.MIRROR": {
+     "id": "zt.MIRROR",
+     "status": "PASS",
+     "line": 348,
+     "pass": 1,
+     "v": "7.98",
+     "u": "clocks",
+     "n": "5",
+     "min": "7.98",
+     "max": "7.98",
+     "exp": "8",
+     "extra": {}
+    },
+    "zt.TESTn": {
+     "id": "zt.TESTn",
+     "status": "PASS",
+     "line": 349,
+     "pass": 1,
+     "v": "10.98",
+     "u": "clocks",
+     "n": "5",
+     "min": "10.98",
+     "max": "10.98",
+     "exp": "11",
+     "extra": {}
+    },
+    "zt.BSLA": {
+     "id": "zt.BSLA",
+     "status": "PASS",
+     "line": 350,
+     "pass": 1,
+     "v": "7.99",
+     "u": "clocks",
+     "n": "5",
+     "min": "7.98",
+     "max": "8.01",
+     "exp": "8",
+     "extra": {}
+    },
+    "zt.BSRA": {
+     "id": "zt.BSRA",
+     "status": "PASS",
+     "line": 351,
+     "pass": 1,
+     "v": "7.99",
+     "u": "clocks",
+     "n": "5",
+     "min": "7.98",
+     "max": "8.01",
+     "exp": "8",
+     "extra": {}
+    },
+    "zt.BSRL": {
+     "id": "zt.BSRL",
+     "status": "PASS",
+     "line": 352,
+     "pass": 1,
+     "v": "7.99",
+     "u": "clocks",
+     "n": "5",
+     "min": "7.98",
+     "max": "8.01",
+     "exp": "8",
+     "extra": {}
+    },
+    "zt.BSRF": {
+     "id": "zt.BSRF",
+     "status": "PASS",
+     "line": 353,
+     "pass": 1,
+     "v": "7.99",
+     "u": "clocks",
+     "n": "5",
+     "min": "7.98",
+     "max": "8.01",
+     "exp": "8",
+     "extra": {}
+    },
+    "zt.BRLC": {
+     "id": "zt.BRLC",
+     "status": "PASS",
+     "line": 354,
+     "pass": 1,
+     "v": "7.99",
+     "u": "clocks",
+     "n": "5",
+     "min": "7.98",
+     "max": "8.01",
+     "exp": "8",
+     "extra": {}
+    },
+    "zt.MUL": {
+     "id": "zt.MUL",
+     "status": "PASS",
+     "line": 355,
+     "pass": 1,
+     "v": "8",
+     "u": "clocks",
+     "n": "5",
+     "min": "7.98",
+     "max": "8.01",
+     "exp": "8",
+     "extra": {}
+    },
+    "zt.ADDHLA": {
+     "id": "zt.ADDHLA",
+     "status": "PASS",
+     "line": 356,
+     "pass": 1,
+     "v": "7.98",
+     "u": "clocks",
+     "n": "5",
+     "min": "7.98",
+     "max": "7.98",
+     "exp": "8",
+     "extra": {}
+    },
+    "zt.ADDDEA": {
+     "id": "zt.ADDDEA",
+     "status": "PASS",
+     "line": 357,
+     "pass": 1,
+     "v": "7.99",
+     "u": "clocks",
+     "n": "5",
+     "min": "7.98",
+     "max": "8.01",
+     "exp": "8",
+     "extra": {}
+    },
+    "zt.ADDBCA": {
+     "id": "zt.ADDBCA",
+     "status": "PASS",
+     "line": 358,
+     "pass": 1,
+     "v": "7.99",
+     "u": "clocks",
+     "n": "5",
+     "min": "7.98",
+     "max": "8.01",
+     "exp": "8",
+     "extra": {}
+    },
+    "zt.ADDHLnn": {
+     "id": "zt.ADDHLnn",
+     "status": "PASS",
+     "line": 359,
+     "pass": 1,
+     "v": "15.99",
+     "u": "clocks",
+     "n": "5",
+     "min": "15.99",
+     "max": "15.99",
+     "exp": "16",
+     "extra": {}
+    },
+    "zt.ADDDEnn": {
+     "id": "zt.ADDDEnn",
+     "status": "PASS",
+     "line": 360,
+     "pass": 1,
+     "v": "15.99",
+     "u": "clocks",
+     "n": "5",
+     "min": "15.99",
+     "max": "15.99",
+     "exp": "16",
+     "extra": {}
+    },
+    "zt.ADDBCnn": {
+     "id": "zt.ADDBCnn",
+     "status": "PASS",
+     "line": 361,
+     "pass": 1,
+     "v": "15.99",
+     "u": "clocks",
+     "n": "5",
+     "min": "15.99",
+     "max": "15.99",
+     "exp": "16",
+     "extra": {}
+    },
+    "zt.PUSHnn": {
+     "id": "zt.PUSHnn",
+     "status": "PASS",
+     "line": 362,
+     "pass": 1,
+     "v": "22.98",
+     "u": "clocks",
+     "n": "5",
+     "min": "22.97",
+     "max": "23",
+     "exp": "23",
+     "extra": {}
+    },
+    "zt.OUTINB": {
+     "id": "zt.OUTINB",
+     "status": "PASS",
+     "line": 363,
+     "pass": 1,
+     "v": "15.99",
+     "u": "clocks",
+     "n": "5",
+     "min": "15.99",
+     "max": "15.99",
+     "exp": "16",
+     "extra": {}
+    },
+    "zt.NEXTRGn": {
+     "id": "zt.NEXTRGn",
+     "status": "PASS",
+     "line": 364,
+     "pass": 1,
+     "v": "20",
+     "u": "clocks",
+     "n": "5",
+     "min": "20",
+     "max": "20",
+     "exp": "20",
+     "extra": {}
+    },
+    "zt.NEXTRGA": {
+     "id": "zt.NEXTRGA",
+     "status": "PASS",
+     "line": 365,
+     "pass": 1,
+     "v": "16.99",
+     "u": "clocks",
+     "n": "5",
+     "min": "16.99",
+     "max": "16.99",
+     "exp": "17",
+     "extra": {}
+    },
+    "zt.PIXELDN": {
+     "id": "zt.PIXELDN",
+     "status": "PASS",
+     "line": 366,
+     "pass": 1,
+     "v": "7.99",
+     "u": "clocks",
+     "n": "5",
+     "min": "7.98",
+     "max": "8.01",
+     "exp": "8",
+     "extra": {}
+    },
+    "zt.PIXELAD": {
+     "id": "zt.PIXELAD",
+     "status": "PASS",
+     "line": 367,
+     "pass": 1,
+     "v": "7.99",
+     "u": "clocks",
+     "n": "5",
+     "min": "7.98",
+     "max": "8.01",
+     "exp": "8",
+     "extra": {}
+    },
+    "zt.SETAE": {
+     "id": "zt.SETAE",
+     "status": "PASS",
+     "line": 368,
+     "pass": 1,
+     "v": "7.99",
+     "u": "clocks",
+     "n": "5",
+     "min": "7.98",
+     "max": "8.01",
+     "exp": "8",
+     "extra": {}
+    },
+    "zt.LDIX": {
+     "id": "zt.LDIX",
+     "status": "PASS",
+     "line": 369,
+     "pass": 1,
+     "v": "15.99",
+     "u": "clocks",
+     "n": "5",
+     "min": "15.99",
+     "max": "15.99",
+     "exp": "16",
+     "extra": {}
+    },
+    "zt.LDWS": {
+     "id": "zt.LDWS",
+     "status": "PASS",
+     "line": 370,
+     "pass": 1,
+     "v": "13.96",
+     "u": "clocks",
+     "n": "5",
+     "min": "13.96",
+     "max": "13.96",
+     "exp": "14",
+     "extra": {}
+    },
+    "zt.LDDX": {
+     "id": "zt.LDDX",
+     "status": "PASS",
+     "line": 371,
+     "pass": 1,
+     "v": "15.99",
+     "u": "clocks",
+     "n": "5",
+     "min": "15.99",
+     "max": "15.99",
+     "exp": "16",
+     "extra": {}
+    },
+    "zt.LDIRX": {
+     "id": "zt.LDIRX",
+     "status": "PASS",
+     "line": 372,
+     "pass": 1,
+     "v": "20.98",
+     "u": "clocks",
+     "n": "5",
+     "min": "20.94",
+     "max": "21",
+     "exp": "21",
+     "extra": {}
+    },
+    "zt.LDPIRX": {
+     "id": "zt.LDPIRX",
+     "status": "PASS",
+     "line": 373,
+     "pass": 1,
+     "v": "20.98",
+     "u": "clocks",
+     "n": "5",
+     "min": "20.97",
+     "max": "21",
+     "exp": "21",
+     "extra": {}
+    },
+    "zt.LDDRX": {
+     "id": "zt.LDDRX",
+     "status": "PASS",
+     "line": 374,
+     "pass": 1,
+     "v": "20.98",
+     "u": "clocks",
+     "n": "5",
+     "min": "20.97",
+     "max": "21",
+     "exp": "21",
+     "extra": {}
+    }
+   },
+   "Z07": {
+    "zu.NEGz80": {
+     "id": "zu.NEGz80",
+     "status": "PASS",
+     "line": 376,
+     "pass": 1,
+     "v": "7.98",
+     "u": "clocks",
+     "n": "5",
+     "min": "7.98",
+     "max": "7.98",
+     "exp": "8",
+     "extra": {}
+    },
+    "zu.LDIz80": {
+     "id": "zu.LDIz80",
+     "status": "PASS",
+     "line": 377,
+     "pass": 1,
+     "v": "15.99",
+     "u": "clocks",
+     "n": "5",
+     "min": "15.99",
+     "max": "15.99",
+     "exp": "16",
+     "extra": {}
+    },
+    "zu.LDIRz80": {
+     "id": "zu.LDIRz80",
+     "status": "PASS",
+     "line": 378,
+     "pass": 1,
+     "v": "21",
+     "u": "clocks",
+     "n": "5",
+     "min": "21",
+     "max": "21",
+     "exp": "21",
+     "extra": {}
+    },
+    "zu.SWAPNIB": {
+     "id": "zu.SWAPNIB",
+     "status": "PASS",
+     "line": 379,
+     "pass": 1,
+     "v": "7.98",
+     "u": "clocks",
+     "n": "5",
+     "min": "7.98",
+     "max": "7.98",
+     "exp": "8",
+     "extra": {}
+    },
+    "zu.MIRROR": {
+     "id": "zu.MIRROR",
+     "status": "PASS",
+     "line": 380,
+     "pass": 1,
+     "v": "7.98",
+     "u": "clocks",
+     "n": "5",
+     "min": "7.98",
+     "max": "7.98",
+     "exp": "8",
+     "extra": {}
+    },
+    "zu.TESTn": {
+     "id": "zu.TESTn",
+     "status": "PASS",
+     "line": 381,
+     "pass": 1,
+     "v": "10.98",
+     "u": "clocks",
+     "n": "5",
+     "min": "10.98",
+     "max": "10.98",
+     "exp": "11",
+     "extra": {}
+    },
+    "zu.BSLA": {
+     "id": "zu.BSLA",
+     "status": "PASS",
+     "line": 382,
+     "pass": 1,
+     "v": "7.98",
+     "u": "clocks",
+     "n": "5",
+     "min": "7.98",
+     "max": "7.98",
+     "exp": "8",
+     "extra": {}
+    },
+    "zu.BSRA": {
+     "id": "zu.BSRA",
+     "status": "PASS",
+     "line": 383,
+     "pass": 1,
+     "v": "7.98",
+     "u": "clocks",
+     "n": "5",
+     "min": "7.98",
+     "max": "7.98",
+     "exp": "8",
+     "extra": {}
+    },
+    "zu.BSRL": {
+     "id": "zu.BSRL",
+     "status": "PASS",
+     "line": 384,
+     "pass": 1,
+     "v": "7.98",
+     "u": "clocks",
+     "n": "5",
+     "min": "7.98",
+     "max": "7.98",
+     "exp": "8",
+     "extra": {}
+    },
+    "zu.BSRF": {
+     "id": "zu.BSRF",
+     "status": "PASS",
+     "line": 385,
+     "pass": 1,
+     "v": "7.98",
+     "u": "clocks",
+     "n": "5",
+     "min": "7.98",
+     "max": "7.98",
+     "exp": "8",
+     "extra": {}
+    },
+    "zu.BRLC": {
+     "id": "zu.BRLC",
+     "status": "PASS",
+     "line": 386,
+     "pass": 1,
+     "v": "7.98",
+     "u": "clocks",
+     "n": "5",
+     "min": "7.98",
+     "max": "7.98",
+     "exp": "8",
+     "extra": {}
+    },
+    "zu.MUL": {
+     "id": "zu.MUL",
+     "status": "PASS",
+     "line": 387,
+     "pass": 1,
+     "v": "7.98",
+     "u": "clocks",
+     "n": "5",
+     "min": "7.98",
+     "max": "7.98",
+     "exp": "8",
+     "extra": {}
+    },
+    "zu.ADDHLA": {
+     "id": "zu.ADDHLA",
+     "status": "PASS",
+     "line": 388,
+     "pass": 1,
+     "v": "7.98",
+     "u": "clocks",
+     "n": "5",
+     "min": "7.98",
+     "max": "7.98",
+     "exp": "8",
+     "extra": {}
+    },
+    "zu.ADDDEA": {
+     "id": "zu.ADDDEA",
+     "status": "PASS",
+     "line": 389,
+     "pass": 1,
+     "v": "7.98",
+     "u": "clocks",
+     "n": "5",
+     "min": "7.98",
+     "max": "7.98",
+     "exp": "8",
+     "extra": {}
+    },
+    "zu.ADDBCA": {
+     "id": "zu.ADDBCA",
+     "status": "PASS",
+     "line": 390,
+     "pass": 1,
+     "v": "7.98",
+     "u": "clocks",
+     "n": "5",
+     "min": "7.98",
+     "max": "7.98",
+     "exp": "8",
+     "extra": {}
+    },
+    "zu.ADDHLnn": {
+     "id": "zu.ADDHLnn",
+     "status": "PASS",
+     "line": 391,
+     "pass": 1,
+     "v": "15.99",
+     "u": "clocks",
+     "n": "5",
+     "min": "15.99",
+     "max": "15.99",
+     "exp": "16",
+     "extra": {}
+    },
+    "zu.ADDDEnn": {
+     "id": "zu.ADDDEnn",
+     "status": "PASS",
+     "line": 392,
+     "pass": 1,
+     "v": "15.99",
+     "u": "clocks",
+     "n": "5",
+     "min": "15.99",
+     "max": "15.99",
+     "exp": "16",
+     "extra": {}
+    },
+    "zu.ADDBCnn": {
+     "id": "zu.ADDBCnn",
+     "status": "PASS",
+     "line": 393,
+     "pass": 1,
+     "v": "15.99",
+     "u": "clocks",
+     "n": "5",
+     "min": "15.99",
+     "max": "15.99",
+     "exp": "16",
+     "extra": {}
+    },
+    "zu.PUSHnn": {
+     "id": "zu.PUSHnn",
+     "status": "PASS",
+     "line": 394,
+     "pass": 1,
+     "v": "22.97",
+     "u": "clocks",
+     "n": "5",
+     "min": "22.97",
+     "max": "22.97",
+     "exp": "23",
+     "extra": {}
+    },
+    "zu.OUTINB": {
+     "id": "zu.OUTINB",
+     "status": "PASS",
+     "line": 395,
+     "pass": 1,
+     "v": "15.99",
+     "u": "clocks",
+     "n": "5",
+     "min": "15.99",
+     "max": "15.99",
+     "exp": "16",
+     "extra": {}
+    },
+    "zu.NEXTRGn": {
+     "id": "zu.NEXTRGn",
+     "status": "PASS",
+     "line": 396,
+     "pass": 1,
+     "v": "19.98",
+     "u": "clocks",
+     "n": "5",
+     "min": "19.97",
+     "max": "20",
+     "exp": "20",
+     "extra": {}
+    },
+    "zu.NEXTRGA": {
+     "id": "zu.NEXTRGA",
+     "status": "PASS",
+     "line": 397,
+     "pass": 1,
+     "v": "16.99",
+     "u": "clocks",
+     "n": "5",
+     "min": "16.99",
+     "max": "16.99",
+     "exp": "17",
+     "extra": {}
+    },
+    "zu.PIXELDN": {
+     "id": "zu.PIXELDN",
+     "status": "PASS",
+     "line": 398,
+     "pass": 1,
+     "v": "7.98",
+     "u": "clocks",
+     "n": "5",
+     "min": "7.98",
+     "max": "7.98",
+     "exp": "8",
+     "extra": {}
+    },
+    "zu.PIXELAD": {
+     "id": "zu.PIXELAD",
+     "status": "PASS",
+     "line": 399,
+     "pass": 1,
+     "v": "7.98",
+     "u": "clocks",
+     "n": "5",
+     "min": "7.98",
+     "max": "7.98",
+     "exp": "8",
+     "extra": {}
+    },
+    "zu.SETAE": {
+     "id": "zu.SETAE",
+     "status": "PASS",
+     "line": 400,
+     "pass": 1,
+     "v": "7.98",
+     "u": "clocks",
+     "n": "5",
+     "min": "7.98",
+     "max": "7.98",
+     "exp": "8",
+     "extra": {}
+    },
+    "zu.LDIX": {
+     "id": "zu.LDIX",
+     "status": "PASS",
+     "line": 401,
+     "pass": 1,
+     "v": "15.99",
+     "u": "clocks",
+     "n": "5",
+     "min": "15.99",
+     "max": "15.99",
+     "exp": "16",
+     "extra": {}
+    },
+    "zu.LDWS": {
+     "id": "zu.LDWS",
+     "status": "PASS",
+     "line": 402,
+     "pass": 1,
+     "v": "13.98",
+     "u": "clocks",
+     "n": "5",
+     "min": "13.96",
+     "max": "13.99",
+     "exp": "14",
+     "extra": {}
+    },
+    "zu.LDDX": {
+     "id": "zu.LDDX",
+     "status": "PASS",
+     "line": 403,
+     "pass": 1,
+     "v": "15.99",
+     "u": "clocks",
+     "n": "5",
+     "min": "15.99",
+     "max": "15.99",
+     "exp": "16",
+     "extra": {}
+    },
+    "zu.LDIRX": {
+     "id": "zu.LDIRX",
+     "status": "PASS",
+     "line": 404,
+     "pass": 1,
+     "v": "21",
+     "u": "clocks",
+     "n": "5",
+     "min": "21",
+     "max": "21",
+     "exp": "21",
+     "extra": {}
+    },
+    "zu.LDPIRX": {
+     "id": "zu.LDPIRX",
+     "status": "PASS",
+     "line": 405,
+     "pass": 1,
+     "v": "21",
+     "u": "clocks",
+     "n": "5",
+     "min": "21",
+     "max": "21",
+     "exp": "21",
+     "extra": {}
+    },
+    "zu.LDDRX": {
+     "id": "zu.LDDRX",
+     "status": "PASS",
+     "line": 406,
+     "pass": 1,
+     "v": "21",
+     "u": "clocks",
+     "n": "5",
+     "min": "21",
+     "max": "21",
+     "exp": "21",
+     "extra": {}
+    }
+   },
+   "I03": {
+    "ih.t1": {
+     "id": "ih.t1",
+     "status": "PASS",
+     "line": 412,
+     "pass": 1,
+     "v": "1",
+     "u": "count",
+     "n": "1",
+     "min": "1",
+     "max": "1",
+     "extra": {}
+    },
+    "ih.t2": {
+     "id": "ih.t2",
+     "status": "PASS",
+     "line": 413,
+     "pass": 1,
+     "v": "1",
+     "u": "count",
+     "n": "1",
+     "min": "1",
+     "max": "1",
+     "extra": {}
+    },
+    "ih.t3": {
+     "id": "ih.t3",
+     "status": "PASS",
+     "line": 414,
+     "pass": 1,
+     "v": "0",
+     "u": "count",
+     "n": "1",
+     "min": "0",
+     "max": "0",
+     "extra": {}
+    },
+    "ih.t4": {
+     "id": "ih.t4",
+     "status": "INFO",
+     "line": 415,
+     "pass": 1,
+     "v": "1",
+     "u": "count",
+     "n": "1",
+     "min": "1",
+     "max": "1",
+     "extra": {}
+    },
+    "ih.t5": {
+     "id": "ih.t5",
+     "status": "PASS",
+     "line": 416,
+     "pass": 1,
+     "v": "6",
+     "u": "count",
+     "n": "1",
+     "min": "6",
+     "max": "6",
+     "extra": {}
+    },
+    "ih.t6": {
+     "id": "ih.t6",
+     "status": "PASS",
+     "line": 417,
+     "pass": 1,
+     "v": "6",
+     "u": "count",
+     "n": "1",
+     "min": "6",
+     "max": "6",
+     "extra": {}
+    },
+    "ih.t7": {
+     "id": "ih.t7",
+     "status": "PASS",
+     "line": 418,
+     "pass": 1,
+     "v": "6",
+     "u": "count",
+     "n": "1",
+     "min": "6",
+     "max": "6",
+     "extra": {}
+    }
+   },
+   "N01": {
+    "nb.LDIR.1.35": {
+     "id": "nb.LDIR.1.35",
+     "status": "PASS",
+     "line": 481,
+     "pass": 1,
+     "v": "13.17",
+     "u": "us",
+     "n": "5",
+     "min": "13.09",
+     "max": "13.2",
+     "extra": {
+      "R": "143"
+     }
+    },
+    "nb.LDIR.1.28": {
+     "id": "nb.LDIR.1.28",
+     "status": "PASS",
+     "line": 482,
+     "pass": 1,
+     "v": "1.59",
+     "u": "us",
+     "n": "5",
+     "min": "1.59",
+     "max": "1.59",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.LDIR.16.35": {
+     "id": "nb.LDIR.16.35",
+     "status": "PASS",
+     "line": 483,
+     "pass": 1,
+     "v": "103.18",
+     "u": "us",
+     "n": "5",
+     "min": "103.18",
+     "max": "103.18",
+     "extra": {
+      "R": "59"
+     }
+    },
+    "nb.LDIR.16.28": {
+     "id": "nb.LDIR.16.28",
+     "status": "PASS",
+     "line": 484,
+     "pass": 1,
+     "v": "12.83",
+     "u": "us",
+     "n": "5",
+     "min": "12.83",
+     "max": "12.83",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.LDIR.64.35": {
+     "id": "nb.LDIR.64.35",
+     "status": "PASS",
+     "line": 485,
+     "pass": 1,
+     "v": "390.66",
+     "u": "us",
+     "n": "5",
+     "min": "390.66",
+     "max": "390.66",
+     "extra": {
+      "R": "20"
+     }
+    },
+    "nb.LDIR.64.28": {
+     "id": "nb.LDIR.64.28",
+     "status": "PASS",
+     "line": 486,
+     "pass": 1,
+     "v": "48.93",
+     "u": "us",
+     "n": "5",
+     "min": "48.93",
+     "max": "48.93",
+     "extra": {
+      "R": "162"
+     }
+    },
+    "nb.LDIR.256.35": {
+     "id": "nb.LDIR.256.35",
+     "status": "PASS",
+     "line": 487,
+     "pass": 1,
+     "v": "1542.48",
+     "u": "us",
+     "n": "5",
+     "min": "1539.88",
+     "max": "1543.14",
+     "extra": {
+      "R": "5"
+     }
+    },
+    "nb.LDIR.256.28": {
+     "id": "nb.LDIR.256.28",
+     "status": "PASS",
+     "line": 488,
+     "pass": 1,
+     "v": "192.8",
+     "u": "us",
+     "n": "5",
+     "min": "192.8",
+     "max": "192.8",
+     "extra": {
+      "R": "45"
+     }
+    },
+    "nb.LDIR.1024.35": {
+     "id": "nb.LDIR.1024.35",
+     "status": "PASS",
+     "line": 489,
+     "pass": 1,
+     "v": "6146.52",
+     "u": "us",
+     "n": "5",
+     "min": "6136.76",
+     "max": "6153.04",
+     "extra": {
+      "R": "1"
+     }
+    },
+    "nb.LDIR.1024.28": {
+     "id": "nb.LDIR.1024.28",
+     "status": "PASS",
+     "line": 490,
+     "pass": 1,
+     "v": "769.5",
+     "u": "us",
+     "n": "5",
+     "min": "769.5",
+     "max": "769.5",
+     "extra": {
+      "R": "11"
+     }
+    },
+    "nb.LDIR.2048.35": {
+     "id": "nb.LDIR.2048.35",
+     "status": "PASS",
+     "line": 491,
+     "pass": 1,
+     "v": "12289.8",
+     "u": "us",
+     "n": "5",
+     "min": "12273.53",
+     "max": "12306.08",
+     "extra": {
+      "R": "1"
+     }
+    },
+    "nb.LDIR.2048.28": {
+     "id": "nb.LDIR.2048.28",
+     "status": "PASS",
+     "line": 492,
+     "pass": 1,
+     "v": "1536.63",
+     "u": "us",
+     "n": "5",
+     "min": "1536.63",
+     "max": "1536.63",
+     "extra": {
+      "R": "5"
+     }
+    },
+    "nb.LDI_unr.1.35": {
+     "id": "nb.LDI_unr.1.35",
+     "status": "PASS",
+     "line": 493,
+     "pass": 1,
+     "v": "13.11",
+     "u": "us",
+     "n": "5",
+     "min": "13.09",
+     "max": "13.2",
+     "extra": {
+      "R": "143"
+     }
+    },
+    "nb.LDI_unr.1.28": {
+     "id": "nb.LDI_unr.1.28",
+     "status": "PASS",
+     "line": 494,
+     "pass": 1,
+     "v": "1.59",
+     "u": "us",
+     "n": "5",
+     "min": "1.59",
+     "max": "1.59",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.LDI_unr.16.35": {
+     "id": "nb.LDI_unr.16.35",
+     "status": "PASS",
+     "line": 495,
+     "pass": 1,
+     "v": "81.66",
+     "u": "us",
+     "n": "5",
+     "min": "81.62",
+     "max": "81.86",
+     "extra": {
+      "R": "69"
+     }
+    },
+    "nb.LDI_unr.16.28": {
+     "id": "nb.LDI_unr.16.28",
+     "status": "PASS",
+     "line": 496,
+     "pass": 1,
+     "v": "10.21",
+     "u": "us",
+     "n": "5",
+     "min": "10.21",
+     "max": "10.21",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.LDI_unr.64.35": {
+     "id": "nb.LDI_unr.64.35",
+     "status": "PASS",
+     "line": 497,
+     "pass": 1,
+     "v": "301.33",
+     "u": "us",
+     "n": "5",
+     "min": "300.81",
+     "max": "301.46",
+     "extra": {
+      "R": "25"
+     }
+    },
+    "nb.LDI_unr.64.28": {
+     "id": "nb.LDI_unr.64.28",
+     "status": "PASS",
+     "line": 498,
+     "pass": 1,
+     "v": "37.6",
+     "u": "us",
+     "n": "5",
+     "min": "37.6",
+     "max": "37.6",
+     "extra": {
+      "R": "203"
+     }
+    },
+    "nb.LDI_unr.256.35": {
+     "id": "nb.LDI_unr.256.35",
+     "status": "PASS",
+     "line": 499,
+     "pass": 1,
+     "v": "1178.98",
+     "u": "us",
+     "n": "5",
+     "min": "1178.98",
+     "max": "1178.98",
+     "extra": {
+      "R": "7"
+     }
+    },
+    "nb.LDI_unr.256.28": {
+     "id": "nb.LDI_unr.256.28",
+     "status": "PASS",
+     "line": 500,
+     "pass": 1,
+     "v": "147.32",
+     "u": "us",
+     "n": "5",
+     "min": "147.32",
+     "max": "147.32",
+     "extra": {
+      "R": "59"
+     }
+    },
+    "nb.LDI_unr.1024.35": {
+     "id": "nb.LDI_unr.1024.35",
+     "status": "PASS",
+     "line": 501,
+     "pass": 1,
+     "v": "4727.09",
+     "u": "us",
+     "n": "5",
+     "min": "4720.58",
+     "max": "4736.86",
+     "extra": {
+      "R": "1"
+     }
+    },
+    "nb.LDI_unr.1024.28": {
+     "id": "nb.LDI_unr.1024.28",
+     "status": "PASS",
+     "line": 502,
+     "pass": 1,
+     "v": "591.43",
+     "u": "us",
+     "n": "5",
+     "min": "591.43",
+     "max": "591.43",
+     "extra": {
+      "R": "15"
+     }
+    },
+    "nb.LDI_unr.2048.35": {
+     "id": "nb.LDI_unr.2048.35",
+     "status": "PASS",
+     "line": 503,
+     "pass": 1,
+     "v": "9467.21",
+     "u": "us",
+     "n": "5",
+     "min": "9457.45",
+     "max": "9473.73",
+     "extra": {
+      "R": "1"
+     }
+    },
+    "nb.LDI_unr.2048.28": {
+     "id": "nb.LDI_unr.2048.28",
+     "status": "PASS",
+     "line": 504,
+     "pass": 1,
+     "v": "1183.63",
+     "u": "us",
+     "n": "5",
+     "min": "1183.63",
+     "max": "1183.63",
+     "extra": {
+      "R": "7"
+     }
+    },
+    "nb.STACK.16.35": {
+     "id": "nb.STACK.16.35",
+     "status": "PASS",
+     "line": 505,
+     "pass": 1,
+     "v": "73.58",
+     "u": "us",
+     "n": "5",
+     "min": "73.58",
+     "max": "73.58",
+     "extra": {
+      "R": "73"
+     }
+    },
+    "nb.STACK.16.28": {
+     "id": "nb.STACK.16.28",
+     "status": "PASS",
+     "line": 506,
+     "pass": 1,
+     "v": "9.19",
+     "u": "us",
+     "n": "5",
+     "min": "9.19",
+     "max": "9.19",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.STACK.64.35": {
+     "id": "nb.STACK.64.35",
+     "status": "PASS",
+     "line": 507,
+     "pass": 1,
+     "v": "251.68",
+     "u": "us",
+     "n": "5",
+     "min": "251.46",
+     "max": "252.02",
+     "extra": {
+      "R": "29"
+     }
+    },
+    "nb.STACK.64.28": {
+     "id": "nb.STACK.64.28",
+     "status": "PASS",
+     "line": 508,
+     "pass": 1,
+     "v": "31.51",
+     "u": "us",
+     "n": "5",
+     "min": "31.51",
+     "max": "31.51",
+     "extra": {
+      "R": "235"
+     }
+    },
+    "nb.STACK.256.35": {
+     "id": "nb.STACK.256.35",
+     "status": "PASS",
+     "line": 509,
+     "pass": 1,
+     "v": "964.46",
+     "u": "us",
+     "n": "5",
+     "min": "964.46",
+     "max": "964.46",
+     "extra": {
+      "R": "8"
+     }
+    },
+    "nb.STACK.256.28": {
+     "id": "nb.STACK.256.28",
+     "status": "PASS",
+     "line": 510,
+     "pass": 1,
+     "v": "120.36",
+     "u": "us",
+     "n": "5",
+     "min": "120.36",
+     "max": "120.36",
+     "extra": {
+      "R": "71"
+     }
+    },
+    "nb.STACK.1024.35": {
+     "id": "nb.STACK.1024.35",
+     "status": "PASS",
+     "line": 511,
+     "pass": 1,
+     "v": "3817.16",
+     "u": "us",
+     "n": "5",
+     "min": "3817.16",
+     "max": "3817.16",
+     "extra": {
+      "R": "2"
+     }
+    },
+    "nb.STACK.1024.28": {
+     "id": "nb.STACK.1024.28",
+     "status": "PASS",
+     "line": 512,
+     "pass": 1,
+     "v": "476.58",
+     "u": "us",
+     "n": "5",
+     "min": "476.58",
+     "max": "476.58",
+     "extra": {
+      "R": "18"
+     }
+    },
+    "nb.STACK.2048.35": {
+     "id": "nb.STACK.2048.35",
+     "status": "PASS",
+     "line": 513,
+     "pass": 1,
+     "v": "7614.79",
+     "u": "us",
+     "n": "5",
+     "min": "7601.77",
+     "max": "7618.05",
+     "extra": {
+      "R": "1"
+     }
+    },
+    "nb.STACK.2048.28": {
+     "id": "nb.STACK.2048.28",
+     "status": "PASS",
+     "line": 514,
+     "pass": 1,
+     "v": "951.35",
+     "u": "us",
+     "n": "5",
+     "min": "951.35",
+     "max": "951.35",
+     "extra": {
+      "R": "9"
+     }
+    },
+    "nb.DMA.1.35": {
+     "id": "nb.DMA.1.35",
+     "status": "PASS",
+     "line": 515,
+     "pass": 1,
+     "v": "102.73",
+     "u": "us",
+     "n": "5",
+     "min": "102.63",
+     "max": "102.9",
+     "extra": {
+      "R": "59"
+     }
+    },
+    "nb.DMA.1.28": {
+     "id": "nb.DMA.1.28",
+     "status": "PASS",
+     "line": 516,
+     "pass": 1,
+     "v": "12.83",
+     "u": "us",
+     "n": "5",
+     "min": "12.83",
+     "max": "12.83",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.DMA.16.35": {
+     "id": "nb.DMA.16.35",
+     "status": "PASS",
+     "line": 517,
+     "pass": 1,
+     "v": "120.01",
+     "u": "us",
+     "n": "5",
+     "min": "119.89",
+     "max": "120.2",
+     "extra": {
+      "R": "52"
+     }
+    },
+    "nb.DMA.16.28": {
+     "id": "nb.DMA.16.28",
+     "status": "PASS",
+     "line": 518,
+     "pass": 1,
+     "v": "15.57",
+     "u": "us",
+     "n": "5",
+     "min": "15.57",
+     "max": "15.57",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.DMA.64.35": {
+     "id": "nb.DMA.64.35",
+     "status": "PASS",
+     "line": 519,
+     "pass": 1,
+     "v": "174.88",
+     "u": "us",
+     "n": "5",
+     "min": "174.88",
+     "max": "174.88",
+     "extra": {
+      "R": "39"
+     }
+    },
+    "nb.DMA.64.28": {
+     "id": "nb.DMA.64.28",
+     "status": "PASS",
+     "line": 520,
+     "pass": 1,
+     "v": "24.12",
+     "u": "us",
+     "n": "5",
+     "min": "24.12",
+     "max": "24.12",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.DMA.256.35": {
+     "id": "nb.DMA.256.35",
+     "status": "PASS",
+     "line": 521,
+     "pass": 1,
+     "v": "393.92",
+     "u": "us",
+     "n": "5",
+     "min": "393.92",
+     "max": "393.92",
+     "extra": {
+      "R": "20"
+     }
+    },
+    "nb.DMA.256.28": {
+     "id": "nb.DMA.256.28",
+     "status": "PASS",
+     "line": 522,
+     "pass": 1,
+     "v": "58.45",
+     "u": "us",
+     "n": "5",
+     "min": "58.38",
+     "max": "58.5",
+     "extra": {
+      "R": "138"
+     }
+    },
+    "nb.DMA.1024.35": {
+     "id": "nb.DMA.1024.35",
+     "status": "PASS",
+     "line": 523,
+     "pass": 1,
+     "v": "1272.38",
+     "u": "us",
+     "n": "5",
+     "min": "1272.38",
+     "max": "1272.38",
+     "extra": {
+      "R": "6"
+     }
+    },
+    "nb.DMA.1024.28": {
+     "id": "nb.DMA.1024.28",
+     "status": "PASS",
+     "line": 524,
+     "pass": 1,
+     "v": "195.33",
+     "u": "us",
+     "n": "5",
+     "min": "195.33",
+     "max": "195.33",
+     "extra": {
+      "R": "45"
+     }
+    },
+    "nb.DMA.2048.35": {
+     "id": "nb.DMA.2048.35",
+     "status": "PASS",
+     "line": 525,
+     "pass": 1,
+     "v": "2441.68",
+     "u": "us",
+     "n": "5",
+     "min": "2441.68",
+     "max": "2441.68",
+     "extra": {
+      "R": "3"
+     }
+    },
+    "nb.DMA.2048.28": {
+     "id": "nb.DMA.2048.28",
+     "status": "PASS",
+     "line": 526,
+     "pass": 1,
+     "v": "377.93",
+     "u": "us",
+     "n": "5",
+     "min": "377.93",
+     "max": "377.93",
+     "extra": {
+      "R": "23"
+     }
+    },
+    "nb.DMA_rtg.16.35": {
+     "id": "nb.DMA_rtg.16.35",
+     "status": "PASS",
+     "line": 527,
+     "pass": 1,
+     "v": "90.05",
+     "u": "us",
+     "n": "5",
+     "min": "89.9",
+     "max": "90.15",
+     "extra": {
+      "R": "65"
+     }
+    },
+    "nb.DMA_rtg.16.28": {
+     "id": "nb.DMA_rtg.16.28",
+     "status": "PASS",
+     "line": 528,
+     "pass": 1,
+     "v": "11.8",
+     "u": "us",
+     "n": "5",
+     "min": "11.8",
+     "max": "11.8",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.DMA_rtg.256.35": {
+     "id": "nb.DMA_rtg.256.35",
+     "status": "PASS",
+     "line": 529,
+     "pass": 1,
+     "v": "364.3",
+     "u": "us",
+     "n": "5",
+     "min": "363.53",
+     "max": "365.08",
+     "extra": {
+      "R": "21"
+     }
+    },
+    "nb.DMA_rtg.256.28": {
+     "id": "nb.DMA_rtg.256.28",
+     "status": "PASS",
+     "line": 530,
+     "pass": 1,
+     "v": "54.59",
+     "u": "us",
+     "n": "5",
+     "min": "54.59",
+     "max": "54.59",
+     "extra": {
+      "R": "147"
+     }
+    },
+    "nb.DMA_rtg.2048.35": {
+     "id": "nb.DMA_rtg.2048.35",
+     "status": "PASS",
+     "line": 531,
+     "pass": 1,
+     "v": "2412.37",
+     "u": "us",
+     "n": "5",
+     "min": "2409.12",
+     "max": "2414.55",
+     "extra": {
+      "R": "3"
+     }
+    },
+    "nb.DMA_rtg.2048.28": {
+     "id": "nb.DMA_rtg.2048.28",
+     "status": "PASS",
+     "line": 532,
+     "pass": 1,
+     "v": "374.39",
+     "u": "us",
+     "n": "5",
+     "min": "374.39",
+     "max": "374.39",
+     "extra": {
+      "R": "23"
+     }
+    },
+    "nb.DMA_rrun.256.35": {
+     "id": "nb.DMA_rrun.256.35",
+     "status": "PASS",
+     "line": 533,
+     "pass": 1,
+     "v": "315.92",
+     "u": "us",
+     "n": "5",
+     "min": "315.38",
+     "max": "316.06",
+     "extra": {
+      "R": "24"
+     }
+    },
+    "nb.DMA_rrun.256.28": {
+     "id": "nb.DMA_rrun.256.28",
+     "status": "PASS",
+     "line": 534,
+     "pass": 1,
+     "v": "48.67",
+     "u": "us",
+     "n": "5",
+     "min": "48.63",
+     "max": "48.73",
+     "extra": {
+      "R": "163"
+     }
+    },
+    "nb.DMA_cont.1.35": {
+     "id": "nb.DMA_cont.1.35",
+     "status": "INFO",
+     "line": 535,
+     "pass": 1,
+     "v": "18.85",
+     "u": "us",
+     "n": "5",
+     "min": "18.76",
+     "max": "18.88",
+     "extra": {
+      "R": "131"
+     }
+    },
+    "nb.DMA_cont.1.28": {
+     "id": "nb.DMA_cont.1.28",
+     "status": "INFO",
+     "line": 536,
+     "pass": 1,
+     "v": "2.36",
+     "u": "us",
+     "n": "5",
+     "min": "2.36",
+     "max": "2.36",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.DMA_arm.256.35": {
+     "id": "nb.DMA_arm.256.35",
+     "status": "PASS",
+     "line": 537,
+     "pass": 1,
+     "v": "327.68",
+     "u": "us",
+     "n": "5",
+     "min": "327.68",
+     "max": "327.68",
+     "extra": {
+      "R": "23"
+     }
+    },
+    "nb.DMA_arm.256.28": {
+     "id": "nb.DMA_arm.256.28",
+     "status": "PASS",
+     "line": 538,
+     "pass": 1,
+     "v": "50.16",
+     "u": "us",
+     "n": "5",
+     "min": "50.16",
+     "max": "50.16",
+     "extra": {
+      "R": "159"
+     }
+    },
+    "nb.DMA_brst.256.35": {
+     "id": "nb.DMA_brst.256.35",
+     "status": "PASS",
+     "line": 539,
+     "pass": 1,
+     "v": "393.92",
+     "u": "us",
+     "n": "5",
+     "min": "393.92",
+     "max": "393.92",
+     "extra": {
+      "R": "20"
+     }
+    },
+    "nb.DMA_brst.256.28": {
+     "id": "nb.DMA_brst.256.28",
+     "status": "PASS",
+     "line": 540,
+     "pass": 1,
+     "v": "58.45",
+     "u": "us",
+     "n": "5",
+     "min": "58.38",
+     "max": "58.5",
+     "extra": {
+      "R": "138"
+     }
+    },
+    "nb.DMA_brst.2048.35": {
+     "id": "nb.DMA_brst.2048.35",
+     "status": "PASS",
+     "line": 541,
+     "pass": 1,
+     "v": "2441.68",
+     "u": "us",
+     "n": "5",
+     "min": "2441.68",
+     "max": "2441.68",
+     "extra": {
+      "R": "3"
+     }
+    },
+    "nb.DMA_brst.2048.28": {
+     "id": "nb.DMA_brst.2048.28",
+     "status": "PASS",
+     "line": 542,
+     "pass": 1,
+     "v": "377.93",
+     "u": "us",
+     "n": "5",
+     "min": "377.93",
+     "max": "377.93",
+     "extra": {
+      "R": "23"
+     }
+    },
+    "nb.LDIRX.256.35": {
+     "id": "nb.LDIRX.256.35",
+     "status": "PASS",
+     "line": 543,
+     "pass": 1,
+     "v": "1544.44",
+     "u": "us",
+     "n": "5",
+     "min": "1543.14",
+     "max": "1546.39",
+     "extra": {
+      "R": "5"
+     }
+    },
+    "nb.LDIRX.256.28": {
+     "id": "nb.LDIRX.256.28",
+     "status": "PASS",
+     "line": 544,
+     "pass": 1,
+     "v": "193.16",
+     "u": "us",
+     "n": "5",
+     "min": "193.16",
+     "max": "193.16",
+     "extra": {
+      "R": "45"
+     }
+    },
+    "nb.FILL_LDR.16.35": {
+     "id": "nb.FILL_LDR.16.35",
+     "status": "PASS",
+     "line": 545,
+     "pass": 1,
+     "v": "100.04",
+     "u": "us",
+     "n": "5",
+     "min": "99.83",
+     "max": "100.1",
+     "extra": {
+      "R": "60"
+     }
+    },
+    "nb.FILL_LDR.16.28": {
+     "id": "nb.FILL_LDR.16.28",
+     "status": "PASS",
+     "line": 546,
+     "pass": 1,
+     "v": "12.45",
+     "u": "us",
+     "n": "5",
+     "min": "12.44",
+     "max": "12.51",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.FILL_LDR.256.35": {
+     "id": "nb.FILL_LDR.256.35",
+     "status": "PASS",
+     "line": 547,
+     "pass": 1,
+     "v": "1539.88",
+     "u": "us",
+     "n": "5",
+     "min": "1539.88",
+     "max": "1539.88",
+     "extra": {
+      "R": "5"
+     }
+    },
+    "nb.FILL_LDR.256.28": {
+     "id": "nb.FILL_LDR.256.28",
+     "status": "PASS",
+     "line": 548,
+     "pass": 1,
+     "v": "192.44",
+     "u": "us",
+     "n": "5",
+     "min": "192.44",
+     "max": "192.44",
+     "extra": {
+      "R": "45"
+     }
+    },
+    "nb.FILL_LDR.2048.35": {
+     "id": "nb.FILL_LDR.2048.35",
+     "status": "PASS",
+     "line": 549,
+     "pass": 1,
+     "v": "12276.78",
+     "u": "us",
+     "n": "5",
+     "min": "12273.53",
+     "max": "12289.8",
+     "extra": {
+      "R": "1"
+     }
+    },
+    "nb.FILL_LDR.2048.28": {
+     "id": "nb.FILL_LDR.2048.28",
+     "status": "PASS",
+     "line": 550,
+     "pass": 1,
+     "v": "1536.63",
+     "u": "us",
+     "n": "5",
+     "min": "1536.63",
+     "max": "1536.63",
+     "extra": {
+      "R": "5"
+     }
+    },
+    "nb.FILL_PSH.16.35": {
+     "id": "nb.FILL_PSH.16.35",
+     "status": "PASS",
+     "line": 551,
+     "pass": 1,
+     "v": "51.31",
+     "u": "us",
+     "n": "5",
+     "min": "51.21",
+     "max": "51.39",
+     "extra": {
+      "R": "89"
+     }
+    },
+    "nb.FILL_PSH.16.28": {
+     "id": "nb.FILL_PSH.16.28",
+     "status": "PASS",
+     "line": 552,
+     "pass": 1,
+     "v": "6.4",
+     "u": "us",
+     "n": "5",
+     "min": "6.38",
+     "max": "6.44",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.FILL_PSH.256.35": {
+     "id": "nb.FILL_PSH.256.35",
+     "status": "PASS",
+     "line": 553,
+     "pass": 1,
+     "v": "428.28",
+     "u": "us",
+     "n": "5",
+     "min": "427.74",
+     "max": "428.65",
+     "extra": {
+      "R": "18"
+     }
+    },
+    "nb.FILL_PSH.256.28": {
+     "id": "nb.FILL_PSH.256.28",
+     "status": "PASS",
+     "line": 554,
+     "pass": 1,
+     "v": "53.5",
+     "u": "us",
+     "n": "5",
+     "min": "53.5",
+     "max": "53.5",
+     "extra": {
+      "R": "150"
+     }
+    },
+    "nb.FILL_PSH.2048.35": {
+     "id": "nb.FILL_PSH.2048.35",
+     "status": "PASS",
+     "line": 555,
+     "pass": 1,
+     "v": "3345.1",
+     "u": "us",
+     "n": "5",
+     "min": "3345.1",
+     "max": "3345.1",
+     "extra": {
+      "R": "2"
+     }
+    },
+    "nb.FILL_PSH.2048.28": {
+     "id": "nb.FILL_PSH.2048.28",
+     "status": "PASS",
+     "line": 556,
+     "pass": 1,
+     "v": "417.79",
+     "u": "us",
+     "n": "5",
+     "min": "417.79",
+     "max": "417.79",
+     "extra": {
+      "R": "21"
+     }
+    },
+    "nb.FILL_DMA.16.35": {
+     "id": "nb.FILL_DMA.16.35",
+     "status": "PASS",
+     "line": 557,
+     "pass": 1,
+     "v": "119.95",
+     "u": "us",
+     "n": "5",
+     "min": "119.57",
+     "max": "120.2",
+     "extra": {
+      "R": "52"
+     }
+    },
+    "nb.FILL_DMA.16.28": {
+     "id": "nb.FILL_DMA.16.28",
+     "status": "PASS",
+     "line": 558,
+     "pass": 1,
+     "v": "15.57",
+     "u": "us",
+     "n": "5",
+     "min": "15.57",
+     "max": "15.57",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.FILL_DMA.256.35": {
+     "id": "nb.FILL_DMA.256.35",
+     "status": "PASS",
+     "line": 559,
+     "pass": 1,
+     "v": "393.92",
+     "u": "us",
+     "n": "5",
+     "min": "393.92",
+     "max": "393.92",
+     "extra": {
+      "R": "20"
+     }
+    },
+    "nb.FILL_DMA.256.28": {
+     "id": "nb.FILL_DMA.256.28",
+     "status": "PASS",
+     "line": 560,
+     "pass": 1,
+     "v": "58.45",
+     "u": "us",
+     "n": "5",
+     "min": "58.38",
+     "max": "58.5",
+     "extra": {
+      "R": "138"
+     }
+    },
+    "nb.FILL_DMA.2048.35": {
+     "id": "nb.FILL_DMA.2048.35",
+     "status": "PASS",
+     "line": 561,
+     "pass": 1,
+     "v": "2441.68",
+     "u": "us",
+     "n": "5",
+     "min": "2441.68",
+     "max": "2441.68",
+     "extra": {
+      "R": "3"
+     }
+    },
+    "nb.FILL_DMA.2048.28": {
+     "id": "nb.FILL_DMA.2048.28",
+     "status": "PASS",
+     "line": 562,
+     "pass": 1,
+     "v": "377.93",
+     "u": "us",
+     "n": "5",
+     "min": "377.93",
+     "max": "377.93",
+     "extra": {
+      "R": "23"
+     }
+    },
+    "nb.PAT_OTIR.64.35": {
+     "id": "nb.PAT_OTIR.64.35",
+     "status": "INFO",
+     "line": 563,
+     "pass": 1,
+     "v": "395.38",
+     "u": "us",
+     "n": "5",
+     "min": "394.73",
+     "max": "395.55",
+     "extra": {
+      "R": "20"
+     }
+    },
+    "nb.PAT_OTIR.64.28": {
+     "id": "nb.PAT_OTIR.64.28",
+     "status": "INFO",
+     "line": 564,
+     "pass": 1,
+     "v": "49.44",
+     "u": "us",
+     "n": "5",
+     "min": "49.44",
+     "max": "49.44",
+     "extra": {
+      "R": "161"
+     }
+    },
+    "nb.PAT_OTIR.128.35": {
+     "id": "nb.PAT_OTIR.128.35",
+     "status": "INFO",
+     "line": 565,
+     "pass": 1,
+     "v": "779.71",
+     "u": "us",
+     "n": "5",
+     "min": "779.71",
+     "max": "779.71",
+     "extra": {
+      "R": "10"
+     }
+    },
+    "nb.PAT_OTIR.128.28": {
+     "id": "nb.PAT_OTIR.128.28",
+     "status": "INFO",
+     "line": 566,
+     "pass": 1,
+     "v": "97.48",
+     "u": "us",
+     "n": "5",
+     "min": "97.48",
+     "max": "97.48",
+     "extra": {
+      "R": "87"
+     }
+    },
+    "nb.PAT_OTIR.256.35": {
+     "id": "nb.PAT_OTIR.256.35",
+     "status": "INFO",
+     "line": 567,
+     "pass": 1,
+     "v": "1545.74",
+     "u": "us",
+     "n": "5",
+     "min": "1543.14",
+     "max": "1546.39",
+     "extra": {
+      "R": "5"
+     }
+    },
+    "nb.PAT_OTIR.256.28": {
+     "id": "nb.PAT_OTIR.256.28",
+     "status": "INFO",
+     "line": 568,
+     "pass": 1,
+     "v": "193.52",
+     "u": "us",
+     "n": "5",
+     "min": "193.52",
+     "max": "193.52",
+     "extra": {
+      "R": "45"
+     }
+    },
+    "nb.PAT_OTIR.2048.35": {
+     "id": "nb.PAT_OTIR.2048.35",
+     "status": "INFO",
+     "line": 569,
+     "pass": 1,
+     "v": "12325.61",
+     "u": "us",
+     "n": "5",
+     "min": "12322.36",
+     "max": "12338.64",
+     "extra": {
+      "R": "1"
+     }
+    },
+    "nb.PAT_OTIR.2048.28": {
+     "id": "nb.PAT_OTIR.2048.28",
+     "status": "INFO",
+     "line": 570,
+     "pass": 1,
+     "v": "1543.14",
+     "u": "us",
+     "n": "5",
+     "min": "1543.14",
+     "max": "1543.14",
+     "extra": {
+      "R": "5"
+     }
+    },
+    "nb.PAT_OUTI.64.35": {
+     "id": "nb.PAT_OUTI.64.35",
+     "status": "INFO",
+     "line": 571,
+     "pass": 1,
+     "v": "307.84",
+     "u": "us",
+     "n": "5",
+     "min": "307.32",
+     "max": "307.97",
+     "extra": {
+      "R": "25"
+     }
+    },
+    "nb.PAT_OUTI.64.28": {
+     "id": "nb.PAT_OUTI.64.28",
+     "status": "INFO",
+     "line": 572,
+     "pass": 1,
+     "v": "38.49",
+     "u": "us",
+     "n": "5",
+     "min": "38.49",
+     "max": "38.49",
+     "extra": {
+      "R": "200"
+     }
+    },
+    "nb.PAT_OUTI.128.35": {
+     "id": "nb.PAT_OUTI.128.35",
+     "status": "INFO",
+     "line": 573,
+     "pass": 1,
+     "v": "599.77",
+     "u": "us",
+     "n": "5",
+     "min": "599.77",
+     "max": "599.77",
+     "extra": {
+      "R": "13"
+     }
+    },
+    "nb.PAT_OUTI.128.28": {
+     "id": "nb.PAT_OUTI.128.28",
+     "status": "INFO",
+     "line": 574,
+     "pass": 1,
+     "v": "75.02",
+     "u": "us",
+     "n": "5",
+     "min": "75.02",
+     "max": "75.02",
+     "extra": {
+      "R": "110"
+     }
+    },
+    "nb.PAT_OUTI.256.35": {
+     "id": "nb.PAT_OUTI.256.35",
+     "status": "INFO",
+     "line": 575,
+     "pass": 1,
+     "v": "1185.96",
+     "u": "us",
+     "n": "5",
+     "min": "1185.96",
+     "max": "1185.96",
+     "extra": {
+      "R": "7"
+     }
+    },
+    "nb.PAT_OUTI.256.28": {
+     "id": "nb.PAT_OUTI.256.28",
+     "status": "INFO",
+     "line": 576,
+     "pass": 1,
+     "v": "147.9",
+     "u": "us",
+     "n": "5",
+     "min": "147.9",
+     "max": "147.9",
+     "extra": {
+      "R": "58"
+     }
+    },
+    "nb.PAT_OUTI.2048.35": {
+     "id": "nb.PAT_OUTI.2048.35",
+     "status": "INFO",
+     "line": 577,
+     "pass": 1,
+     "v": "9470.47",
+     "u": "us",
+     "n": "5",
+     "min": "9457.45",
+     "max": "9473.73",
+     "extra": {
+      "R": "1"
+     }
+    },
+    "nb.PAT_OUTI.2048.28": {
+     "id": "nb.PAT_OUTI.2048.28",
+     "status": "INFO",
+     "line": 578,
+     "pass": 1,
+     "v": "1183.63",
+     "u": "us",
+     "n": "5",
+     "min": "1183.63",
+     "max": "1183.63",
+     "extra": {
+      "R": "7"
+     }
+    },
+    "nb.PAT_DMA.64.35": {
+     "id": "nb.PAT_DMA.64.35",
+     "status": "INFO",
+     "line": 579,
+     "pass": 1,
+     "v": "182.22",
+     "u": "us",
+     "n": "5",
+     "min": "182.05",
+     "max": "182.48",
+     "extra": {
+      "R": "38"
+     }
+    },
+    "nb.PAT_DMA.64.28": {
+     "id": "nb.PAT_DMA.64.28",
+     "status": "INFO",
+     "line": 580,
+     "pass": 1,
+     "v": "25.02",
+     "u": "us",
+     "n": "5",
+     "min": "25.02",
+     "max": "25.02",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.PAT_DMA.128.35": {
+     "id": "nb.PAT_DMA.128.35",
+     "status": "INFO",
+     "line": 581,
+     "pass": 1,
+     "v": "255.27",
+     "u": "us",
+     "n": "5",
+     "min": "254.83",
+     "max": "255.39",
+     "extra": {
+      "R": "29"
+     }
+    },
+    "nb.PAT_DMA.128.28": {
+     "id": "nb.PAT_DMA.128.28",
+     "status": "INFO",
+     "line": 582,
+     "pass": 1,
+     "v": "36.45",
+     "u": "us",
+     "n": "5",
+     "min": "36.45",
+     "max": "36.45",
+     "extra": {
+      "R": "209"
+     }
+    },
+    "nb.PAT_DMA.256.35": {
+     "id": "nb.PAT_DMA.256.35",
+     "status": "INFO",
+     "line": 583,
+     "pass": 1,
+     "v": "401.25",
+     "u": "us",
+     "n": "5",
+     "min": "401.25",
+     "max": "401.25",
+     "extra": {
+      "R": "20"
+     }
+    },
+    "nb.PAT_DMA.256.28": {
+     "id": "nb.PAT_DMA.256.28",
+     "status": "INFO",
+     "line": 584,
+     "pass": 1,
+     "v": "59.28",
+     "u": "us",
+     "n": "5",
+     "min": "59.28",
+     "max": "59.28",
+     "extra": {
+      "R": "137"
+     }
+    },
+    "nb.PAT_DMA.2048.35": {
+     "id": "nb.PAT_DMA.2048.35",
+     "status": "INFO",
+     "line": 585,
+     "pass": 1,
+     "v": "2452.53",
+     "u": "us",
+     "n": "5",
+     "min": "2452.53",
+     "max": "2452.53",
+     "extra": {
+      "R": "3"
+     }
+    },
+    "nb.PAT_DMA.2048.28": {
+     "id": "nb.PAT_DMA.2048.28",
+     "status": "INFO",
+     "line": 586,
+     "pass": 1,
+     "v": "378.63",
+     "u": "us",
+     "n": "5",
+     "min": "378.63",
+     "max": "378.63",
+     "extra": {
+      "R": "23"
+     }
+    },
+    "nb.ATR_57.1.35": {
+     "id": "nb.ATR_57.1.35",
+     "status": "INFO",
+     "line": 587,
+     "pass": 1,
+     "v": "30.52",
+     "u": "us",
+     "n": "5",
+     "min": "30.52",
+     "max": "30.52",
+     "extra": {
+      "R": "112"
+     }
+    },
+    "nb.ATR_57.1.28": {
+     "id": "nb.ATR_57.1.28",
+     "status": "INFO",
+     "line": 588,
+     "pass": 1,
+     "v": "3.83",
+     "u": "us",
+     "n": "5",
+     "min": "3.83",
+     "max": "3.83",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.ATR_57.32.35": {
+     "id": "nb.ATR_57.32.35",
+     "status": "INFO",
+     "line": 589,
+     "pass": 1,
+     "v": "779.71",
+     "u": "us",
+     "n": "5",
+     "min": "779.71",
+     "max": "779.71",
+     "extra": {
+      "R": "10"
+     }
+    },
+    "nb.ATR_57.32.28": {
+     "id": "nb.ATR_57.32.28",
+     "status": "INFO",
+     "line": 590,
+     "pass": 1,
+     "v": "97.48",
+     "u": "us",
+     "n": "5",
+     "min": "97.48",
+     "max": "97.48",
+     "extra": {
+      "R": "87"
+     }
+    },
+    "nb.ATR_NR.1.35": {
+     "id": "nb.ATR_NR.1.35",
+     "status": "INFO",
+     "line": 591,
+     "pass": 1,
+     "v": "42.85",
+     "u": "us",
+     "n": "5",
+     "min": "42.79",
+     "max": "42.96",
+     "extra": {
+      "R": "97"
+     }
+    },
+    "nb.ATR_NR.1.28": {
+     "id": "nb.ATR_NR.1.28",
+     "status": "INFO",
+     "line": 592,
+     "pass": 1,
+     "v": "5.36",
+     "u": "us",
+     "n": "5",
+     "min": "5.36",
+     "max": "5.36",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.ATR_NR.32.35": {
+     "id": "nb.ATR_NR.32.35",
+     "status": "INFO",
+     "line": 593,
+     "pass": 1,
+     "v": "1539.88",
+     "u": "us",
+     "n": "5",
+     "min": "1539.88",
+     "max": "1539.88",
+     "extra": {
+      "R": "5"
+     }
+    },
+    "nb.ATR_NR.32.28": {
+     "id": "nb.ATR_NR.32.28",
+     "status": "INFO",
+     "line": 594,
+     "pass": 1,
+     "v": "192.07",
+     "u": "us",
+     "n": "5",
+     "min": "192.07",
+     "max": "192.07",
+     "extra": {
+      "R": "45"
+     }
+    },
+    "nb.HIDE_NR.128.35": {
+     "id": "nb.HIDE_NR.128.35",
+     "status": "INFO",
+     "line": 595,
+     "pass": 1,
+     "v": "1212.7",
+     "u": "us",
+     "n": "5",
+     "min": "1212.7",
+     "max": "1212.7",
+     "extra": {
+      "R": "6"
+     }
+    },
+    "nb.HIDE_NR.128.28": {
+     "id": "nb.HIDE_NR.128.28",
+     "status": "INFO",
+     "line": 596,
+     "pass": 1,
+     "v": "151.64",
+     "u": "us",
+     "n": "5",
+     "min": "151.64",
+     "max": "151.64",
+     "extra": {
+      "R": "57"
+     }
+    },
+    "nb.HIDE_57.128.35": {
+     "id": "nb.HIDE_57.128.35",
+     "status": "INFO",
+     "line": 597,
+     "pass": 1,
+     "v": "3084.66",
+     "u": "us",
+     "n": "5",
+     "min": "3084.66",
+     "max": "3084.66",
+     "extra": {
+      "R": "2"
+     }
+    },
+    "nb.HIDE_57.128.28": {
+     "id": "nb.HIDE_57.128.28",
+     "status": "INFO",
+     "line": 598,
+     "pass": 1,
+     "v": "385",
+     "u": "us",
+     "n": "5",
+     "min": "385",
+     "max": "385",
+     "extra": {
+      "R": "23"
+     }
+    },
+    "nb.SPR_OFF.0.35": {
+     "id": "nb.SPR_OFF.0.35",
+     "status": "INFO",
+     "line": 599,
+     "pass": 1,
+     "v": "5.62",
+     "u": "us",
+     "n": "5",
+     "min": "5.62",
+     "max": "5.62",
+     "extra": {
+      "R": "162"
+     }
+    },
+    "nb.SPR_OFF.0.28": {
+     "id": "nb.SPR_OFF.0.28",
+     "status": "INFO",
+     "line": 600,
+     "pass": 1,
+     "v": "0.7",
+     "u": "us",
+     "n": "5",
+     "min": "0.7",
+     "max": "0.7",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.NR_v.0.35": {
+     "id": "nb.NR_v.0.35",
+     "status": "INFO",
+     "line": 601,
+     "pass": 1,
+     "v": "5.62",
+     "u": "us",
+     "n": "5",
+     "min": "5.62",
+     "max": "5.62",
+     "extra": {
+      "R": "162"
+     }
+    },
+    "nb.NR_v.0.28": {
+     "id": "nb.NR_v.0.28",
+     "status": "INFO",
+     "line": 602,
+     "pass": 1,
+     "v": "0.7",
+     "u": "us",
+     "n": "5",
+     "min": "0.7",
+     "max": "0.7",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.NR_a.0.35": {
+     "id": "nb.NR_a.0.35",
+     "status": "INFO",
+     "line": 603,
+     "pass": 1,
+     "v": "6.81",
+     "u": "us",
+     "n": "5",
+     "min": "6.81",
+     "max": "6.81",
+     "extra": {
+      "R": "160"
+     }
+    },
+    "nb.NR_a.0.28": {
+     "id": "nb.NR_a.0.28",
+     "status": "INFO",
+     "line": 604,
+     "pass": 1,
+     "v": "0.82",
+     "u": "us",
+     "n": "5",
+     "min": "0.82",
+     "max": "0.82",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.PORTPAIR.0.35": {
+     "id": "nb.PORTPAIR.0.35",
+     "status": "INFO",
+     "line": 605,
+     "pass": 1,
+     "v": "14.76",
+     "u": "us",
+     "n": "5",
+     "min": "14.76",
+     "max": "14.76",
+     "extra": {
+      "R": "140"
+     }
+    },
+    "nb.PORTPAIR.0.28": {
+     "id": "nb.PORTPAIR.0.28",
+     "status": "INFO",
+     "line": 606,
+     "pass": 1,
+     "v": "1.85",
+     "u": "us",
+     "n": "5",
+     "min": "1.85",
+     "max": "1.85",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.NR_READ.0.35": {
+     "id": "nb.NR_READ.0.35",
+     "status": "INFO",
+     "line": 607,
+     "pass": 1,
+     "v": "12.85",
+     "u": "us",
+     "n": "5",
+     "min": "12.77",
+     "max": "12.88",
+     "extra": {
+      "R": "144"
+     }
+    },
+    "nb.NR_READ.0.28": {
+     "id": "nb.NR_READ.0.28",
+     "status": "INFO",
+     "line": 608,
+     "pass": 1,
+     "v": "1.59",
+     "u": "us",
+     "n": "5",
+     "min": "1.59",
+     "max": "1.59",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.MMU.1.35": {
+     "id": "nb.MMU.1.35",
+     "status": "INFO",
+     "line": 609,
+     "pass": 1,
+     "v": "5.64",
+     "u": "us",
+     "n": "5",
+     "min": "5.62",
+     "max": "5.72",
+     "extra": {
+      "R": "162"
+     }
+    },
+    "nb.MMU.1.28": {
+     "id": "nb.MMU.1.28",
+     "status": "INFO",
+     "line": 610,
+     "pass": 1,
+     "v": "0.7",
+     "u": "us",
+     "n": "5",
+     "min": "0.7",
+     "max": "0.7",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.MMU.4.35": {
+     "id": "nb.MMU.4.35",
+     "status": "INFO",
+     "line": 611,
+     "pass": 1,
+     "v": "22.84",
+     "u": "us",
+     "n": "5",
+     "min": "22.84",
+     "max": "22.84",
+     "extra": {
+      "R": "124"
+     }
+    },
+    "nb.MMU.4.28": {
+     "id": "nb.MMU.4.28",
+     "status": "INFO",
+     "line": 612,
+     "pass": 1,
+     "v": "2.87",
+     "u": "us",
+     "n": "5",
+     "min": "2.87",
+     "max": "2.87",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.7FFD.0.35": {
+     "id": "nb.7FFD.0.35",
+     "status": "INFO",
+     "line": 613,
+     "pass": 1,
+     "v": "8.29",
+     "u": "us",
+     "n": "5",
+     "min": "8.29",
+     "max": "8.29",
+     "extra": {
+      "R": "155"
+     }
+    },
+    "nb.7FFD.0.28": {
+     "id": "nb.7FFD.0.28",
+     "status": "INFO",
+     "line": 614,
+     "pass": 1,
+     "v": "1.02",
+     "u": "us",
+     "n": "5",
+     "min": "1.02",
+     "max": "1.02",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.ULA_CHAR.0.35": {
+     "id": "nb.ULA_CHAR.0.35",
+     "status": "INFO",
+     "line": 615,
+     "pass": 1,
+     "v": "61.61",
+     "u": "us",
+     "n": "5",
+     "min": "61.49",
+     "max": "61.69",
+     "extra": {
+      "R": "81"
+     }
+    },
+    "nb.ULA_CHAR.0.28": {
+     "id": "nb.ULA_CHAR.0.28",
+     "status": "INFO",
+     "line": 616,
+     "pass": 1,
+     "v": "7.72",
+     "u": "us",
+     "n": "5",
+     "min": "7.72",
+     "max": "7.72",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.TILE_ENT.0.35": {
+     "id": "nb.TILE_ENT.0.35",
+     "status": "INFO",
+     "line": 617,
+     "pass": 1,
+     "v": "7.41",
+     "u": "us",
+     "n": "5",
+     "min": "7.41",
+     "max": "7.41",
+     "extra": {
+      "R": "158"
+     }
+    },
+    "nb.TILE_ENT.0.28": {
+     "id": "nb.TILE_ENT.0.28",
+     "status": "INFO",
+     "line": 618,
+     "pass": 1,
+     "v": "0.89",
+     "u": "us",
+     "n": "5",
+     "min": "0.89",
+     "max": "0.89",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.L2_CELL.0.35": {
+     "id": "nb.L2_CELL.0.35",
+     "status": "INFO",
+     "line": 619,
+     "pass": 1,
+     "v": "360.58",
+     "u": "us",
+     "n": "5",
+     "min": "360.43",
+     "max": "361.21",
+     "extra": {
+      "R": "21"
+     }
+    },
+    "nb.L2_CELL.0.28": {
+     "id": "nb.L2_CELL.0.28",
+     "status": "INFO",
+     "line": 620,
+     "pass": 1,
+     "v": "44.99",
+     "u": "us",
+     "n": "5",
+     "min": "44.99",
+     "max": "44.99",
+     "extra": {
+      "R": "174"
+     }
+    },
+    "nb.TM_SWAP.0.35": {
+     "id": "nb.TM_SWAP.0.35",
+     "status": "INFO",
+     "line": 621,
+     "pass": 1,
+     "v": "5.62",
+     "u": "us",
+     "n": "5",
+     "min": "5.62",
+     "max": "5.62",
+     "extra": {
+      "R": "162"
+     }
+    },
+    "nb.TM_SWAP.0.28": {
+     "id": "nb.TM_SWAP.0.28",
+     "status": "INFO",
+     "line": 622,
+     "pass": 1,
+     "v": "0.7",
+     "u": "us",
+     "n": "5",
+     "min": "0.7",
+     "max": "0.7",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.L2_FLIP.0.35": {
+     "id": "nb.L2_FLIP.0.35",
+     "status": "INFO",
+     "line": 623,
+     "pass": 1,
+     "v": "5.64",
+     "u": "us",
+     "n": "5",
+     "min": "5.62",
+     "max": "5.72",
+     "extra": {
+      "R": "162"
+     }
+    },
+    "nb.L2_FLIP.0.28": {
+     "id": "nb.L2_FLIP.0.28",
+     "status": "INFO",
+     "line": 624,
+     "pass": 1,
+     "v": "0.7",
+     "u": "us",
+     "n": "5",
+     "min": "0.7",
+     "max": "0.7",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.SHADOW2.0.35": {
+     "id": "nb.SHADOW2.0.35",
+     "status": "INFO",
+     "line": 625,
+     "pass": 1,
+     "v": "13.75",
+     "u": "us",
+     "n": "5",
+     "min": "13.75",
+     "max": "13.75",
+     "extra": {
+      "R": "142"
+     }
+    },
+    "nb.SHADOW2.0.28": {
+     "id": "nb.SHADOW2.0.28",
+     "status": "INFO",
+     "line": 626,
+     "pass": 1,
+     "v": "1.72",
+     "u": "us",
+     "n": "5",
+     "min": "1.72",
+     "max": "1.72",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.TM_SCRL.0.35": {
+     "id": "nb.TM_SCRL.0.35",
+     "status": "INFO",
+     "line": 627,
+     "pass": 1,
+     "v": "11.43",
+     "u": "us",
+     "n": "5",
+     "min": "11.43",
+     "max": "11.43",
+     "extra": {
+      "R": "148"
+     }
+    },
+    "nb.TM_SCRL.0.28": {
+     "id": "nb.TM_SCRL.0.28",
+     "status": "INFO",
+     "line": 628,
+     "pass": 1,
+     "v": "1.4",
+     "u": "us",
+     "n": "5",
+     "min": "1.4",
+     "max": "1.4",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.L2_SCRL.0.35": {
+     "id": "nb.L2_SCRL.0.35",
+     "status": "INFO",
+     "line": 629,
+     "pass": 1,
+     "v": "11.43",
+     "u": "us",
+     "n": "5",
+     "min": "11.43",
+     "max": "11.43",
+     "extra": {
+      "R": "148"
+     }
+    },
+    "nb.L2_SCRL.0.28": {
+     "id": "nb.L2_SCRL.0.28",
+     "status": "INFO",
+     "line": 630,
+     "pass": 1,
+     "v": "1.4",
+     "u": "us",
+     "n": "5",
+     "min": "1.4",
+     "max": "1.4",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.PAL8.1.35": {
+     "id": "nb.PAL8.1.35",
+     "status": "INFO",
+     "line": 631,
+     "pass": 1,
+     "v": "17.12",
+     "u": "us",
+     "n": "5",
+     "min": "17.12",
+     "max": "17.12",
+     "extra": {
+      "R": "135"
+     }
+    },
+    "nb.PAL8.1.28": {
+     "id": "nb.PAL8.1.28",
+     "status": "INFO",
+     "line": 632,
+     "pass": 1,
+     "v": "2.1",
+     "u": "us",
+     "n": "5",
+     "min": "2.1",
+     "max": "2.1",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.PAL8.16.35": {
+     "id": "nb.PAL8.16.35",
+     "status": "INFO",
+     "line": 633,
+     "pass": 1,
+     "v": "211.51",
+     "u": "us",
+     "n": "5",
+     "min": "211.13",
+     "max": "211.61",
+     "extra": {
+      "R": "34"
+     }
+    },
+    "nb.PAL8.16.28": {
+     "id": "nb.PAL8.16.28",
+     "status": "INFO",
+     "line": 634,
+     "pass": 1,
+     "v": "26.36",
+     "u": "us",
+     "n": "5",
+     "min": "26.36",
+     "max": "26.36",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.PAL9.1.35": {
+     "id": "nb.PAL9.1.35",
+     "status": "INFO",
+     "line": 635,
+     "pass": 1,
+     "v": "22.84",
+     "u": "us",
+     "n": "5",
+     "min": "22.84",
+     "max": "22.84",
+     "extra": {
+      "R": "124"
+     }
+    },
+    "nb.PAL9.1.28": {
+     "id": "nb.PAL9.1.28",
+     "status": "INFO",
+     "line": 636,
+     "pass": 1,
+     "v": "2.87",
+     "u": "us",
+     "n": "5",
+     "min": "2.87",
+     "max": "2.87",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.PAL_SEL.0.35": {
+     "id": "nb.PAL_SEL.0.35",
+     "status": "INFO",
+     "line": 637,
+     "pass": 1,
+     "v": "5.64",
+     "u": "us",
+     "n": "5",
+     "min": "5.62",
+     "max": "5.72",
+     "extra": {
+      "R": "162"
+     }
+    },
+    "nb.PAL_SEL.0.28": {
+     "id": "nb.PAL_SEL.0.28",
+     "status": "INFO",
+     "line": 638,
+     "pass": 1,
+     "v": "0.7",
+     "u": "us",
+     "n": "5",
+     "min": "0.7",
+     "max": "0.7",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.COP_NR.8.35": {
+     "id": "nb.COP_NR.8.35",
+     "status": "INFO",
+     "line": 639,
+     "pass": 1,
+     "v": "271.37",
+     "u": "us",
+     "n": "5",
+     "min": "270.91",
+     "max": "272.07",
+     "extra": {
+      "R": "28"
+     }
+    },
+    "nb.COP_NR.8.28": {
+     "id": "nb.COP_NR.8.28",
+     "status": "INFO",
+     "line": 640,
+     "pass": 1,
+     "v": "33.87",
+     "u": "us",
+     "n": "5",
+     "min": "33.87",
+     "max": "33.87",
+     "extra": {
+      "R": "222"
+     }
+    },
+    "nb.COP_NR.32.35": {
+     "id": "nb.COP_NR.32.35",
+     "status": "INFO",
+     "line": 641,
+     "pass": 1,
+     "v": "1039.75",
+     "u": "us",
+     "n": "5",
+     "min": "1039.75",
+     "max": "1039.75",
+     "extra": {
+      "R": "8"
+     }
+    },
+    "nb.COP_NR.32.28": {
+     "id": "nb.COP_NR.32.28",
+     "status": "INFO",
+     "line": 642,
+     "pass": 1,
+     "v": "129.82",
+     "u": "us",
+     "n": "5",
+     "min": "129.72",
+     "max": "129.97",
+     "extra": {
+      "R": "66"
+     }
+    },
+    "nb.COP_NR.256.35": {
+     "id": "nb.COP_NR.256.35",
+     "status": "INFO",
+     "line": 643,
+     "pass": 1,
+     "v": "8197.53",
+     "u": "us",
+     "n": "5",
+     "min": "8187.77",
+     "max": "8204.05",
+     "extra": {
+      "R": "1"
+     }
+    },
+    "nb.COP_NR.256.28": {
+     "id": "nb.COP_NR.256.28",
+     "status": "INFO",
+     "line": 644,
+     "pass": 1,
+     "v": "1025.5",
+     "u": "us",
+     "n": "5",
+     "min": "1025.5",
+     "max": "1025.5",
+     "extra": {
+      "R": "8"
+     }
+    },
+    "nb.COP_IO.8.35": {
+     "id": "nb.COP_IO.8.35",
+     "status": "INFO",
+     "line": 645,
+     "pass": 1,
+     "v": "258.31",
+     "u": "us",
+     "n": "5",
+     "min": "258.2",
+     "max": "258.76",
+     "extra": {
+      "R": "29"
+     }
+    },
+    "nb.COP_IO.8.28": {
+     "id": "nb.COP_IO.8.28",
+     "status": "INFO",
+     "line": 646,
+     "pass": 1,
+     "v": "32.27",
+     "u": "us",
+     "n": "5",
+     "min": "32.27",
+     "max": "32.27",
+     "extra": {
+      "R": "231"
+     }
+    },
+    "nb.COP_IO.32.35": {
+     "id": "nb.COP_IO.32.35",
+     "status": "INFO",
+     "line": 647,
+     "pass": 1,
+     "v": "958.36",
+     "u": "us",
+     "n": "5",
+     "min": "958.36",
+     "max": "958.36",
+     "extra": {
+      "R": "8"
+     }
+    },
+    "nb.COP_IO.32.28": {
+     "id": "nb.COP_IO.32.28",
+     "status": "INFO",
+     "line": 648,
+     "pass": 1,
+     "v": "119.44",
+     "u": "us",
+     "n": "5",
+     "min": "119.44",
+     "max": "119.44",
+     "extra": {
+      "R": "71"
+     }
+    },
+    "nb.COP_IO.256.35": {
+     "id": "nb.COP_IO.256.35",
+     "status": "INFO",
+     "line": 649,
+     "pass": 1,
+     "v": "7484.57",
+     "u": "us",
+     "n": "5",
+     "min": "7471.55",
+     "max": "7487.83",
+     "extra": {
+      "R": "1"
+     }
+    },
+    "nb.COP_IO.256.28": {
+     "id": "nb.COP_IO.256.28",
+     "status": "INFO",
+     "line": 650,
+     "pass": 1,
+     "v": "935.07",
+     "u": "us",
+     "n": "5",
+     "min": "935.07",
+     "max": "935.07",
+     "extra": {
+      "R": "9"
+     }
+    },
+    "nb.COPGO+ST.0.35": {
+     "id": "nb.COPGO+ST.0.35",
+     "status": "INFO",
+     "line": 651,
+     "pass": 1,
+     "v": "11.43",
+     "u": "us",
+     "n": "5",
+     "min": "11.43",
+     "max": "11.43",
+     "extra": {
+      "R": "148"
+     }
+    },
+    "nb.COPGO+ST.0.28": {
+     "id": "nb.COPGO+ST.0.28",
+     "status": "INFO",
+     "line": 652,
+     "pass": 1,
+     "v": "1.4",
+     "u": "us",
+     "n": "5",
+     "min": "1.4",
+     "max": "1.4",
+     "extra": {
+      "R": "255"
+     }
+    },
+    "nb.LDIR+COP.256.35": {
+     "id": "nb.LDIR+COP.256.35",
+     "status": "PASS",
+     "line": 653,
+     "pass": 1,
+     "v": "1543.14",
+     "u": "us",
+     "n": "5",
+     "min": "1543.14",
+     "max": "1543.14",
+     "extra": {
+      "R": "5"
+     }
+    },
+    "nb.LDIR+COP.256.28": {
+     "id": "nb.LDIR+COP.256.28",
+     "status": "PASS",
+     "line": 654,
+     "pass": 1,
+     "v": "192.8",
+     "u": "us",
+     "n": "5",
+     "min": "192.8",
+     "max": "192.8",
+     "extra": {
+      "R": "45"
+     }
+    },
+    "nb.CP_WAIT.120.35": {
+     "id": "nb.CP_WAIT.120.35",
+     "status": "INFO",
+     "line": 655,
+     "pass": 1,
+     "v": "120",
+     "u": "count",
+     "n": "5",
+     "min": "120",
+     "max": "120",
+     "extra": {
+      "R": "1",
+      "flag": "0"
+     }
+    },
+    "nb.CP_WAIT.120.28": {
+     "id": "nb.CP_WAIT.120.28",
+     "status": "INFO",
+     "line": 656,
+     "pass": 1,
+     "v": "120",
+     "u": "count",
+     "n": "5",
+     "min": "120",
+     "max": "120",
+     "extra": {
+      "R": "1",
+      "flag": "0"
+     }
+    },
+    "nb.CP_APART.256.35": {
+     "id": "nb.CP_APART.256.35",
+     "status": "INFO",
+     "line": 657,
+     "pass": 1,
+     "v": "0",
+     "u": "count",
+     "n": "5",
+     "min": "0",
+     "max": "0",
+     "extra": {
+      "R": "1",
+      "flag": "0"
+     }
+    },
+    "nb.CP_APART.256.28": {
+     "id": "nb.CP_APART.256.28",
+     "status": "INFO",
+     "line": 658,
+     "pass": 1,
+     "v": "0",
+     "u": "count",
+     "n": "5",
+     "min": "0",
+     "max": "0",
+     "extra": {
+      "R": "1",
+      "flag": "0"
+     }
+    },
+    "nb.CP_SHARE.256.35": {
+     "id": "nb.CP_SHARE.256.35",
+     "status": "INFO",
+     "line": 659,
+     "pass": 1,
+     "v": "255",
+     "u": "count",
+     "n": "5",
+     "min": "255",
+     "max": "255",
+     "extra": {
+      "R": "1",
+      "flag": "0"
+     }
+    },
+    "nb.CP_SHARE.256.28": {
+     "id": "nb.CP_SHARE.256.28",
+     "status": "INFO",
+     "line": 660,
+     "pass": 1,
+     "v": "255",
+     "u": "count",
+     "n": "5",
+     "min": "255",
+     "max": "255",
+     "extra": {
+      "R": "1",
+      "flag": "0"
+     }
+    }
+   }
+  },
+  "comments": [],
+  "passes": [
+   {
+    "index": 1,
+    "from_line": 2,
+    "how": "marker",
+    "mode": "ALL",
+    "groups": [
+     "G0",
+     "G1",
+     "G2",
+     "G3",
+     "G4",
+     "G5",
+     "G6",
+     "G7",
+     "G8",
+     "G9",
+     "V",
+     "XT",
+     "XD",
+     "XH"
+    ]
+   },
+   {
+    "index": 2,
+    "from_line": 722,
+    "how": "marker",
+    "mode": "GROUP:V",
+    "groups": [
+     "V"
+    ]
+   },
+   {
+    "index": 3,
+    "from_line": 744,
+    "how": "marker",
+    "mode": "GROUP:XT",
+    "groups": [
+     "XT"
+    ]
+   },
+   {
+    "index": 4,
+    "from_line": 753,
+    "how": "marker",
+    "mode": "GROUP:XD",
+    "groups": [
+     "XD"
+    ]
+   },
+   {
+    "index": 5,
+    "from_line": 759,
+    "how": "marker",
+    "mode": "GROUP:XH",
+    "groups": [
+     "XH"
+    ]
+   },
+   {
+    "index": 6,
+    "from_line": 764,
+    "how": "marker",
+    "mode": "GROUP:XH",
+    "groups": [
+     "XH"
+    ]
+   },
+   {
+    "index": 7,
+    "from_line": 769,
+    "how": "marker",
+    "mode": "GROUP:XH",
+    "groups": []
+   },
+   {
+    "index": 8,
+    "from_line": 777,
+    "how": "marker",
+    "mode": "GROUP:XD",
+    "groups": [
+     "XD"
+    ]
+   },
+   {
+    "index": 9,
+    "from_line": 783,
+    "how": "marker",
+    "mode": "GROUP:XH",
+    "groups": [
+     "XH"
+    ]
+   },
+   {
+    "index": 10,
+    "from_line": 794,
+    "how": "marker",
+    "mode": "GROUP:XT",
+    "groups": [
+     "XT"
+    ]
+   }
+  ],
+  "parts": [
+   "NXSUITE.001",
+   "NXSUITE.TXT"
+  ],
+  "truncated": null,
+  "cable": "hdmi",
+  "passes_disagree": []
+ },
+ "claims": {
+  "sys-sd-write-rst8": {
+   "verdict": "confirmed",
+   "tests": [
+    "S07"
+   ],
+   "value": 64.0,
+   "spread": 0.0,
+   "unit": "-",
+   "choice": null,
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "sys-launch-divmmc-regs": {
+   "verdict": "measured",
+   "tests": [
+    "S01"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$DE",
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "sys-core-version-regs": {
+   "verdict": "measured",
+   "tests": [
+    "S02"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "3.03.00",
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "sys-board-id": {
+   "verdict": "measured",
+   "tests": [
+    "S02"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "3.03.00",
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "sys-ram-size": {
+   "verdict": "choice",
+   "tests": [
+    "S03"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "distinct",
+   "why": null,
+   "result_type": "choice",
+   "notes": []
+  },
+  "sys-launch-7ffd-unlocked": {
+   "verdict": "confirmed",
+   "tests": [
+    "S01"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$DE",
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "sys-launch-nextreg-state": {
+   "verdict": "measured",
+   "tests": [
+    "S01"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$DE",
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "sys-nextreg-keeps-select": {
+   "verdict": "confirmed",
+   "tests": [
+    "S05"
+   ],
+   "value": 0.0,
+   "spread": 0.0,
+   "unit": "-",
+   "choice": null,
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "sys-cpu-speed-readback": {
+   "verdict": "confirmed",
+   "tests": [
+    "S06"
+   ],
+   "value": 0.0,
+   "spread": 0.0,
+   "unit": "-",
+   "choice": null,
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "sys-60hz-switch-timing": {
+   "verdict": "measured",
+   "tests": [
+    "F03"
+   ],
+   "value": 264.0,
+   "spread": 0.0,
+   "unit": "lines",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "sys-video-timing-frame-rate": {
+   "verdict": "pending-operator",
+   "tests": [
+    "V19"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "Hz",
+   "choice": null,
+   "why": "V19:pending-operator",
+   "result_type": "number",
+   "notes": []
+  },
+  "sys-rom3-bytes-386e": {
+   "verdict": "measured",
+   "tests": [
+    "S04"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$EEE2",
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "sys-nexload-printer-buffer": {
+   "verdict": "measured",
+   "tests": [
+    "S00"
+   ],
+   "value": 0.0,
+   "spread": 0.0,
+   "unit": "bytes",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "cpu-z80n-tstates-3m5": {
+   "verdict": "confirmed",
+   "tests": [
+    "Z06"
+   ],
+   "value": 31.0,
+   "spread": 0.0,
+   "unit": "count",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "cpu-z80n-tstates-28": {
+   "verdict": "confirmed",
+   "tests": [
+    "Z07"
+   ],
+   "value": 31.0,
+   "spread": 0.0,
+   "unit": "count",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "cpu-28-wait-sram-fetch": {
+   "verdict": "confirmed",
+   "tests": [
+    "C01"
+   ],
+   "value": 4.0,
+   "spread": 0.0,
+   "unit": "clocks",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "cpu-28-wait-bank5": {
+   "verdict": "measured",
+   "tests": [
+    "C02"
+   ],
+   "value": 4.0,
+   "spread": 0.0,
+   "unit": "clocks",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "cpu-28-wait-page0e": {
+   "verdict": "measured",
+   "tests": [
+    "C03"
+   ],
+   "value": 4.0,
+   "spread": 0.0,
+   "unit": "clocks",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "cpu-28-wait-page0f": {
+   "verdict": "measured",
+   "tests": [
+    "C04"
+   ],
+   "value": 4.0,
+   "spread": 0.0,
+   "unit": "clocks",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "cpu-28-wait-reads-only": {
+   "verdict": "measured",
+   "tests": [
+    "C05"
+   ],
+   "value": 7.01,
+   "spread": 0.0,
+   "unit": "clocks",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "cpu-speed-scaling-7-14": {
+   "verdict": "measured",
+   "tests": [
+    "C06"
+   ],
+   "value": 4.0,
+   "spread": 0.0,
+   "unit": "clocks",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "cpu-speed-ratio-routines": {
+   "verdict": "measured",
+   "tests": [
+    "N01"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "count",
+   "choice": "table",
+   "why": null,
+   "result_type": "number",
+   "notes": [
+    "the numbers are the 180 nb.* lines (JSON \"subtests\" of N01)"
+   ]
+  },
+  "cpu-speed-switch-cost": {
+   "verdict": "measured",
+   "tests": [
+    "C07"
+   ],
+   "value": 0.0,
+   "spread": 0.0,
+   "unit": "T",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "cpu-contention-bank5-3m5": {
+   "verdict": "measured",
+   "tests": [
+    "C08"
+   ],
+   "value": 0.03,
+   "spread": 0.0,
+   "unit": "T",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "cpu-contention-08b6-latch": {
+   "verdict": "measured",
+   "tests": [
+    "C09"
+   ],
+   "value": 23.0,
+   "spread": 11.5,
+   "unit": "T",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "cpu-io-contention": {
+   "verdict": "measured",
+   "tests": [
+    "C10"
+   ],
+   "value": 10.99,
+   "spread": 0.02,
+   "unit": "T",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "cpu-contention-by-timing": {
+   "verdict": "choice",
+   "tests": [
+    "XT3"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "book",
+   "why": null,
+   "result_type": "choice",
+   "notes": []
+  },
+  "cpu-undoc-timings": {
+   "verdict": "measured",
+   "tests": [
+    "C11"
+   ],
+   "value": 8.01,
+   "spread": 0.0,
+   "unit": "T",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "cpu-out-c-0": {
+   "verdict": "confirmed",
+   "tests": [
+    "C12"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$00",
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "cpu-ld-a-i-pv": {
+   "verdict": "measured",
+   "tests": [
+    "I15"
+   ],
+   "value": 0.0,
+   "spread": 0.0,
+   "unit": "count",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "cpu-block-io-flags": {
+   "verdict": "choice",
+   "tests": [
+    "C13"
+   ],
+   "value": 50.0,
+   "spread": 0.0,
+   "unit": "-",
+   "choice": null,
+   "why": null,
+   "result_type": "choice",
+   "notes": []
+  },
+  "cpu-undoc-flags-xy": {
+   "verdict": "measured",
+   "tests": [
+    "C14"
+   ],
+   "value": 24.0,
+   "spread": 0.0,
+   "unit": "-",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "z80n-func-suite": {
+   "verdict": "confirmed",
+   "tests": [
+    "zf.ADDBCA",
+    "zf.ADDBCnn",
+    "zf.ADDDEA0",
+    "zf.ADDDEAF",
+    "zf.ADDDEnn",
+    "zf.ADDHLA0",
+    "zf.ADDHLAF",
+    "zf.ADDHLnn",
+    "zf.BRLC",
+    "zf.BSLA",
+    "zf.BSRA",
+    "zf.BSRF",
+    "zf.BSRF20",
+    "zf.BSRL",
+    "zf.JPC",
+    "zf.JPCedge",
+    "zf.LDDRX0",
+    "zf.LDDRXF",
+    "zf.LDDX0",
+    "zf.LDDXF",
+    "zf.LDIRX0",
+    "zf.LDIRXF",
+    "zf.LDIX0",
+    "zf.LDIXF",
+    "zf.LDWS7F",
+    "zf.LDWSFF",
+    "zf.MIRROR",
+    "zf.MUL",
+    "zf.NEXTRGA",
+    "zf.NEXTRGn",
+    "zf.OUTINB0",
+    "zf.OUTINBF",
+    "zf.PUSHnn",
+    "zf.PXAD1",
+    "zf.PXAD2",
+    "zf.PXDN1",
+    "zf.PXDN2",
+    "zf.PXDN3",
+    "zf.PXDN4",
+    "zf.SETAE",
+    "zf.SWAPNIB",
+    "zf.TESTnz",
+    "zf.TESTz0",
+    "zf.TESTzF"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$A4",
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "z80n-add-rr-a-carry": {
+   "verdict": "confirmed",
+   "tests": [
+    "Z02"
+   ],
+   "value": 0.0,
+   "spread": 0.0,
+   "unit": "count",
+   "choice": null,
+   "why": null,
+   "result_type": "choice",
+   "notes": []
+  },
+  "z80n-ldws-flags": {
+   "verdict": "choice",
+   "tests": [
+    "Z03"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "ADD-D-1",
+   "why": null,
+   "result_type": "choice",
+   "notes": []
+  },
+  "z80n-jpc-flags": {
+   "verdict": "confirmed",
+   "tests": [
+    "zf.JPC",
+    "zf.JPCedge"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$A5",
+   "why": null,
+   "result_type": "choice",
+   "notes": []
+  },
+  "z80n-test-nf": {
+   "verdict": "confirmed",
+   "tests": [
+    "zf.TESTnz",
+    "zf.TESTz0",
+    "zf.TESTzF"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$B4",
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "z80n-ldix-flags": {
+   "verdict": "confirmed",
+   "tests": [
+    "zf.LDDRX0",
+    "zf.LDDRXF",
+    "zf.LDDX0",
+    "zf.LDDXF",
+    "zf.LDIRX0",
+    "zf.LDIRXF",
+    "zf.LDIX0",
+    "zf.LDIXF"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$00",
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "z80n-ldpirx-fixed": {
+   "verdict": "confirmed",
+   "tests": [
+    "zf.LDPIRX0",
+    "zf.LDPIRXF"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$00",
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": [
+    "zf.LDPIRX0: F $00, model $08 - differs only in bits the docs call unsure (mask $28); data right",
+    "zf.LDPIRXF: F $C1, model $C9 - differs only in bits the docs call unsure (mask $28); data right"
+   ]
+  },
+  "z80n-ed-b6": {
+   "verdict": "choice",
+   "tests": [
+    "Z04"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "same-as-LDIRX",
+   "why": null,
+   "result_type": "choice",
+   "notes": []
+  },
+  "z80n-pixel-edges": {
+   "verdict": "measured",
+   "tests": [
+    "Z05"
+   ],
+   "value": 8.0,
+   "spread": 0.0,
+   "unit": "count",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "irq-pulse-length-3m5": {
+   "verdict": "measured",
+   "tests": [
+    "I04"
+   ],
+   "value": -1.0,
+   "spread": 0.0,
+   "unit": "T",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "irq-pulse-length-28": {
+   "verdict": "measured",
+   "tests": [
+    "I05"
+   ],
+   "value": -1.0,
+   "spread": 0.0,
+   "unit": "clocks",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "irq-ack-cost": {
+   "verdict": "measured",
+   "tests": [
+    "I14"
+   ],
+   "value": 33.46,
+   "spread": 0.0,
+   "unit": "T",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "irq-pulse-bus-ff": {
+   "verdict": "confirmed",
+   "tests": [
+    "I01"
+   ],
+   "value": 5.0,
+   "spread": 0.0,
+   "unit": "count",
+   "choice": null,
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "cpu-ed7e-im2": {
+   "verdict": "confirmed",
+   "tests": [
+    "I02"
+   ],
+   "value": 5.0,
+   "spread": 0.0,
+   "unit": "count",
+   "choice": null,
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "irq-hwim2-vector-layout": {
+   "verdict": "confirmed",
+   "tests": [
+    "I06"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$F6",
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "irq-im2hold-suite": {
+   "verdict": "confirmed",
+   "tests": [
+    "I03"
+   ],
+   "value": 6.0,
+   "spread": 0.0,
+   "unit": "count",
+   "choice": null,
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "irq-status-bit-diagnostics": {
+   "verdict": "confirmed",
+   "tests": [
+    "I07"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$01",
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "irq-22-bit7-int-low": {
+   "verdict": "measured",
+   "tests": [
+    "I08"
+   ],
+   "value": 23.0,
+   "spread": 0.0,
+   "unit": "clocks",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "irq-line-int-position": {
+   "verdict": "measured",
+   "tests": [
+    "I10"
+   ],
+   "value": -150.0,
+   "spread": 0.0,
+   "unit": "T",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "irq-line-int-numbering": {
+   "verdict": "confirmed",
+   "tests": [
+    "I11"
+   ],
+   "value": 5.0,
+   "spread": 0.0,
+   "unit": "count",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "irq-ula-int-line": {
+   "verdict": "measured",
+   "tests": [
+    "I09"
+   ],
+   "value": 248.0,
+   "spread": 0.0,
+   "unit": "lines",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "irq-line-shares-int": {
+   "verdict": "confirmed",
+   "tests": [
+    "I16"
+   ],
+   "value": 100.0,
+   "spread": 0.0,
+   "unit": "count",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "irq-ula-enable-shared": {
+   "verdict": "confirmed",
+   "tests": [
+    "I17"
+   ],
+   "value": 5.0,
+   "spread": 0.0,
+   "unit": "count",
+   "choice": null,
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "irq-hwim2-im1-fallback": {
+   "verdict": "choice",
+   "tests": [
+    "I18"
+   ],
+   "value": 2.0,
+   "spread": 0.0,
+   "unit": "count",
+   "choice": null,
+   "why": null,
+   "result_type": "choice",
+   "notes": []
+  },
+  "irq-reti-retn-rules": {
+   "verdict": "confirmed",
+   "tests": [
+    "I19"
+   ],
+   "value": 1.0,
+   "spread": 0.0,
+   "unit": "count",
+   "choice": null,
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "irq-one-outstanding": {
+   "verdict": "confirmed",
+   "tests": [
+    "I20"
+   ],
+   "value": 1.0,
+   "spread": 0.0,
+   "unit": "count",
+   "choice": null,
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "irq-nr20-generate": {
+   "verdict": "measured",
+   "tests": [
+    "I21"
+   ],
+   "value": 1.0,
+   "spread": 0.0,
+   "unit": "count",
+   "choice": null,
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "irq-ctc-status-polled": {
+   "verdict": "confirmed",
+   "tests": [
+    "I13"
+   ],
+   "value": 16136.0,
+   "spread": 0.0,
+   "unit": "count",
+   "choice": null,
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "irq-ctc-rate-fixed": {
+   "verdict": "confirmed",
+   "tests": [
+    "I12"
+   ],
+   "value": 2216.37,
+   "spread": 0.0,
+   "unit": "ticks",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "irq-ctc-time-constant": {
+   "verdict": "choice",
+   "tests": [
+    "I13"
+   ],
+   "value": 16136.0,
+   "spread": 0.0,
+   "unit": "count",
+   "choice": "16xtc",
+   "why": null,
+   "result_type": "choice",
+   "notes": []
+  },
+  "dma-pulse-lost": {
+   "verdict": "confirmed",
+   "tests": [
+    "I22"
+   ],
+   "value": 0.0,
+   "spread": 0.0,
+   "unit": "count",
+   "choice": null,
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "dma-burst-prescaler-int": {
+   "verdict": "confirmed",
+   "tests": [
+    "I23"
+   ],
+   "value": 12.0,
+   "spread": 0.0,
+   "unit": "count",
+   "choice": null,
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "dma-hwim2-yield": {
+   "verdict": "confirmed",
+   "tests": [
+    "I24"
+   ],
+   "value": 1211.0,
+   "spread": 0.0,
+   "unit": "bytes",
+   "choice": null,
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "frame-lines-50": {
+   "verdict": "confirmed",
+   "tests": [
+    "F01",
+    "XT1"
+   ],
+   "value": 311.0,
+   "spread": 0.0,
+   "unit": "lines",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "frame-lines-60": {
+   "verdict": "measured",
+   "tests": [
+    "F03"
+   ],
+   "value": 264.0,
+   "spread": 0.0,
+   "unit": "lines",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "frame-line-length": {
+   "verdict": "measured",
+   "tests": [
+    "F02"
+   ],
+   "value": 228.02,
+   "spread": 0.0,
+   "unit": "T",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "frame-60hz-display-start": {
+   "verdict": "confirmed",
+   "tests": [
+    "F06"
+   ],
+   "value": 264.0,
+   "spread": 0.0,
+   "unit": "lines",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": [
+    "F06: board: at 60 Hz the ULA interrupt comes at line 224 of 264, 40 lines before the display starts (line 0); at 50 Hz at line 248 of 311, 63 lines before."
+   ]
+  },
+  "frame-raster-read": {
+   "verdict": "confirmed",
+   "tests": [
+    "F04"
+   ],
+   "value": 0.0,
+   "spread": 0.0,
+   "unit": "count",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "frame-64-offset": {
+   "verdict": "measured",
+   "tests": [
+    "F05"
+   ],
+   "value": 100.0,
+   "spread": 0.0,
+   "unit": "lines",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "frame-64-33-l2-top": {
+   "verdict": "operator",
+   "tests": [
+    "V18"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "lines",
+   "choice": "V18:part-left-part-left",
+   "why": null,
+   "result_type": "visual",
+   "notes": [
+    "V18: operator: $64 = 33 -> part-left, $64 = 32 -> part-left (two = row 0 lit by the copper at its line 0 plus the reference; part-left / part-right = row 0 white on that part only): not one setting alone (row 0 lit with: neither); a part-lit row 0 (with $64 = 33 and 32) means the colour change came part-way along that row: the copper line starts (part-right) or ends (part-left) inside the Layer 2 row, not at its left edge."
+   ]
+  },
+  "frame-timing-change-frame-end": {
+   "verdict": "disproved",
+   "tests": [
+    "XT2"
+   ],
+   "value": 320.0,
+   "spread": 0.0,
+   "unit": "lines",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": [
+    "XT2: board: $03 written at line 100 of a 311-line frame (old 311, new 320 lines): that frame was 320 lines; the frame being drawn ran on to the NEW length at once (not held to the frame end), then a 7-line frame, then 320."
+   ]
+  },
+  "frame-ula-int-per-timing": {
+   "verdict": "confirmed",
+   "tests": [
+    "XT1"
+   ],
+   "value": 4.0,
+   "spread": 0.0,
+   "unit": "count",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "copper-wait-passed-line": {
+   "verdict": "choice",
+   "tests": [
+    "P01"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "lines",
+   "choice": "holds",
+   "why": null,
+   "result_type": "choice",
+   "notes": []
+  },
+  "copper-wait-h-same-line": {
+   "verdict": "confirmed",
+   "tests": [
+    "P02"
+   ],
+   "value": 100.0,
+   "spread": 0.0,
+   "unit": "-",
+   "choice": null,
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "copper-wait-max-h": {
+   "verdict": "measured",
+   "tests": [
+    "P03"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$3F",
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "copper-line-vs-raster": {
+   "verdict": "confirmed",
+   "tests": [
+    "P04",
+    "N01"
+   ],
+   "value": 1.0,
+   "spread": 0.0,
+   "unit": "lines",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": [
+    "also: the nb.* table of N01"
+   ]
+  },
+  "copper-instruction-time": {
+   "verdict": "measured",
+   "tests": [
+    "P05"
+   ],
+   "value": 1.88,
+   "spread": 0.0,
+   "unit": "clocks",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "copper-restart-line": {
+   "verdict": "measured",
+   "tests": [
+    "P06"
+   ],
+   "value": 0.0,
+   "spread": 0.0,
+   "unit": "lines",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "copper-move-44-pair": {
+   "verdict": "confirmed",
+   "tests": [
+    "P07"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$A5",
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "copper-cpu-coexist": {
+   "verdict": "confirmed",
+   "tests": [
+    "P08",
+    "N01"
+   ],
+   "value": 0.0,
+   "spread": 0.0,
+   "unit": "count",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": [
+    "also: the nb.* table of N01"
+   ]
+  },
+  "copper-nextreg-collision": {
+   "verdict": "measured",
+   "tests": [
+    "P09"
+   ],
+   "value": 21.75,
+   "spread": 0.0,
+   "unit": "clocks",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "copper-same-mode-no-restart": {
+   "verdict": "confirmed",
+   "tests": [
+    "P10"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$00",
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "copper-15-resets-clip": {
+   "verdict": "disproved",
+   "tests": [
+    "V17"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "inside",
+   "why": null,
+   "result_type": "visual",
+   "notes": [
+    "V17: operator: both rows stayed inside the clip window: the copper MOVE to $15 did not reset it."
+   ]
+  },
+  "dma-correct-3m5": {
+   "verdict": "confirmed",
+   "tests": [
+    "D01",
+    "N01"
+   ],
+   "value": 0.0,
+   "spread": 0.0,
+   "unit": "-",
+   "choice": null,
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "dma-cost-per-byte": {
+   "verdict": "disproved",
+   "tests": [
+    "D02"
+   ],
+   "value": 5.92,
+   "spread": 0.0,
+   "unit": "clocks",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": [
+    "D02: board: no timing byte 6.0 T at 3.5 MHz / 5.92 clocks at 28 MHz; byte %01 (3) 6.0 T at 3.5 MHz / 5.92 clocks at 28 MHz; byte %11 (4) 8.0 T at 3.5 MHz / 8.0 clocks at 28 MHz; byte %10 (2) 4.0 T at 3.5 MHz / 4.96 clocks at 28 MHz (memory to memory; to port $5B with no byte: 6.0 / 5.92). Differs: memory, cycle length 2, 28 MHz: 4.96, not 4; port, cycle length 2, 28 MHz: 4.96, not 4."
+   ]
+  },
+  "dma-default-cycle-length": {
+   "verdict": "confirmed",
+   "tests": [
+    "D02"
+   ],
+   "value": 5.92,
+   "spread": 0.0,
+   "unit": "clocks",
+   "choice": null,
+   "why": null,
+   "result_type": "choice",
+   "notes": [
+    "D02: board: no timing byte 6.0 T at 3.5 MHz / 5.92 clocks at 28 MHz; byte %01 (3) 6.0 T at 3.5 MHz / 5.92 clocks at 28 MHz; byte %11 (4) 8.0 T at 3.5 MHz / 8.0 clocks at 28 MHz; byte %10 (2) 4.0 T at 3.5 MHz / 4.96 clocks at 28 MHz (memory to memory; to port $5B with no byte: 6.0 / 5.92). No timing byte = two 3-clock cycles (6 a byte): the default is 3, not the Z80 standard 4."
+   ]
+  },
+  "dma-length-rule": {
+   "verdict": "confirmed",
+   "tests": [
+    "D03"
+   ],
+   "value": 16.0,
+   "spread": 0.0,
+   "unit": "bytes",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "dma-prescaler-rate": {
+   "verdict": "measured",
+   "tests": [
+    "D04"
+   ],
+   "value": 3195.36,
+   "spread": 0.0,
+   "unit": "clocks",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": [
+    "D04: board, clocks per byte at 28 MHz: P=12 390.4 (32P = 384: +1.7 %; 32P+3: +0.9 %); P=55 1760.6 (32P = 1760: +0.0 %; 32P+3: -0.1 %); P=100 3195.4 (32P = 3200: -0.1 %; 32P+3: -0.2 %); P=144 4597.8 (32P = 4608: -0.2 %; 32P+3: -0.3 %); at 3.5 MHz: P=12 58.4 T (4P+3 = 51, +14.5 %); P=55 226.8 T (4P+3 = 223, +1.7 %); P=100 406.3 T (4P+3 = 403, +0.8 %); P=144 581.3 T (4P+3 = 579, +0.4 %). P=1 at 3.5 MHz: 14.0 T against 6.4 T with P=0, so P=1 does slow the transfer (the claim says it has no effect)."
+   ]
+  },
+  "dma-burst-cpu-share": {
+   "verdict": "confirmed",
+   "tests": [
+    "D05"
+   ],
+   "value": 99.37,
+   "spread": 0.0,
+   "unit": "%",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": [
+    "D05: board: during a P = 100 burst transfer the CPU loop ran at 99.37 % of its speed without DMA (claim: more than 95 %); during a continuous transfer it made 0 passes (0 = frozen for the whole block)."
+   ]
+  },
+  "dma-setup-costs": {
+   "verdict": "measured",
+   "tests": [
+    "D16",
+    "N01"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "count",
+   "choice": "table",
+   "why": null,
+   "result_type": "number",
+   "notes": [
+    "the numbers are the 180 nb.* lines (JSON \"subtests\" of N01)"
+   ]
+  },
+  "dma-read-status": {
+   "verdict": "confirmed",
+   "tests": [
+    "D06"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$3A",
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "dma-c3-reset-keeps": {
+   "verdict": "confirmed",
+   "tests": [
+    "D07"
+   ],
+   "value": 7.68,
+   "spread": 0.0,
+   "unit": "clocks",
+   "choice": null,
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "dma-wr4-interrupt-lock": {
+   "verdict": "confirmed",
+   "tests": [
+    "XH2"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "deaf",
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": [
+    "XH2: board: lock pass: one DMA byte copied before the WR4 byte $91, none after it; after an F4 soft reset: the DMA answered again."
+   ]
+  },
+  "dma-autorestart-freeze": {
+   "verdict": "confirmed",
+   "tests": [
+    "XH1"
+   ],
+   "value": 1.0,
+   "spread": 0.0,
+   "unit": "count",
+   "choice": null,
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "dma-overlap-fill": {
+   "verdict": "confirmed",
+   "tests": [
+    "D08"
+   ],
+   "value": 0.0,
+   "spread": 0.0,
+   "unit": "bytes",
+   "choice": null,
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "dma-blitter-detect": {
+   "verdict": "choice",
+   "tests": [
+    "D09"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "blitter",
+   "why": null,
+   "result_type": "choice",
+   "notes": []
+  },
+  "dma-blitter-physical": {
+   "verdict": "confirmed",
+   "tests": [
+    "D10"
+   ],
+   "value": 0.0,
+   "spread": 0.0,
+   "unit": "bytes",
+   "choice": null,
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "dma-blitter-bram": {
+   "verdict": "confirmed",
+   "tests": [
+    "D11"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "twin",
+   "why": null,
+   "result_type": "choice",
+   "notes": []
+  },
+  "dma-blitter-2d": {
+   "verdict": "confirmed",
+   "tests": [
+    "D12"
+   ],
+   "value": 0.0,
+   "spread": 0.0,
+   "unit": "bytes",
+   "choice": null,
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "dma-blitter-transparent-fill": {
+   "verdict": "confirmed",
+   "tests": [
+    "D13"
+   ],
+   "value": 2.88,
+   "spread": 0.0,
+   "unit": "clocks",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": [
+    "D13: board at 28 MHz, clocks per byte: opaque 5.92, transparent (half the bytes skipped) 5.92 - the skipped bytes still cost their write cycle; fill 2.88 against a fixed-source copy 5.92 = 0.49 x (no read cycle)."
+   ]
+  },
+  "dma-blitter-l2-xy": {
+   "verdict": "confirmed",
+   "tests": [
+    "D14"
+   ],
+   "value": 0.0,
+   "spread": 0.0,
+   "unit": "bytes",
+   "choice": null,
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "dma-blitter-cost": {
+   "verdict": "left-out",
+   "tests": [
+    "D15"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "us",
+   "choice": null,
+   "why": "D15",
+   "result_type": "number",
+   "notes": []
+  },
+  "spr-line-limit": {
+   "verdict": "confirmed",
+   "tests": [
+    "SP10"
+   ],
+   "value": 106.0,
+   "spread": 0.0,
+   "unit": "count",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": [
+    "SP10: board: the overflow flag sets at k = 106 / 53 / 27 / 14 for scale 1 / 2 / 4 / 8 (sprites moved off the line before it clears: 23). The model \"1,824 clocks a line; a drawn sprite costs 1 + 16 x scale, every other of the 128 (hidden ones too) 1; the sprite that brings the total to 1,824 is dropped\" predicts 106 / 53 / 27 / 14; the largest sets that fit cost 105 x 17 + 23 = 1808, 52 x 33 + 76 = 1792, 26 x 65 + 102 = 1792, 13 x 129 + 115 = 1792 clocks. The board agrees."
+   ]
+  },
+  "spr-collision-rules": {
+   "verdict": "confirmed",
+   "tests": [
+    "SP01"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$01",
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "spr-303b-shared-index": {
+   "verdict": "confirmed",
+   "tests": [
+    "SP02"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$01",
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "spr-34-vs-303b": {
+   "verdict": "confirmed",
+   "tests": [
+    "SP03"
+   ],
+   "value": 3.0,
+   "spread": 0.0,
+   "unit": "-",
+   "choice": null,
+   "why": null,
+   "result_type": "choice",
+   "notes": []
+  },
+  "spr-4byte-records": {
+   "verdict": "confirmed",
+   "tests": [
+    "SP04"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$01",
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "spr-nr-postinc": {
+   "verdict": "confirmed",
+   "tests": [
+    "SP05"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$01",
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "spr-4bit-attr4-halves": {
+   "verdict": "confirmed",
+   "tests": [
+    "SP06"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$01",
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "spr-transparency-before-offset": {
+   "verdict": "confirmed",
+   "tests": [
+    "SP07"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$00",
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "spr-relative-accidental": {
+   "verdict": "choice",
+   "tests": [
+    "SP08"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "relative",
+   "why": null,
+   "result_type": "choice",
+   "notes": []
+  },
+  "spr-position-wrap": {
+   "verdict": "confirmed",
+   "tests": [
+    "SP09"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$0F",
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "spr-clip-units": {
+   "verdict": "operator",
+   "tests": [
+    "V01"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "book",
+   "choice": "V01:book-two-late",
+   "why": null,
+   "result_type": "visual",
+   "notes": []
+  },
+  "spr-order-bit6": {
+   "verdict": "operator",
+   "tests": [
+    "V02"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "V02:green-red",
+   "why": null,
+   "result_type": "visual",
+   "notes": []
+  },
+  "spr-change-one-line-late": {
+   "verdict": "disproved",
+   "tests": [
+    "V01"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "book",
+   "choice": "two-late",
+   "why": null,
+   "result_type": "visual",
+   "notes": [
+    "V01: operator: a copper sprite change (WAIT line 157) shown TWO lines after the line it was made on (row 159); TECHNIQUES.md:331 already says to write at WAIT(line N-2) for line N."
+   ]
+  },
+  "spr-scale-rotate": {
+   "verdict": "confirmed",
+   "tests": [
+    "V03"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "tl",
+   "why": null,
+   "result_type": "visual",
+   "notes": [
+    "V03: operator: X scale 4 after rotation: the bar stayed wide; rotate + X mirror left the red corner top left: rotation first, then the mirror."
+   ]
+  },
+  "spr-port-low-byte": {
+   "verdict": "confirmed",
+   "tests": [
+    "SP11"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$01",
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "lay-transparency-rules": {
+   "verdict": "confirmed",
+   "tests": [
+    "V04"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "claim",
+   "why": null,
+   "result_type": "visual",
+   "notes": [
+    "V04: operator: ULA and Layer 2 transparent by colour = $14, tilemap and sprites by index = $4C / $4B (before the palette offset / palette)."
+   ]
+  },
+  "lay-border-transparent": {
+   "verdict": "confirmed",
+   "tests": [
+    "V05"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "lower-green",
+   "why": null,
+   "result_type": "visual",
+   "notes": [
+    "V05: operator: Layer 2 showed through the side borders of lines 96-191 (a border in the $14 colour is transparent), then a strip in the fallback colour ($4A, green for the test) out to the screen edge: the screen shows border beyond the 320 x 256 Layer 2 (book N14 says nothing is drawn beyond the wide area)."
+   ]
+  },
+  "lay-l2-priority-bit": {
+   "verdict": "confirmed",
+   "tests": [
+    "V06"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "claim",
+   "why": null,
+   "result_type": "visual",
+   "notes": [
+    "V06: operator: the priority colour drew over the sprites (in order SLU and in blend mode 110), and not where its colour was the transparent one."
+   ]
+  },
+  "lay-l2-wide-clip-default": {
+   "verdict": "confirmed",
+   "tests": [
+    "V07"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "both",
+   "why": null,
+   "result_type": "visual",
+   "notes": [
+    "V07: operator: clip 0-255 / 0-191 -> top band(s), clip 0-159 / 0-255 -> both (both = the bottom 32 rows of the 320 x 256 Layer 2 shown too). The claim: top, then both."
+   ]
+  },
+  "lay-l2-default-banks": {
+   "verdict": "measured",
+   "tests": [
+    "S01"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$DE",
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "lay-l2-640-whole-pixels": {
+   "verdict": "confirmed",
+   "tests": [
+    "V08"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "none",
+   "why": null,
+   "result_type": "visual",
+   "notes": [
+    "V08: operator: 640 x 256 Layer 2 blocks over red / blue tiles - no scroll: none; Layer 2 and tilemap both scrolled one step: none (none = no red at any block edge; left / right = a one-dot red line on that edge). The layers line up and a 640 scroll step moved Layer 2 by 2 dots, like the tilemap: the claim."
+   ]
+  },
+  "lay-l2-scroll-ranges": {
+   "verdict": "confirmed",
+   "tests": [
+    "V09"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "on",
+   "why": null,
+   "result_type": "visual",
+   "notes": [
+    "V09: operator: 256 x 192 scrolled X 128 / Y 96: the stripes met on the square (wrap at 256 / 192); 320 x 256 scrolled X 160 / Y 128: the stripes met on the square (wrap at 320 / 256)."
+   ]
+  },
+  "lay-l2-flip-not-synced": {
+   "verdict": "confirmed",
+   "tests": [
+    "V10"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "lines",
+   "choice": "split-clean",
+   "why": null,
+   "result_type": "visual",
+   "notes": [
+    "V10: operator: the picture split at about line 96 with a clean edge: $12 took effect mid-frame."
+   ]
+  },
+  "lay-l2-writemap-over-altrom": {
+   "verdict": "confirmed",
+   "tests": [
+    "M04"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$5A",
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "lay-l2-no-cpu-wait": {
+   "verdict": "confirmed",
+   "tests": [
+    "C15"
+   ],
+   "value": 20.97,
+   "spread": 0.0,
+   "unit": "clocks",
+   "choice": null,
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "lay-tilemap-bank7-wrap": {
+   "verdict": "confirmed",
+   "tests": [
+    "V11"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "wrap",
+   "why": null,
+   "result_type": "visual",
+   "notes": [
+    "V11: operator: the tiles past bank 7 offset $1FFF took page 14's start (green): the offset wraps at 8K."
+   ]
+  },
+  "lay-tilemap-reset-bases": {
+   "verdict": "measured",
+   "tests": [
+    "S01"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$DE",
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "lay-tilemap-text-and-6b": {
+   "verdict": "confirmed",
+   "tests": [
+    "V12"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "lower",
+   "why": null,
+   "result_type": "visual",
+   "notes": [
+    "V12: operator: text mode: the background index (colour = $14) was transparent; $6B bit 0 set by the copper at line 152 put the tiles marked \"ULA over\" over the ULA below that line only."
+   ]
+  },
+  "lay-sprites-between-ula-tilemap": {
+   "verdict": "confirmed",
+   "tests": [
+    "V13"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "claim",
+   "why": null,
+   "result_type": "visual",
+   "notes": [
+    "V13: operator: order %110 with $68 bits 6:5 = %01: tiles with attribute bit 0 = 0 in front of the sprites, with bit 0 = 1 behind them."
+   ]
+  },
+  "lay-blend-stencil": {
+   "verdict": "confirmed",
+   "tests": [
+    "V14"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "match",
+   "why": null,
+   "result_type": "visual",
+   "notes": [
+    "V14: operator: blend 110 (add, clamp 7), blend 111 (add, take 5) and stencil (ULA AND tilemap) each matched the colour computed beside it."
+   ]
+  },
+  "lay-ula-reads-bank5": {
+   "verdict": "operator",
+   "tests": [
+    "V15"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "V15:stays",
+   "why": null,
+   "result_type": "visual",
+   "notes": []
+  },
+  "lay-port-ff-timex": {
+   "verdict": "operator",
+   "tests": [
+    "V16"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "V16:changed",
+   "why": null,
+   "result_type": "visual",
+   "notes": []
+  },
+  "mem-7ffd-unlocked-remap": {
+   "verdict": "confirmed",
+   "tests": [
+    "M01"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$06",
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "mem-7ffd-locked": {
+   "verdict": "confirmed",
+   "tests": [
+    "M02"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$00",
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "mem-48k-timing-7ffd": {
+   "verdict": "measured",
+   "tests": [
+    "XT4"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$06",
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": [
+    "XT4: board: $7FFD paged MMU 6 / 7 = $06 / $07; the $3FFD half was SKIPPED (NextReg $D8 bit 0 set at launch: the +3 disk ports are trapped), so b6 / b7 = $FF are not an answer."
+   ]
+  },
+  "mem-1ffd-128k-timing": {
+   "verdict": "confirmed",
+   "tests": [
+    "XT5"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$DFF3",
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "mem-altrom-select": {
+   "verdict": "confirmed",
+   "tests": [
+    "M03"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$3D",
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "mem-high-pages": {
+   "verdict": "measured",
+   "tests": [
+    "M05"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$C0",
+   "why": null,
+   "result_type": "number",
+   "notes": []
+  },
+  "mem-fetch-wrap-ffff": {
+   "verdict": "confirmed",
+   "tests": [
+    "M06"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$77",
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "div-automap-off-0a": {
+   "verdict": "confirmed",
+   "tests": [
+    "M03"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "$3D",
+   "why": null,
+   "result_type": "pass-fail",
+   "notes": []
+  },
+  "div-3dxx-instant-automap": {
+   "verdict": "confirmed",
+   "tests": [
+    "XD2"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "instant",
+   "why": null,
+   "result_type": "choice",
+   "notes": []
+  },
+  "div-rst38-trap-hidden-rom": {
+   "verdict": "confirmed",
+   "tests": [
+    "XD3"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "trap",
+   "why": null,
+   "result_type": "choice",
+   "notes": []
+  },
+  "div-bb-bit6": {
+   "verdict": "choice",
+   "tests": [
+    "XD1"
+   ],
+   "value": null,
+   "spread": null,
+   "unit": "-",
+   "choice": "set-enables",
+   "why": null,
+   "result_type": "choice",
+   "notes": []
+  }
+ }
+}

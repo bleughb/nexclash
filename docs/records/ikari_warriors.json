@@ -65,9 +65,13 @@
   "docs/profiles/ikari_warriors.json",
   "asm/ikari_warriors_hooks.asm",
   "docs/profiles/ikari_warriors_edges.json",
-  "docs/profiles/ikari_warriors_enhanced.json"
+  "docs/profiles/ikari_warriors_enhanced.json",
+  "asm/ikari_warriors_arcade.asm"
  ],
- "shared_data": [],
+ "shared_data": [
+  "asm/lib/hlib_pace.asm",
+  "asm/lib/hlib_speed.asm"
+ ],
  "rebuild": {
   "args": [
    "--no-record"

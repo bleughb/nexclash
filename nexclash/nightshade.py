@@ -929,7 +929,7 @@ def loading_check(base, nex, screen, frames_key=None):
     pages[46], pages[47] = bytearray(b23[:8192]), bytearray(b23[8192:])
     pages[10] = bytearray(nex[512:512 + 8192])           # bank 5 = first bank in the file
     st = {'mmu': [0xFF, 0xFF, 10, 11, 4, 5, 46, 47], 'sel': 0x55, 'n': 0, 'shown': False, 'key': False}
-    pg = lambda n: pages.setdefault(n, bytearray(8192))
+    pg = lambda n: (pages.get(n) or pages.setdefault(n, bytearray(8192)))
 
     class Mem(list):
         def __getitem__(s, a):
