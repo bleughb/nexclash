@@ -338,7 +338,10 @@
   "docs/profiles/pyjamarama_enhanced.json",
   "docs/profiles/pyjamarama_palette.json"
  ],
- "shared_data": [],
+ "shared_data": [
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_speed.asm"
+ ],
  "rebuild": {
   "args": [
    "--no-record"

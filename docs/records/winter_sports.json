@@ -80,11 +80,11 @@
  "outputs": {
   "plain": {
    "file": "winter_sports.nex",
-   "md5": "8dc688fa980454c63f98bc0e802d5f88"
+   "md5": "518144ff82bc534b5fa33a7df8d49176"
   },
   "sprites": {
    "file": "winter_sports_sprites.nex",
-   "md5": "eab9ae6fc1ba2e5184b57a7796140cd7"
+   "md5": "dc0711f0a74c3e3025059010c99b0d5d"
   }
  },
  "repro": [],

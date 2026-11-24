@@ -439,6 +439,12 @@ SPB = 15                           # sprite patterns: bank 15 (pages 30-31), upl
 QUADS = ((0, 0), (16, 0), (0, 16), (16, 16))   # TL, TR, BL, BR = sprites 0-3
 P2LEN, DZLEN = 9663, 4760          # plane: plotter 2 graphics 43485-53147, Dizzy 24290-29049
 HOOK_RAM = (0x5B40, 0x5BC0)        # variables + hook stack (printer buffer, never touched by the game)
+
+
+def built_hook_ram():
+    """The hook RAM as the built image holds it at boot: zeros over whatever the snapshot had (apply() writes it, the
+    replay starts from it: V_SELOK = 0, so the first hook takes spdfix's .first path; the latches at 3.5 MHz)."""
+    return bytes(HOOK_RAM[1] - HOOK_RAM[0])
 HSTK_MIN = 0x5B7A + 18             # Enhanced scratch ends 0x5B79; reserve an interrupt's stack
 TAIL_ADDR = 0x5B00                 # never touched by the game (RZX scan); the plain build uses it too
 PROFILE = os.path.join(_HERE, '..', 'docs', 'profiles', 'dizzy1_ultimate_cartoon_adventure.json')
@@ -711,6 +717,7 @@ class Dizzy1Patch:
         self.prepare(mem.__getitem__)
         for a, old, new in self.sites:
             ram[a - 0x4000:a - 0x4000 + len(new)] = new
+        ram[HOOK_RAM[0] - 0x4000:HOOK_RAM[1] - 0x4000] = built_hook_ram()     # zero in the reference snapshot too
         snap.banks[5], snap.banks[2], snap.banks[0] = bytes(ram[0:16384]), bytes(ram[16384:32768]), bytes(ram[32768:])
 
     def alt_image(self):
@@ -1279,7 +1286,7 @@ def verify(patch, rzx, z80, stop=None, collect=0, progress=None):
             if not patch.plane:
                 patch.prepare(lambda a: mem0[a])
             model = st['model'] = Model(patch, lambda a: mem0[a])
-            model.hram = mem0[HOOK_RAM[0]:HOOK_RAM[1]]
+            model.hram = built_hook_ram()         # the built image's, not the recording's printer buffer (Codex review)
             try:
                 patch.check(lambda a: mem0[a])
             except ValueError as e:
@@ -1756,8 +1763,15 @@ def unit_tests(patch, states, z80=None):
     def at(speed, sel=0x07, nrs=None):
         def f(name, st, prep=None, stop_at=None, p=None, want_fail=False):
             ENTRY.update(speed=speed, sel=sel, nr=nrs or {})
+
+            def ready(mem, regs, model):        # a hook after boot (V_SELOK = 1): the boot cases below set 0 themselves
+                h = bytearray(model.hram)
+                h[0x5B4F - HOOK_RAM[0]] = 1
+                model.hram = bytes(h)
+                if prep:
+                    prep(mem, regs, model)
             try:
-                run(name, st, prep, stop_at, p, want_fail)
+                run(name, st, ready, stop_at, p, want_fail)
             finally:
                 ENTRY.update(speed=0, sel=0x07, nr={})
         return f
@@ -1780,6 +1794,34 @@ def unit_tests(patch, states, z80=None):
     sf = patch.rom_code.index(b'\xe6\xcc\x20', S['spdfix'] - ROM_ORG)          # AND 0xCC / JR NZ,.sel
     nsel = variant(colours=patch.colours, edit={ROM_ORG + sf + 2: b'\x00\x00'})      # moved selection read as NR 7
     moved('moved selection taken as NR 7', _pick(states, COLL), latch(1), p=nsel, want_fail=True)
+    # the first hook after boot: the stub's last NextReg read (NR 8, after setup) leaves 0x243B on NR 8, whose values
+    # ((NR 8 & 0x30) | issue 2) pass the layout test; spdfix's first call (V_SELOK = 0) keeps the boot latch (3.5 MHz,
+    # the stub's start-up speed) and selects NR 7 (Codex review C1)
+    def boot(mem, regs, model):
+        h = bytearray(model.hram)
+        h[0x5B4F - HOOK_RAM[0]] = 0                      # V_SELOK: no hook has run since boot
+        for a in (0x5B66, 0x5B67, 0x5B68):
+            h[a - HOOK_RAM[0]] = 0
+        model.hram = bytes(h)
+    for nr8 in (0x10, 0x11, 0x80):
+        for name, st in kinds:
+            at(0, sel=0x08, nrs={0x08: nr8})('%s, first after boot, NR 8 = 0x%02X selected' % (name, nr8), st, boot)
+    fz = patch.rom_code.index(b'\x3a' + (0x5B4F).to_bytes(2, 'little') + b'\xb7\x28', S['spdfix'] - ROM_ORG)
+    nfirst = variant(colours=patch.colours, edit={ROM_ORG + fz + 4: b'\x00\x00'})     # no boot select: NR 8 read as NR 7
+    for nr8 in (0x10, 0x11):
+        at(0, sel=0x08, nrs={0x08: nr8})('boot select missing, NR 8 = 0x%02X' % nr8, _pick(states, COLL), boot,
+                                          p=nfirst, want_fail=True)
+    if z80:                                             # the built image's hook variables are zero, not the snapshot's
+        from .z80tonex import Z80Snapshot
+        snap = Z80Snapshot(z80)
+        lo, hi = HOOK_RAM[0] - 0x4000, HOOK_RAM[1] - 0x4000
+        b5 = bytearray(snap.banks[5])
+        b5[lo:hi] = b'\x5a' * (hi - lo)
+        snap.banks[5] = bytes(b5)
+        variant(colours=patch.colours).apply(snap)
+        c['cases'] += 1
+        if any(snap.banks[5][lo:hi]):
+            c['hook variables taken from the snapshot!'] += 1
     t2 = patch.rom_code.index(b'\x3a' + (0x5B66).to_bytes(2, 'little'), S['t_p2'] - ROM_ORG)
     n35 = variant(colours=patch.colours, edit={ROM_ORG + t2: b'\x3e\x00\x00'})       # t_p2 exits at a fixed 3.5 MHz
     at(1)('plotter 2 exit at a fixed 3.5 MHz', p2c, p=n35, want_fail=True)

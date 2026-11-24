@@ -167,6 +167,8 @@ class NextModel(object):
             if self.sel == 0x1F:
                 return self.line() & 255
             return self.nr.get(self.sel, 0)
+        if port == 0x243B:
+            return self.sel                     # the selection reads back (a wrapper that saves it must get it)
         return 0xFF
 
     def write_port(self, regs, port, value, *x):
@@ -675,13 +677,85 @@ def _t_iff(code, syms):
     return c
 
 
+def line_isr_cases(code, syms, line=0x1A5, speed=1):
+    """A zero-time interrupt after each OUT to 0x243B in a line read, leaving NR 7 selected (what Silkworm's and Into
+    the Eagle's Nest's handlers do; Codex review C7). -> {entry: [result after OUT 1, 2, ...]} with the true line
+    `line`. hlib_line reads NR 7 as the low byte when the interrupt follows its NR $1F select: callers whose ISR
+    moves the selection use hlib_line_di, preserve the selection in the ISR, or count interrupts (hlib_now's retry
+    sees only held lines, and a handler shorter than a line holds none)."""
+    from skoolkit.simutils import PC, SP
+    out = {}
+    for entry in ('hlib_line', 'hlib_line_di'):
+        if entry not in syms:
+            continue
+        res = []
+        for k in range(1, 4):
+            sim, model = _machine(code, speed=speed)
+            model.frozen = line
+            R, m, ops = sim.registers, sim.memory, sim.opcodes
+            sp = (R[SP] - 2) & 0xFFFF
+            m[sp], m[sp + 1] = STOP & 255, STOP >> 8
+            R[SP], R[PC], R[IFF1] = sp, syms[entry], 1
+            outs = 0
+            for _ in range(100000):
+                if R[PC] == STOP:
+                    break
+                pc = R[PC]
+                is_out = m[pc] == 0xED and m[(pc + 1) & 0xFFFF] == 0x79 and R[2] == 0x24
+                ops[m[pc]]()
+                if is_out:
+                    outs += 1
+                    if outs == k and R[IFF1]:
+                        model.sel = 7
+            res.append(R[6] * 256 + R[7])
+        out[entry] = res
+    return out
+
+
+def drift_extremes(samples, window):
+    """samples: (time, drift) in time order; -> (most the drift rises, most it falls) between two samples at most
+    `window` apart. A rolling minimum / maximum: comparing each sample with the window's oldest alone missed a
+    0, +2, -2, 0 swing of 4 (Codex review T4)."""
+    lo, hi = collections.deque(), collections.deque()
+    rise = fall = j = 0
+    for i, (t_i, d_i) in enumerate(samples):
+        while t_i - samples[j][0] > window:
+            j += 1
+        while lo and samples[lo[-1]][1] >= d_i:
+            lo.pop()
+        lo.append(i)
+        while hi and samples[hi[-1]][1] <= d_i:
+            hi.pop()
+        hi.append(i)
+        while lo[0] < j:
+            lo.popleft()
+        while hi[0] < j:
+            hi.popleft()
+        rise = max(rise, d_i - samples[lo[0]][1])
+        fall = max(fall, samples[hi[0]][1] - d_i)
+    return rise, fall
+
+
+def drift_selfcheck():
+    """-> failures"""
+    bad = []
+    if drift_extremes([(0, 0), (1, 2), (2, -2), (3, 0)], 10) != (2, 4):
+        bad.append('drift 0, +2, -2, 0: rise 2, fall 4')
+    if drift_extremes([(0, 0), (5, 9), (20, 0)], 10) != (9, 0):      # 5 -> 20 is 15 apart: not one window
+        bad.append('drift: a pair further apart than the window does not count')
+    if drift_extremes([(0, 0), (100, 3)], 10) != (0, 0):
+        bad.append('drift: two samples a window apart are never compared')
+    return bad
+
+
 # Hook files whose NEXTREG 7 writes a fixed speed (the player's F8 choice lost on the way out), published before
 # the stack forms existed; the back-catalogue speed fix takes each off this list. A new engine is never added here.
-SPEED_LEGACY = {
-    'atic_atac_hooks.asm', 'atic_atac_v14_hooks.asm', 'cauldron_hooks.asm', 'incredible_shrinking_fireman_hooks-add-GPT6_ASTRA.asm',
-    'inferno_hooks.asm', 'matchday_hooks.asm', 'matchday_v21_hooks.asm', 'new_zealand_story_hooks.asm',
-    'rainbow_hooks.asm', 'rainbow_z80n_hooks.asm', 'trueno_hooks.asm', 'wally_hooks.asm',
-    'arkanoid_hooks.asm', 'bomb_jack_hooks.asm', 'manic_miner_hooks.asm',   # published 2026-11-21, landed 2026-11-22
+SPEED_LEGACY = {             # file: its fixed writes now; a new one in a listed file fails too (Codex review C6)
+    'atic_atac_hooks.asm': 8, 'atic_atac_v14_hooks.asm': 2, 'cauldron_hooks.asm': 11,
+    'incredible_shrinking_fireman_hooks-add-GPT6_ASTRA.asm': 1, 'inferno_hooks.asm': 13, 'matchday_hooks.asm': 2,
+    'matchday_v21_hooks.asm': 1, 'new_zealand_story_hooks.asm': 2, 'rainbow_hooks.asm': 2, 'rainbow_z80n_hooks.asm': 2,
+    'trueno_hooks.asm': 2, 'wally_hooks.asm': 2,
+    'arkanoid_hooks.asm': 1, 'bomb_jack_hooks.asm': 3, 'manic_miner_hooks.asm': 9,   # published 2026-11-21, landed 2026-11-22
     }
 # Shipped in jattree/nxc (fixed: gauntlet, altered_beast, jsw, robin_of_the_wood). Left, not the plain kind:
 # matchday_v21 and new_zealand_story run the game's own interrupt handler at 3.5 MHz on purpose (its sound) and give the
@@ -692,6 +766,21 @@ SPEED_LEGACY = {
 # cauldron (v1.1 ships, own hooks), incredible_shrinking_fireman GPT6 (OPUS ships), inferno, matchday (v21 ships),
 # rainbow (z80n ships), trueno, wally (wally2 ships, keeps the speed).
 _SPEED_RE = re.compile(r'^\s*(?:[A-Za-z_.][\w.]*:?)?\s*nextreg\s+(?:0x0?7|\$0?7|7|07h)\s*,\s*([^\s;]+)', re.I)
+
+
+def speed_audit_check(sa=None, legacy=None):
+    """-> (title, failures): a fixed NEXTREG 7 write in a file not on SPEED_LEGACY, or more than its pinned count in a
+    listed one (the exemption was by file name: another fixed write in a listed file passed); a listed file with
+    fewer than its count asks for the pin to come down."""
+    sa = speed_audit() if sa is None else sa
+    legacy = SPEED_LEGACY if legacy is None else legacy
+    bad = ['fixed speed written in a hook: %s line %d!' % (f, sa[f][0][0]) for f in sorted(sa) if f not in legacy]
+    bad += ['%s writes a fixed speed %d times, %d pinned: line %d is new!' % (f, len(sa[f]), legacy[f], sa[f][-1][0])
+            for f in sorted(sa) if f in legacy and len(sa[f]) > legacy[f]]
+    bad += ['%s writes a fixed speed %d times, %d pinned: lower its SPEED_LEGACY count (or take it off)!'
+            % (f, len(sa.get(f, ())), n) for f, n in sorted(legacy.items()) if len(sa.get(f, ())) < n]
+    return ('hooklib speed audit: NEXTREG 7 only 28 MHz in or the caller\'s speed back; %d legacy files still to fix'
+            % len(set(legacy) & set(sa)), bad)
 
 
 def speed_audit(root=ROOT):
@@ -1051,13 +1140,12 @@ def selfcheck():
                 % (len(au), sum(v == 'twice' for *_, v in au), sum(v == 'value' for *_, v in au),
                    sum(v == 'exempt' for *_, v in au), len(_IFF_AUDIT_CASES)),
                 ['IFF read once: %s!' % x for x in once] + _t_iff_audit_rules()))
-    sa = speed_audit()
-    new = sorted(f for f in sa if f not in SPEED_LEGACY)
-    fixed = sorted(f for f in SPEED_LEGACY if f not in sa)
-    out.append(('hooklib speed audit: NEXTREG 7 only 28 MHz in or the caller\'s speed back; %d legacy files still to fix'
-                % len(SPEED_LEGACY & set(sa)),
-                ['fixed speed written in a hook: %s line %d!' % (f, sa[f][0][0]) for f in new] +
-                ['%s no longer writes a fixed speed: take it off SPEED_LEGACY!' % f for f in fixed]))
+    out.append(speed_audit_check())
+    li = line_isr_cases(code, syms)
+    out.append(('hooklib line read under a selection-moving ISR (C7): hlib_line_di exact %s; hlib_line %s'
+                % (li.get('hlib_line_di'), li.get('hlib_line')),
+                ([] if all(v == 0x1A5 for v in li.get('hlib_line_di', [0])) else ['hlib_line_di read a moved selection!'])
+                + ([] if li.get('hlib_line', [0x1A5])[1] != 0x1A5 else ['hlib_line no longer shows the gap: revise C7 note!'])))
     good = hide_cases([0, 1], {0x100: 'room'}, lambda pc, st, sp: ([], set()))
     broken = hide_cases([0, 1], {0x100: 'room'}, lambda pc, st, sp: ([], {5}))
     out.append(('hooklib hide_cases: %d cases (2 states x 4 speeds), a hook leaving sprite 5 shown caught (%d)'

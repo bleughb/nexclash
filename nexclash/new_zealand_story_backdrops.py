@@ -14,6 +14,7 @@ Pages (all zero in v1.1, in banks the .nex already has): 45, 67, 81, 83.
      high nibble = even row.
 Pixel model (backdrop_index): exactly what asm/new_zealand_story_backdrop.asm draws.
 """
+from . import l2pal
 import json
 import os
 
@@ -98,6 +99,7 @@ def layout():
             for i in range(16):
                 v = pal[i] if i < len(pal) else 0
                 d[o + 2 * i] = v >> 1; d[o + 2 * i + 1] = v & 1
+            d[o:o + 32] = l2pal.fix(bytes(d[o:o + 32]), 'pairs', keep=(0,))     # opaque 0xE3 -> 0xE7 (entry 0: the sky)
     for i, n in enumerate(NAMES):
         w, s = LEVEL_WS[i]
         b = floors[n]

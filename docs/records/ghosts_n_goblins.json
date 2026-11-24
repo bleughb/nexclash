@@ -77,7 +77,10 @@
   "docs/profiles/ghosts_n_goblins_graphics.json",
   "docs/profiles/ghosts_n_goblins_palette.json"
  ],
- "shared_data": [],
+ "shared_data": [
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_speed.asm"
+ ],
  "rebuild": {
   "args": [
    "--no-record",

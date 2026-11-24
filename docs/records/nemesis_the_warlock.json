@@ -30,7 +30,9 @@
   "docs/profiles/nemesis_the_warlock.json",
   "asm/nemesis_hooks.asm"
  ],
- "shared_data": [],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm"
+ ],
  "rebuild": {
   "args": [
    "--no-record"

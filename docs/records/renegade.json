@@ -51,7 +51,11 @@
   "docs/profiles/renegade128.json",
   "asm/renegade128_hooks.asm"
  ],
- "shared_data": [],
+ "shared_data": [
+  "asm/lib/hlib_pace.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_speed.asm"
+ ],
  "rebuild": {
   "args": [
    "--no-record"

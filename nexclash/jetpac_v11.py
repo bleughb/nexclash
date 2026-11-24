@@ -449,16 +449,8 @@ def _machine(Sim, mem, regs, ns, slot='o'):
     sim = machine(Sim, mem, regs, slot)
     R, ed = sim.registers, sim.after_ED
 
-    def nn():
-        p = R[24]
-        ns.nextreg(mem[(p + 2) % 65536], mem[(p + 3) % 65536])
-        R[15] = R2[R[15]]; R[24] = (p + 4) % 65536
-
-    def na():
-        p = R[24]
-        ns.nextreg(mem[(p + 2) % 65536], R[0])
-        R[15] = R2[R[15]]; R[24] = (p + 3) % 65536
-    ed[0x91], ed[0x92] = nn, na
+    from . import z80n                      # the shared Z80N handlers, NEXTREG's T-states included (Codex review D1)
+    z80n.install(sim, ns.nextreg)
 
     class Tr:
         def read_port(s, regs_, port):
