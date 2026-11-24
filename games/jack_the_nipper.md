@@ -1,15 +1,15 @@
-# Jack the Nipper (Gremlin Graphics, 1986) - stage 0 done; engine not yet written
+# Jack the Nipper (Gremlin Graphics, 1986) - stage 1 done (design decided 2026-11-23); engine not yet written
 
 ## Next session
-Stage: 1 (design)            State: intake done 2026-11-22 (survey below); no design yet
+Stage: 2 (build)             State: design decided by the owner 2026-11-23 (all defaults; "Design decisions" below)
 Inputs: TOSEC `Jack the Nipper (1986)(Gremlin Graphics Software).z80` (md5 adcdb8f9bb5e72218392aab8fd44e78e) and its
 `[a]` (4c5398b8bcfd88ebd83656f01c3aca21); rzxarchive `j/jacknipper.rzx` (108,043 frames, 36 min; its own start
 snapshot md5 903c092495784d308cf03899b80d7110)    Branch: add-jack-the-nipper
-Checks: survey (GATE OK), inspect, figure sheet, pixel readers, depth    Pending user answers: the design question below
-Start with: the object record's position bytes and 0x87BB, the erase / restore at 0x8760, objects per room
-(`cost --at 0x8009`)    Read: PLAYBOOK 2-3, 3d (an unknown engine: feasibility first)
-Open: the figure plotter(s) behind the copier; where the figures' colours come from; a short recording (3-5 min) for
-the design runs (the 36-minute one stays for the full verification)
+Checks: survey (GATE OK), inspect, figure sheet, pixel readers, depth    Pending user answers: none
+Start with: the patch plan (PLAYBOOK 2): hooks at the sprite routine 0x8009's two paths (0x80C9, 0x8273), the
+shadow screen 0x6000-0x6FFF and dirty cells 0x7D00-0x7EFF, a pattern cache (a 24 x 40 adult is six sprites)
+Read: PLAYBOOK 2-3, docs/ENGINE_CONTRACT.md, "Design decisions" below
+Open: a short recording (3-5 min) for the build runs (the 36-minute one stays for the full verification)
 
 ## Snapshot (0b)
 48K, in game (PC 0x908B in RAM; the recording's start 0x90AD), IM 1 with interrupts OFF (DI), I = 0x3F, SP 0x7FF7,
@@ -61,7 +61,10 @@ RAMTOP 0x7C60, border 0. No loader to run.
 - Model so far: shadow screen + dirty cells + masked sprites; figures take the room's attributes (0x7F84 sets them
   per room). Next: the plotters' entry points and inputs (x, y, frame), the restore's source, figures per room.
 
-## Design question (pending, to Jon 2026-11-23; PLAYBOOK 3c defaults + this game's exceptions)
+## Design decisions (the owner, 2026-11-23)
+All defaults taken: every figure a sprite (pickups included); scenery, HUD, score and text on the ULA; figures in front of all scenery, later objects over earlier; the game's own colours until the painted sheet; effects (pea, sparkle, smoke) as sprites; the masks' black outline kept; no pause or message window known (a hide gets its own fix if one turns up).
+
+## Design question (asked 2026-11-23; PLAYBOOK 3c defaults + this game's exceptions)
 The recording draws 69 figure kinds (figures.png, from 0x8009's two paths over 108,043 frames): 36 small objects
 (16 x 16: pickups such as the computer, glue, bomb and keys, a bug, and effects: the pea, a sparkle, four smoke
 puffs), 8 of 16 x 24 (Jack, the ghosts, a kid) and 25 adults 24 px wide (24 / 32 / 40 rows: postman, women, the
@@ -79,6 +82,7 @@ sprites, so patterns are uploaded per figure from a cache (more figure kinds tha
 
 ## Stage log
 - 2026-11-22: stage 0, ~1.5 h wall (both games' surveys in parallel), ~20 tool calls, no user rounds.
+- 2026-11-23: stage 1 closed: the owner took every default (one round).
 
 ## Lessons
 - [none: stage 0 only: the survey answered every intake question it asks]
