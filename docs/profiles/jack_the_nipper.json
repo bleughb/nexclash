@@ -1,0 +1,24 @@
+{
+ "game": "Jack the Nipper",
+ "engine": "jack_the_nipper",
+ "signature": {
+  "addr": "34747",
+  "bytes": "dd7e0008dd7e0fa7caca8708c3db87dd"
+ },
+ "sites": {
+  "0x80C9": "e5f5a7",
+  "0x8273": "e5f5a7",
+  "0xAA4A": "cdf986"
+ },
+ "hooks": {
+  "source": "asm/jack_the_nipper_hooks.asm",
+  "syms": {
+   "code_start": "0x3800",
+   "e_cmt": "0x3810",
+   "e_d16": "0x3800",
+   "e_d24": "0x3808"
+  },
+  "page": "CBB4E5F5A7C3CC80CBB4E5F5A7C37682C3F986",
+  "assembled_with": "sjasmplus 1.24.0"
+ }
+}
