@@ -416,6 +416,14 @@
     "sprites": "b836bba4eebd119fc04179178bd22d3a"
    }
   },
+  "6f5d708c439f3356a930ea4f176a0c8f": {
+   "game": "Jack the Nipper II - In Coconut Capers",
+   "doc": "jack_the_nipper_2.md",
+   "nex": {
+    "plain": "e63f00da62e1ac853765bf7825f2241a",
+    "sprites": "5e157c0999e7d755a8daef3b93e6c384"
+   }
+  },
   "a4963e747af1145fe0f2710da592abc6": {
    "game": "Jet Set Willy",
    "doc": "jet_set_willy.md",

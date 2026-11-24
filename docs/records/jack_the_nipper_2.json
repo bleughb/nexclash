@@ -1,0 +1,152 @@
+{
+ "name": "jack_the_nipper_2",
+ "order": 277,
+ "game": "Jack the Nipper II - In Coconut Capers",
+ "doc": "jack_the_nipper_2.md",
+ "engine": "jack_the_nipper_2",
+ "representative": true,
+ "reference": "jack_the_nipper_2",
+ "inputs": {
+  "snapshot": {
+   "name": "jack_the_nipper_2.z80",
+   "md5": "6f5d708c439f3356a930ea4f176a0c8f",
+   "path": "jack_the_nipper_2/jack_the_nipper_2.z80",
+   "note": "TOSEC Jack the Nipper II - In Coconut Capers (1987)(Gremlin Graphics Software)[a].z80: 48K, in game"
+  },
+  "recordings": [
+   {
+    "name": "jacknipper2.rzx",
+    "md5": "5b8cd64db568ec3bccd77e7efbacd6b9",
+    "path": "jack_the_nipper_2/jacknipper2.rzx",
+    "role": "rzxarchive j/jacknipper2.rzx: 158,593 frames (52 min), human play on a 128K machine running the 48K game, from its own start snapshot"
+   },
+   {
+    "name": "jack_the_nipper_2.pok",
+    "md5": "8a14db29b9a55e460aa3f1fcf7a341e0",
+    "path": "jack_the_nipper_2/jack_the_nipper_2.pok",
+    "note": "the cheats checked against the code: Infinite lives 43251 = 0, Infinite ammo 38306 = 0 (the archive's); Immunity 43212 = 201 (ours; the archive's two immunity sets are not used: games/jack_the_nipper_2.md)"
+   }
+  ]
+ },
+ "modules": [
+  "jack_the_nipper_2",
+  "jack_the_nipper"
+ ],
+ "own_modules": [
+  "jack_the_nipper_2"
+ ],
+ "data": [
+  "docs/profiles/jack_the_nipper_2.json",
+  "asm/jack_the_nipper_2_hooks.asm"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_pcache.asm",
+  "asm/lib/hlib_dma.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "jacknipper2.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 240,
+  "note": "Blit sites: original and patched blit from one state (registers, every write outside the cell buffer, the scratch writes = the buffer writes moved by 0xC000; IY, values read back from the scratch and E' proven dead on the first 300 blits and every 100th after). Copier entry: the commit (every slot's colour list entry the scenery's), then the figures blitted since the last copy, modelled from their graphics and masks, against the original's buffer slots and against the visible sprites pixel for pixel, each pixel in its cell's colour from the original's list. Units: every site at four speeds, the copy as a hide, the figure table full; eight negative controls."
+ },
+ "outputs": {
+  "plain": {
+   "file": "jack_the_nipper_2.nex",
+   "md5": "e63f00da62e1ac853765bf7825f2241a"
+  },
+  "sprites": {
+   "file": "jack_the_nipper_2_sprites.nex",
+   "md5": "5e157c0999e7d755a8daef3b93e6c384"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Jack the Nipper II",
+  "engine_col": "jack_the_nipper_2 (jack_the_nipper_2.md)",
+  "build": "jack_the_nipper_2_sprites.nex: every figure (pickups and effects too) a 4-bit sprite in its cells' colours from the game's own colour list; scenery, HUD and text on the ULA",
+  "software": "RZX replay verify of the whole recording (blits, copies, picture), units + 8 negative controls; JNext: figures show as sprites",
+  "hardware": "untested",
+  "next": "the owner tests in JNext / on a Next; colour sheets and recolour; cheats in the .nxc"
+ },
+ "checks": [
+  "asm2profile:jack_the_nipper_2"
+ ],
+ "techniques": [
+  {
+   "application": "jack_the_nipper_2.scratch-redirect",
+   "id": "patch.scratch-redirect",
+   "revision": 1,
+   "target": "the game's own blits land in a scratch copy of the cell buffer at slot 1 (IY high byte AND 0x3F at the 16 blit sites)",
+   "phases": []
+  },
+  {
+   "application": "jack_the_nipper_2.pattern-cache",
+   "id": "optimise.pattern-cache",
+   "revision": 4,
+   "target": "4-bit tile pairs keyed by graphics address + pair + colour (one colour), or by an exact cell-colour signature (several); the oldest slot of the window on a miss",
+   "phases": []
+  },
+  {
+   "application": "jack_the_nipper_2.restore-speed",
+   "id": "patch.restore-speed",
+   "revision": 1,
+   "target": "every hook gives back the caller's NR 7",
+   "phases": []
+  },
+  {
+   "application": "jack_the_nipper_2.pacing",
+   "id": "detect.pacing-structure",
+   "revision": 2,
+   "target": "no frame sync: the work is the pace; hooks add 4.5 %",
+   "phases": []
+  },
+  {
+   "application": "jack_the_nipper_2.screen-readers",
+   "id": "detect.gameplay-screen-readers",
+   "revision": 2,
+   "target": "no logic reads figure pixels",
+   "phases": []
+  }
+ ],
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/jack_the_nipper_2.md#pacing"
+   ],
+   "coverage": "Simulator over the first 3,000 frames (994 updates); no JNext or hardware timing.",
+   "result": "No frame sync; the hooks add 4.5 % of the time (2.8 % over the first 1,000 frames), so the game runs about 5 % slower."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/jack_the_nipper_2.md#dependencies"
+   ],
+   "coverage": "scan --writers over 40,000 frames; the verifier over the whole recording.",
+   "result": "No logic reads figure pixels; IY, the scratch values read back and E' dead."
+  },
+  "decision": "Scratch cell-buffer redirect at slot 1 + 4-bit sprites committed at the copier's entry, each pixel in its cell's colour.",
+  "next_experiment": "JNext pace against the original (verify.update-locked-pace)."
+ },
+ "results": [
+  {
+   "application": "jack_the_nipper_2.scratch-redirect",
+   "check": "state.rzx-differential",
+   "scope": "1 human recording: 3,000 frames verified (the whole 158,593 in the stamp run); no hardware; JNext start only",
+   "evidence": "games/jack_the_nipper_2.md \"Results\"",
+   "status": "partial",
+   "build": "5e157c09"
+  }
+ ]
+}
