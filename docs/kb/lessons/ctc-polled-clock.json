@@ -11,9 +11,9 @@
   },
   {
    "game": "hardware",
-   "record": "docs/kb/hardware/next-issue2-3.03.00.json",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
    "test": "I12",
-   "text": "KS1 Issue 2, core 3.03.00 (nxsuite I12): the CTC counted the same over a fixed interval at 7, 14 and 28 MHz (2216 ticks): its rate does not follow the CPU speed.",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite I12): the CTC counted the same over a fixed interval at 7, 14 and 28 MHz (2216 ticks): its rate does not follow the CPU speed.",
    "shown_on": "hardware"
   }
  ],

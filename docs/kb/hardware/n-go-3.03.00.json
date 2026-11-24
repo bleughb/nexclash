@@ -2,11 +2,12 @@
  "schema": 2,
  "platform": {
   "kind": "board",
-  "name": "board",
+  "name": "N-GO",
   "hardware_evidence": true
  },
  "board": {
-  "name": "next-issue2",
+  "name": "n-go",
+  "named_from": "owner (relabelled 2026-11-24: the registers read $0A / $00, as an official Issue 2 does; the run predates the first-start questions)",
   "nr00": "nr00:$0A",
   "nr0f": "nr0f:$00",
   "ram": "distinct",

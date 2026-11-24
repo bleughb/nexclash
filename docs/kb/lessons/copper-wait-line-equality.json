@@ -2,7 +2,7 @@
  "id": "lesson.copper-wait-line-equality",
  "kind": "pitfall",
  "claim": "A Copper WAIT matches its line only for equality (the position is at-or-past), so a WAIT for a line the beam has passed holds until the next frame; and the Copper counts the left border of line n + 1 as line n.",
- "limit": "The passed-line hold and copper line = raster line measured on a KS1 (core 3.03.00, nxsuite P01, P04); the left-border count and the h limits (55 on a 456-dot line, 54 on 448) are from the book.",
+ "limit": "The passed-line hold and copper line = raster line measured on the N-Go board (Issue 2-compatible clone, core 3.03.00, nxsuite P01, P04); the left-border count and the h limits (55 on a 456-dot line, 54 on 448) are from the book.",
  "evidence": [
   {
    "game": "reference",
@@ -12,16 +12,16 @@
   },
   {
    "game": "hardware",
-   "record": "docs/kb/hardware/next-issue2-3.03.00.json",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
    "test": "P01",
-   "text": "KS1 Issue 2, core 3.03.00 (nxsuite P01): a WAIT for a line already passed held the rest of the list until that line in the next frame.",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite P01): a WAIT for a line already passed held the rest of the list until that line in the next frame.",
    "shown_on": "hardware"
   },
   {
    "game": "hardware",
-   "record": "docs/kb/hardware/next-issue2-3.03.00.json",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
    "test": "P04",
-   "text": "KS1 Issue 2, core 3.03.00 (nxsuite P04): copper WAITs for lines 0, 120, 191 and 250 matched the same $1E/$1F raster lines.",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite P04): copper WAITs for lines 0, 120, 191 and 250 matched the same $1E/$1F raster lines.",
    "shown_on": "hardware"
   }
  ],

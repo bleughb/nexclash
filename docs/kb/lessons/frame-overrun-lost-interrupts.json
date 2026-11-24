@@ -24,9 +24,9 @@
   },
   {
    "game": "hardware",
-   "record": "docs/kb/hardware/next-issue2-3.03.00.json",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
    "test": "I03",
-   "text": "KS1 Issue 2, core 3.03.00 (nxsuite I03): im2hold T1-T7 held: interrupts held through a 3-frame DI in hold mode, lost in pulse mode; a RET-ended handler blocked later ones until a RETI.",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite I03): im2hold T1-T7 held: interrupts held through a 3-frame DI in hold mode, lost in pulse mode; a RET-ended handler blocked later ones until a RETI.",
    "shown_on": "hardware"
   }
  ],

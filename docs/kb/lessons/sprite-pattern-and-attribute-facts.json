@@ -11,9 +11,9 @@
   },
   {
    "game": "hardware",
-   "record": "docs/kb/hardware/next-issue2-3.03.00.json",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
    "test": "SP06",
-   "text": "KS1 Issue 2, core 3.03.00 (nxsuite SP06): a 4-bit anchor with attr4 $80 showed bytes 0-127 of the slot and $C0 bytes 128-255.",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite SP06): a 4-bit anchor with attr4 $80 showed bytes 0-127 of the slot and $C0 bytes 128-255.",
    "shown_on": "hardware"
   }
  ],

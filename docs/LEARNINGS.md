@@ -150,7 +150,7 @@ BRIEFING - with its reason.
 - NextReg $43=0x20 = edit sprite palette 0 with auto-increment; $40 index, $41 RRRGGGBB.
 - NextReg $19 clip: reset the index with $1C bit 1, then write X1,X2,Y1,Y2; ULA-relative when
   sprites are not over the border.
-- Per-scanline sprite limit: 105 unscaled 16x16 sprites a line (52 / 26 / 13 at 2x / 4x / 8x; KS1
+- Per-scanline sprite limit: 105 unscaled 16x16 sprites a line (52 / 26 / 13 at 2x / 4x / 8x; N-Go
   3.03.00, nxsuite SP10); overflow sets port 0x303B read bit 1 (ports.txt). We use <= ~12 a line. Layer order is global (NextReg $15 bits 4:2, SLU default): sprites cannot sit
   behind some ULA objects and in front of others (Wally limit stands).
 - Sprite-to-sprite order: NextReg $15 bit 6 = 0 (reset) draws the HIGHER sprite number on top;
@@ -645,7 +645,7 @@ Grouped by question; add a new lesson to its group.
 - Z80N instructions in hooks: always allowed in .nex builds (maintainers, 2026-10-21). SkoolKit's
   simulator does not know them (an unknown ED opcode runs as a silent 2-byte NOP), so a verifier
   calls `z80n.install(sim, nextreg)` after simpool.machine(): all 29, NEXTREG through the engine's
-  own model, other ED NOPs and ED B6 (LDIRX on a KS1 3.03.00, nxsuite Z04) raise Z80NError
+  own model, other ED NOPs and ED B6 (LDIRX on N-Go 3.03.00, nxsuite Z04) raise Z80NError
   (strict=False: game code running ED NOPs).
   Handlers follow core 3.02.05's VHDL where the guide disagrees (z80n docstring: LDIX-family flags
   like LDI, ADD rr,A clears CF, LDWS 14 T). Engines written before it (cyclone._machine ED 31 / ED 30,

@@ -104,9 +104,9 @@ $08 bit 7 semantics, 48K timing vs 7FFD decoding (see A1, LEARNINGS 1.2-1.4).
 ### A1. What we rely on
 | Item | Setting / fact |
 |---|---|
-| Core | 3.03 only (owner, 2026-11-24): no 28 MHz read wait on 3.03.00 (docs/kb/hardware/next-issue2-3.03.00.json, nxsuite C01), so 28 MHz budgets may use the full 8x of 3.5 MHz; the x1.4 / 8-over-6.5 factors are a 3.02 allowance, dropped per build when it is next revised (and its checks pass). 3.02 figures in the docs are history |
+| Core | 3.03 only (owner, 2026-11-24): no 28 MHz read wait on 3.03.00 (docs/kb/hardware/n-go-3.03.00.json, nxsuite C01), so 28 MHz budgets may use the full 8x of 3.5 MHz; the x1.4 / 8-over-6.5 factors are a 3.02 allowance, dropped per build when it is next revised (and its checks pass). 3.02 figures in the docs are history |
 | CPU speed | NextReg $07 = 0 (3.5 MHz) |
-| Video | 50Hz forced (NextReg $05) unless `--allow-60hz` (nexclash.py convert / auto / patch / new / verify: sets z80tonex.ALLOW_60HZ, every build path; outputs then differ from the verified MD5s). "50 Hz" = clk28 / clocks per frame: 50.08 Hz at our 48K timing and VGA 0 (28e6 / (312 x 1792), computed), 49.36 at 128K timing (measured: KS1 3.03.00, nxsuite V19); VGA timings 1-6 (NextReg $11, the user's setting) run up to ~18 % fast (TECHNIQUES 2.6 clock table, register notes). Ask for the video mode with any "runs too fast" hardware report |
+| Video | 50Hz forced (NextReg $05) unless `--allow-60hz` (nexclash.py convert / auto / patch / new / verify: sets z80tonex.ALLOW_60HZ, every build path; outputs then differ from the verified MD5s). "50 Hz" = clk28 / clocks per frame: 50.08 Hz at our 48K timing and VGA 0 (28e6 / (312 x 1792), computed), 49.36 at 128K timing (measured: N-Go 3.03.00, nxsuite V19); VGA timings 1-6 (NextReg $11, the user's setting) run up to ~18 % fast (TECHNIQUES 2.6 clock table, register notes). Ask for the video mode with any "runs too fast" hardware report |
 | 48K fidelity | NextReg $03 = 48K timing (written after the legacy paging writes; VHDL: this does NOT stop 7FFD/1FFD decoding - with 48K/128K timing 7FFD decodes as A15=0, A1:0=01, A14 ignored; timing only changes contention); NextReg $08 contention on; 7FFD lock via the tail's own 7FFD write (bit 5) |
 | DivMMC | The stub clears NextReg $06 bit 4 and unmaps DivMMC memory (OUT $E3,0; z80tonex.build_stub). That bit turned DivMMC automap off only up to core 3.01.05: from core 3.01.10 it is the DRIVE-button NMI alone, the automap enable is NextReg $0A bit 4, and $BB bit 7 (set at reset) automaps on any instruction fetch at $3Dxx while ROM3 is selected - which the alt ROM image 1 is (core 3.02.05 nextreg.txt, varmfskii zx_next_notes; NEXT_REGISTERS). NextZXOS and NEXLOAD leave it ON: $0A read 0x11, $B8 0x82 (entry points 0x0008, 0x0038) on a Tang board, 2026-11-20, so every IM 1 interrupt mapped DivMMC over 0000-3FFF under our games: Bubbler (hook stack 0x3EF4) crashed with automap on, played with it off (jattree/nxc #3); Commando 541e34e2 (code at 0x3D00-0x3DFF) likely too (C2 #24). Since 2026-11-20 every build (auto/convert/recolour, z80tonex CLI) starts with z80tonex.automap_off (DI, $0A bit 4 off, JP the stub: 19 bytes at entry-bank 0x1E00, header PC on them), applied last by nexclash.py finish_outputs, each file booted by nextboot.automap_check from $0A = 0x11, so nothing of a build moves. Rule kept: never put code at 0x3D00-0x3DFF |
 | Interrupt length | Next /INT outlasts a 128K's 36 T: an EI-first handler re-enters (Tang: op after EI ends 38 T after ack: yes; 42: no). games/altered_beast.md |
@@ -380,8 +380,8 @@ Hardware to confirm
    maintainer decision (full `selftest.py --stamp`). Check ped7g NEXLOAD2's reset list first.
 27. Alt image 0: a copy of ROM 0 on the Next is NextZXOS's (Target Renegade's sound bytes, Knight
    Tyme's star map). New engines: `patch.altrom0` (128K ROM 0 + hooks). OUT 0x1FFD picks the ROM pair in
-   128K timing (KS1 3.03.00, nxsuite XT5); the image unconfirmed. `scan` cannot split ROM reads by ROM.
-28. DONE (KS1 3.03.00, docs/kb/hardware/next-issue2-3.03.00.json): a WAIT for a LINE already passed
+   128K timing (N-Go 3.03.00, nxsuite XT5); the image unconfirmed. `scan` cannot split ROM reads by ROM.
+28. DONE (N-Go 3.03.00, docs/kb/hardware/n-go-3.03.00.json): a WAIT for a LINE already passed
    holds the list until next frame (nxsuite P01; an h passed on the CURRENT line does not wait);
    neither $64 = 33 nor 32 puts copper line 0 on 320x256 Layer 2 row 0 (V18); a 60 Hz frame has 264
    lines (F03), so with $64 = 0 a WAIT for 311 never fires there (TECHNIQUES "Raster numbering").
@@ -405,7 +405,7 @@ Designs not built yet (use when a game needs them)
    with it against today's OUTI / OTIR loops, where the source pattern is linear in memory.
 32. Per-cell depth with no masking (TECHNIQUES "Sprites BETWEEN the ULA and the tilemap"): $15 layer
    mode %110 + $68 bits 6:5 = %01 should put ULA + tilemap in front of the sprites, and tile attribute
-   bit 0 single tiles behind them. Seen on a KS1 (3.03.00, nxsuite V13).
+   bit 0 single tiles behind them. Seen on an N-Go (3.03.00, nxsuite V13).
 33. Hook page with interrupts on when the game's ISR touches every slot (no free slot for midres'
    slot-5 trick): NextMasterSystem's trampoline (TECHNIQUES) - the IM2 entry maps the game's page back
    under the ISR and puts a trampoline in its return slot that maps the hook page again. Needs: verify
@@ -429,7 +429,7 @@ Designs not built yet (use when a game needs them)
    the same block every alt-ROM engine fills with hooks (Cyclone 0x3AFF, Match Day 0x3BFF handle it
    per engine). A shared check belongs in nextboot.check / the alt ROM build: IM 2 and I*256+0xFF in
    the altrom range -> refuse unless both vector bytes are unchanged or deliberately redirected.
-   The bus reads $FF in pulse mode on a KS1 (3.03.00, nxsuite I01); other cores unmeasured.
+   The bus reads $FF in pulse mode on an N-Go (3.03.00, nxsuite I01); other cores unmeasured.
 36. `inspect` should warn when CODE runs in the printer buffer (0x5B00-0x5BFF): NEXLOAD overwrites it,
    so the build needs keep_printer_buffer (Match Day: data; Cyclone: the main loop - its first plain
    build, without it, would not run on hardware). `auto` warns (new builds). Read first, not put back:

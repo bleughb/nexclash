@@ -2,7 +2,7 @@
  "id": "lesson.dma-copy-loses-interrupt",
  "kind": "pitfall",
  "claim": "A classic zxnDMA job holds the bus and can hide the frame interrupt, which the simulator does not model; copy in short chunks or use the CPU when the copy would cover the interrupt line.",
- "limit": "Shown on a KS1 (core 3.03.00, nxsuite I22): a continuous transfer covering the pulse-mode frame interrupt loses it.",
+ "limit": "Shown on the N-Go board (Issue 2-compatible clone, core 3.03.00, nxsuite I22): a continuous transfer covering the pulse-mode frame interrupt loses it.",
  "evidence": [
   {
    "game": "games/cisco_heat.md",
@@ -18,9 +18,9 @@
   },
   {
    "game": "hardware",
-   "record": "docs/kb/hardware/next-issue2-3.03.00.json",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
    "test": "I22",
-   "text": "KS1 Issue 2, core 3.03.00 (nxsuite I22): a continuous zxnDMA transfer covering the pulse-mode frame interrupt lost it, DI or EI, at 3.5 and 28 MHz.",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite I22): a continuous zxnDMA transfer covering the pulse-mode frame interrupt lost it, DI or EI, at 3.5 and 28 MHz.",
    "shown_on": "hardware"
   }
  ],

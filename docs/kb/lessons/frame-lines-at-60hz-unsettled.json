@@ -1,7 +1,7 @@
 {
  "id": "lesson.frame-lines-at-60hz-unsettled",
  "kind": "open",
- "claim": "A 60 Hz frame has 264 lines on a KS1 (core 3.03.00, 128K timing, $11 = 0), as the book says, not the 262 / 261 docs/TECHNIQUES.md gave. Where the mode is unknown, wait only for lines below 261.",
+ "claim": "A 60 Hz frame has 264 lines on the N-Go board (Issue 2-compatible clone, core 3.03.00, 128K timing, $11 = 0), as the book says, not the 262 / 261 docs/TECHNIQUES.md gave. Where the mode is unknown, wait only for lines below 261.",
  "limit": "Measured at one setting of one board ($11 = 0, 128K timing, HDMI cable; nxsuite F03, F06); 48K timing, the other VGA timings and HDMI modes not measured.",
  "evidence": [
   {
@@ -12,16 +12,16 @@
   },
   {
    "game": "hardware",
-   "record": "docs/kb/hardware/next-issue2-3.03.00.json",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
    "test": "F03",
-   "text": "KS1 Issue 2, core 3.03.00 (nxsuite F03): after $05 bit 2 was set the frames were 264 lines (311 at 50 Hz), 228.02 T a line at both rates.",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite F03): after $05 bit 2 was set the frames were 264 lines (311 at 50 Hz), 228.02 T a line at both rates.",
    "shown_on": "hardware"
   },
   {
    "game": "hardware",
-   "record": "docs/kb/hardware/next-issue2-3.03.00.json",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
    "test": "F06",
-   "text": "KS1 Issue 2, core 3.03.00 (nxsuite F06): at 60 Hz the ULA interrupt came at line 224 of 264, 40 lines before the display (line 0); at 50 Hz at line 248 of 311.",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite F06): at 60 Hz the ULA interrupt came at line 224 of 264, 40 lines before the display (line 0); at 50 Hz at line 248 of 311.",
    "shown_on": "hardware"
   }
  ],

@@ -1,10 +1,10 @@
 # Board vs emulators: nxsuite 4548f5f
 
 Generated (GPL-3.0-or-later, part of nexclash) by
-`python tools/hwtests/intake.py --compare docs/kb/hardware/next-issue2-3.03.00.json docs/kb/hardware/emulator/jnext-1.3.0-3.02.03.json docs/kb/hardware/emulator/cspect-4.5.9.0-50hz-4.00.00.json docs/kb/hardware/emulator/cspect-4.5.9.0-60hz-4.00.00.json`.
+`python tools/hwtests/intake.py --compare docs/kb/hardware/n-go-3.03.00.json docs/kb/hardware/emulator/jnext-1.3.0-3.02.03.json docs/kb/hardware/emulator/cspect-4.5.9.0-50hz-4.00.00.json docs/kb/hardware/emulator/cspect-4.5.9.0-60hz-4.00.00.json`.
 All four ran the same build (4548f5f) as RUN ALL; the CSpect 60 Hz column started with 60 Hz set, so its frame figures differ by design. A cell is the verdict and value of that record; `-` = not answered there.
 
-| claim | board next-issue2 3.03.00 | JNext 1.3.0 3.02.03 | CSpect 4.5.9.0 50Hz 4.00.00 | CSpect 4.5.9.0 60Hz 4.00.00 |
+| claim | board n-go 3.03.00 | JNext 1.3.0 3.02.03 | CSpect 4.5.9.0 50Hz 4.00.00 | CSpect 4.5.9.0 60Hz 4.00.00 |
 |---|---|---|---|---|
 | copper-instruction-time | measured 1.88 | measured 1.93 | measured 0 | measured 0 |
 | copper-nextreg-collision | measured 21.75 | measured 25.87 | measured 0 | measured 0 |

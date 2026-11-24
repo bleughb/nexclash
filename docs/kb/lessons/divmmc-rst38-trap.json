@@ -17,9 +17,9 @@
   },
   {
    "game": "hardware",
-   "record": "docs/kb/hardware/next-issue2-3.03.00.json",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
    "test": "XD3",
-   "text": "KS1 Issue 2, core 3.03.00 (nxsuite XD3): the delayed RST $38 trap still fired with an alt ROM image in place, so it masks the hook-space path.",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite XD3): the delayed RST $38 trap still fired with an alt ROM image in place, so it masks the hook-space path.",
    "shown_on": "hardware"
   }
  ],

@@ -10,9 +10,9 @@
   },
   {
    "game": "hardware",
-   "record": "docs/kb/hardware/next-issue2-3.03.00.json",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
    "test": "SP02",
-   "text": "KS1 Issue 2, core 3.03.00 (nxsuite SP02): one port $303B write set both the pattern-upload slot ($5B) and the attribute index ($57).",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite SP02): one port $303B write set both the pattern-upload slot ($5B) and the attribute index ($57).",
    "shown_on": "hardware"
   }
  ],

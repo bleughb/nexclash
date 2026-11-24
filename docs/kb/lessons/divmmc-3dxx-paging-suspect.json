@@ -2,7 +2,7 @@
  "id": "lesson.divmmc-3dxx-paging-suspect",
  "kind": "open",
  "claim": "Code relocated into 0x3Dxx may stop a native JNext run, with the DivMMC automatic-paging region as a suspected but unproven cause.",
- "limit": "On JNext the cause is still not proven; only the move from 3D80 to 3600 is shown to help. On a KS1 (core 3.03.00, nxsuite XD2) a $3Dxx fetch does map DivMMC at once.",
+ "limit": "On JNext the cause is still not proven; only the move from 3D80 to 3600 is shown to help. On the N-Go board (Issue 2-compatible clone, core 3.03.00, nxsuite XD2) a $3Dxx fetch does map DivMMC at once.",
  "evidence": [
   {
    "game": "games/exolon.md",
@@ -11,9 +11,9 @@
   },
   {
    "game": "hardware",
-   "record": "docs/kb/hardware/next-issue2-3.03.00.json",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
    "test": "XD2",
-   "text": "KS1 Issue 2, core 3.03.00 (nxsuite XD2): with automap on and ROM3 selected, an instruction fetch at $3Dxx mapped DivMMC at once: the suspected cause is real on a board.",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite XD2): with automap on and ROM3 selected, an instruction fetch at $3Dxx mapped DivMMC at once: the suspected cause is real on a board.",
    "shown_on": "hardware"
   }
  ],

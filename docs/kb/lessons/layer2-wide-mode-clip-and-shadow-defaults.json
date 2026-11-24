@@ -2,7 +2,7 @@
  "id": "lesson.layer2-wide-mode-clip-and-shadow-defaults",
  "kind": "pitfall",
  "claim": "In 320x256 or 640x256 Layer 2 the reset clip window (0-255, 0-191) hides the bottom 64 lines until 0-159, 0-255 is written to NextREG 0x18, and the 5-bank picture from bank 8 runs into the default shadow at bank 11.",
- "limit": "The clip part seen on a KS1 (core 3.03.00, nxsuite V07); the shadow-bank part is from the book. For double buffering in a wide mode set NextREG 0x13 to bank 13 or higher.",
+ "limit": "The clip part seen on the N-Go board (Issue 2-compatible clone, core 3.03.00, nxsuite V07); the shadow-bank part is from the book. For double buffering in a wide mode set NextREG 0x13 to bank 13 or higher.",
  "evidence": [
   {
    "game": "reference",
@@ -12,9 +12,9 @@
   },
   {
    "game": "hardware",
-   "record": "docs/kb/hardware/next-issue2-3.03.00.json",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
    "test": "V07",
-   "text": "KS1 Issue 2, core 3.03.00 (nxsuite V07): with clip 0-255 / 0-191 only the top of a 320x256 Layer 2 showed; with 0-159 / 0-255 the bottom rows too (operator).",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite V07): with clip 0-255 / 0-191 only the top of a 320x256 Layer 2 showed; with 0-159 / 0-255 the bottom rows too (operator).",
    "shown_on": "hardware"
   }
  ],
