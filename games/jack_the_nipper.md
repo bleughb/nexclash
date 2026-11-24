@@ -71,7 +71,8 @@ All defaults taken: every figure a sprite (pickups included); scenery, HUD, scor
 - Redirect per call, at the two figure callers' returns from 0x87BB (0x80C9 and 0x8273: H - 0x40), not by patching the
   helper's base (`ADD A,0x60` at 0x87EF): 14 other callers use 0x87BB for map lookups (0x9400 / 0x9BFC: `CP 0x72` on
   H; 0xB273 turns H into a cell-map address at 0x7000+), and the restore keeps its own base (0x8747: `ADD A,0x60`).
-- To confirm before writing hooks: every shadow write of a figure draw goes through that HL (the shifted path 0x8147,
+- Confirmed 2026-11-23: the dirty-cell marks are base-independent (0x8123: `AND 8`, `RRCA` x3, `ADD 0x7D` from H, then L), the 16-wide draw (0x80E3-0x810C) is an AND-mask pass then an OR-graphics pass stepping by `DEC H` and the relative row helper, and no `CP` / `SUB` / `AND` with a 0x60-0x70 constant exists in 0x8000-0x881F (only the two `ADD A,0x60`). So slot 1 can hold a RAM scratch page for the whole game (the game never reads the ROM there; rom_paths: one RET at 0x0052): the hooks only move H at the two returns and build the sprites, with no map per draw. The verifier's memory compare proves no figure write reaches the real shadow.
+- Still to confirm: every shadow write of a figure draw goes through that HL (the shifted path 0x8147,
   the 24-wide path 0x8228, the shifted routine near 0x85D0 with IY = 0x8000 and DE' = 0x7400, the AND-table writer
   0x8637-0x8667); the dirty-cell marks (0x812C, 0x8209, 0x82F6, 0x845F) take the cell from H bits the 0x40 shift does
   not touch, or map the mark back; slot 1 mapped from the 0x8009 entry to its returns, the ROM back at every exit.
