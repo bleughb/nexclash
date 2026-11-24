@@ -215,6 +215,14 @@ not fit bank 0 runs from a slot-7 overlay page (40-43, 60, 61, 63; a group may h
 in the test table, and a test any other page of the generator's `xpage` list, flags bits 5-7: the V tests in
 `gv3.asm`-`gv6.asm`).
 
+Which machine the board results come from (corrected 2026-11-24): every board run so far was on an N-Go,
+the open-source clone of the Issue 2 Next, not an official Kickstarter board. It reads machine id $0A and
+board id $00, exactly like an official Issue 2, so the registers cannot tell them apart. No official Next
+board (KS1, KS2 or KS3) has run the suite yet. Which core build the N-Go loads (the official Issue 2
+bitstream or its own) is not stated in any source the repository holds: unverified. Every "board" fact here
+and in the records is "N-Go board (Issue 2-compatible clone), core 3.03.00"; by the owner's word the earlier
+board runs in this file (im2hold, z80ntest, nextbench) came from the same N-Go.
+
 ### Owner checklist (one board, one core)
 
 1. Copy `nxsuite.nex` into a new folder of its own on the SD card; start it from the Browser. The first
@@ -304,8 +312,8 @@ line on the screen warns that the picture may blink); the intake prints them sid
 F03 / I09. Starting the machine at 60 Hz gives the same table (the keys are named by rate, not by order).
 
 `video=`: always `unknown` - no register the repository's sources cite says which output (HDMI, VGA, RGB)
-is in use. Board facts (KS1, core 3.03.00): NextReg $11 read $00 with an HDMI cable and with "Digital"
-selected in the settings, and the frame was 128K VGA timing (311 lines, INT line 248), so digital output
+is in use. Board facts (N-Go board, an Issue 2-compatible clone, core 3.03.00): NextReg $11 read $00
+with an HDMI cable and with "Digital" selected in the settings, and the frame was 128K VGA timing (311 lines, INT line 248), so digital output
 does not imply a different frame. (The book report: $11 modes 0-6 are VGA master-clock steps, HDMI works
 in modes 0 and 1, $11 is set by the firmware from the display settings; the start-up screen's D key
 shows the digital test card.) `geom=` is what the measurements match: line length in CTC ticks (16 clocks) and lines per frame:
@@ -384,8 +392,13 @@ run the suite by hand; the V (visual) pass can be answered by eye or left PENDIN
 It refuses a file that is cut short, damaged (CRC), not ASCII / LF, or names an unknown test or status,
 and a continuation whose parts are not all beside it.
 Per claim it reports CONFIRMED, DISPROVED, MEASURED value +- spread, CHOICE word or NOT ANSWERED (with the
-reason), with the claim's sources; it never edits lessons or docs. The board name defaults to
-`next-issue2` / `3` / `4` from NextReg $00 = $0A and $0F = 0 / 1 / 2 (Issue 2 = the KS1 boards). Emulator
+reason), with the claim's sources; it never edits lessons or docs. A board record is named
+`<platform>-<core>[-<label>].json`. The platform is `--board` when given, else the operator's machine
+answer (the `record` of that code in nxsuite_claims.json `platforms`, for example `n-go`, `next-ks1`), else
+from the registers alone: NextReg $00 = $0A with $0F = 0 / 1 / 2 gives `issue2-compatible` / `issue3-` /
+`issue4-compatible`. The registers never name a maker or a Kickstarter board: a clone reads the same (the
+N-Go measured so far reads $0A / $00, like an official Issue 2). The record says which it came from
+(`board.named_from`: option / operator / registers). Emulator
 results (`--platform` other than `board`) are stored apart and never count as hardware evidence; `--compare`
 says when it compares a board with an emulator. Z01's cases decide their own claims (LDIX / LDPIRX / JP (C) /
 TEST cases; func-suite = every case but LDPIRX); an LDPIRX case that differs from the model only in F bits

@@ -104,8 +104,8 @@ wdec1:  ex de,hl : jp wdec
 ; From the start timing s to Pentagon (or to 48K when s is Pentagon): $03 written at line 100, then the
 ; lengths of that frame (v = f1, from line 100 to its wrap; j1 = the line read just after that fall), and
 ; of the next two (f2, f3); timing put back.
-; PASS if f1 = the start length and f2 = the new one. Board run 7 (KS1 3.03.00, 311 -> 320): f1 = 320,
-; j1 = 0, f2 = 7, f3 = 320 - the frame being drawn ran on to the new length at once, then a 7-line frame:
+; PASS if f1 = the start length and f2 = the new one. Board run 7 (N-Go board, an Issue 2-compatible
+; clone, core 3.03.00, 311 -> 320): f1 = 320, j1 = 0, f2 = 7, f3 = 320 - the frame being drawn ran on to the new length at once, then a 7-line frame:
 ; not held to the frame end (FAIL).
 t_xt2:  call xt_arm
         ld a,(NRSNAP+$03) : rrca : rrca : rrca : rrca : and 7 : ld (.s),a

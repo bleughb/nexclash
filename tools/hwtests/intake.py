@@ -860,17 +860,34 @@ TABLE_TESTS = {'N01': 'nb.'}       # tests whose answer is a table of sub-lines,
 ISSUES = {'00': 'issue2', '01': 'issue3', '02': 'issue4'}     # NextReg $0F board id on a Next ($00 = $0A)
 
 
-def board_name(res, board=None):
-    """--board, else from NextReg $00 / $0F: a Next ($00 = $0A) -> next-issue2 / 3 / 4 (Issue 2 = the KS1
-    boards); anything else -> machine-xx-board-yy"""
+def board_name(res, board=None, table=None):
+    """the platform part of a board record's name: --board, else the operator's machine answer (the "record"
+    of that code in nxsuite_claims.json platforms), else from NextReg $00 / $0F: $0A with $0F = 0 / 1 / 2 ->
+    issue2- / issue3- / issue4-compatible. The registers never name a maker or a Kickstarter: a clone of a
+    board reads the same (an N-Go reads $0A / $00 like an official Issue 2). Anything else ->
+    machine-xx-board-yy."""
     h = res['sessions'][0]['header']
     if board:
         return board
+    op = operator(h, table)
+    if op and op.get('model'):
+        rec = {p_['code']: p_.get('record') for p_ in (table or load_table()).get('platforms', {}).get('list', [])}
+        if rec.get(op['model']):
+            return rec[op['model']]
     m = h.get('machine', 'nr00:$00').split(':')[-1].lstrip('$').lower()
     b = h.get('board', 'nr0f:$00').split(':')[-1].lstrip('$').lower()
     if m == '0a' and b in ISSUES:
-        return 'next-' + ISSUES[b]
+        return ISSUES[b] + '-compatible'
     return 'machine-%s-board-%s' % (m, b)
+
+
+def named_from(res, board=None, table=None):
+    """what a board record's name came from: option / operator / registers"""
+    if board:
+        return 'option'
+    op = operator(res['sessions'][0]['header'], table)
+    rec = {p_['code']: p_.get('record') for p_ in (table or load_table()).get('platforms', {}).get('list', [])}
+    return 'operator' if op and rec.get(op.get('model')) else 'registers'
 
 
 def slug(x):
@@ -890,7 +907,7 @@ def write_json(res, table, path_in, data, board=None, outdir=OUTDIR, dry=False, 
     op = operator(h, table)
     if is_board(platform):
         lab = '-' + slug(op['label']) if op and op.get('label') else ''      # no label: the old name
-        path = os.path.join(outdir, '%s-%s%s.json' % (board_name(res, board), core, lab))
+        path = os.path.join(outdir, '%s-%s%s.json' % (board_name(res, board, table), core, lab))
     else:
         path = os.path.join(outdir, 'emulator', '%s-%s.json' % (slug(platform), core))
     old = json.load(open(path)) if os.path.exists(path) else {}
@@ -900,9 +917,10 @@ def write_json(res, table, path_in, data, board=None, outdir=OUTDIR, dry=False, 
     v = verdicts(res, table)
     doc = {'schema': 2,
            'platform': {'kind': 'board' if is_board(platform) else 'emulator',
-                        'name': 'board' if is_board(platform) else platform,
+                        'name': ((op or {}).get('model_name') or 'board') if is_board(platform) else platform,
                         'hardware_evidence': is_board(platform)},
-           'board': {'name': board_name(res, board) if is_board(platform) else slug(platform),
+           'board': {'name': board_name(res, board, table) if is_board(platform) else slug(platform),
+                     'named_from': named_from(res, board, table) if is_board(platform) else 'platform',
                      'nr00': h.get('machine', ''), 'nr0f': h.get('board', ''),
                      'ram': h.get('ram'), 'video': h.get('video'), 'geom': h.get('geom')},
            'core': core, 'operator': op, 'intake_runs': len(hist), 'intakes': hist,
@@ -1501,7 +1519,7 @@ def selfcheck():
             open(src, 'wb').write(good)
             p, doc = write_json(res, table, src, good, None, d)
             p2, doc2 = write_json(res, table, src, good, None, d)
-            if p != p2 or doc2['intake_runs'] != 2 or not os.path.basename(p).startswith('next-issue4-3.03.03'):
+            if p != p2 or doc2['intake_runs'] != 2 or not os.path.basename(p).startswith('issue4-compatible-3.03.03'):
                 bad.append('json: %s runs %s' % (p, doc2['intake_runs']))
             res_f = parse(make_file(sample(table, fail=True)), table)
             pf, docf = write_json(res_f, table, src, good, 'other', d)
@@ -1592,7 +1610,8 @@ def selfcheck():
         if n_ != 2:
             bad.append('--runs: %d tests flagged, expected 2 (%s)' % (n_, sink.getvalue().strip()))
         # --summary: two made-up boards (the same file, the second with S05 / F01 changed, F02 within
-        # tolerance, another board name, an operator line with a label): S05 + F01 differ (board), F02 is noise
+        # tolerance, another board name, an operator line with a label): S05 + F01 differ (platform = the machine
+        # answered, and board), F02 is noise
         ra = parse(make_file(whole), table)
         k_ = next(i for i, l in enumerate(alt) if l.startswith('H divmmc')) + 1
         rb = parse(make_file(alt[:k_] + ['H operator model=K3 conn=2 disp=1 ramq=2 pi=3 label=BENCH2'] + alt[k_:]),
@@ -1603,9 +1622,16 @@ def selfcheck():
             bad.append('record names %s / %s (label in the name only when given)' % (pa_, pb_))
         if (docb.get('operator') or {}).get('model_name') != 'KS3 Next (Artix-7 35T)':
             bad.append('operator answers not decoded: %s' % docb.get('operator'))
+        # the platform name: the operator's machine answer names it; registers alone only say "compatible"
+        pc_, docc = write_json(rb, table, b_, b'b', None, d, dry=True)
+        pr_, docr = write_json(ra, table, a_, b'a', None, d, dry=True)
+        if (not pc_.endswith('next-ks3-3.03.03-bench2.json') or docc['board']['named_from'] != 'operator'
+                or not os.path.basename(pr_).startswith('issue4-compatible-')
+                or docr['board']['named_from'] != 'registers'):
+            bad.append('platform names %s / %s' % (pc_, pr_))
         sink = io.StringIO()
         f_ = summary([pa_, pb_], table, out=sink)
-        if sorted(f_) != ['F01', 'S05'] or f_['F01'] != ('board',) or 'F02' not in sink.getvalue().split(
+        if sorted(f_) != ['F01', 'S05'] or f_['F01'] != ('platform', 'board') or 'F02' not in sink.getvalue().split(
                 'noise')[-1] or 'BENCH2' not in sink.getvalue():
             bad.append('--summary: %s (want F01 + S05 by board, F02 noise, the label shown)' % f_)
         # negative control: a summary blind to differences finds nothing - the check above would catch it
