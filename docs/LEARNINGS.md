@@ -605,18 +605,18 @@ Grouped by question; add a new lesson to its group.
 - Prove free memory with an access scan over the recording, not by zero-check.
   Also require zero content for persistent code (untouched may just mean
   "room not visited"), or explain the non-zero bytes. Commando's hook RAM 0x5E20-0x60FF holds
-  non-zero bytes: BASIC workspace below RAMTOP (CLEAR 25087), below the game's own stack; no game
-  code references it; untouched in area 1 + start-up - later areas not yet scanned (commando.md).
-- The printer buffer is not always free: Dizzy 1 keeps its stack above it,
-  Dizzy 4 keeps a bit-reverse table there, Rainbow Islands keeps code there,
-  Everyone's a Wally uses it (0x5B00-0x7AFF write-first).
-- Default "below SP" tail placement can hit data (Dizzy 1: font at 0xFF9E) or
-  code (Dizzy 4: code directly below the stack). Always check the printed tail.
-- Below SP is NOT free by default (Match Day's trophy data, 2026-11-04): prove a tail write-first.
+  non-zero bytes: BASIC workspace below RAMTOP (CLEAR 25087), below the game's stack; no code
+  references it; untouched in area 1 + start-up, later areas unscanned (commando.md).
+- The printer buffer is not always free: Dizzy 1's stack above it; Dizzy 4's bit-reverse table,
+  Rainbow Islands' code, Everyone's a Wally's data (0x5B00-0x7AFF write-first) in it.
+- "Below SP" is not free (Dizzy 1: font 0xFF9E; Dizzy 4: code; Match Day: trophy data, 2026-11-04);
+  check the printed tail.
 - A game reading the ROM font needs a slot-1 page that is a copy of ROM 0x2000-0x3FFF, with
   hooks only where the game never reads (prefer `altrom`: the alt ROM is that copy, read-only).
 - An undo buffer (or back buffer) written before read in every RZX is a stronger tail site than
   dead stack and rescues slot1 when dead stack < 54 (Dizzy 6: 48 bytes; Rainbow: back buffer).
+  Prove a tail by rom_paths' proof, not RAM checkpoints (Green Beret's scenery buffer is shown
+  before its first draw); none write-first: restore it (Alien 8, Green Beret).
 
 - A screen effect that uses MEMORY AS MASKS reads all of it (Lode Runner's fade: screen AND bytes
   0x0000-0x6BFF, 4 passes): the alt ROM hook area and the printer buffer then change what the effect
