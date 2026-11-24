@@ -3,7 +3,7 @@
 Techniques: `patch.inbetween-views`, `patch.whole-altrom-image`
 
 ## Next session
-Stage: 2 (build)   State: M6 record done 2026-11-24 (docs/records/elite_std.json: a + reworks jcv / e128, selftest --verify PASSED and stamped; not committed)
+Stage: 2 (build)   State: M8 SD save / load 2026-11-24 (## SD save); record MD5s updated, selftest --verify restamped
 Inputs: C:\1NEXT\elite_work\tapes\t1.tap ([a]), ejcv.tap (= t8, Joystick), e128.tap (original); work folder C:\1NEXT\elite_work\std    Branch: add-elite
 Checks: verify (full scenario set) a / jcv / e128 all cases PASS + title renders ok + negative controls caught; CSpect: title (frames) -> launch -> flight, all three
 Pending user answers: none
@@ -15,54 +15,31 @@ Open: ## Smooth title ship (M5, 2026-11-23; asm/elite_std_hooks.asm, elite_std.p
   layout A 0x7378-0x7386, B 0x71A2-0x71B0, no HALT in the loop) and "Press Space, Commander" (jcv's only title; a /
   e128 after N; A 0x73C3-0x73F2, B 0x71E5-0x7210, HALT once a pass). The model is fixed per screen: Y/N always the
   blueprint 0x6490 (event 0x79); Press Space cycles 8 models by a counter (A 0x7470, B 0x7286) per entry.
-- Measured (simulator, 3.5 MHz, from the start states): frames per pass jcv 8.68 (8-10), a 10.90 (10-12), e128 10.86
-  (10-12). Pass cost jcv (T, ISR in): clear 25,313, text 140,036, rotate + draw 315,610, copy 79,414; a / e128 draw
-  443k / 441k. Per pass the ship turns about 1/16 rad (orientation hi bytes move 4-9 of about 0x60).
-- Choice: (ii), extrapolation with the game's own draw, not (i) smaller rotation steps: the rotation is the game's
-  fixed-shift step (A28D: 9FFD with A = 0x8C, AE69, 9F41 twice), so a 1/N step would change the arithmetic and the
-  pass-boundary state; extrapolating leaves every game pass exactly the original's.
-- Hooks (8 same-length CALLs per version, the title loops only): h_top at the clear's CALL (28 MHz, phase noted), h_bg
-  at the rotate + draw CALL (the buffer, cleared + text, kept in page 27), h_copy at the copy's CALL (HALT: the game's
-  copy runs at a frame top), h_prea / h_pree / h_prej at the instruction after the copy (LD A,(0xFC0D) / LD A,(0xFC13) /
-  LD BC,0xFF1F). h_pre: L = the pass's lines at 28 MHz (raster NR 0x1E/0x1F against the line after the last HALT);
-  frames the pass takes at 3.5 MHz D = L * K / 312 (Press Space: floor + 1, the loop's HALT; Y/N: a carried
-  fraction); the frames that are not the game's own get renders; then 3.5 MHz and the replaced instruction.
-- Render (all game code, our own stack in page 26): buffer = background (DMA), slot 0x6159 = this pass's state
-  extrapolated by w = j / D of the last pass's change (x, y, z and 9 orientation values, the hack renderer's dec_v /
-  enc_v; a change of 0x2000 or more, a new ship or a new screen, = no extrapolation), the game's draw (A6DF / E008, IX
-  = slot, IY = blueprint), HALT, the game's copy (7FBE / 7398: 4K at 28 MHz, done in the top border: no tearing). A
-  draw that runs past a frame top counts that frame. Afterwards the slot, the draw's work bytes (prm.rng, measured
-  write sets widened: A 6159+28, 9C90, A6D8, A8F0-AAFF, AC98, B430-B4DF, BCC0-BCDF; B 6159+28, DA00, E218-E41F,
-  E5C0, E910, F200-F2AF) and the buffer are put back.
-- Memory: alt ROM 0x3A3D-0x3A9B (entries); bank 13 in the NEX: page 26 = 0xF3 0xAF (the draw's POP AF at SP = 0
-  reads them: the only ROM read of the title), variables, prm, code (1,175 bytes), saves, stack, a pass log at 0x1F00
-  (L, D, frame tops); page 27 = the background, with the alt ROM's IM 2 table + h_isr copied to 0x1900-0x1A3C because
-  it is mapped at slot 1 for a moment (interrupts stay on). The hack builds carry bank 13 unused (an NXC toggle must
-  list the same banks as the base).
-- K (lines at 3.5 MHz per line at 28 MHz) from the CSpect pass log against the original's frames per pass: L means
-  jcv about 302, a 411.5, e128 408.8 -> K = 8.27 (a), 8.28 (jcv), 8.29 (e128), prm.kf 68 / 72 / 74. Logged D: jcv 9 (8
-  on short passes), a / e128 10-12, as the original.
-- Verified: (1) lockstep, every case: the title CALLs run as the instructions they replaced, so the game's own title
-  passes equal the original's (title 44 / 57 / 43 hook calls; a and e128 have the new case title_space, 60 more):
-  a 17 cases, jcv 16, e128 17 PASSED, negatives caught; flight / docked / launch cases unchanged. (2) title_render_check
-  (title cases): each render done on a copy of the original at the pass end (w = 0, 64, 128, 192, 255), then the
-  ranges and buffer put back, leaves RAM 0x5000-0xFFFF as the pass left it (but the routines' own stack, which the asm
-  keeps in page 26): a 125, jcv 70, e128 120 renders ok; w = 0 draws the game's own picture (all passes); and for all
-  8 Press Space models of jcv and e128 (C:\1NEXT\elite_work\std\rcheck2.py: 38-70 renders each, all ok). (3) CSpect,
-  copies caught one after another (copy breakpoint, screenshots, C:\1NEXT\elite_work\std\m5\*_frames.png): every
-  displayed frame differs from the one before (jcv 120-282 px changed per frame, a 334-706, e128 503-706, a Press
-  Space 443-922), 6 renders + the game's frame per 9-frame pass (jcv); Y -> Access menu, N -> Press Space, SPACE ->
-  status page, 1 -> launch and flight, NR 0x07 = 0 (3.5 MHz) after the title, all three; hack toggle boots and flies.
-- Limits: a pass's game work at 28 MHz must stay under one frame per segment (clear + text; draw) for L to be exact
-  (measured at most about 0.8 of a frame); a big model's render may need two frames (counted, so fewer renders, same
-  pace). Per frame the turn is under a pixel at the edges of small models, so neighbouring frames differ in some
-  lines only. Not tried on hardware (the DMA in continuous mode and the 28 MHz copy timing are CSpect's).
+- Measured (simulator, 3.5 MHz): frames per pass jcv 8.68, a 10.90, e128 10.86; the draw is most of a pass (jcv
+  316k of 560k T); the ship turns about 1/16 rad a pass. Choice: extrapolate with the game's own draw, not smaller
+  rotation steps (the fixed-shift step A28D would change the pass-boundary state); every game pass stays the original's.
+- Hooks (8 same-length CALLs per version, title loops only): h_top (clear's CALL: 28 MHz, phase), h_bg (rotate + draw:
+  the cleared + text buffer kept in page 27), h_copy (HALT: the copy at a frame top), h_prea / h_pree / h_prej (after the
+  copy): L = the pass's lines at 28 MHz, D = L * K / 312 frames at 3.5 MHz; the frames not the game's own get renders.
+- Render (game code, own stack in page 26): buffer = background (DMA), slot 0x6159 extrapolated by w = j / D of the last
+  pass's change (no extrapolation on a change of 0x2000+), the game's draw (A6DF / E008), HALT, the game's copy (7FBE /
+  7398, 4K at 28 MHz in the top border); then the slot, the draw's work bytes (prm.rng) and the buffer put back.
+- Memory: alt ROM entries from 0x3A3D; bank 13: page 26 = 0xF3 0xAF, variables, prm, code, saves, stack, pass log at
+  0x1F00; page 27 = the background + the alt ROM's IM 2 table / h_isr copy at 0x1900 (+ the SD code, ## SD save).
+- K from the CSpect pass log vs the original's frames per pass: 8.27 (a), 8.28 (jcv), 8.29 (e128); prm.kf 68 / 72 / 74.
+- Verified: lockstep (title CALLs run as replaced, so the game's passes equal the original's); title_render_check: each
+  render on a copy of the original put back leaves RAM as the pass left it (a 125, jcv 70, e128 120; all 8 Press Space
+  models, rcheck2.py); CSpect: every displayed frame differs from the one before (m5\*_frames.png), Y / N / SPACE / 1.
+- Limits: game work at 28 MHz must stay under a frame per segment (measured at most about 0.8); a big model may need two
+  frames (counted). Not tried on hardware (DMA continuous mode, the 28 MHz copy timing are CSpect's).
 
 ## Owner decisions
 (2026-11-23) rebuild for the standard releases so the game looks and starts as the original; the
 Russian 128K hack (engine `elite`, games/elite.md) becomes an NXC option (games/elite_hack.md). Colour / 50 fps
 renders are enhancements, options, not the default. Lenslok skipped (the build starts after the check). Three versions
 supported: "[a]", the Joystick / cursor tape and the original Firebird tape.
+(2026-11-24) Commander save / load on the SD card, not tape (tape cannot work on the Next): one file per name, the
+first 8 characters + .ELA / .ELB, an empty name loads the last saved; only the "Press Any Key" wait is skipped; SD only.
 
 ## Versions (nexclash/elite_std.py VERSIONS; profile signatures per version, at the start state)
 | | a ("[a]" tape, t1) | jcv (ELITEJCV = "[Joystick]", t8 / ejcv) | e128 (ELITE128 = original Firebird tape) |
@@ -184,20 +161,41 @@ xc.py
   so on, not free space; no dead space was found that the NPC engine (about 1.7K plus the B452 table) or the packed
   blueprints (about 3.6K plus about 15 readers) would fit. The hack gets its space by rewriting the display code.
 
+## SD save (M8, 2026-11-24; asm "SD save / load", elite_std.py VERSIONS[v]['sd'], elite_std_verify.sd_check)
+- Sites (survey C:\NEXT\elite_work\std\saveload): docked SYMBOL SHIFT = ACCESS MENU (1 load, 2 save, 3 exit). Load
+  CALL 0x0562 at A D954 / B D32E, save CALL 0x04C6 at A D99C / B D376 -> CALLs of h_lda / h_ldb / h_sva / h_svb (alt ROM);
+  the key wait before the save (A D996 / B D370) -> NOPs. Block IX = A D054 / B A816, DE = 0x66 / 0x68, name first;
+  typed load name A DED0 / B AC25. The game's test after a load: empty typed name takes any, else
+  equal up to the 0 (all 11 equal = mismatch -> it loads again); failure (NC): "Tape Loading Error", commander restored.
+- Hook: DI, page 27 at slot 2 (0x5000: code; the ULA reads bank 5 itself), own stack, I = 0x5B over a 257 x 0x5D table
+  with EI / RETI at 0x5D5D (DivMMC covers the alt ROM's table in esxDOS), NextReg 0x0A bit 4 (automap) on for the
+  call only, esxDOS calls with IX = HL. Save: <first 8>.ELx then _LAST.ELx; load: <first 8> (empty: _LAST) into a
+  buffer, the game's name test first (mismatch = NC, no loop), then the block. All state put back; carry = done.
+- Verified: sd_check (engine unit tests): a Next memory model with a fake esxDOS checking each RST 8 (ROM in slots 0 / 1,
+  automap on, stack / buffers / vector above 0x3FFF; it returns with EI, registers scrambled): saves, loads by name,
+  empty, missing, clashing name, a refusing card; RAM changed only at the block; negatives caught. Lockstep: the 3 sites run as the replaced instructions ('sd hook'; no case reaches them);
+  a 25 / jcv 24 / e128 25 PASSED. CSpect (-mmc=C:/CSpect/sdtest/), all three: save JOE / MILICEVICH (files 102 / 104
+  bytes, MILICEVI.ELx, _LAST follows), load JOE, empty (= last), BOB (Tape Loading Error, commander kept), launch, fly.
+- Notes: bytes after the name's 0 keep the old name's tail (as on tape). jcv's MILICEVIC (D054) shows as JAMESON after
+  Press Space (backup D232; the original's path). The hack toggle has no SD hooks.
+
 ## Open
 - Verify coverage: the gap cases (2026-11-24) cover docking, escape pod, energy bomb, galactic hyperdrive, in-system jump,
   game over, an explosion, a missile hit; still no natural (unpoked) missile hit or death in layout B.
 - e128's own layout: writers surveyed (Verify); hack toggles would need relocation for it.
 - Converter: 0xC000+ tails refused on 48K too; tails here from access scans (lesson 2).
-- Hack gameplay toggle: NPC-vs-NPC fight not yet provoked; docking not reached; disk save/load off with it on.
+- Hack gameplay toggle: NPC-vs-NPC fight not yet provoked; docking not reached; disk save/load off with it on; its
+  builds fail gap_in_system_jump (proof 0x7EFF not reached: the hack's own jump code; every lockstep case equal).
+- SD save: hardware untested (DivMMC automap at RST 8 with the alt ROM on; NextReg 0x0A on cores before 3.01.10).
 - Option (b) bundles: no proven free space (## NXC); would need relocating the display rewrites too.
 - Smooth title ship: not tried on hardware (DMA continuous mode, 28 MHz copy inside the top border are CSpect's); the
   draw-segment-under-a-frame assumption is measured for the 8 + 1 models only.
 
-## Plan (M1-M7 done)
+## Plan (M1-M8 done)
 - M6 (2026-11-24): record docs/records/elite_std.json (order 277): the "[a]" start state, reworks jcv / e128 on their own
   (Lode Runner 128K pattern), the tapes as inputs (each start state rebuilds byte for byte from its tape); stamped.
 - M7 (2026-11-24): the 8 gap cases (## Verify); NXCs to the nxc repo, branch elite-patch, patches/Elite (1985)(Firebird).
+- M8 (2026-11-24): SD save / load (## SD save); NXCs remade, record MD5s updated.
 
 ## Stage log
 2026-11-23  stage 2 M1 survey + M2 skeleton (standard release)  ~2.5 h  ~90 calls  0 user rounds
@@ -205,6 +203,7 @@ xc.py
 2026-11-23  stage 2 M4 NXCs, loading screen, toggles (pirate packs, hack gameplay), option (b) scan  ~4 h  ~170 calls  3 user rounds
 2026-11-23  stage 2 M5 smooth title ship (hooks, renders, verifier title cases, NXC remake)  ~3 h  ~150 calls  0 user rounds
 2026-11-24  stage 2 M6 record + M7 gap cases, e128 writers, NXCs to the nxc repo  ~2 h  ~120 calls  3 user rounds
+2026-11-24  stage 2 M8 SD save / load, sd_check, CSpect, NXCs  ~2 h  ~90 calls  1 user round
 
 ## Lessons
 - [local: Elite [a] tape] the "[a]" release carries Lenslok; the expected code sits in RAM (0xC799) once the prompt is up,

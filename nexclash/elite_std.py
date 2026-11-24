@@ -12,7 +12,9 @@ The game is unchanged in look and pace. The one change is the IM 2 fix where it 
 0xFD00-0xFE00 is not uniform, so the vector 0xFEFE holds only for bus byte 0xFF; CSpect's is not 0xFF): the game's
 I = 0xFD -> 0x39 (the version's sites; jcv's start state too) over a uniform table in alt ROM image 1 (Sinclair's 48K
 ROM + 317 bytes in its free 0xFF area, asm/elite_std_hooks.asm), vector 0x3A3A = JP 0xFEFE. e128's own table is
-uniform (257 x 0xFE): no fix. Verifier: nexclash/elite_std_verify.py (scripted states, lockstep original vs build).
+uniform (257 x 0xFE): no fix. Also: the title ship redrawn every frame (VERSIONS[v]['ttl']) and the commander save /
+load on the SD card instead of tape (VERSIONS[v]['sd']; games/elite_std.md "## SD save"). Verifier:
+nexclash/elite_std_verify.py (scripted states, lockstep original vs build; sd_check for the SD hooks).
 """
 import hashlib
 import json
@@ -67,12 +69,20 @@ TS_B = ((0x71A2, 'cd5f74', 'h_top'), (0x71A8, 'cddddf', 'h_bg'), (0x71AB, 'cd987
 VERSIONS['a']['ttl'] = dict(sites=TS_A, draw=0xA6DF, copy=0x7FBE, clear=0x8080, rot=0x9CAF, kf=68, rng=RNG_A)
 VERSIONS['jcv']['ttl'] = dict(sites=TS_A, draw=0xA6DF, copy=0x7FBE, clear=0x8080, rot=0x9CAF, kf=72, rng=RNG_A)
 VERSIONS['e128']['ttl'] = dict(sites=TS_B, draw=0xE008, copy=0x7398, clear=0x745F, rot=0xDFDD, kf=74, rng=RNG_B)
+# SD save / load (games/elite_std.md "## SD save"; asm/elite_std_hooks.asm "SD save / load"): the ACCESS MENU's tape
+# CALLs -> CALLs of the hooks (load, save), and the "Start Tape, Then Press Any Key" wait before the save -> NOPs.
+SD_A = ((0xD954, 'cd6205', 'h_lda'), (0xD99C, 'cdc604', 'h_sva'), (0xD996, 'cdf7e1', None))
+SD_B = ((0xD32E, 'cd6205', 'h_ldb'), (0xD376, 'cdc604', 'h_svb'), (0xD370, 'cd48af', None))
+VERSIONS['a']['sd'] = VERSIONS['jcv']['sd'] = SD_A
+VERSIONS['e128']['sd'] = SD_B
+SD_OFF = 0x1000             # the SD code's place in BUF_PG (asm ORG 0x5000: the page at slot 2)
+SD_I, SD_VEC = 0x5B, 0x5D5D # the IM 2 table (257 x 0x5D) and its EI / RETI in that page, while esxDOS runs
 STATE_BANK = 13             # asm STATE_PG 26 (code, variables, saves) / BUF_PG 27 (the title's background)
-# (the hack has no title: no title hooks)
+# (the hack has no title: no title hooks; its own save / load is disk code at other addresses: no SD hooks)
 VERSIONS['a_hack'] = dict(VERSIONS['a'], title='Elite ([a] tape) + Russian hack gameplay', keys='200-220:SPACE;500-520:1',
-                          ttl=None)
+                          ttl=None, sd=None)
 VERSIONS['jcv_hack'] = dict(VERSIONS['jcv'], title='Elite (Joystick tape) + Russian hack gameplay',
-                            ttl=None)
+                            ttl=None, sd=None)
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _CACHE = {}
@@ -166,6 +176,8 @@ class EliteStdPatch:
         if t:
             self.tsites = [(a, bytes.fromhex(o), bytes([0xCD]) + self.syms[sym].to_bytes(2, 'little'))
                            for a, o, sym in t['sites']]
+        self.sdsites = [(a, bytes.fromhex(o), bytes([0xCD]) + self.syms[sym].to_bytes(2, 'little') if sym else bytes(3))
+                        for a, o, sym in self.v.get('sd') or ()]
         self.extra_banks[STATE_BANK] = self.state_bank(t)  # also without a title (the hack): the NXC's toggle
                                                             # builds must list the same banks
 
@@ -186,6 +198,12 @@ class EliteStdPatch:
         st = bytes(page) + bytes(8192 - len(page))
         buf = bytearray(8192)
         buf[ROM_ORG - 0x2000:ROM_ORG - 0x2000 + 0x13D] = self.page[ROM_ORG - 0x2000:ROM_ORG - 0x2000 + 0x13D]
+        sd = bytes.fromhex(self.prof['hooks']['sd'])
+        if self.syms['sd_start'] != 0x4000 + SD_OFF or SD_OFF + len(sd) > ROM_ORG - 0x2000:
+            raise ValueError('SD code must sit at BUF_PG 0x1000, below the alt ROM table copy')
+        buf[SD_OFF:SD_OFF + len(sd)] = sd
+        buf[SD_I * 256 - 0x4000:SD_I * 256 - 0x4000 + 257] = bytes([SD_VEC & 255]) * 257
+        buf[SD_VEC - 0x4000:SD_VEC - 0x4000 + 3] = b'\xFB\xED\x4D'      # EI; RETI
         return st + bytes(buf)
 
     def patch_ram(self, ram, regs=None, check=True):
@@ -194,7 +212,7 @@ class EliteStdPatch:
         verifier's mid-game states (check=False: a site the game has since overwritten - [a]'s init 0xD09E becomes
         commander data - is left as the game wrote it, as in the build). -> the sites applied."""
         done = []
-        for a, old, new in self.sites + self.tsites:
+        for a, old, new in self.sites + self.tsites + self.sdsites:
             cur = bytes(ram[a - 0x4000:a - 0x4000 + len(old)])
             if cur != old:
                 if check:
@@ -381,6 +399,10 @@ def unit_tests(patch, states=None, neg=True, nex=None):
     extra = {12: banks[12]}
     bad = _fix_problems(banks, extra, patch.version)
     c['im2 path ok' if not bad else 'im2 path!'] += 1
+    if patch.sdsites:                       # the SD save / load hooks (elite_std_verify.sd_check), with negatives
+        from . import elite_std_verify as V
+        sc, _ = V.sd_check(patch, nex, neg=neg)
+        c.update(sc)
     if neg:
         for name, nb, ne in negative_variants(banks, patch.version):
             c['neg %s caught' % name if _fix_problems(nb, ne, patch.version) else 'neg %s missed!' % name] += 1

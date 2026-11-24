@@ -20,6 +20,10 @@ instructions they replaced ('title hook'): the game's own title passes must equa
 every other case). What the hooks add between passes (renders at 28 MHz) is checked by title_render_check on the
 title case: each render done on a copy of the original, then put back by the asm's ranges, must leave RAM as the
 pass left it ('render ok'; 'render differs!' fails).
+
+SD save / load (games/elite_std.md "## SD save"): the three sites (the ACCESS MENU's load and save CALLs, the key
+wait before a save) run in the lockstep as the instructions they replaced ('sd hook'), like the title hooks; the
+hooks themselves are checked by sd_check on the built .nex (a Next memory model with a fake esxDOS).
 """
 import collections
 import os
@@ -257,7 +261,7 @@ def run_case(z80, patch, frames, keys, version, variant=None, keep=5):
     to, tp = o.tracer, p.tracer
     c, ex = collections.Counter(), []
     sites = {a + i for a, old, new in p.applied for i in range(len(new))} | p.excl
-    tsites = {a: (a, old, new) for a, old, new in p.applied if (a, old, new) in patch.tsites}
+    tsites = {a: (a, old, new) for a, old, new in p.applied if (a, old, new) in patch.tsites + patch.sdsites}
     cmp_regs = [i for i in E.CMP if i < len(_REG) and _REG[i] not in ('T', 'SP2')]
     nint = [0]
     seen = set()
@@ -287,12 +291,12 @@ def run_case(z80, patch, frames, keys, version, variant=None, keep=5):
                 return c, ex, seen
             opo[mo[prev]]()
             ts = tsites.get(rp[24])
-            if ts:                      # a title hook: run as the instruction it replaced (module docstring)
+            if ts:                      # a title / SD hook: run as the instruction it replaced (module docstring)
                 a, old, new = ts
                 mp[a:a + len(old)] = old
                 opp[mp[a]]()
                 mp[a:a + len(new)] = new
-                c['title hook'] += 1
+                c['title hook' if ts in patch.tsites else 'sd hook'] += 1
             else:
                 opp[mp[rp[24]]]()
             if rp[24] != ro[24]:
@@ -376,6 +380,267 @@ def _banks_of(patch, z80):
     patch.patch_ram(ram, None, check=False)
     return {5: bytes(ram[0:16384]), 2: bytes(ram[16384:32768]), 0: bytes(ram[32768:49152]),
             12: patch.extra_banks[12]}
+
+
+# ------------------------------------------------------------------------------------------------ SD save / load
+
+SD_LAY = {'A': (0xD054, 0x66, 0xDED0), 'B': (0xA816, 0x68, 0xAC25)}    # block (IX), length (DE), typed-name buffer
+
+
+class _Esx:
+    """esxDOS as the hooks see it (RST 8 with automap on): F_OPEN / F_READ / F_WRITE / F_CLOSE on a dict of files.
+    Like the real one it may come back with interrupts on and IY, HL, DE, the alternate set scrambled. Each call
+    also checks the hook's conditions: ROM in slots 0 / 1 (DivMMC overlays them), automap on, stack and buffers above
+    0x4000, HL = IX, and an interrupt now would reach an EI / RETI outside 0x0000-0x3FFF."""
+    def __init__(self, files, fail_write=False):
+        self.files, self.fail_write, self.open, self.bad, self.calls = files, fail_write, {}, [], []
+
+    def call(self, R, mem, st):
+        def w(a):
+            return mem[a] | mem[(a + 1) & 0xFFFF] << 8
+        sp = R[12]
+        ret = w(sp)
+        fn, ix, hl = mem[ret], R[8] << 8 | R[9], R[6] << 8 | R[7]
+        if st['mmu'][0:2] != [0xFF, 0xFF] or not st['nr'].get(0x0A, 0) & 0x10:
+            self.bad.append(('rst 8 without the ROM / automap', st['mmu'][0:2], st['nr'].get(0x0A)))
+        if sp < 0x4000 or ix < 0x4000 or hl != ix:
+            self.bad.append(('rst 8 registers', hex(sp), hex(ix), hex(hl)))
+        i = R[14] << 8
+        tab = {mem[i + k] for k in range(257)}
+        vec = mem[i] * 257 if len(tab) == 1 else 0
+        if i < 0x4000 or vec < 0x4000 or [mem[vec], mem[vec + 1], mem[vec + 2]] != [0xFB, 0xED, 0x4D]:
+            self.bad.append(('an interrupt in esxDOS would not reach EI / RETI', hex(i), hex(vec)))
+        a, bc, err = R[0], R[2] << 8 | R[3], False
+        if fn == 0x9A:
+            name, p = '', ix
+            while mem[p] and len(name) < 64:
+                name, p = name + chr(mem[p]), p + 1
+            self.calls.append(('open', name, R[2]))
+            if a != ord('*'):
+                self.bad.append(('drive', a))
+            if R[2] == 0x01 and name in self.files:
+                h = 3 + len(self.open)
+                self.open[h], a = [name, 0, 'r'], h
+            elif R[2] == 0x0E and not self.fail_write:
+                self.files[name] = b''
+                h = 3 + len(self.open)
+                self.open[h], a = [name, 0, 'w'], h
+            else:
+                a, err = 5, True
+        elif fn in (0x9D, 0x9E):
+            f = self.open.get(a)
+            self.calls.append(('read' if fn == 0x9D else 'write', bc))
+            if f is None or f[2] != ('r' if fn == 0x9D else 'w'):
+                self.bad.append(('read / write on handle', a))
+                err = True
+            elif fn == 0x9D:
+                d = self.files[f[0]][f[1]:f[1] + bc]
+                for k, x in enumerate(d):
+                    mem[ix + k] = x
+                f[1] += len(d)
+                bc = len(d)
+            else:
+                self.files[f[0]] += bytes(mem[ix + k] for k in range(bc))
+        elif fn == 0x9B:
+            self.calls.append(('close',))
+            err = self.open.pop(a, None) is None
+        else:
+            self.bad.append(('function', hex(fn)))
+            err = True
+        R[0], R[2], R[3] = a, bc >> 8, bc & 255
+        R[1] = (R[1] & 0xFE) | (1 if err else 0)
+        for k in (4, 5, 6, 7, 10, 11, 16, 17, 18, 19, 20, 21, 22, 23):
+            R[k] = (R[k] * 7 + 0x5A) & 255             # scrambled
+        R[26] = 1                                       # back with interrupts on
+        R[12], R[24] = sp + 2, (ret + 1) & 0xFFFF
+
+
+def _sd_machine(nex):
+    """A Next as the build leaves it in the game (48K mapping, alt ROM image 1 in slots 0 / 1, automap off), from the
+    built .nex's banks: (memory, state, simulator class, nextreg handlers)."""
+    from . import nextboot
+    from .dizzy6 import _rw_simulator
+    banks, _, _ = nextboot.load_nex(str(nex))
+    pages = {}
+    for b, data in banks.items():
+        pages[2 * b], pages[2 * b + 1] = bytearray(data[0:8192]), bytearray(data[8192:16384])
+    alt = bytes(banks[12][8192:16384] + banks[12][0:8192])
+    st = {'mmu': [0xFF, 0xFF, 10, 11, 4, 5, 0, 1], 'nr': {0x0A: 0x05, 0x8C: 0x80}, 'sel': 0}
+
+    class Mem(list):
+        def __getitem__(s, a):
+            m = st['mmu'][a >> 13]
+            return alt[a] if m == 0xFF else pages.setdefault(m, bytearray(8192))[a & 0x1FFF]
+
+        def __setitem__(s, a, v):
+            m = st['mmu'][a >> 13]
+            if m != 0xFF:
+                pages.setdefault(m, bytearray(8192))[a & 0x1FFF] = v
+    return Mem([0] * 65536), st, _rw_simulator(), pages
+
+
+def _sd_call(nex, entry, ret, regs, files, fail_write=False, limit=200000):
+    """Run one hook call (entry = the CALL's target) on _sd_machine with the fake esxDOS until it returns to ret.
+    -> (registers, memory, state, esx, problems)."""
+    from skoolkit.simulator import R2
+    mem, st, Sim, pages = _sd_machine(nex)
+    for a, v in regs.pop('ram', {}).items():
+        mem[a] = v
+    sp = 0xF000
+    mem[sp - 2], mem[sp - 1] = ret & 255, ret >> 8
+    sim = Sim(mem, dict(regs, PC=entry, SP=sp - 2, **{'^BC': 0x1357, '^DE': 0x2468, '^HL': 0x9ABC, '^A': 0x11, '^F': 0x22}))
+    R, ed = sim.registers, sim.after_ED
+    R[14], R[27], R[26] = 0x39, 2, 1
+
+    def nn():
+        p = R[24]
+        reg, val = sim.memory[p + 2], sim.memory[p + 3]
+        st['nr'][reg] = val
+        if 0x50 <= reg <= 0x57:
+            st['mmu'][reg - 0x50] = val
+        R[15] = R2[R[15]]
+        R[24] = p + 4
+
+    def na():
+        p = R[24]
+        reg = sim.memory[p + 2]
+        st['nr'][reg] = R[0]
+        if 0x50 <= reg <= 0x57:
+            st['mmu'][reg - 0x50] = R[0]
+        R[15] = R2[R[15]]
+        R[24] = p + 3
+    ed[0x91], ed[0x92] = nn, na
+
+    class Tr:
+        def read_port(s, regs_, port):
+            if port == 0x253B and 0x50 <= st['sel'] <= 0x57:
+                return st['mmu'][st['sel'] - 0x50]
+            return st['nr'].get(st['sel'], 0) if port == 0x253B else 0xFF
+
+        def write_port(s, regs_, port, value, *x):
+            if port == 0x243B:
+                st['sel'] = value
+    sim.set_tracer(Tr())
+    esx = _Esx(files, fail_write)
+    before = {p: bytes(pages[p]) for p in (10, 11, 4, 5, 0, 1)}
+    kept = [R[k] for k in (10, 11) + tuple(range(16, 24))]
+    ops, n, bad = sim.opcodes, 0, []
+    while not (R[24] == ret and R[12] == sp):
+        if R[24] == 0x0008:
+            esx.call(R, mem, st)
+            continue
+        if R[24] < 0x4000 and not 0x3900 <= R[24] < 0x3B00:
+            bad.append(('PC in the ROM', hex(R[24])))
+            break
+        ops[mem[R[24]]]()
+        n += 1
+        if n > limit:
+            bad.append(('no return', hex(R[24])))
+            break
+    if st['mmu'] != [0xFF, 0xFF, 10, 11, 4, 5, 0, 1] or st['nr'][0x0A] != 0x05 or R[14] != 0x39 or R[26] != 0:
+        bad.append(('state after', st['mmu'], st['nr'][0x0A], hex(R[14]), 'IFF', R[26]))
+    if [R[k] for k in (10, 11) + tuple(range(16, 24))] != kept:
+        bad.append(('IY / alternate set not kept',))
+    at = {10: 0x4000, 11: 0x6000, 4: 0x8000, 5: 0xA000, 0: 0xC000, 1: 0xE000}
+    changed = sorted(at[p] + k for p, b in before.items() for k in range(8192) if pages[p][k] != b[k])
+    changed = [a for a in changed if not sp - 16 <= a < sp]             # the game's stack below the return
+    return R, mem, st, esx, bad + esx.bad, changed
+
+
+def sd_check(patch, nex, neg=True):
+    """The SD save / load hooks of a built .nex (asm "SD save / load"; games/elite_std.md "## SD save"), run on a Next
+    memory model with a fake esxDOS (_Esx), every call checked for its conditions and for what it leaves (slots,
+    NextReg 0x0A, I, interrupts off, the stack, RAM changed only where it should): save a short and a long name,
+    load each back over a cleared block, an empty name (the last save), a missing name, another name in the same file,
+    and a card that refuses writes. neg: two broken hooks (the extension's letter, the DI after RST 8) must fail.
+    -> Counter (failures end in '!'), examples."""
+    import shutil
+    c, ex = collections.Counter(), []
+    if not patch.sdsites:
+        return c, ex
+    lay = E.VERSIONS[patch.version]['layout']
+    blk, n, typed = SD_LAY[lay]
+    ld_site, sv_site = patch.sdsites[0], patch.sdsites[1]
+    ld_e, sv_e = int.from_bytes(ld_site[2][1:3], 'little'), int.from_bytes(sv_site[2][1:3], 'little')
+    ext = '.EL' + lay
+
+    def run(nexf, tag, files, keep=None):
+        k = collections.Counter()
+        exs = []
+
+        def ok(cond, key, detail=None):
+            if cond:
+                k[key] += 1
+            else:
+                k[key + '!'] += 1
+                exs.append((tag, key, detail))
+
+        def cmdr(name, seed):
+            d = bytearray((seed * 37 + i * 11) & 255 for i in range(n))
+            d[0:11] = name.encode().ljust(11, b'\0')[:11]
+            return bytes(d)
+
+        def do_save(name, seed, fail=False):
+            d = cmdr(name, seed)
+            R, mem, st, esx, bad, ch = _sd_call(nexf, sv_e, sv_site[0] + 3, dict(A=0xFF, IX=blk, DE=n, IY=0x5C3A,
+                                                ram={blk + i: x for i, x in enumerate(d)}), files, fail)
+            ok(not bad, 'sd call ok', bad[:3])
+            ok(not ch, 'sd save leaves RAM', [hex(x) for x in ch[:4]])
+            return d, R
+
+        def do_load(typed_name, seed):
+            pre = cmdr('PREVIOUS', seed)
+            ram = {blk + i: x for i, x in enumerate(pre)}
+            ram.update({typed + i: x for i, x in enumerate(typed_name.encode() + b'\0')})
+            R, mem, st, esx, bad, ch = _sd_call(nexf, ld_e, ld_site[0] + 3, dict(A=0xFF, IX=blk, DE=n, IY=0x5C3A,
+                                                ram=ram), files)
+            ok(not bad, 'sd call ok', bad[:3])
+            ok(not [a for a in ch if not blk <= a < blk + n], 'sd load leaves RAM', [hex(x) for x in ch[:4]])
+            return bytes(mem[blk + i] for i in range(n)), R[1] & 1, pre
+
+        a, R = do_save('JOE', 1)
+        ok(R[1] & 1 and files.get('JOE' + ext) == a and files.get('_LAST' + ext) == a, 'save short name')
+        b, R = do_save('MILICEVIC', 2)
+        ok(R[1] & 1 and files.get('MILICEVI' + ext) == b and files.get('_LAST' + ext) == b, 'save long name',
+           sorted(files))
+        got, cy, pre = do_load('JOE', 3)
+        ok(cy and got == a, 'load by name')
+        got, cy, pre = do_load('MILICEVIC', 4)
+        ok(cy and got == b, 'load long name')
+        got, cy, pre = do_load('', 5)
+        ok(cy and got == b, 'load empty name = last save')
+        got, cy, pre = do_load('BOB', 6)
+        ok(not cy and got == pre, 'load missing name fails, block kept')
+        got, cy, pre = do_load('MILICEVIX', 7)
+        ok(not cy and got == pre, 'load other name in the file fails')
+        ro = dict(files)
+        d, R = do_save('ZED', 8, fail=True)
+        ok(not R[1] & 1 and files == ro, 'save on a refusing card fails')
+        return k, exs
+
+    k, e = run(nex, 'build', {})
+    c.update(k)
+    ex += e
+    if neg:
+        d = bytearray(open(nex, 'rb').read())
+        import tempfile
+        tmp = tempfile.mkdtemp(prefix='elite_sd_')
+        try:
+            for name, old, new in (('extension', b'.ELA\0', b'.FLA\0'),
+                                   ('di', bytes([0xCF, 0x00, 0xF3]), bytes([0xCF, 0x00, 0x00]))):
+                at = d.find(old)
+                if at < 0 or d.find(old, at + 1) >= 0:
+                    c['neg sd %s not found!' % name] += 1
+                    continue
+                bd = bytearray(d)
+                bd[at:at + len(new)] = new
+                p = os.path.join(tmp, name + '.nex')
+                open(p, 'wb').write(bd)
+                kk, _ = run(p, name, {})
+                c['neg sd %s caught' % name if any(x.endswith('!') for x in kk) else 'neg sd %s missed!' % name] += 1
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+    return c, ex
 
 
 # ------------------------------------------------------------------------------------------------ title renders

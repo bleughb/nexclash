@@ -64,7 +64,7 @@
  "outputs": {
   "plain": {
    "file": "elite_std.nex",
-   "md5": "fdf902724678c8bf6cd9ad00ca1fa687"
+   "md5": "4e176c9cf03bb207782221ac05396899"
   }
  },
  "repro": [],
@@ -157,7 +157,7 @@
    "outputs": {
     "plain": {
      "file": "elite_std_jcv.nex",
-     "md5": "2b1cc73a21c038d25de35cee46b159bc"
+     "md5": "3426af1e9ab02f77e0020f221318798e"
     }
    }
   },
@@ -194,23 +194,23 @@
    "outputs": {
     "plain": {
      "file": "elite_std_e128.nex",
-     "md5": "4862999097474b509e4304749c08d66f"
+     "md5": "b214d6fa502e5fff9a84e1711dcd6e7a"
     }
    }
   }
  ],
  "checked": {
   "deps": {
-   "asm/elite_std_hooks.asm": "593862341b2a4f7c",
-   "docs/profiles/elite_std.json": "b2509d488017590b",
+   "asm/elite_std_hooks.asm": "6b31fbca68cecb2b",
+   "docs/profiles/elite_std.json": "498dd57a9bb8b652",
    "nexclash.py": "d9b430cef7478a38",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "dfc6f6d6e095185c",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/elite_std.py": "d6ae9fbfef844d98",
-   "nexclash/elite_std_verify.py": "61f6a41d5f1257fd",
+   "nexclash/elite_std.py": "fddcf70d120d1d41",
+   "nexclash/elite_std_verify.py": "18871da170247f62",
    "nexclash/engines.py": "0e60737f194a4e1e",
    "nexclash/hooklib.py": "258714a3676ee71b",
    "nexclash/hookprofile.py": "cac1335153f15daa",
@@ -225,23 +225,23 @@
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "a1ab887e8ad3880b",
+   "recipe": "fa81c3e9e44ed93d",
    "rom": "sinclair"
   },
   "date": "2026-11-24"
  },
  "verified": {
   "deps": {
-   "asm/elite_std_hooks.asm": "593862341b2a4f7c",
-   "docs/profiles/elite_std.json": "b2509d488017590b",
+   "asm/elite_std_hooks.asm": "6b31fbca68cecb2b",
+   "docs/profiles/elite_std.json": "498dd57a9bb8b652",
    "nexclash.py": "d9b430cef7478a38",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "dfc6f6d6e095185c",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/elite_std.py": "d6ae9fbfef844d98",
-   "nexclash/elite_std_verify.py": "61f6a41d5f1257fd",
+   "nexclash/elite_std.py": "fddcf70d120d1d41",
+   "nexclash/elite_std_verify.py": "18871da170247f62",
    "nexclash/engines.py": "0e60737f194a4e1e",
    "nexclash/hooklib.py": "258714a3676ee71b",
    "nexclash/hookprofile.py": "cac1335153f15daa",
@@ -256,7 +256,7 @@
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "a1ab887e8ad3880b",
+   "recipe": "fa81c3e9e44ed93d",
    "rom": "sinclair"
   },
   "date": "2026-11-24"

@@ -30,6 +30,7 @@ BUF_PG    EQU 27            ; 8K page, mapped at slot 1 (0x2000) for a moment: t
                             ; BG; at 0x3900-0x3A3C the alt ROM's IM 2 table and h_isr (elite_std.py): interrupts
                             ; work while it is there
 BG        EQU 0x2000
+SD_PG     EQU BUF_PG        ; also the SD save / load code, at its 0x1000 (slot 2: 0x5000; BG uses 0x0000-0x0FFF)
 SLOT      EQU 0x6159        ; the title ship's slot (both layouts)
 BPTR      EQU SLOT + 35     ; its blueprint pointer
 FLINES    EQU 312           ; lines per 50 Hz frame
@@ -120,6 +121,36 @@ pre_c:  ld (V_HALT),a
         jp p_pre
 pre_x:  nextreg 0x50,0xFF
         nextreg 0x07,0                  ; 3.5 MHz
+        ret
+
+; ---------------------------------------------------------------------------------------------- SD save / load
+; The ACCESS MENU's tape CALLs (LD-BYTES 0x0562 / SA-BYTES 0x04C6; elite_std.py VERSIONS[v]['sd']) come here, with
+; the game's IX = commander block, DE = its length. B = 1 load / 0 save, C = the extension's last letter, HL (load)
+; = the typed name. The work runs from SD_PG mapped at slot 2 (0x4000: the ULA reads bank 5 itself, the screen
+; stays; neither the game's stack nor its block nor the name buffer is there). Carry out = done, as the ROM's.
+h_lda:  ld hl,0xDED0                    ; layout A: the name typed for a load
+        ld c,'A'
+        jr sd_ld
+h_ldb:  ld hl,0xAC25                    ; layout B
+        ld c,'B'
+sd_ld:  ld b,1
+        jr sd_go
+h_sva:  ld c,'A'
+        jr sd_sv
+h_svb:  ld c,'B'
+sd_sv:  ld b,0
+sd_go:  di
+        push bc
+        ld bc,NREG
+        ld a,0x52
+        out (c),a
+        inc b
+        in a,(c)                        ; A = the game's slot 2 page
+        pop bc
+        nextreg 0x52,SD_PG
+        jp sd_main
+sd_back:
+        nextreg 0x52,a                  ; flags kept: carry is the result
         ret
 rom_end:
         ASSERT rom_end <= 0x3CEC
@@ -674,3 +705,209 @@ dma:    ld a,0x83
 page_end:
         ASSERT page_end <= SAVE
         SAVEBIN "elitestd_page.bin", page_start, page_end - page_start
+
+; ---------------------------------------------------------------------------------------------- SD_PG at slot 2
+; Commander files on the SD card (esxDOS RST 8, the current drive and folder: the game's): one file per name, the
+; first 8 characters + ".ELA" (layout A) / ".ELB" (layout B), the tape block as it was (A 0x66, B 0x68 bytes, the name
+; first). Every save also writes "_LAST.ELx" ("_" is not a name character), which an empty name loads. A load with a
+; name returns carry only when the file's name is the one typed (the game's own test after LD-BYTES), so a file of
+; another name of the same first 8 characters is a load error, never a loop. While esxDOS runs, interrupts go
+; to an EI / RETI in this page (I = SD_I: DivMMC overlays 0x0000-0x3FFF, the alt ROM's table and h_isr); DivMMC
+; automap (NextReg 0x0A bit 4, off since the build's start) is on only for the call. elite_std.py puts the table
+; (257 x 0x5D at 0x5B00) and the handler (0x5D5D) in the page.
+SD_I     EQU 0x5B
+SD_VEC   EQU 0x5D5D
+V_MMU2   EQU 0x5E00             ; the game's slot 2 page
+V_GSP    EQU 0x5E01             ; the game's SP
+V_I      EQU 0x5E03
+V_0A     EQU 0x5E04             ; NextReg 0x0A as it was
+V_LEN    EQU 0x5E05             ; the block's length (DE)
+V_IX     EQU 0x5E07             ; the block (IX)
+V_NAME   EQU 0x5E09             ; the typed name (load)
+V_LOAD   EQU 0x5E0B
+V_HDL    EQU 0x5E0C
+FNAME    EQU 0x5E20             ; 8 + 4 + 1
+SD_BUF   EQU 0x5E40             ; a file read (0x80 at most)
+SD_SP    EQU 0x6000             ; stack 0x5F00-0x5FFF
+
+        ORG 0x5000
+sd_start:
+sd_main:
+        ld (V_MMU2),a
+        ld (V_GSP),sp
+        ld sp,SD_SP
+        ld (V_LEN),de
+        ld (V_IX),ix
+        ld (V_NAME),hl
+        ld a,b
+        ld (V_LOAD),a
+        ld a,c
+        ld (sd_ext+3),a
+        ld a,i
+        ld (V_I),a
+        ld a,SD_I
+        ld i,a
+        ld bc,NREG
+        ld a,0x0A
+        out (c),a
+        inc b
+        in a,(c)
+        ld (V_0A),a
+        or 0x10                         ; DivMMC automap (cores from 3.01.10; older ones keep it on in NextReg 0x06)
+        nextreg 0x0A,a
+        ld a,(V_LOAD)
+        or a
+        jr nz,.ld
+        call sd_save
+        jr .out
+.ld:    call sd_load
+.out:   push af
+        ld a,(V_0A)
+        nextreg 0x0A,a
+        ld a,(V_I)
+        ld i,a
+        pop af
+        ld sp,(V_GSP)
+        ld a,(V_MMU2)
+        jp sd_back
+
+sd_save:                                ; -> carry: saved
+        ld hl,(V_IX)
+        call mkname
+        jr z,.last                      ; no name: only _LAST
+        call sd_write
+        ret nc
+        call .last
+        scf                             ; the commander's own file is what counts
+        ret
+.last:  ld hl,s_last
+        call mkname
+        jr sd_write
+
+sd_load:                                ; -> carry: loaded (the block written only then)
+        ld hl,(V_NAME)
+        call mkname
+        jr nz,.open
+        ld hl,s_last
+        call mkname
+.open:  ld ix,FNAME
+        ld b,0x01                       ; FA_READ
+        call sd_open
+        ret nc                          ; no such file
+        ld ix,SD_BUF
+        ld e,0x9D                       ; F_READ
+        call sd_rw
+        ret nc
+        ld hl,(V_NAME)
+        ld a,(hl)
+        or a
+        jr z,.ok                        ; no name typed: the game takes any (D966 / D340)
+        ld de,SD_BUF
+        ld b,11                         ; the game's test: equal up to the 0, all 11 equal is a mismatch
+.cmp:   ld a,(de)
+        cp (hl)
+        jr nz,.bad
+        or (hl)
+        jr z,.ok
+        inc hl
+        inc de
+        djnz .cmp
+.bad:   or a
+        ret
+.ok:    ld hl,SD_BUF
+        ld de,(V_IX)
+        ld bc,(V_LEN)
+        ldir
+        scf
+        ret
+
+sd_write:                               ; FNAME <- the block -> carry: written and closed
+        ld b,0x0E                       ; FA_WRITE + FA_CREATE_AL (created or truncated)
+        call sd_open
+        ret nc
+        ld ix,(V_IX)
+        ld e,0x9E                       ; F_WRITE
+sd_rw:                                  ; E = F_READ / F_WRITE of V_LEN bytes at IX, then close -> carry: all done
+        ld bc,(V_LEN)
+        call esx
+        jr c,.err
+        ld hl,(V_LEN)
+        or a
+        sbc hl,bc
+        jr nz,.err
+        ld a,(V_HDL)
+        ld e,0x9B                       ; F_CLOSE
+        call esx
+        ccf
+        ret
+.err:   ld a,(V_HDL)
+        ld e,0x9B
+        call esx
+        or a
+        ret
+
+sd_open:                                ; FNAME, B = mode -> carry: open (V_HDL)
+        ld ix,FNAME
+        ld a,'*'                        ; the current drive
+        ld e,0x9A                       ; F_OPEN
+        call esx
+        ccf
+        ret nc
+        ld (V_HDL),a
+        ret
+
+mkname:                                 ; HL = a name -> FNAME = its first 8 characters (to the first below 0x21) +
+        ld de,FNAME                     ; ".ELx", 0 -> NZ; Z: no name (FNAME left)
+        ld b,8
+.c:     ld a,(hl)
+        cp 0x21
+        jr c,.e
+        cp 0x7F
+        jr nc,.e
+        ld (de),a
+        inc hl
+        inc de
+        djnz .c
+.e:     ld a,b
+        cp 8
+        ret z
+        ld hl,sd_ext
+        ld bc,5
+        ldir                            ; Z kept (NZ)
+        ret
+
+esx:                                    ; RST 8 function E with A, B / BC, IX (HL = IX too) -> A, BC, carry = error.
+        push iy                         ; Keeps IY and the alternate set; interrupts off after it
+        exx
+        push bc
+        push de
+        push hl
+        exx
+        ex af,af'
+        push af
+        ex af,af'
+        push af
+        ld a,e
+        ld (.fn),a
+        pop af
+        push ix
+        pop hl
+        rst 8
+.fn:    db 0
+        di
+        ex af,af'
+        pop af
+        ex af,af'
+        exx
+        pop hl
+        pop de
+        pop bc
+        exx
+        pop iy
+        ret
+
+s_last: db "_LAST",0
+sd_ext: db ".ELA",0
+sd_end:
+        ASSERT sd_end <= 0x5900         ; 0x5900-0x5A3C: the alt ROM table's copy (BUF_PG at slot 1)
+        SAVEBIN "elitestd_sd.bin", sd_start, sd_end - sd_start
