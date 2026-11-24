@@ -186,7 +186,7 @@ xc.py
 - Converter: 0xC000+ tails refused on 48K too; tails here from access scans (lesson 2).
 - Hack gameplay toggle: NPC-vs-NPC fight not yet provoked; docking not reached; disk save/load off with it on; its
   builds fail gap_in_system_jump (proof 0x7EFF not reached: the hack's own jump code; every lockstep case equal).
-- SD save: hardware untested (DivMMC automap at RST 8 with the alt ROM on; NextReg 0x0A on cores before 3.01.10).
+- SD save: works on the owner's Next, all three versions (2026-11-24); cores before 3.01.10 untried.
 - Option (b) bundles: no proven free space (## NXC); would need relocating the display rewrites too.
 - Smooth title ship: not tried on hardware (DMA continuous mode, 28 MHz copy inside the top border are CSpect's); the
   draw-segment-under-a-frame assumption is measured for the 8 + 1 models only.
