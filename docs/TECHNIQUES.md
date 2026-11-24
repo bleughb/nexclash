@@ -56,8 +56,8 @@ What it says:
   core version first: older cores read the extended parameter bytes as DMA writes.
 - 28 MHz on core 3.02 is ~6.3-7x 3.5 MHz, not 8x: each memory read adds a wait state, so (T + reads) / 8
   (LEARNINGS 2.1f; none on 3.03.00: N-Go board, nxsuite C01): LDIR 21 T + 3 reads -> 3.0 T a byte at 3.5 MHz terms = 0.857 us (measured 0.861).
-  Budget a 28 MHz renderer from simulator T x 1.4, not x 1: JNext 1.3.0 ran Castle Master's Z80N renderer
-  (maths, PUSH fills) at 1.34-1.42x its simulator T (2026-11-19; hardware to confirm).
+  Builds target core 3.03 (2026-11-24): budget a 28 MHz renderer from simulator T x 1. The x 1.4 rule was
+  for 3.02 and JNext 1.3.0 (which models 3.02: Castle Master's Z80N renderer ran at 1.34-1.42x its T).
 - Sprite pattern upload: DMA is ~3x OUTI for a 256-byte pattern and ~1.8x for a 64-byte one
   (14.5 + 64 x 0.18 = 26 us vs 47 us). OUTINB = OUTI. Sprite attributes: port and NEXTREG the
   same here only because v1's NEXTREG side wrote constants (`NEXTREG $35,32`); with values loaded
@@ -280,7 +280,7 @@ What v2 adds:
 - Raster numbering: Active Video Line ($1E/$1F), line interrupt ($22/$23) and copper WAIT all
   count from ULA pixel row 0 UNLESS NextReg $64 (core 3.01.05+) is non-zero: it offsets all three
   (changelog 3.01.05). Frame length differs by timing: 48K 312 lines, 128K 311, Pentagon 320 on
-  VGA; HDMI 312 whatever the machine timing; 60 Hz 264 (N-Go 3.03.00 128K VGA, nxsuite F03). Line length:
+  VGA; HDMI 312 whatever the machine timing; 60 Hz 264 (N-Go 3.03.00 128K VGA, F03). Line length:
   896 clocks (48K, Pentagon), 912 (128K), 864 (HDMI 50 Hz), 858 (HDMI 60 Hz). The ULA interrupt
   comes at line 248 (48K / 128K VGA 50 Hz), 239 (Pentagon), 256 (HDMI 50 Hz), 224 at 60 Hz (F06). Display rows 0-191,
   then border + blanking (all from varmfskii zx_next_notes copper tables). A raster wait that
@@ -642,7 +642,7 @@ Ped7g's test suite) where a technique there is mostly about one Next feature.
   is then 50.00, 51.02, 52.61, 53.57, 55.36, 57.14, 58.93 Hz (HDMI 50.00), a "60 Hz" one 60.00 ...
   70.71 (HDMI 60.00). So everything paced by the frame interrupt - every game we convert - runs up
   to ~18 % fast on a VGA 1-6 setting, and CTC / DMA-prescaler rates scale with clk28 too. At 128K
-  timing VGA 0 is 28e6 / (311 x 1824) = 49.36 Hz, measured (N-Go 3.03.00, nxsuite F01 / F02). The setting
+  timing VGA 0 is 28e6 / (311 x 1824) = 49.36 Hz, measured (N-Go 3.03.00, F01/F02). The setting
   is the user's (BRIEFING A1, Video).
 - For us: C2 #37 (beeper replay) has two candidate players: copper-driven (no CPU per sample, one
   frame of latency) or a CTC interrupt (~10 % CPU at 16 kHz; needs hardware IM2 mode, C2 #34).
