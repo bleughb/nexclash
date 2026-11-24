@@ -30,6 +30,10 @@ SITES_ORIG = {0x80C9: 'e5f5a7', 0x8273: 'e5f5a7', 0x86F9: '21ff7c'}
 SITE_OP = {0x80C9: (0xC3, 'e_d16'), 0x8273: (0xC3, 'e_d24'), 0x86F9: (0xC3, 'e_cmt')}
 INTERIORS = (0x80CA, 0x80CB, 0x8274, 0x8275, 0x86FA, 0x86FB)
 
+from .hooklib import CMP as _CMP
+
+CMP = _CMP                  # every register but R, T, MEMPTR: R is never read (no LD A,R in the code; games/jack_the_nipper.md)
+
 _HERE = os.path.dirname(os.path.abspath(__file__))
 
 

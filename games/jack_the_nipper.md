@@ -86,6 +86,20 @@ All defaults taken: every figure a sprite (pickups included); scenery, HUD, scor
 - The plain build's tail at 0x6F00 is to be proven by rom_paths' tail proof (Green Beret, 2026-11-23: a RAM scan alone
   missed a copier reading its tail before the game wrote it).
 
+## Pacing
+No interrupt accepted in 108,043 frames: nothing syncs the game to the frame, so the work it does is its pace (survey,
+card detect.pacing-structure). The figure draws still run whole (redirected, not replaced), as do the copier and the
+restore, so the game's own work per update is the original's. The time added is the hooks': the record at each draw
+(at the caller's speed) and the commit at each copy (28 MHz; tiles uploaded only on a cache miss). Not yet measured in
+JNext (verify.update-locked-pace): open.
+
+## Dependencies
+Readers of the shadow and the display (`scan --writers`, 30,000 frames): the copier, the room-entry blit (0xAE14), fills
+(0xA8E5, 0xA917) and a character roll (0xFF93 / 0xFFCD); no logic reads figure pixels. The dirty-cell marks and the
+restore run as the original's (the marks take only base-independent bits of the address). R is never read (no
+`LD A,R` in the code). Differences the redirect leaves, proven dead by the verifier's run-on: H' (the draw's last
+address) and stack bytes below SP holding the moved address.
+
 ## Design question (asked 2026-11-23; PLAYBOOK 3c defaults + this game's exceptions)
 The recording draws 69 figure kinds (figures.png, from 0x8009's two paths over 108,043 frames): 36 small objects
 (16 x 16: pickups such as the computer, glue, bomb and keys, a bug, and effects: the pea, a sparkle, four smoke
