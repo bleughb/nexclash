@@ -8,6 +8,12 @@
    "game": "notes",
    "text": "VHDL reading for core 3.01.09, not confirmed on hardware.",
    "shown_on": "analysis"
+  },
+  {
+   "game": "games/prince_of_the_yolkfolk.md",
+   "text": "The tail relies on locked 7FFD writes not remapping the MMU (from the VHDL); hardware still to confirm with this build.",
+   "quote": "Relies on locked 7FFD writes not remapping MMU",
+   "shown_on": "analysis"
   }
  ],
  "level": "inferred",

@@ -16,6 +16,9 @@
   "exec.game_reads_r"
  ],
  "card": "patch.preserve-r",
+ "facts": {
+  "interrupts": "on"
+ },
  "words": [
   "interrupt placement",
   "RZX",
