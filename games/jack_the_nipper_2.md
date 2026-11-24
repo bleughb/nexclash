@@ -144,6 +144,8 @@ code no death reaches) and Lives 255 (34631: the one-digit lives display). Immun
   0; an exact signature (alignment, mirror, covered cells' colours) in reserved slots cuts the builds (71 to 15).
 - [doc LEARNINGS 2.3] demonstrated: a verifier modelling slot-1 stores by wrapping store opcodes must wrap every form
   the hooks use: CALL cc was left out, the return address was dropped and the commit returned to 0x0000.
+- [card patch.scratch-redirect §Failure lookup] demonstrated: IY (moved to the scratch), the flags and A read back
+  from it, and E' differed; proven dead by the lockstep run-on (memory equal apart from popped bytes).
 - [local: this game's colour model] observed: an item's cells take colours from a table (0x8A36 + 4 x (IX+9)) and
   (IX+6) = 0xD0 objects two colours, so the object's own colour field is not the picture; the verifier compares every
   sprite pixel with the original's colour list instead.

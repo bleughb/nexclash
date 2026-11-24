@@ -1,17 +1,17 @@
-# Jack the Nipper (Gremlin Graphics, 1986) - stage 1 done (design decided 2026-11-23); engine not yet written
+# Jack the Nipper (Gremlin Graphics, 1986) - stage 2 done; the whole-recording stamp to rerun on the final module
 
 Techniques: `patch.scratch-redirect`, `optimise.pattern-cache`, `patch.restore-speed`, `detect.pacing-structure`, `detect.gameplay-screen-readers`
 
 ## Next session
-Stage: 2 (build)             State: design decided by the owner 2026-11-23 (all defaults; "Design decisions" below)
-Inputs: TOSEC `Jack the Nipper (1986)(Gremlin Graphics Software).z80` (md5 adcdb8f9bb5e72218392aab8fd44e78e) and its
-`[a]` (4c5398b8bcfd88ebd83656f01c3aca21); rzxarchive `j/jacknipper.rzx` (108,043 frames, 36 min; its own start
-snapshot md5 903c092495784d308cf03899b80d7110)    Branch: add-jack-the-nipper
-Checks: survey (GATE OK), inspect, figure sheet, pixel readers, depth    Pending user answers: none
-Start with: "Patch plan" below (template smashtv.py): stage A = sites + slot-1 page + the H redirect only (boot check,
-the shadow keeps the background), then sprites, verify, units + negatives, cheats, record
-Read: PLAYBOOK 2-3, docs/ENGINE_CONTRACT.md, "Design decisions" below
-Open: a short recording (3-5 min) for the build runs (the 36-minute one stays for the full verification)
+Stage: 3 (prove + deliver)   State: engine, units, negatives, record and test .nxc done 2026-11-23; a stamp ran on the
+module before Jack the Nipper II's verifier changes (CALL cc, LD (IY+d) and PUSH IY wrappers; nothing these hooks use),
+so the planner asks for a re-verify: rerun `selftest.py --game jack_the_nipper --verify --stamp` (~80 min)
+Inputs: TOSEC `Jack the Nipper (1986)(Gremlin Graphics Software)[a].z80` (4c5398b8bcfd88ebd83656f01c3aca21);
+rzxarchive `j/jacknipper.rzx` (108,043 frames, 36 min)    Reference: reference-local/jack_the_nipper
+Branch: add-jack-the-nipper (local, with Jack the Nipper II)
+Start with: the stamp; then "Results" + the record's result, the owner's test of `~/nxc-test/Jack the Nipper 1.0
+test`, colour sheets (docs/COLOURS.md), Codex review of the engine, the PR with Jack the Nipper II
+Open: pace in JNext; the cheats not yet tried in play
 
 ## Snapshot (0b)
 48K, in game (PC 0x908B in RAM; the recording's start 0x90AD), IM 1 with interrupts OFF (DI), I = 0x3F, SP 0x7FF7,
@@ -66,27 +66,42 @@ RAMTOP 0x7C60, border 0. No loader to run.
 ## Design decisions (the owner, 2026-11-23)
 All defaults taken: every figure a sprite (pickups included); scenery, HUD, score and text on the ULA; figures in front of all scenery, later objects over earlier; the game's own colours until the painted sheet; effects (pea, sparkle, smoke) as sprites; the masks' black outline kept; no pause or message window known (a hide gets its own fix if one turns up).
 
-## Patch plan (stage 2, 2026-11-23, in progress)
-- Technique: patch.scratch-redirect. The game's own figure draws keep running unchanged (same work, so the same pace
-  in a game with no frame sync), but into a scratch shadow mapped at slot 1 (0x2000-0x2FFF: the ROM's place; the game
-  uses the ROM for one RET at 0x0052). The real shadow then holds only the background, the dirty-cell copier and the
-  restore run as before, and the hook builds the figure's sprites from the same graphics and mask.
-- Redirect per call, at the two figure callers' returns from 0x87BB (0x80C9 and 0x8273: H - 0x40), not by patching the
-  helper's base (`ADD A,0x60` at 0x87EF): 14 other callers use 0x87BB for map lookups (0x9400 / 0x9BFC: `CP 0x72` on
-  H; 0xB273 turns H into a cell-map address at 0x7000+), and the restore keeps its own base (0x8747: `ADD A,0x60`).
-- Confirmed 2026-11-23: the dirty-cell marks are base-independent (0x8123: `AND 8`, `RRCA` x3, `ADD 0x7D` from H, then L), the 16-wide draw (0x80E3-0x810C) is an AND-mask pass then an OR-graphics pass stepping by `DEC H` and the relative row helper, and no `CP` / `SUB` / `AND` with a 0x60-0x70 constant exists in 0x8000-0x881F (only the two `ADD A,0x60`). So slot 1 can hold a RAM scratch page for the whole game (the game never reads the ROM there; rom_paths: one RET at 0x0052): the hooks only move H at the two returns and build the sprites, with no map per draw. The verifier's memory compare proves no figure write reaches the real shadow.
-- Still to confirm: every shadow write of a figure draw goes through that HL (the shifted path 0x8147,
-  the 24-wide path 0x8228, the shifted routine near 0x85D0 with IY = 0x8000 and DE' = 0x7400, the AND-table writer
-  0x8637-0x8667); the dirty-cell marks (0x812C, 0x8209, 0x82F6, 0x845F) take the cell from H bits the 0x40 shift does
-  not touch, or map the mark back; slot 1 mapped from the 0x8009 entry to its returns, the ROM back at every exit.
-- Sprites: from DE' (graphics) and DE (mask) at the hook, rows by type. The original's look (screens.png, 2026-11-23): the graphics are black line art (the cells' ink is black), the mask-cleared body shows the PAPER of the cells it stands on (the clash: Jack yellow on a yellow wall, blue on the blue floor). Clash-free default for "the game's own colours": lines black, body in the paper (and bright) of the attribute cell under the figure's feet, one colour per figure, until a painting; the line art and its outline stay as drawn. 4-bit patterns (0 clear, 1 black, 2 body), the body colour by the sprite's palette offset (one bank per Spectrum colour), so one pattern serves every room. (IX+4) bit 0 = 0 takes the mirrored draw (0x8482 / 0x85D0: bytes reversed through the table at 0x7400, order swapped): the sprite's X mirror. Position: the copier maps shadow row y to screen row y (0x86F9: counters 0x7D / 0x7E -> 0x40xx / 0x48xx), so sprite (x + 32, top + 32), x = (L AND 31) x 8 + shift; a pattern cache (optimise.pattern-cache: a
-  24 x 40 adult is six sprites, 69 kinds); sprite order = object order (depth).
-- Template: nexclash/smashtv.py (the game's own plotters into a scratch buffer, no frame sync; docs/ENGINE_TEMPLATES.md), with the shared hook library: hlib_pcache (pattern cache), hlib_commit (atomic attribute commit), hlib_speed, hlib_r. Sites: 0x80C9 and 0x8273 (both `PUSH HL; PUSH AF; AND A` = E5 F5 A7, right after `CALL 0x87BB`): JP to the hook, which takes the figure (DE' graphics, DE mask, rows by type, x / y from IX), moves H by -0x40, replays the three bytes and returns to +3; 0xAA4A (`CALL 0x86F9`, the copier, after Jack's own draw at 0xAA44 and the footsteps): CALL the commit first. Slot 1 = one RAM page: scratch shadow 0x2000-0x2FFF, hook code and state above it, the register block.
-- Hooks at 28 MHz with patch.restore-speed and patch.preserve-r; verify per hook against the RZX (registers, all memory
-  but the scratch page; picture = ULA + sprites against the original), pace by verify.update-locked-pace.
-- Cheats (the owner, 2026-11-23: every patch carries them, off by default). The archive's "Immunity" POKE pair (Super Collection "¤ Pokes/Jack the Nipper.pok": 44278 and 44285 = 58, `LD A,(nn)` over a JP NZ / CALL NZ) is two things: 44285 (0xACFD `CALL NZ,0xA9F2`) skips the lose-a-life routine (0xA9F2 clears the death flag 0x8CFD, decrements the lives counter 0x8CE7 at 0xA9FF, redraws the life icons): immunity; 44278 (0xACF6 `JP NZ,0xAAB9` after 0x7F1E, which reads Q and shows a flashing pause / quit prompt; 0xAAB9 restarts) only disables Q: dropped. Cheats: Immunity = 44285 to 58; Infinite lives = 43519 (0xA9FF `DEC A`) to 0 (a death still happens, it costs no life). Original bytes match the `[a]` snapshot; to prove in a replay or JNext, and more to look for (the Naughtyometer).
-- The plain build's tail at 0x6F00 is to be proven by rom_paths' tail proof (Green Beret, 2026-11-23: a RAM scan alone
-  missed a copier reading its tail before the game wrote it).
+## Build (stage 2, 2026-11-23)
+- Technique: patch.scratch-redirect. The game's own figure draws keep running unchanged (the same work, so the same
+  pace in a game with no frame sync) into a scratch shadow at slot 1 (page 24: 0x2000-0x2FFF, the ROM's place; the
+  game uses the ROM for one RET at 0x0052): at the two figure callers' returns from 0x87BB (0x80C9 and 0x8273, `PUSH
+  HL; PUSH AF; AND A`) a JP to the hook records the figure and moves H by -0x40 (RES 6,H). Not the helper's base: 14
+  other callers use 0x87BB for map lookups, and the dirty-cell marks take only base-independent bits.
+- Commit at the copier's entry (0x86F9, `LD HL,0x7CFF` replayed): the copier has two callers (0xAA4A and the main
+  loop's 0xAC72), so a hook at one caller missed scenes.
+- Sprites: 4-bit patterns (0 clear, 1 black line, 2 body) from the graphics and the mask, the body in the paper (and
+  bright) of the attribute cell under the figure's feet through the palette offset (one bank per colour), so one
+  pattern serves every room; (IX+4) bit 0 = 0 draws mirrored: the X mirror bit (a mirrored 24-wide box starts 8 pixels
+  left); sprite order = object order; a pattern cache keyed by graphics address + pair.
+- Hooks: own stack, the caller's speed back (HLIB_SPEED_IN / OUT), the record at 28 MHz. Builds: plain 496edfe0,
+  sprites b836bba4 (record). The start-up tail at 0x6F00 is put back before the game starts (restore_tail).
+
+## Results
+- 3,000 frames (simulator): zero failures; 860,219 sprite pixels compared against the model of the original's draws,
+  the model against the original's shadow bytes at every copy. H' and the stack bytes below SP holding the moved
+  address proven dead by the lockstep run-on (RUN_ON 400,000 steps; Jack's own draw takes up to ~185,000).
+- auto (2,000 frames): PASSED; units: every site at four speeds, the copy as a hide; negative controls DETECTED: no
+  redirect, never mirrored, wrong colour bank, leftover sprites not hidden, the caller's speed not given back.
+- The whole recording (108,043 frames): a stamp ran on the earlier module; the rerun on the final one is the
+  result (pending).
+- JNext 1.3.5 headless: both builds reach play, the figures show as sprites; the .nxc menu boots.
+
+## Cheats
+Every patch carries them, off by default; the archive's (Super Collection "Pokes/Jack the Nipper.pok"), checked
+against the code: Immunity 44285 = 58 (0xACFD `CALL NZ,0xA9F2` to `LD A,(nn)`: the lose-a-life routine never runs);
+Infinite lives 43519 = 0 (0xA9FF `DEC A`: a death costs no life). Not used: the archive's second Immunity POKE
+(44278: only turns off the Q pause / quit key). Not yet tried in play.
+
+## Hardware checklist
+- Boots from the .nxc menu (cheats off), reaches play; every figure (Jack, the adults, pickups, the pea, smoke) a
+  sprite with its black outline, the body in the colour under its feet, no colour bleed into the scenery.
+- Mirrored figures face the right way; a room change leaves no sprite behind.
+- Each cheat on: no life lost (Immunity: no death at all).
 
 ## Pacing
 No interrupt accepted in 108,043 frames: nothing syncs the game to the frame, so the work it does is its pace (survey,
@@ -121,16 +136,26 @@ sprites, so patterns are uploaded per figure from a cache (more figure kinds tha
 ## Stage log
 - 2026-11-22: stage 0, ~1.5 h wall (both games' surveys in parallel), ~20 tool calls, no user rounds.
 - 2026-11-23: stage 1 closed: the owner took every default (one round).
+- 2026-11-23: stage 2 (engine, verifier, units, negatives, record, .nxc), ~90 tool calls, no user rounds.
 
 ## Lessons
-- [none: stage 0 only: the survey answered every intake question it asks]
+- [doc LEARNINGS 2.3] demonstrated: SkoolKit drops writes below 0x4000, so the verifier models the slot-1 page by
+  wrapping every store form the hooks use (LD (nn), PUSH, CALL, LD (IX+d), LD (HL) / (DE) / (BC)).
+- [card patch.scratch-redirect §Failure lookup] demonstrated: H' differed after a redirected draw; a check of H' alone
+  failed (EXX / EX DE,HL move the value); the lockstep run-on until every register agrees proved it dead.
+- [card patch.scratch-redirect §Failure lookup] demonstrated: the commit hooked at one copier caller (0xAA4A) never
+  ran on the main loop's path (0xAC72); the copier's entry catches both.
+- [local: this game's colours] observed: the line art is black and the body shows the paper of the cells under it;
+  the clash-free default is the paper under the feet, one colour per figure.
 
 ## Technique use
-- detect.pacing-structure: used: the survey's no-interrupt finding names the no-frame-sync case for the design
+- detect.pacing-structure: used: no frame sync, so the hooks' time is the slowdown (1.87 %)
+- patch.scratch-redirect: used and amended (the run-on dead proof; the commit at the copier's entry)
+- optimise.pattern-cache: used: keys by graphics address + pair; 4-bit patterns serve every room
 
 ## Friction
-- reuse: [none: no code written at intake]
-- retries: [none: the first survey run started outside the toolkit folder (module not found); rerun from it]
+- reuse: [local: per engine] Jack the Nipper II imports this verifier's overlays, slot-1 store model and NextSide
+- retries: [card patch.scratch-redirect §Failure lookup] the H' check and the commit site each took a second attempt
 - environment: [none: no workaround]
-- hand-rolled: [none: survey and inspect covered intake]
-- scratch: [none: no scratch scripts]
+- hand-rolled: [local: per engine] the hook-time meter (hook-page T-states, 28 MHz at an eighth)
+- scratch: [local: dropped] fullverify.py and the figure census: per-engine harness runs
