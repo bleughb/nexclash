@@ -335,7 +335,7 @@ def _overlays(base, vpage, psite):
 def _writable_slot1(sim, store):
     """SkoolKit drops every write below 0x4000 (its opcodes test addr > 0x3FFF); on the Next slot 1 is this build's
     RAM page. Wrap the store opcodes the draw uses so a write into 0x2000-0x3FFF reaches the page: LD (HL),r,
-    LD (HL),n, LD (DE),A, LD (BC),A. The hooks' own stores (LD (nn),A / rr, PUSH on the hook stack, LD (IX+d)) go
+    LD (HL),n, LD (DE),A, LD (BC),A, LD (IY+d),r / n. The hooks' own stores (LD (nn),A / rr, PUSH on the hook stack, LD (IX+d)) go
     through other opcodes: wrapped too where a hook uses them (_hook_stores)."""
     R, mem, ops = sim.registers, sim.memory, sim.opcodes
 
@@ -357,13 +357,18 @@ def _writable_slot1(sim, store):
     wrap(ops, 0x36, hl, lambda: mem[(R[24] + 1) & 0xFFFF])
     wrap(ops, 0x12, lambda: R[4] << 8 | R[5], lambda: R[0])
     wrap(ops, 0x02, lambda: R[2] << 8 | R[3], lambda: R[0])
+    iyd = lambda: ((R[10] << 8 | R[11]) + ((mem[(R[24] + 2) & 0xFFFF] ^ 0x80) - 0x80)) & 0xFFFF
+    fd = sim.after_FD                       # LD (IY+d),r / n: Jack the Nipper II's blits address the buffer through IY
+    for op, ri in {0x70: 2, 0x71: 3, 0x72: 4, 0x73: 5, 0x74: 6, 0x75: 7, 0x77: 0}.items():
+        wrap(fd, op, iyd, lambda ri=ri: R[ri])
+    wrap(fd, 0x36, iyd, lambda: mem[(R[24] + 3) & 0xFFFF])
     _hook_stores(sim, store)
 
 
 def _hook_stores(sim, store):
     """The stores the hook code makes in its page (state and stack): run each instruction, then write what the Next
     would have written, for the forms the hooks use: LD (nn),A; LD (nn),HL; LD (nn),rr (ED); LD (nn),SP (ED 73);
-    PUSH rr / CALL (to the hook stack); LD (IX+d),r / n. A form missed here leaves the page short of a byte and the
+    PUSH rr, PUSH IX / IY, CALL (to the hook stack); LD (IX+d),r / n. A form missed here leaves the page short of a byte and the
     sprite check fails."""
     R, mem, ops, ed = sim.registers, sim.memory, sim.opcodes, sim.after_ED
 
@@ -392,6 +397,7 @@ def _hook_stores(sim, store):
         pass                                # conditional calls: not in the hooks
     dd = sim.after_DD
     pre(dd, 0xE5, lambda: [((R[12] - 1) & 0xFFFF, R[8]), ((R[12] - 2) & 0xFFFF, R[9])])     # PUSH IX
+    pre(sim.after_FD, 0xE5, lambda: [((R[12] - 1) & 0xFFFF, R[10]), ((R[12] - 2) & 0xFFFF, R[11])])     # PUSH IY
     ixd = lambda: ((R[8] << 8 | R[9]) + ((mem[(R[24] + 2) & 0xFFFF] ^ 0x80) - 0x80)) & 0xFFFF
     for op, ri in {0x70: 2, 0x71: 3, 0x72: 4, 0x73: 5, 0x74: 6, 0x75: 7, 0x77: 0}.items():
         pre(dd, op, lambda ri=ri: [(ixd(), R[ri])])
