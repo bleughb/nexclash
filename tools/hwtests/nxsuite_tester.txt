@@ -76,7 +76,8 @@ the menu showed, unless you answered the first-start questions.
 
 WHAT THE ANSWERS ARE USED FOR
 The results are added to the project's hardware records, labelled with
-the machine, its core and the label you chose. They are used to check
+the machine and its core. The label you chose is not published unless
+you say it may be. They are used to check
 the project's documented hardware facts and to decide what game builds
 may rely on. Nothing personal is needed or kept: please do not put your
 name in the label.
