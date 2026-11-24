@@ -10,7 +10,7 @@
 ; background path), then turns the figures into 4-bit sprites in the object's own ink and paper (pixel = colour + 1;
 ; palette bank 0 normal, bank 1 bright), uploads tiles not cached, writes the attributes, hides the rest.
 ; Memory: this file is Next page JTN_PAGE at MMU slot 1 (0x2000-0x3FFF) for the whole game (the game never reads the
-; ROM there): 0x2900-0x2D4F scratch buffer, 0x3000-0x35FF state, 0x3600- code, 0x3E00 the tail restore, 0x3F00 the
+; ROM there): 0x2000-0x28FF state, 0x2900-0x2D4F scratch buffer, 0x3000- code, 0x3E00 the tail restore, 0x3F00 the
 ; stub's register block.
 
         DEVICE ZXSPECTRUMNEXT
@@ -26,42 +26,48 @@ FIGSZ     EQU 10            ; +0 gfx, +2 colour, +3 -, +4 rows, +5 width bytes, 
 SPR0      EQU 0
 PROBE     EQU 8
 
-FIGS      EQU 0x3000
-HLIB_PCACHE EQU 0x3100
-SLOTUSE   EQU 0x3180
-V_NFIG    EQU 0x31C0
-V_SHOWN   EQU 0x31C1
-V_UPD     EQU 0x31C2
-V_LATCH   EQU 0x31C3
-V_HSP     EQU 0x31C4
-V_NSPR    EQU 0x31C6
-C_FIG     EQU 0x31D2
-C_COLS    EQU 0x31D4
-C_TROWS   EQU 0x31D5
-C_TR      EQU 0x31D6
-C_TC      EQU 0x31D7
-C_SLOT    EQU 0x31D8
-C_PAIR    EQU 0x31D9
-C_ATP     EQU 0x31DA
-B_ROW     EQU 0x31DC
-B_T       EQU 0x31DD
-T_TC      EQU 0x31DE
-T_N       EQU 0x31DF
-T_COL     EQU 0x31E0
-T_G       EQU 0x31E1
-C_T       EQU 0x31E3
-V_HASH    EQU 0x31E4
-V_LATCHD  EQU 0x31E5
-V_HL      EQU 0x31E8        ; a blit stub's HL (2)
-T_INK     EQU 0x31E6        ; tile: the ink and paper pixel values (colour + 1)
-T_PAP     EQU 0x31E7
-TILEBUF   EQU 0x3200
-HSTACK    EQU 0x3400
-ATTRTAB   EQU 0x3400
+FIGS      EQU 0x2000
+HLIB_PCACHE EQU 0x2100
+SLOTUSE   EQU 0x2180
+V_NFIG    EQU 0x21C0
+V_SHOWN   EQU 0x21C1
+V_UPD     EQU 0x21C2
+V_LATCH   EQU 0x21C3
+V_HSP     EQU 0x21C4
+V_NSPR    EQU 0x21C6
+C_FIG     EQU 0x21D2
+C_COLS    EQU 0x21D4
+C_TROWS   EQU 0x21D5
+C_TR      EQU 0x21D6
+C_TC      EQU 0x21D7
+C_SLOT    EQU 0x21D8
+C_PAIR    EQU 0x21D9
+C_ATP     EQU 0x21DA
+B_ROW     EQU 0x21DC
+B_T       EQU 0x21DD
+T_TC      EQU 0x21DE
+T_N       EQU 0x21DF
+T_COL     EQU 0x21E0
+T_G       EQU 0x21E1
+C_T       EQU 0x21E3
+V_HASH    EQU 0x21E4
+V_LATCHD  EQU 0x21E5
+V_HL      EQU 0x21E8        ; a blit stub's HL (2)
+T_PX      EQU 0x21EA        ; tile: the image column of the next pixel
+F_CX0     EQU 0x21EB        ; fcolour: the cells a figure covers
+F_CX1     EQU 0x21EC
+F_CY0     EQU 0x21ED
+F_CY1     EQU 0x21EE
+F_COL     EQU 0x21EF
+T_INK     EQU 0x21E6        ; tile: the ink and paper pixel values (colour + 1)
+T_PAP     EQU 0x21E7
+TILEBUF   EQU 0x2200
+HSTACK    EQU 0x2400
+ATTRTAB   EQU 0x2400
 
         INCLUDE "lib/hlib_speed.asm"     ; macros only
 
-        ORG 0x3600
+        ORG 0x3000
 code_start:
 ; e_b0 .. e_b15: JP here from each blit's LD (0xBDE8),SP (HL = the graphics, IY = the buffer, IX = the object). The
 ; stub keeps HL and hands its way back to blit; every register and flag is kept but IY, moved to the scratch buffer.
@@ -263,8 +269,7 @@ cells:  ld hl,DIRTY
         ret
 
 ; commit: pass 1 uploads the tiles not cached and fills ATTRTAB; pass 2 writes the attributes and hides the rest.
-commit: call cells                  ; the cells keep the scenery's colours
-        ld a,(V_UPD)
+commit: ld a,(V_UPD)
         inc a
         jr nz,.u
         inc a                   ; 1-255: SLOTUSE 0 never matches
@@ -284,7 +289,8 @@ commit: call cells                  ; the cells keep the scenery's colours
         add ix,de
         pop bc
         djnz .f
-.p2:    xor a
+.p2:    call cells              ; then the cells keep the scenery's colours
+        xor a
         ld (V_NFIG),a
         ld bc,0x303B
         ld a,SPR0
@@ -319,7 +325,8 @@ commit: call cells                  ; the cells keep the scenery's colours
         ret
 
 ; figure: IX = an entry. Its tiles: columns 1 (16 wide) or 2 (24), rows of 16 from the top: 1, 2, 2 or 3.
-figure: ld a,(ix+5)
+figure: call fcolour
+        ld a,(ix+5)
         sub 1                   ; 2 -> 1 column, 3 -> 2
         ld (C_COLS),a
         ld a,(ix+4)
@@ -384,7 +391,12 @@ slot:   ld e,(ix+0)
         adc a,d
         sub e
         ld d,a                  ; graphics address + pair
-        ld a,(ix+2)             ; + the colours baked in (ink, paper): the key names the image AND its colours
+        ld a,(ix+3)             ; a figure in several colours (an item's own table, 0xBA8A): built every time
+        or a
+        jr nz,.uni
+        ld de,0                 ; key 0 = mutable: always uploaded
+        jr .k
+.uni:   ld a,(ix+2)             ; one colour: + the colour baked in: the key names the image AND its colour
         add a,a
         add a,a
         add a,a
@@ -393,7 +405,10 @@ slot:   ld e,(ix+0)
         or e
         jr nz,.k
         inc e                   ; 0 is the mutable key
-.k:     ld a,e
+.k:     ld a,d
+        or e
+        jr z,.mut               ; mutable: any slot not serving this update
+        ld a,e
         xor d
         and 63
         ld (V_HASH),a
@@ -415,7 +430,11 @@ slot:   ld e,(ix+0)
         and 63
         djnz .p
         ld a,(V_HASH)           ; a slot not serving this update
-        ld b,64
+        jr .q0
+.mut:   ld a,(ix+0)
+        and 63
+        ld (V_HASH),a
+.q0:    ld b,64
 .q:     ld c,a
         add a,low SLOTUSE
         ld l,a
@@ -449,18 +468,8 @@ slot:   ld e,(ix+0)
 ; build: TILEBUF = tiles 2 x C_PAIR and 2 x C_PAIR + 1 of the figure at IX, 128 bytes each (16 rows of 8 bytes, the
 ; left pixel in the high nibble): ink + 1 where the graphics bit is set, else paper + 1 where the mask bit is clear,
 ; else 0 (the palette bank gives the bright ones).
-build:  ld a,(ix+2)             ; the object's colour -> the two pixel values
-        ld b,a
-        and 7
-        inc a
-        ld (T_INK),a
-        ld a,b
-        rrca
-        rrca
-        rrca
-        and 7
-        inc a
-        ld (T_PAP),a
+build:  ld a,(ix+2)             ; one colour: its two pixel values once (cls looks up each pixel's cell otherwise)
+        call codes
         ld hl,TILEBUF
         ld a,(C_PAIR)
         add a,a
@@ -540,6 +549,12 @@ byte2:  push de
         push bc
         cp (ix+5)
         jr nc,.out
+        push af
+        add a,a
+        add a,a
+        add a,a
+        ld (T_PX),a             ; the byte's first image column
+        pop af
         ld a,(de)
         ld d,a                  ; D = graphics
         ld a,(bc)
@@ -572,7 +587,13 @@ byte2:  push de
         pop de
         ret
 
-cls:    sla d
+cls:    ld a,(ix+3)
+        or a
+        call z,pixcol           ; several colours: this pixel's cell
+        ld a,(T_PX)
+        inc a
+        ld (T_PX),a
+        sla d
         jr c,.ink
         sla e
         ld a,0
@@ -581,6 +602,196 @@ cls:    sla d
         ret
 .ink:   sla e
         ld a,(T_INK)
+        ret
+
+; codes: A = an attribute -> T_INK, T_PAP = its ink and paper as pixel values (1-8 normal, 9-15 bright, bright black 1).
+codes:  push bc
+        ld b,a
+        and 7
+        call code
+        ld (T_INK),a
+        ld a,b
+        rrca
+        rrca
+        rrca
+        and 7
+        call code
+        ld (T_PAP),a
+        pop bc
+        ret
+code:   bit 6,b
+        jr z,.n
+        or a
+        jr z,.n                 ; bright black = black
+        add a,8
+        ret
+.n:     inc a
+        ret
+
+; pixcol: the colour of the cell the next pixel (image column T_PX, figure row B_ROW) shows on, from the game's own
+; colour list (read before cells puts the scenery's back) -> T_INK, T_PAP. Keeps BC, DE, HL.
+pixcol: push hl
+        push de
+        push bc
+        ld a,(ix+5)             ; screen column: x + c, or x + width x 8 - 1 - c mirrored
+        add a,a
+        add a,a
+        add a,a
+        dec a
+        ld c,a                  ; width x 8 - 1
+        ld a,(T_PX)
+        bit 0,(ix+8)
+        jr z,.nm
+        neg
+        add a,c                 ; w8 - 1 - c
+.nm:    ld l,a
+        ld h,0
+        ld e,(ix+6)
+        ld d,0
+        add hl,de               ; 9-bit screen column
+        srl h
+        rr l
+        srl l
+        srl l                   ; cell column (0-34)
+        ld a,l
+        cp 32
+        jr nc,.none
+        ld e,a
+        ld a,(B_ROW)
+        add a,(ix+7)            ; screen row
+        rrca
+        rrca
+        rrca
+        and 31                  ; cell row
+        cp 20
+        jr nc,.none
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl               ; row x 32
+        ld d,0
+        add hl,de
+        ld de,DIRTY
+        add hl,de
+        ld a,(hl)               ; the cell's slot
+        cp 3
+        jr c,.none
+        ld e,a
+        ld d,0
+        ld hl,SLOTCOL
+        add hl,de
+        ld a,(hl)
+        call codes
+.none:  pop bc
+        pop de
+        pop hl
+        ret
+
+; fcolour: the figure at IX -> (IX+3) = 1 when every cell it covers holds one colour in the game's colour list (then
+; (IX+2) = it), else 0 (an item with a colour per cell). Cells: columns x >> 3 .. (x + width x 8 - 1) >> 3, rows
+; top >> 3 .. (top + rows - 1) >> 3, inside the 32 x 20 map.
+fcolour:
+        ld a,(ix+6)
+        rrca
+        rrca
+        rrca
+        and 31
+        ld (F_CX0),a
+        ld a,(ix+5)
+        add a,a
+        add a,a
+        add a,a
+        dec a
+        ld l,a
+        ld h,0
+        ld e,(ix+6)
+        ld d,0
+        add hl,de
+        srl h
+        rr l
+        srl l
+        srl l
+        ld a,l
+        cp 32
+        jr c,.c1
+        ld a,31
+.c1:    ld (F_CX1),a
+        ld a,(ix+7)
+        rrca
+        rrca
+        rrca
+        and 31
+        ld (F_CY0),a
+        ld a,(ix+7)
+        add a,(ix+4)
+        dec a
+        rrca
+        rrca
+        rrca
+        and 31
+        cp 20
+        jr c,.r1
+        ld a,19
+.r1:    ld (F_CY1),a
+        ld a,0xFF
+        ld (F_COL),a
+        ld (ix+3),1
+        ld a,(F_CY0)
+.row:   ld b,a                  ; B = cell row
+        ld a,(F_CX0)
+.col:   ld c,a                  ; C = cell column
+        push bc
+        ld l,b
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld e,c
+        ld d,0
+        add hl,de
+        ld de,DIRTY
+        add hl,de
+        ld a,(hl)
+        cp 3
+        jr c,.skip              ; no slot here
+        ld e,a
+        ld d,0
+        ld hl,SLOTCOL
+        add hl,de
+        ld a,(hl)
+        ld e,a
+        ld a,(F_COL)
+        cp 0xFF
+        jr nz,.cmp
+        ld a,e
+        ld (F_COL),a
+        jr .skip
+.cmp:   cp e
+        jr z,.skip
+        ld (ix+3),0             ; a second colour
+.skip:  pop bc
+        ld a,(F_CX1)
+        cp c
+        jr z,.nr                ; the row's last column done
+        ld a,c
+        inc a
+        jr .col
+.nr:    ld a,(F_CY1)
+        cp b
+        jr z,.done              ; the last row done
+        ld a,b
+        inc a
+        jr .row
+.done:  ld a,(F_COL)
+        cp 0xFF
+        jr nz,.st
+        ld a,(ix+2)             ; no slot found (should not happen): the object's colour
+.st:    ld (ix+2),a
         ret
 
 ; attrs: the tile (C_TR, C_TC) of the figure at IX in C_SLOT -> 5 bytes at C_ATP. X = x + 32 + 16 x column (mirrored:
@@ -632,7 +843,8 @@ attrs:  ld hl,(C_ATP)
         add a,32
         ld (hl),a               ; attribute 1 (rows above the screen wrap far below it: off screen)
         inc hl
-.n_bank: ld a,(ix+9)             ; (negative control: INC A after it = the wrong bank)
+.n_bank: ld a,0                   ; one bank holds normal and bright (negative control: LD A,1 = the wrong bank)
+        nop
         add a,a
         add a,a
         add a,a
@@ -671,12 +883,12 @@ code_end:
 ; ---- the stub's set-up (stub_extra at 0xD000, CALLed once before the game starts) ----
         ORG 0xD000
 setup_start:
-; setup: bank 0 = 0 clear, 1-8 the Spectrum's normal colours (black .. white); bank 1 = the same bright; sprite 127 on
+; setup: bank 0 = 0 clear, 1-8 the Spectrum's normal colours (black .. white), 9-15 the bright ones; sprite 127 on
 ; top (later objects over earlier, as the game draws); sprites visible.
 setup:  nextreg 0x43,0x20
         nextreg 0x40,0
         ld hl,setpal
-        ld b,32
+        ld b,16
 .p:     ld a,(hl)
         inc hl
         nextreg 0x41,a
@@ -684,7 +896,7 @@ setup:  nextreg 0x43,0x20
         nextreg 0x4B,0
         nextreg 0x15,0x41
         ret
-setpal: db 0x00, 0x00, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4, 0xB6, 0,0,0,0,0,0,0
-        db 0x00, 0x00, 0x03, 0xE0, 0xE3, 0x1C, 0x1F, 0xFC, 0xFF, 0,0,0,0,0,0,0
+setpal: db 0x00, 0x00, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4, 0xB6        ; 0 clear, 1-8 normal black .. white
+        db 0x03, 0xE0, 0xE3, 0x1C, 0x1F, 0xFC, 0xFF                    ; 9-15 bright blue .. white
 setup_end:
         SAVEBIN "jtn2_setup.bin", setup_start, setup_end - setup_start

@@ -90,10 +90,12 @@ class _PagePatch:
     keep_printer_buffer = True              # the game reads and runs code at 0x5B00-0x5BBC
     tail_addr = TAIL_ADDR
 
+    code_org = CODE_ORG
+
     def __init__(self, code=b''):
         page = bytearray(8192)
-        page[CODE_ORG - 0x2000:CODE_ORG - 0x2000 + len(code)] = code
-        if CODE_ORG + len(code) > RESTORE:
+        page[self.code_org - 0x2000:self.code_org - 0x2000 + len(code)] = code
+        if self.code_org + len(code) > RESTORE:
             raise ValueError('hook code runs into the tail restore')
         self.page = bytes(page)
         self.slot1 = (JTN_PAGE, REGBLOCK)
@@ -130,8 +132,8 @@ class JtnPatch(_PagePatch):
         self.prof = prof or load_profile()
         h = self.prof['hooks']
         self.syms = {k: int(v, 16) for k, v in h['syms'].items()}
-        if self.syms['code_start'] != CODE_ORG:
-            raise ValueError('hook code assembled at 0x%04X, not CODE_ORG' % self.syms['code_start'])
+        if self.syms['code_start'] != self.code_org:
+            raise ValueError('hook code assembled at 0x%04X, not 0x%04X' % (self.syms['code_start'], self.code_org))
         super().__init__(bytes.fromhex(h['page']))
         self.stub_extra = bytes.fromhex(h['setup'])      # the sprite palette and NR 0x15, once (asm `setup`)
         self.setup_call = self.syms['setup']
@@ -280,7 +282,7 @@ def figure_pixels(f, get):
     return out
 
 
-def _overlays(base, vpage, psite):
+def _overlays(base, vpage, psite, state=STATE, scratch=SCRATCH):
     class O:
         """The original: ROM below 0x4000 (writes go nowhere), RAM from the replay."""
         def __init__(s):
@@ -317,9 +319,9 @@ def _overlays(base, vpage, psite):
         def __setitem__(s, a, v):
             if 0x2000 <= a < 0x4000:
                 hook = s.R is not None and 0x2000 <= s.R[24] < 0x4000
-                if STATE[0] <= a < STATE[1] and not hook:
+                if state[0] <= a < state[1] and not hook:
                     s.err.append(('game code wrote the hook state', a, s.R[24] if s.R else None))
-                if not STATE[0] <= a < STATE[1] and not SCRATCH[0] <= a < SCRATCH[1]:
+                if not state[0] <= a < state[1] and not scratch[0] <= a < scratch[1]:
                     s.err.append(('write to the page outside state and scratch', a))
                 s.page[a - 0x2000] = v
                 s.pw[a] = v
@@ -368,7 +370,7 @@ def _writable_slot1(sim, store):
 def _hook_stores(sim, store):
     """The stores the hook code makes in its page (state and stack): run each instruction, then write what the Next
     would have written, for the forms the hooks use: LD (nn),A; LD (nn),HL; LD (nn),rr (ED); LD (nn),SP (ED 73);
-    PUSH rr, PUSH IX / IY, CALL (to the hook stack); LD (IX+d),r / n. A form missed here leaves the page short of a byte and the
+    PUSH rr, PUSH IX / IY, CALL and CALL cc (to the hook stack); LD (IX+d),r / n. A form missed here leaves the page short of a byte and the
     sprite check fails."""
     R, mem, ops, ed = sim.registers, sim.memory, sim.opcodes, sim.after_ED
 
@@ -393,8 +395,11 @@ def _hook_stores(sim, store):
         pre(ops, op, lambda hi=hi, lo=lo: sp2(hi, lo))
     ret_to = lambda n: (R[24] + n) & 0xFFFF
     pre(ops, 0xCD, lambda: [((R[12] - 1) & 0xFFFF, ret_to(3) >> 8), ((R[12] - 2) & 0xFFFF, ret_to(3) & 255)])
-    for op in (0xC4, 0xCC, 0xD4, 0xDC, 0xE4, 0xEC, 0xF4, 0xFC):
-        pass                                # conditional calls: not in the hooks
+    taken = {0xC4: lambda f: not f & 0x40, 0xCC: lambda f: f & 0x40, 0xD4: lambda f: not f & 1, 0xDC: lambda f: f & 1,
+             0xE4: lambda f: not f & 4, 0xEC: lambda f: f & 4, 0xF4: lambda f: not f & 0x80, 0xFC: lambda f: f & 0x80}
+    for op, cc in taken.items():            # CALL cc: the return address only when the call is taken
+        pre(ops, op, lambda cc=cc: [((R[12] - 1) & 0xFFFF, ret_to(3) >> 8), ((R[12] - 2) & 0xFFFF, ret_to(3) & 255)]
+            if cc(R[1]) else [])
     dd = sim.after_DD
     pre(dd, 0xE5, lambda: [((R[12] - 1) & 0xFFFF, R[8]), ((R[12] - 2) & 0xFFFF, R[9])])     # PUSH IX
     pre(sim.after_FD, 0xE5, lambda: [((R[12] - 1) & 0xFFFF, R[10]), ((R[12] - 2) & 0xFFFF, R[11])])     # PUSH IY

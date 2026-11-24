@@ -21,12 +21,12 @@ from .hooklib import CMP as _CMP
 
 CMP = _CMP                  # every register but R, T, MEMPTR (R: no LD A,R in the code)
 JTN_PAGE = J1.JTN_PAGE
-CODE_ORG = J1.CODE_ORG
+CODE_ORG = 0x3000           # hook code (asm ORG); its state sits below the scratch buffer, 0x2000-0x28FF
 REGBLOCK = J1.REGBLOCK
 TAIL_ADDR = 0xBF00          # the start-up tail; restore_tail puts its bytes back before the game starts
 BUFFER = (0xE900, 0xED00)   # the cell buffer the blits draw into (128 slots of 8 bytes)
 SCRATCH = (0x2900, 0x2D50)  # where they draw instead (IY high byte AND 0x3F; offsets up to +0x4F)
-STATE = J1.STATE
+STATE = (0x2000, 0x2900)    # the page's hook state and stack
 DIRTY, TILEMAP, TILEATTR, SLOTCOL = 0xFB00, 0xF800, 0xED00, 0xBD68
 BLITS = (0xB34B, 0xB39B, 0xB3FD, 0xB471, 0xB579, 0xB5C1, 0xB618, 0xB679, 0xB727, 0xB75F, 0xB799, 0xB816, 0xB903,
          0xB931, 0xB960, 0xB9B3)
@@ -66,6 +66,7 @@ def is_jack_the_nipper_2(snap):
 
 class _Page(J1._PagePatch):
     tail_addr = TAIL_ADDR
+    code_org = CODE_ORG
 
 
 class PlainPatch(_Page):
@@ -79,8 +80,8 @@ class JtnPatch(_Page):
         self.prof = prof or load_profile()
         h = self.prof['hooks']
         self.syms = {k: int(v, 16) for k, v in h['syms'].items()}
-        if self.syms['code_start'] != CODE_ORG:
-            raise ValueError('hook code assembled at 0x%04X, not CODE_ORG' % self.syms['code_start'])
+        if self.syms['code_start'] != self.code_org:
+            raise ValueError('hook code assembled at 0x%04X, not 0x%04X' % (self.syms['code_start'], self.code_org))
         super().__init__(bytes.fromhex(h['page']))
         self.stub_extra = bytes.fromhex(h['setup'])
         self.setup_call = self.syms['setup']
@@ -147,6 +148,13 @@ def figure_pixels(f, get):
     return out
 
 
+def code(attr, v):
+    """The sprite pixel value of an attribute's ink (v = 1) or paper (v = 2): 1-8 normal black .. white, 9-15 bright
+    blue .. white, bright black = 1 (asm `codes`; one palette bank)."""
+    c = attr & 7 if v == 1 else attr >> 3 & 7
+    return (8 + c if c else 1) if attr & 0x40 else 1 + c
+
+
 def slot_cells(get):
     """{slot: (cell column, cell row)} from the dirty map."""
     out = {}
@@ -203,7 +211,7 @@ def pair(patch, regs, base, vpage, vns, span):
     from .simpool import machine
     from . import z80n
     psite = {a + k: v for a, old, new in patch.sites for k, v in enumerate(new)}
-    O, P = J1._overlays(base, vpage, psite)
+    O, P = J1._overlays(base, vpage, psite, STATE, SCRATCH)
     o, p = O(), P()
     so = machine(Simulator, o, list(regs), 'j2o')
     sp = Simulator(p, {})
@@ -234,7 +242,7 @@ def pair(patch, regs, base, vpage, vns, span):
     jb = patch.syms['j_back'] + 1
     for e in p.err:
         k = e[0]
-        if k == 'write to the page outside state and scratch' and (SCRATCH[0] <= e[1] < SCRATCH[1] or e[1] in (jb, jb + 1)):
+        if k == 'write to the page outside state and scratch' and e[1] in (jb, jb + 1):
             continue                        # the scratch buffer, and the shared blit body's way back (its JP operand)
         bad[k + '!'] += 1
         det.append(e)
@@ -378,9 +386,13 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
         for b in bad:
             fail('sprite attributes!', b)
         want = {}
-        for (x, y), (v, (ink, paper, bright)) in exp.items():
+        for (x, y), (v, _) in exp.items():   # each pixel in its cell's colour, from the original's own colour list
             if 0 <= x < PLAY[0] and 0 <= y < PLAY[1]:
-                want[(x + 32, y + 32)] = ((ink if v == 1 else paper) + 1, 1 if bright else 0)
+                s = get(DIRTY + (y >> 3) * 32 + (x >> 3))
+                if s < 3:
+                    fail('figure pixel on a cell with no slot!', (x, y))
+                    continue
+                want[(x + 32, y + 32)] = (code(get(SLOTCOL + s), v), 0)
         have = {k: v for k, v in got.items() if 32 <= k[0] < 32 + PLAY[0] and 32 <= k[1] < 32 + PLAY[1]}
         if want != have:
             d = sorted(set(want) ^ set(have) | {k for k in want if have.get(k) != want[k]})
