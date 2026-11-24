@@ -103,8 +103,8 @@ def pcache_key(page, row):
 
 class NextModel(object):
     """The Next as a hook sees it, for a SkoolKit Simulator: z80n installed with this NextReg model, the
-    port tracer set. Time runs at the current NR 7 clock (fast = 28 MHz's real factor: 8, or about 6.5
-    with the wait states, LEARNINGS 2.1f); the video line follows it (t_line T a line at 3.5 MHz, lines a
+    port tracer set. Time runs at the current NR 7 clock (fast = 28 MHz's real factor: 8 on core 3.03, the target;
+    about 6.5 with core 3.02's read wait states, LEARNINGS 2.1f); the video line follows it (t_line T a line at 3.5 MHz, lines a
     frame). Not modelled: contention, interrupts, the bus-idle latch of a speed change."""
 
     def __init__(self, sim, speed=0, t_line=224, lines=312, fast=8.0, line=0):

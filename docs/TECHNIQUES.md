@@ -54,10 +54,10 @@ What it says:
   rules and traps in docs/DDMA.md. Classic DMA and the re-arm costs above still fit contiguous copies
   and port uploads; prefer zxnDDMA for a rectangle, fill, transparent blit or Layer 2 write. Gate on
   core version first: older cores read the extended parameter bytes as DMA writes.
-- 28 MHz is ~6.3-7x 3.5 MHz, not 8x: each memory read adds a wait state, so (T + reads) / 8
-  (LEARNINGS 2.1f): LDIR 21 T + 3 reads -> 3.0 T a byte at 3.5 MHz terms = 0.857 us (measured 0.861).
-  Budget a 28 MHz renderer from simulator T x 1.4, not x 1: JNext 1.3.0 ran Castle Master's Z80N renderer
-  (maths, PUSH fills) at 1.34-1.42x its simulator T (2026-11-19; hardware to confirm).
+- 28 MHz on core 3.02 is ~6.3-7x 3.5 MHz, not 8x: each memory read adds a wait state, so (T + reads) / 8
+  (LEARNINGS 2.1f; none on 3.03.00: N-Go board, nxsuite C01): LDIR 21 T + 3 reads -> 3.0 T a byte at 3.5 MHz terms = 0.857 us (measured 0.861).
+  Builds target core 3.03 (2026-11-24): budget a 28 MHz renderer from simulator T x 1. The x 1.4 rule was
+  for 3.02 and JNext 1.3.0 (which models 3.02: Castle Master's Z80N renderer ran at 1.34-1.42x its T).
 - Sprite pattern upload: DMA is ~3x OUTI for a 256-byte pattern and ~1.8x for a 64-byte one
   (14.5 + 64 x 0.18 = 26 us vs 47 us). OUTINB = OUTI. Sprite attributes: port and NEXTREG the
   same here only because v1's NEXTREG side wrote constants (`NEXTREG $35,32`); with values loaded

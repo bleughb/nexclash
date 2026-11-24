@@ -6,7 +6,7 @@
  "evidence": [
   {
    "game": "notes",
-   "text": "Issue 2 board, core 3.03.00: after WR4 byte 91 then 87 every later transfer failed; six C3 resets, A3, AF, 8B did not recover it, only power-off.",
+   "text": "N-Go board (Issue 2-compatible), core 3.03.00: after WR4 byte 91 then 87 every later transfer failed; six C3 resets, A3, AF, 8B did not recover it, only power-off.",
    "shown_on": "hardware"
   }
  ],

@@ -7,6 +7,12 @@
    "game": "games/treasure_island_dizzy.md",
    "text": "A hook-speed latch in the slot-0 hook page read back 0 because the simulator drops writes below 0x4000; the clock matrix caught it.",
    "shown_on": "simulator"
+  },
+  {
+   "game": "games/hard_drivin.md",
+   "text": "the verify's reference re-render ran away until dizzy6._rw_simulator kept writes to the hook page in slot 1",
+   "quote": "stock SkoolKit dropped the hook page's writes below 0x4000",
+   "shown_on": "simulator"
   }
  ],
  "level": "demonstrated",
