@@ -898,13 +898,36 @@ def is_board(platform):
     return platform is None or platform.lower() == 'board'
 
 
-def write_json(res, table, path_in, data, board=None, outdir=OUTDIR, dry=False, platform=None):
+def set_label(res, label):
+    """The machine label the operator typed is personal until its owner says it may be published, so by
+    default (label '-') it is withheld from every session header: it reaches neither the record's name nor
+    its content; the other operator answers (model, conn, disp, ramq, pi) are kept. label = NAME sets a
+    public label in its place (--label); label '=' keeps the typed one (--keep-label, only when its owner
+    agreed). The file's own bytes (and file_sha256) are not changed. Returns what was done, or None."""
+    if label == '=':
+        return None
+    if label != '-' and not re.fullmatch(r'[A-Za-z0-9]{1,8}', label):
+        raise Refused('--label: 1-8 letters or digits')
+    typed = any(s_['header'].get('label', '-') != '-' for s_ in res['sessions'])
+    for s_ in res['sessions']:
+        if 'label' in s_['header'] or 'model' in s_['header'] or 'conn' in s_['header']:
+            s_['header']['label'] = label.upper() if label != '-' else '-'
+    if label == '-':
+        return 'withheld at intake' if typed else None
+    return 'set at intake' + (' (the typed label replaced)' if typed else '')
+
+
+def write_json(res, table, path_in, data, board=None, outdir=OUTDIR, dry=False, platform=None, label='-'):
+    res = dict(res, sessions=[dict(s_, header=dict(s_['header'])) for s_ in res['sessions']])   # not the caller's
+    label_note = set_label(res, label)
     h = res['sessions'][0]['header']
     core = h.get('core', 'unknown')
     for s in res['sessions'][1:]:
         if s['header'].get('core') not in (None, core):
             raise Refused('the file mixes cores %s and %s: run the intake per core' % (core, s['header']['core']))
     op = operator(h, table)
+    if op is not None and label_note:
+        op['label_note'] = label_note
     if is_board(platform):
         lab = '-' + slug(op['label']) if op and op.get('label') else ''      # no label: the old name
         path = os.path.join(outdir, '%s-%s%s.json' % (board_name(res, board, table), core, lab))
@@ -1476,13 +1499,13 @@ def summary(paths, table=None, out=sys.stdout):
     return found
 
 
-def intake(path, board=None, outdir=OUTDIR, dry=False, out=sys.stdout, table=None, platform=None):
+def intake(path, board=None, outdir=OUTDIR, dry=False, out=sys.stdout, table=None, platform=None, label='-'):
     table = table or load_table()
     lines, names = load_chain(path)
     data = make_file(lines)
     res = parse(data, table)
     res['parts'] = names
-    p, doc = write_json(res, table, path, data, board, outdir, dry, platform)
+    p, doc = write_json(res, table, path, data, board, outdir, dry, platform, label)
     report(doc, table, out)
     print(('would write ' if dry else 'wrote ') + p, file=out)
     return doc
@@ -1660,15 +1683,27 @@ def selfcheck():
         rb = parse(make_file(alt[:k_] + ['H operator model=K3 conn=2 disp=1 ramq=2 pi=3 label=BENCH2'] + alt[k_:]),
                    table)
         pa_, _ = write_json(ra, table, a_, b'a', 'made-up-a', d)
-        pb_, docb = write_json(rb, table, b_, b'b', 'made-up-b', d)
+        pb_, docb = write_json(rb, table, b_, b'b', 'made-up-b', d, label='=')      # the typed label kept
         if not pb_.endswith('made-up-b-3.03.03-bench2.json') or not pa_.endswith('made-up-a-3.03.03.json'):
             bad.append('record names %s / %s (label in the name only when given)' % (pa_, pb_))
         if (docb.get('operator') or {}).get('model_name') != 'KS3 Next (Artix-7 35T)':
             bad.append('operator answers not decoded: %s' % docb.get('operator'))
+        # the default withholds the typed label (name and content); --label NAME replaces it; the other
+        # operator answers stay
+        for lab_, want_ in ((None, 'made-up-b-3.03.03.json'), ('Spare2', 'made-up-b-3.03.03-spare2.json')):
+            kw_ = {} if lab_ is None else {'label': lab_}
+            pl_, docl_ = write_json(rb, table, b_, b'b', 'made-up-b', d, dry=True, **kw_)
+            o_ = docl_['operator']
+            if (not pl_.endswith(want_) or 'BENCH2' in json.dumps(docl_) or not o_.get('label_note')
+                    or (o_['model'], o_['conn'], o_['ramq']) != ('K3', docb['operator']['conn'], docb['operator']['ramq'])):
+                bad.append('label %s: %s / %s' % (lab_ or 'default', pl_, o_))
+        # negative control: kept on purpose (--keep-label), the typed label is in the record and its name
+        if 'BENCH2' not in json.dumps(docb):
+            bad.append('negative control: the typed label is missing from a --keep-label record')
         # the platform name: the operator's machine answer names it; registers alone only say "compatible"
         pc_, docc = write_json(rb, table, b_, b'b', None, d, dry=True)
         pr_, docr = write_json(ra, table, a_, b'a', None, d, dry=True)
-        if (not pc_.endswith('next-ks3-3.03.03-bench2.json') or docc['board']['named_from'] != 'operator'
+        if (not pc_.endswith('next-ks3-3.03.03.json') or docc['board']['named_from'] != 'operator'
                 or not os.path.basename(pr_).startswith('issue4-compatible-')
                 or docr['board']['named_from'] != 'registers'):
             bad.append('platform names %s / %s' % (pc_, pr_))
@@ -1696,6 +1731,10 @@ def main(argv=None):
                     help='"board" (default) or the emulator name and exact version, e.g. "JNext 1.3.0"')
     ap.add_argument('--out', default=OUTDIR, help='output folder (default docs/kb/hardware)')
     ap.add_argument('--dry-run', action='store_true', help='report only, write nothing')
+    ap.add_argument('--label', help='a public machine label (1-8 letters / digits) for the record name and content; '
+                                    'by default the label the operator typed is withheld')
+    ap.add_argument('--keep-label', action='store_true',
+                    help='keep the label the operator typed (only when its owner agreed to publish it)')
     ap.add_argument('--compare', nargs='+', metavar='JSON',
                     help='two records: the claims that differ; three or more: a Markdown table of the first '
                          'against the others')
@@ -1754,7 +1793,8 @@ def main(argv=None):
     if not a.file:
         ap.error('give NXSUITE.TXT, --compare A B or --selfcheck')
     try:
-        intake(a.file, a.board, a.out, a.dry_run, platform=a.platform)
+        intake(a.file, a.board, a.out, a.dry_run, platform=a.platform,
+               label='=' if a.keep_label else (a.label or '-'))
     except Refused as e:
         print('REFUSED: %s' % e)
         return 2

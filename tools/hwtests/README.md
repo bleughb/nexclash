@@ -337,8 +337,11 @@ First start (once per folder): the machine as a two-key code from `nxsuite_claim
 believed fitted, Pi / accelerator, and a machine label of up to 8 letters / digits - the screen says it is
 a machine nickname, not a person's name. Every session writes them as
 `H operator model=K1 conn=1 disp=2 ramq=1 pi=2 label=BENCH1` (`-` = not given); the intake decodes them
-into the record's `operator` (what was said, not measured) and adds the label to the record name
-(`<board>-<core>-<label>.json`; without a label the name is `<board>-<core>.json` as before).
+into the record's `operator` (what was said, not measured). The typed label is WITHHELD by default: it
+goes neither into the record name nor into its content (the other answers are kept), because the record is
+published in the repository. `--label NAME` sets a public label (`<platform>-<core>-<name>.json`);
+`--keep-label` keeps the typed one, only when its owner agreed to publish it. The label never names the
+platform: that comes from the machine answer (a label such as one containing "KS1" on an N-Go means nothing).
 
 After a hang: reset the Next, start `nxsuite.nex` again from the same folder. It finds the progress record,
 resumes by itself after 5 seconds (or press R): the test it stopped in is written HANG-GUARD, its group is
