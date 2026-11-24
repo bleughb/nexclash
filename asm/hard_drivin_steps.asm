@@ -6,7 +6,7 @@
 ; - Sub-steps: the driver (CALL t_drv replaces CALL 0x9E34 at 0x9E2F and 0xFC4C) runs N x (PUSH CONT; JP 0x9E34). The
 ;   car physics' accumulations are divided by N (8-bit fractions kept here, not in game RAM: positions, angles,
 ;   heading, speed, skid velocity, steering; relaxation toward the road with C = 75 / 41 at N = 2 / 4); counters,
-;   traffic, timers, gravity and the clock flash run once per update through one-byte gates the driver writes
+;   traffic, timers, gravity, the clock flash and manual gear shifts run once per update through one-byte gates the driver writes
 ;   (g_first / g_last); N = 1 = the original game byte for byte.
 ; - Pace (real time): each original update = UPD_L = 10 frames x 311 lines (5 updates = one lap-clock second). A
 ;   line clock (lclk, NR 0x1E/0x1F polled: clk) is advanced at the driver entry / exit, in the copy hook and at the
@@ -25,6 +25,12 @@
 ; - Render guards (all N, in and out of the driver; latent in the original, reached with new camera positions):
 ;   clip-vertex append CEB9 (drop a vertex past 9E11), span fill C7C0 (skip a polygon with a vertex y >= 80h), shift
 ;   stub A0E7 / D758 (scale clamped to 1..6).
+; - Exact speedups (in the driver; outside it the ROM side runs the original): Z80N MUL for the object multiply's
+;   shift-add (C541 -> C588) and the clip multiply's 8 x 8 path (D030 -> CFBE), every register / flag as the
+;   original; the view copy by zxnDMA (128 rows of 32 bytes, 28 MHz), then the original's last row from DE07 (its
+;   registers, DE49 / DE4F and its inner CALL's stack word as the original).
+; - Heading blend (display only; bl_on, default 1): the render's camera matrix interpolated toward the next heading
+;   unit by the heading's fraction A9A5 (h_blend at 9EE3), the game's matrix back after the render (h_rpost).
 ; Memory: the hook page PG_CODE in MMU slot 1 (0x2000-0x3FFF) for the whole driver. Each site calls / jumps to a
 ; trampoline at SH (8-byte slots): the alt ROM's bytes there are the ORIGINAL instruction(s), the page's bytes at the
 ; same address jump to the hook. Stacks: the hooks run on their own stack (STK). Interrupts: off in play, never
@@ -82,7 +88,10 @@ T_TICK  EQU SH+27*8
 T_PLAIN EQU SH+28*8
 T_RMAP  EQU SH+31*8
 T_RMEXIT EQU SH+32*8
-T_END   EQU SH+33*8
+T_MUL8  EQU SH+33*8
+T_MUL88 EQU SH+34*8
+T_BLEND EQU SH+35*8
+T_END   EQU SH+36*8
 
         ORG 0x2000
 
@@ -578,6 +587,7 @@ setg:   ld c,a
 g_first:
         dw 0x9E38 : db 0x28,0x18        ; crash timer 958B + F5D5 start
         dw 0xF4AD : db 0xC0,0xC9        ; odometer F4A9
+g_gear: dw 0xA658 : db 0xC8,0xC9        ; manual gears 96AB (A65C-A67E: W / S, indicator, 91DE): once an update
 G_FIRSTN EQU ($-g_first)/4
 g_last:
         dw 0xFAD6 : db 0x20,0x18        ; traffic / ghost / scripted-path move
@@ -1261,6 +1271,9 @@ h_rpost:
         ld sp,STK
         push af
         push hl
+        ld a,(bl_act)                   ; the heading blend: the game's own camera matrix back (display only)
+        or a
+.rs:    call nz,bl_rest
         ld a,(g_spd)
         nextreg 0x07,a
         ld hl,(r_sp)
@@ -1275,22 +1288,33 @@ h_rpost:
 
 h_copy: ld (r_sp),sp
         ld sp,STK
-        push af
-        push bc
-        push de
-        push hl
 .pv:    call pace_view
-        ld hl,(r_sp)
+        nextreg 0x07,3
+vgo:    ld hl,dmatab                    ; the view by DMA (28 MHz): row r (8000 + 32 r) -> the screen's pixel row r
+        ld bc,0x006B
+        otir
+        otir
+        otir
+        otir
+        ld b,DMALEN-1024
+        otir
+        ld hl,(r_sp)                    ; the original's side effects: DE4F = its SP (S), DE49 = 1, its inner CALL's
+        ld (0xDE4F),hl                  ; DC41 at S - 2; (S) = the way back to h_cpost
+        ld a,1
+        ld (0xDE49),a
         ld (hl),low h_cpost
         inc hl
         ld (hl),high h_cpost
-        pop hl
-        pop de
-        pop bc
-        pop af
-        ld sp,(r_sp)
-        nextreg 0x07,3
-        jp VCOPY
+        dec hl
+        dec hl
+        ld (hl),0xDC
+        dec hl
+        ld (hl),0x41
+        exx
+        ld hl,0x4FEF                    ; its state at DE07 in the last row: H'L' (screen), HL (8FE0); the rest of the
+        exx                             ; original (that row's 32 bytes again) sets every register as the original
+        ld hl,0x8FE0
+        jp 0xDE07
 h_cpost:
         ld (r_sp),sp
         ld sp,STK
@@ -1307,6 +1331,191 @@ h_cpost:
         pop af
         ld sp,(r_sp)
         jp RET_C
+
+; ---- exact speedups (Z80N MUL), all N, in the driver (outside it the trampolines' ROM side runs the original) ----
+; h_mul8: C541 LD C,0; LD H,C (JP): the object multiply C52C after its sign / magnitude part: A = |A| (0..80h), DE =
+; |DE| (0..8000h). The original's shift-add (bit 7 of A ignored) leaves at C588: A:HL = 2 x (A & 7Fh) x DE >> 8 by
+; ADD HL,HL / ADC A,A on P = (A & 7Fh) x DE (the same last two instructions here: A, F the same), C = 0, DE kept;
+; A & 7Fh = 0: HL = 0, A = 0, F of ADD A,A (40h).
+h_mul8: and 0x7F
+        jr z,.z
+        ld (mtmp),de
+        ld c,e
+        ld e,a
+        mul d,e                         ; hi = m x D
+        ex de,hl
+        ld d,a
+        ld e,c
+        mul d,e                         ; lo = m x E
+        ld a,l
+        add a,d
+        ld l,e
+        ld e,a
+        ld a,h
+.ac:    adc a,0
+        ld h,e                          ; A:HL = P
+        ld de,(mtmp)
+        ld c,0
+        add hl,hl
+        adc a,a
+        ld l,h
+        ld h,a
+        jp 0xC588
+.z:     ld c,a
+        ld h,a
+        ld l,a
+        add a,a
+        jp 0xC588
+
+; h_mul88: D030 RR E; JR C (JP): the clip multiply CEF2's 8 x 8 path (both high bytes 0: D = H = A = 0): the
+; original leaves DE = L x E, L = H (0) at CFBE (POP AF there sets A, F)
+h_mul88:
+        ld d,l
+        mul d,e
+.lh:    ld l,h
+        jp 0xCFBE
+
+;  ---- heading blend (display only), all N in the driver: 9EE3 LD A,(A949) (JP), right after the render built its
+; camera matrix A96B-A973 (D1A5 from the byte angles A94B-A94D, copied from A962-A96A). d = A9A5 - 80h (the heading's
+; own fraction, centred: 80h = the byte heading exactly): M2 = D1A5 at heading A94C + sign(d) (A962-A96A, then put
+; back), each entry M + sign(M2 - M) x ((|M2 - M| x |d| + 80h) >> 8) into A96B-A973 for the render (at most half a
+; unit). h_rpost puts the game's matrix back (bl_rest): logic reads A96D / A970 / A973. bl_on = 0: off (Spec.blend).
+h_blend:
+        ld (bl_sp),sp
+        ld sp,STK
+        push af
+        push bc
+        push de
+        push hl
+        push ix
+        push iy
+        exx
+        push bc
+        push de
+        push hl
+        exx
+        ld a,(bl_on)
+        or a
+        jr z,.out
+        ld a,(0xA9A5)
+        sub 0x80
+        jr z,.out
+        ld (bl_d),a
+        ld hl,0xA96B
+        ld de,bl_m
+        ld bc,9
+        ldir
+        ld a,(0xA94C)
+        ld (bl_h),a
+        ld b,a
+        ld a,(bl_d)
+        or a
+        ld a,b
+        jp m,.dn
+        inc a
+        jr .h
+.dn:    dec a
+.h:     ld (0xA94C),a
+        call 0xD1A5                     ; A962-A96A = M2
+        ld a,(bl_h)
+        ld (0xA94C),a
+        ld a,(bl_d)
+        or a
+        jp p,.w
+        neg
+.w:     ld c,a                          ; |d| 1..80h
+        ld hl,bl_m
+        ld ix,0xA962
+        ld b,9
+.l:     ld a,(hl)
+        xor 0x80
+        ld e,a
+        ld a,(ix+0)
+        xor 0x80
+        sub e                           ; M2 - M (biased: unsigned order = signed order)
+        jr nc,.p
+        neg
+        call .q
+        ld e,a
+        ld a,(hl)
+        sub e
+        jr .st
+.p:     call .q
+.pa:    add a,(hl)
+.st:    ld (ix+9),a                     ; A96B + i: the blended entry
+        ld a,(hl)
+        ld (ix+0),a                     ; A962 + i: as the original left it
+        inc hl
+        inc ix
+        djnz .l
+        ld a,1
+        ld (bl_act),a
+.out:   exx
+        pop hl
+        pop de
+        pop bc
+        exx
+        pop iy
+        pop ix
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ld sp,(bl_sp)
+        ld a,(0xA949)
+        jp 0x9EE6
+.q:     ld d,a                          ; A = (A x |d| + 80h) >> 8
+        ld e,c
+        mul d,e
+        ld a,e
+        add a,0x80
+        ld a,d
+        adc a,0
+        ret
+
+; bl_rest: A96B-A973 := bl_m, bl_act := 0. AF lost (BC, DE, HL kept)
+bl_rest:
+        push bc
+        push de
+        push hl
+        ld hl,bl_m
+        ld de,0xA96B
+        ld bc,9
+        ldir
+        xor a
+        ld (bl_act),a
+        pop hl
+        pop de
+        pop bc
+        ret
+
+bl_on:  db 1
+bl_act: db 0
+bl_d:   db 0
+bl_h:   db 0
+bl_sp:  dw 0
+bl_m:   ds 9
+
+; the view copy's DMA program: reset, A -> B 32 bytes, both memory + increment, continuous; then per row A and B
+dmatab: db 0x83,0xC3
+        db 0x7D
+        dw 0x8000,32
+        db 0x14,0x10,0xAD
+        dw 0x4000
+        db 0x82,0xCF,0x87
+vrow = 1
+        DUP 127
+        db 0x1D
+        dw 0x8000+vrow*32
+        db 0xAD
+        dw 0x4000+((vrow&0xC0)<<5)+((vrow&7)<<8)+((vrow&0x38)<<2)
+        db 0xCF,0x87
+vrow = vrow+1
+        EDUP
+dmaend:
+DMALEN  EQU dmaend-dmatab
+        ASSERT DMALEN == 1031
+mtmp:   dw 0
 
 ; ---- hook state (Spec's names) -----------------------------------------------------------------------------------
 hstate:
@@ -1450,6 +1659,12 @@ code_end:
         ORG T_RMEXIT
         nextreg 0x51,0xFF
         jp 0xE92E
+        ORG T_MUL8
+        jp h_mul8
+        ORG T_MUL88
+        jp h_mul88
+        ORG T_BLEND
+        jp h_blend
         ORG T_END
         ORG 0x3D00
         ds 0x3FFE-0x3D00
@@ -1543,6 +1758,17 @@ r_drv:  nextreg 0x51,PG_CODE            ; -> the page's t_drv+4: jp drv
         ds T_RMEXIT-$
         nextreg 0x51,0xFF
         jp 0xE92E
+        ds T_MUL8-$
+        ld c,0                          ; C541's instructions
+        ld h,c
+        jp 0xC544
+        ds T_MUL88-$
+        rr e                            ; D030's (the JR C as JP C)
+        jp c,0xD053
+        jp 0xD034
+        ds T_BLEND-$
+        ld a,(0xA949)                   ; 9EE3's instruction
+        jp 0x9EE6
         ds T_END-$
 r_end:
         ENT
