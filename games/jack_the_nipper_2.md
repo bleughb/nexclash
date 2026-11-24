@@ -1,12 +1,11 @@
 # Jack the Nipper II - In Coconut Capers (Gremlin Graphics, 1987) - stage 0 done; engine not yet written
 
 ## Next session
-Stage: 1 (design)            State: stage 1 analysis done 2026-11-23 (below); the design question not yet asked
+Stage: 2 (build)             State: design decided 2026-11-23 (the owner: the same answers as Jack the Nipper)
 Inputs: TOSEC `Jack the Nipper II - In Coconut Capers (1987)(Gremlin Graphics Software)[a].z80` (md5
 6f5d708c439f3356a930ea4f176a0c8f: 48K, in game); rzxarchive `j/jacknipper2.rzx` (158,593 frames, 52 min; its own
 start snapshot md5 f89e14ab3939e70ecbe94cc1f42b38fe)    Branch: add-jack-the-nipper
-Checks: survey (GATE CHECK, below), inspect, scan --writers (no pixel logic)    Pending user answers: Jack the
-Nipper's design question first (most defaults carry over: same family, same no-frame-sync pacing)
+Checks: survey (GATE CHECK, below), inspect, scan --writers (no pixel logic)    Pending user answers: none
 Start with: the design question (defaults + exceptions below), a preview and a plain .nex from `[a]` (SP 0xFFFA:
 prove the tail with rom_paths' tail proof)    Read: PLAYBOOK 2-3, games/jack_the_nipper.md (the design there)
 Open: the three unreached CALL sites (a screen redraw and a text printer, not figure plotters)
@@ -56,6 +55,8 @@ Open: the three unreached CALL sites (a screen redraw and a text printer, not fi
   bottom rows with attribute 0x6F, pixels rotated in place) and the panel digits (0x93B4); attribute readers the
   panel test and a colour cycler (0xC0B3); buffer readers the maskers and the room decoder (0xAA00). Collisions
   come from the object table, not pixels.
+- Design: the owner, 2026-11-23, "you can go on those": the same answers as Jack the Nipper (every figure a sprite, effects too, outline kept, the game's own colours until a painting); not a colour run yet.
+- Cheats (every patch carries them, off by default): the archive's POKEs (Super Collection "¤ Pokes"): Infinite lives 43251 = 0 (0xA8F3 `DEC (HL)`), Infinite ammo 38306 = 0 (0x95A2 `DEC (HL)`), Lives 255 at 34631 (now 8), Immunity 1 34426 = 0 (0x867A `DEC A`), Immunity 2 (ten POKEs from 43203 = 201 on). Original bytes match the `[a]` snapshot; each to be checked in a replay (Immunity 2's `JP NZ` to `CALL NZ` changes look odd: prove them or drop them), and more looked for.
 - Plan for the design: as Jack the Nipper (games/jack_the_nipper.md): hook each blit site to place the figure as
   sprites (pattern from HL, mirror bit, x / y from the record) and skip the mask-and-OR, so the buffer holds the
   background only and the cell copier puts back what a figure covered; the figure's colour leaves the cells (sprites

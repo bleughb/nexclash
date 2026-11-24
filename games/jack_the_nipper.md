@@ -80,6 +80,7 @@ All defaults taken: every figure a sprite (pickups included); scenery, HUD, scor
   24 x 40 adult is six sprites, 69 kinds); sprite order = object order (depth).
 - Hooks at 28 MHz with patch.restore-speed and patch.preserve-r; verify per hook against the RZX (registers, all memory
   but the scratch page; picture = ULA + sprites against the original), pace by verify.update-locked-pace.
+- Cheats (the owner, 2026-11-23: every patch carries them, off by default): the archive's POKE (Super Collection "¤ Pokes/Jack the Nipper.pok"): Immunity = 44278 and 44285 set to 58 (0xACF6 `JP NZ,0xAAB9` and 0xACFD `CALL NZ,0xA9F2` become `LD A,(nn)`; original bytes match the `[a]` snapshot). Check each in a replay, and look for more (lives, the Naughtyometer) as for Winter Sports.
 - The plain build's tail at 0x6F00 is to be proven by rom_paths' tail proof (Green Beret, 2026-11-23: a RAM scan alone
   missed a copier reading its tail before the game wrote it).
 
