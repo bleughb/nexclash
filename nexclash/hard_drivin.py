@@ -881,7 +881,9 @@ W16 = {'PX', 'PY', 'PZ', 'HD', 'SP', 'VX', 'VY', 'VZ'}
 C_RELAX = {1: None, 2: 75, 4: 41}               # (1 - C / 256) ^ N ~ 1 / 2: the original's halving per update
 C4ST, C4UP, C2ST, C2UP = 660, 600, 1350, 1200   # the adaptive N's thresholds (busy lines a sub-step; the .asm's)
 NL = 311
-STEPS_F28 = 1.2                                 # the model's 28 MHz instruction = 1.2 x its T (route 1's JNext ratio)
+STEPS_F28 = 1.0                                 # the model's 28 MHz instruction = f28 x its T. 1.0: core 3.03
+#   (the target; no read wait: docs/TECHNIQUES.md 1.0, KS1 3.03.00 nxsuite C01, LDIR 2048 B 8.00x). 1.2 was route 1's
+#   JNext figure (JNext 1.3.0 models core 3.02's wait state); pass f28=1.2 for a JNext / 3.02 estimate
 BLEND = True                                    # the steps build's heading blend (bl_on; StepsPatch(blend=))
 VIEW_ONLY = ([(0x4000, 0x5000), (0x8000, 0x9000), (0x90DC, 0x90E0), (0x90EA, 0x9160), (0x91AA, 0x91AE),
               (0x91BA, 0x91BF), (0x968F, 0x9690), (0x9C00, 0x9E12), (0xA949, 0xA96B), (0xA974, 0xA988), (0xA98E, 0xA98F),

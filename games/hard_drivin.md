@@ -12,7 +12,8 @@ Engine: nexclash/hard_drivin.py: route 1 (HDPatch, Next, verify, unit_tests, neg
   1), hard_drivin_steps.nex (default) 9cc6f829 (phase 1; before: a2709f99 = hd4_na + automap_off); with the loading
   screen hard_drivin_steps_loading.nex 9d1a130d, hard_drivin_smooth_loading.nex f789a1c7; the .nxc = steps +
   screen, toggle "Original time steps" = smooth + screen, 5 trainers (sections "Loading screen" and "Trainers").
-Checks: 2026-11-24 phase 1: `auto --quick 2000` PASSED (steps 288 cases, 0 mismatches; unit tests incl. exhaustive
+Checks: 2026-11-24 f28 1.0: stamped selftest PASSED (steps 6,220 cases; pace 10.00 / 10.02 / 10.70; smooth 3,112).
+  Phase 1: `auto --quick 2000` PASSED (steps 288 cases, 0 mismatches; unit tests incl. exhaustive
   multiplies, DMA copy, gears, blend; 27 / 27 negatives); stamped selftest PASSED (whole RZX: steps 6,220 cases = the
   Spec, 0 mismatches (202 s); 27 / 27 negatives; model pace 10.00 / 10.15 / 10.71 frames; smooth 3,112 checks).
   2026-11-23: stamped selftest PASSED (whole RZX: steps 6,220 cases = the Spec; smooth 3,112 checks).
@@ -21,7 +22,9 @@ Start with: hardware test 3 (C:\1NEXT\harddrivin_work\hardware3\checklist.txt): 
   blend look, pace. Then, if wanted: zxnDDMA for the sky / copy, route 2b (own renderer on the sub-stepped state).
 Open: route 1: the first calibration interrupt's extra ~574 T (0.06 %), sub-unit angle interpolation. Both: R not
   preserved (patch.preserve-r: the verify excludes R; no consumer found, not proven). Route 2a: the model's 28 MHz
-  ratio (f28 1.2) is route 1's JNext figure; the time-out path is the recorded u554 + synthetic states only.
+  factor is f28 1.0 since 2026-11-24 (target core 3.03, no read wait: TECHNIQUES 1.0; 1.2 was JNext = 3.02); the
+  time-out path is the recorded u554 + synthetic states only. Core 3.03 review (section "Core 3.03"): K on the board
+  and N = 4's share are unmeasured; N thresholds / pacing unchanged (owner decides).
 
 ## Facts
 - Tape (.tap = .tzx data): BASIC `HD 128K`, code 100 bytes at 30000, 5,000 at 32960, 200 at 43616, BASIC `-`, then one 41,400-byte block at 24000. Single load, no multiload.
@@ -58,7 +61,8 @@ Open: route 1: the first calibration interrupt's extra ~574 T (0.06 %), sub-unit
 - Per update: the real render first, then in-between views on scratch pages 38-41 with the camera interpolated,
   each copied in lines 128-262 (no tear); window = K x the real render's 28 MHz lines, debt carried. K measured
   at run time by a 3.5 MHz calibration render (IM 2 through the hook page, pushes repaired, a hit push abandons the
-  render); JNext K 6.17-6.28 depending on the scene (contention share) (hardware ratios 6.6-7.0). JNext pace vs plain: -4 frames / 178 updates.
+  render); JNext K 6.17-6.28 depending on the scene (contention share) (6.6-7.0 = TECHNIQUES 1.0's core 3.02.00
+  copy loops, not this render; on core 3.03 expect K ~8 or a little over: no read wait). JNext pace vs plain: -4 frames / 178 updates.
 
 ## Stage log
 - 2026-11-22: stage 0 (intake) + stage 1 (route choice, feasibility), ~50 tool calls, 1 user round.
@@ -128,7 +132,7 @@ moves the car once an update (~4 a second). Route 2a (user: "a good idea"): ever
   counts updates (0x950B to 5).
 - N = 1 replay of captured updates = the recording byte for byte; with the accumulations scaled, N = 2 / 4 match
   one update within rounding and step-size error. Once an update: traffic (0xF92D has 4 phases only), clock,
-  timers, odometer, replay records. Time: N = 2 always fits 10 frames at 28 MHz, N = 4 the median render only.
+  timers, odometer, replay records. Time: N = 2 always fits 10 frames at 28 MHz, N = 4 the median render only (f28 1.2 = JNext; core 3.03: section "Core 3.03").
 ### Build 2a stages 1-3 (subagents; step\stage1-3_results.md, spec.py, hd3 / hd4)
 - Rules (spec.py, now Spec in the engine): an 8-bit fraction a variable + a shadow (game writes reset it),
   relaxation C = 75 / 41 at N = 2 / 4, speed / N only after a velocity rebuild, steering +-30 / N, throttle words,
@@ -165,6 +169,14 @@ moves the car once an update (~4 a second). Route 2a (user: "a good idea"): ever
   updates): c_sub median 477 -> 448 (p95 851 -> 813), N 4 / 2: 534 / 229 -> 580 / 183, 0 views early.
 - Look (JNext, a slow on-road turn, jn\p1_turn_compare.png): objects and road edges sit a pixel or two apart from
   the unblended view between heading steps; the mountain backdrop (drawn from the heading byte) still steps.
+
+## Core 3.03 (2026-11-24; harddrivin_work\opt\core303_results.md)
+- No read wait at 28 MHz (TECHNIQUES 1.0, nxsuite C01). "6.6-7.0" and K_INIT 6.6 = TECHNIQUES' 3.02.00 copy loops.
+- Route 1: samples kept for K 4.0-9.99, K_INIT only the first window. Model, 553 renders, K 6.2 / 8.0 / 8.2 / 8.6:
+  views 1,145 / 1,475 / 1,509 / 1,586, samples within 0.39 %, drops 12-15 %.
+- Route 2a model f28 1.0 (thresholds = shares of UPD_L, not from 1.2): c_sub p50 / p75 / p90 / p95 / max 477 / 593 /
+  704 / 779 / 919 (1.2: 570 / 709 / 842 / 932 / 1,101); 4 c + 224 <= 3,110 on 91 % (76 %); N 4 / 2 1,278 / 274.
+- K on the board: page 36 offset 1917 = K x 256 (smooth); steps c_sub at 3833; nothing on screen.
 
 ## Loading screen, trainers, .nxc (2026-11-23; step\nxc_results.md)
 - Screen: the tape has no SCREEN$ block (.tzx: BASIC, code 100 @ 30000, 5,000 @ 32960, 200 @ 43616, BASIC, 41,400 @
