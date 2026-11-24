@@ -120,46 +120,58 @@
   "list": [
    {
     "code": "K1",
+    "record": "next-ks1",
     "name": "KS1 Next (Spartan-6)"
    },
    {
     "code": "K2",
+    "record": "next-ks2",
     "name": "KS2 Next (Artix-7 15T)"
    },
    {
     "code": "K3",
+    "record": "next-ks3",
     "name": "KS3 Next (Artix-7 35T)"
    },
    {
     "code": "NG",
+    "record": "n-go",
+    "measured": "identifies as machine $0A / board $00 (NextReg $00 / $0F, nxsuite on core 3.03.00, 2026-11-24), the same as an official Issue 2: the registers cannot tell them apart",
     "name": "N-GO"
    },
    {
     "code": "XB",
+    "record": "xberry-pi",
     "name": "Xberry Pi"
    },
    {
     "code": "ZD",
+    "record": "zxdos",
     "name": "ZXDOS / ZXDOS+"
    },
    {
     "code": "ZT",
+    "record": "zxtres",
     "name": "ZXTRES"
    },
    {
     "code": "MI",
+    "record": "mister",
     "name": "MiSTer DE10-Nano"
    },
    {
     "code": "KG",
+    "record": "karabas-go",
     "name": "Karabas-Go / Mini"
    },
    {
     "code": "TN",
+    "record": "tang-nano-20k",
     "name": "Tang Nano 20K NextNano"
    },
    {
     "code": "NT",
+    "record": "nexttang",
     "name": "NextTang"
    },
    {
@@ -1939,7 +1951,7 @@
    "expect": "lesson.sprite-collision-is-per-dot-in-line-buffer and book ch 16 (C-S12, S14): collision is exact to the dot (opaque over opaque in the line buffer); dots outside the clip window, overlaps hidden by $15 bit 6 and sprites switched off by $15 bit 0 still collide; reading clears both bits. docs/NEXT_REGISTERS.md:63: the read clears bits 1 and 0.",
    "needs": "a working sprite collision flag (g8.asm notes that CSpect 4.5.9 sets it for one sprite alone and JNext 1.3.0 never sets it)",
    "hazard": "none (sprites show on display lines 80-120 meanwhile; all 128 hidden afterwards, $15 / $09 / $4B put back, the sprite clip window set to full; sprite pattern memory is left written)",
-   "fields": "side = two opaque dots side by side (0 = no collision), same = on the same dot (1), clip = an overlap outside the clip window (1 = still collides), off = with $15 bit 0 = 0 (1 = still collides), second = a second $303B read (0 = the first read cleared it), alone = control, one sprite by itself (must be 0). Board run 5 (KS1 3.03.00): 0 1 1 1 0 0 = the claim exactly."
+   "fields": "side = two opaque dots side by side (0 = no collision), same = on the same dot (1), clip = an overlap outside the clip window (1 = still collides), off = with $15 bit 0 = 0 (1 = still collides), second = a second $303B read (0 = the first read cleared it), alone = control, one sprite by itself (must be 0). Board run 5 (N-Go board, an Issue 2-compatible clone, core 3.03.00): 0 1 1 1 0 0 = the claim exactly."
   },
   {
    "id": "SP02",
@@ -2814,7 +2826,7 @@
    "expect": "book ch 5 (report B-N10): a WR4 byte with bit 4 leaves the DMA deaf until a machine reset; a hard or soft reset frees it. lesson.zxn-dma-wr4-interrupt-lock: byte $91 locked the DMA until power-off (one board, core 3.03.00; hard reset untested).",
    "needs": "opt-in group H (its hazard screen, Y); a soft reset, hard reset or power cycle, then a restart of the suite and an operator answer (keys 1-3) for the follow-up",
    "hazard": "leaves the DMA unusable on purpose until a reset (possibly until power-off); no other change. Run last in its group; the screen after it says what to do. Opt-in for that reason",
-   "fields": "XH2: first pass: one DMA byte; if it does not arrive the DMA is already deaf: SKIP why=dma-deaf (nothing sent). Else before / after = 1-byte copies before and after the WR4 byte $91 (bit 4); v = deaf (PASS) or copied (FAIL). Then power off and on (or a hard reset), start again, H: a 1 / 2 / 3 question gives reset=soft / hard / power and v = reset-frees or still-locked (the start's DMA byte, PRG_XH2), OPERATOR. The verdict uses the lock pass; the note states each follow-up. Board run 7 (KS1, 3.03.00): pass 4 ran in the same run as the lock (no restart) and found the DMA still deaf; the files hold no start after a reset, so what F4 does is not yet shown."
+   "fields": "XH2: first pass: one DMA byte; if it does not arrive the DMA is already deaf: SKIP why=dma-deaf (nothing sent). Else before / after = 1-byte copies before and after the WR4 byte $91 (bit 4); v = deaf (PASS) or copied (FAIL). Then power off and on (or a hard reset), start again, H: a 1 / 2 / 3 question gives reset=soft / hard / power and v = reset-frees or still-locked (the start's DMA byte, PRG_XH2), OPERATOR. The verdict uses the lock pass; the note states each follow-up. Board run 7 (N-Go board, an Issue 2-compatible clone, core 3.03.00): pass 4 ran in the same run as the lock (no restart) and found the DMA still deaf; the files hold no start after a reset, so what F4 does is not yet shown."
   }
  ],
  "claims_not_tested": [
@@ -2825,7 +2837,7 @@
     "docs/TECHNIQUES.md:282"
    ],
    "status": "NOT ANSWERABLE on this board configuration",
-   "reason": "the board under test gives a VGA-timed frame with an HDMI cable and \"Digital\" selected (KS1, core 3.03.00: NextReg $11 = $00, 311 lines, 114 CTC ticks per line, ULA interrupt at line 248), and no source in the repository or the book says how to select a frame with HDMI geometry at boot; the header geom= field and the operator cable answer say which frame a run measured"
+   "reason": "the board under test gives a VGA-timed frame with an HDMI cable and \"Digital\" selected (N-Go board, an Issue 2-compatible clone, core 3.03.00: NextReg $11 = $00, 311 lines, 114 CTC ticks per line, ULA interrupt at line 248), and no source in the repository or the book says how to select a frame with HDMI geometry at boot; the header geom= field and the operator cable answer say which frame a run measured"
   },
   {
    "claim": "frame-lines-60",
@@ -2834,7 +2846,7 @@
     "docs/TECHNIQUES.md:283"
    ],
    "status": "NOT ANSWERABLE on this board configuration",
-   "reason": "the board under test gives a VGA-timed frame with an HDMI cable and \"Digital\" selected (KS1, core 3.03.00: NextReg $11 = $00, 311 lines, 114 CTC ticks per line, ULA interrupt at line 248), and no source in the repository or the book says how to select a frame with HDMI geometry at boot; the header geom= field and the operator cable answer say which frame a run measured"
+   "reason": "the board under test gives a VGA-timed frame with an HDMI cable and \"Digital\" selected (N-Go board, an Issue 2-compatible clone, core 3.03.00: NextReg $11 = $00, 311 lines, 114 CTC ticks per line, ULA interrupt at line 248), and no source in the repository or the book says how to select a frame with HDMI geometry at boot; the header geom= field and the operator cable answer say which frame a run measured"
   },
   {
    "claim": "frame-line-length",
@@ -2843,7 +2855,7 @@
     "docs/TECHNIQUES.md:283"
    ],
    "status": "NOT ANSWERABLE on this board configuration",
-   "reason": "the board under test gives a VGA-timed frame with an HDMI cable and \"Digital\" selected (KS1, core 3.03.00: NextReg $11 = $00, 311 lines, 114 CTC ticks per line, ULA interrupt at line 248), and no source in the repository or the book says how to select a frame with HDMI geometry at boot; the header geom= field and the operator cable answer say which frame a run measured"
+   "reason": "the board under test gives a VGA-timed frame with an HDMI cable and \"Digital\" selected (N-Go board, an Issue 2-compatible clone, core 3.03.00: NextReg $11 = $00, 311 lines, 114 CTC ticks per line, ULA interrupt at line 248), and no source in the repository or the book says how to select a frame with HDMI geometry at boot; the header geom= field and the operator cable answer say which frame a run measured"
   },
   {
    "claim": "irq-ula-int-line",
@@ -2852,7 +2864,7 @@
     "docs/TECHNIQUES.md:284"
    ],
    "status": "NOT ANSWERABLE on this board configuration",
-   "reason": "the board under test gives a VGA-timed frame with an HDMI cable and \"Digital\" selected (KS1, core 3.03.00: NextReg $11 = $00, 311 lines, 114 CTC ticks per line, ULA interrupt at line 248), and no source in the repository or the book says how to select a frame with HDMI geometry at boot; the header geom= field and the operator cable answer say which frame a run measured"
+   "reason": "the board under test gives a VGA-timed frame with an HDMI cable and \"Digital\" selected (N-Go board, an Issue 2-compatible clone, core 3.03.00: NextReg $11 = $00, 311 lines, 114 CTC ticks per line, ULA interrupt at line 248), and no source in the repository or the book says how to select a frame with HDMI geometry at boot; the header geom= field and the operator cable answer say which frame a run measured"
   },
   {
    "claim": "frame-ula-int-per-timing",
@@ -2861,7 +2873,7 @@
     "docs/TECHNIQUES.md:284"
    ],
    "status": "NOT ANSWERABLE on this board configuration",
-   "reason": "the board under test gives a VGA-timed frame with an HDMI cable and \"Digital\" selected (KS1, core 3.03.00: NextReg $11 = $00, 311 lines, 114 CTC ticks per line, ULA interrupt at line 248), and no source in the repository or the book says how to select a frame with HDMI geometry at boot; the header geom= field and the operator cable answer say which frame a run measured"
+   "reason": "the board under test gives a VGA-timed frame with an HDMI cable and \"Digital\" selected (N-Go board, an Issue 2-compatible clone, core 3.03.00: NextReg $11 = $00, 311 lines, 114 CTC ticks per line, ULA interrupt at line 248), and no source in the repository or the book says how to select a frame with HDMI geometry at boot; the header geom= field and the operator cable answer say which frame a run measured"
   }
  ],
  "claims": [
