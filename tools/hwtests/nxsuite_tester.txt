@@ -38,8 +38,10 @@ A  All automatic tests. About 6 minutes. Leave the machine alone.
    The border is blue while a group runs. The picture may blink once or
    twice (two tests switch between 50 and 60 Hz for a moment).
 V  The visual pass. About 8 minutes. Each screen shows a picture and asks
-   a question: answer Y / N or a number. S = ask later. One question
-   needs a watch that shows seconds.
+   a question: answer Y / N or a number. S = ask later. The last one
+   (V19) asks for the refresh rate your display shows in its info / OSD
+   menu, if it shows one (type e.g. 49.36, M is the point; S if not),
+   then needs a watch that shows seconds (S skips it).
 T  Timing (optional). A few minutes. It changes the machine timing and
    puts it back after each test.
 D  DivMMC (optional). A few minutes. It does not write to the SD card

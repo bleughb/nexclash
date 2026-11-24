@@ -53,6 +53,13 @@ q_one:  call q_one0
         inc a : ret
 .z:     xor a : ret
 q_one0: push hl : call cls : pop hl : xor a
+; V19's monitor-rate screen text (gv.asm calls it through ovcall: page 41 has no room for it)
+q_v19m: ld hl,q_mon : ld a,1 : jp q_txt
+q_mon:  db "V19 RATE THE DISPLAY SHOWS",0
+        db "If its info / OSD menu shows the",0
+        db "refresh rate, type it (49.36,",0
+        db "50.0 ...), ENTER. Point = M.",0
+        db "C clears. S = it shows none.",0,0
 ; HL = lines (each 0-ended, a 0 after the last), A = first row -> printed from column 0
 q_txt:  ld (crow),a
 .l:     ld a,(hl) : or a : ret z

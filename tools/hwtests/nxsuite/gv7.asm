@@ -73,3 +73,37 @@ q_v08b: db 2
         db "3 = thin RED on the RIGHT edges",0
         db "4 = something else",0,0
         db "none",0,"left",0,"right",0,"other",0
+
+; ---------------------------------------------------------------- V15 the ULA reads bank 5
+; A checkerboard and these words in bank 5 (slot 2 = page 10). Then page 36 is mapped into slot 2 and its
+; screen area filled white (paper 7, ink 7) while the operator looks; slot 2 back (restore_all also).
+; Y = the checkerboard stayed (the ULA reads bank 5: the claim), N = the screen went white.
+@t_v15: call cls
+        ld hl,$4800                                 ; checkerboard of 4 x 4 dots: rows 8-23
+.c:     ld a,h : and 4 : ld a,$F0 : jr z,.c1
+        ld a,$0F
+.c1:    ld (hl),a : inc hl : ld a,h : cp $58 : jr nz,.c
+        ld hl,m_v15 : ld a,1 : call plines
+        nextreg $52,36
+        ld hl,$4000 : ld de,$4001 : ld bc,6143 : ld (hl),0 : ldir
+        ld hl,$5800 : ld de,$5801 : ld bc,767 : ld (hl),$3F : ldir
+        call g7_key
+        nextreg $52,$0A
+        ld hl,q_v15 : jp ask
+m_v15:  db "V15: the program now fills the",0
+        db "screen white through ANOTHER",0
+        db "page mapped at $4000.",0
+        db "Look, then press any key.",0,0
+q_v15:  db 0
+        db "V15 ULA READS BANK 5",0
+        db " ",0
+        db "While you looked, did the",0
+        db "checkerboard and the words stay?",0
+        db "Y = they stayed",0
+        db "N = the screen went white",0,0
+        db "stays",0,"white",0
+
+; any key (pressed and let go)
+g7_key:  call keys_up
+.w:     call getkey : or a : jr z,.w
+        jp keys_up

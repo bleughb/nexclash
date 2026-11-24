@@ -357,6 +357,8 @@ def passes_disagree(res, final_only=True):
 def verdicts(res, table):
     """-> {claim: {verdict, value, spread, unit, choice, tests, why, notes}}"""
     out = {}
+    _RES.clear()
+    _RES.update(res)
     for c in table['claims']:
         cid = c['id']
         tests = [x['id'] for x in table['tests'] if cid in x['claims']]
@@ -587,7 +589,52 @@ def _f06_60(e, rec, src):
             i60, l60, gap, e.get('i50'), e.get('l50'), '?' if None in (l50, i50) else int(l50 - i50)))
 
 
+_RES = {}         # the results being judged (set by verdicts): V19 reads F01 / F02 beside its own keys
+
+
 def _v19(e, rec, src):
+    """V19: up to three rates side by side - the program's (F01 lines x F02 line length, timed by the CTC),
+    the stopwatch's (frames / watch time, with the CTC's own time of the same interval) and the display's
+    (mon, as typed off its info / OSD menu). Either the watch or the monitor answer counts as answered."""
+    rates, parts = [], []
+    t = _RES.get('tests', {})
+    ln, tl = (num(t[x].get('v')) if x in t else None for x in ('F01', 'F02'))
+    if ln and tl:
+        p = 28e6 / (ln * tl * 8)       # F02's T are 3.5 MHz T: 8 clocks of the 28 MHz CTC clock each
+        rates.append(('program', p, 0.01))
+        parts.append('program: %d lines x %s T (F01 / F02, counted in CTC clocks) = %.2f Hz +-0.01' % (ln, tl, p))
+    w = _v19_watch(e, rec)
+    if w:
+        rates.append(('stopwatch', w[0], w[1]))
+        parts.append('%s; +-%.2f Hz' % (w[2], w[1]))
+    mon = _k(e, 'mon')
+    if mon:
+        md = _k(e, 'mond')
+        md = int(md) if md is not None and 0 <= md <= 2 else 2
+        mt = 0.5 / 10 ** md            # half a unit of the last digit typed
+        rates.append(('monitor', mon, mt))
+        parts.append('monitor: %.*f Hz as typed off the display%s (+-%g; monitors round, and some show the '
+                     "nominal mode rate rather than the measured one)" % (
+                         md, mon, ', mode %s' % e['monmode'] if e.get('monmode') else '', mt))
+    if not w and not mon:
+        return None
+    say = 'board (cable %s): %s.' % (e.get('cable', '?'), '; '.join(parts))
+    if len(rates) > 1:
+        # each rate with its own tolerance; a pair disagrees only when the two ranges do not meet
+        off = [(a, b) for i, a in enumerate(rates) for b in rates[i + 1:] if abs(a[1] - b[1]) > a[2] + b[2]]
+        if not off:
+            say += ' They agree within their tolerances.'
+        else:
+            a, b = max(off, key=lambda p: abs(p[0][1] - p[1][1]))
+            nom = any(x[0] == 'monitor' and min(abs(x[1] - 50), abs(x[1] - 60)) < 0.005 for x in (a, b))
+            say += ' DISAGREEMENT: %s %.2f Hz against %s %.2f Hz, beyond both tolerances%s.' % (
+                a[0], a[1], b[0], b[1], '; the monitor may show the nominal mode rate (50 / 60 Hz), not the '
+                'measured one' if nom else '')
+    return None, say
+
+
+def _v19_watch(e, rec):
+    """-> (Hz, +-Hz, text) from the stopwatch keys, or None when the stopwatch part was skipped."""
     fr, se, te = _k(e, 'frames'), _k(e, 'secs'), _k(e, 'tenths')
     if not fr or not se:
         return None
@@ -600,24 +647,24 @@ def _v19(e, rec, src):
         secs = se + te / 10
         lo, hi = fr / (secs + 0.3), fr / (secs - 0.3)
         how = 'tenths typed: +-0.3 s (reading and reaction)'
-    say = 'board: %d frames in %s s = %s Hz (cable %s); %s, so %.2f-%.2f Hz. %s' % (
-        fr, secs, rec.get('v'), e.get('cable', '?'), how, lo, hi,
-        '50.00 Hz lies inside that range.' if lo <= 50 <= hi else
-        '50.00 Hz lies outside that range: time it again with tenths to be sure.')
+    say = 'stopwatch: %d frames in %s s = %.2f Hz; %s, so %.2f-%.2f Hz (%s)' % (
+        fr, secs, fr / secs, how, lo, hi,
+        '50.00 Hz lies inside that range' if lo <= 50 <= hi else
+        '50.00 Hz lies outside that range: time it again with tenths to be sure')
     w, c0, c1 = _k(e, 'ctcw'), _hex(e.get('c0')), _hex(e.get('c1'))
     if None not in (w, c0, c1):
         ticks = 256 * w + c0 - c1          # CTC channel 3, prescaler 256: one tick = 256 clocks of 28 MHz
         cs = ticks * 256 / 28e6
         if cs > 0:
-            say += (' Same interval by the CTC (28 MHz clock / 256, book ch 6): %d ticks = %.2f s, so %.3f Hz; '
-                    'the watch said %s s (%+.2f s). %s' % (
+            say += ('; same interval by the CTC (28 MHz clock / 256, book ch 6): %d ticks = %.2f s, so %.3f Hz; '
+                    'the watch said %s s (%+.2f s): %s' % (
                         ticks, cs, fr / cs, secs, secs - cs,
-                        "The watch and the machine agree: the rate by the watch is the machine's."
+                        "the watch and the machine agree, so the rate by the watch is the machine's"
                         if abs(secs - cs) <= 0.3 else
-                        'The watch time differs from the CTC time by more than the reading error: a timing error '
+                        'the watch time differs from the CTC time by more than the reading error: a timing error '
                         'at the watch (start / stop) - or the 28 MHz clock itself is off by %.2f %%, which only the '
-                        'watch can show.' % (100 * (secs - cs) / cs)))
-    return None, say
+                        'watch can show' % (100 * (secs - cs) / cs)))
+    return (lo + hi) / 2, (hi - lo) / 2, say
 
 
 def _hex(v):
@@ -1611,6 +1658,24 @@ def selfcheck():
             rp = reference([p, pe], d, table)
             if '### S05' not in open(rp, encoding='utf-8').read():
                 bad.append('--reference has no S05 section')
+        # V19: program (F01 / F02) / stopwatch / monitor side by side; a disagreement flagged only beyond the
+        # coarsest tolerance. 311 x 228.02 T = 49.36 Hz; the negative control is the nominal 50 typed whole.
+        V = 'T id=V19 st=OPERATOR c=sys-video-timing-frame-rate v=%s u=Hz n=1 min=%s max=%s cable=hdmi '
+        fl = ['T id=F01 st=PASS c=frame-lines-50 v=311 u=lines n=1 min=311 max=311',
+              'T id=F02 st=INFO c=frame-line-length v=228.02 u=T n=1 min=228.02 max=228.02']
+        for tag, vl, want in (
+                ('monitor only', V % ('49.36', '49.36', '49.36') + 'mon=49.36 mond=2 monmode=720x576',
+                 ('program: 311 lines', 'monitor: 49.36 Hz', 'mode 720x576', 'agree within')),
+                ('watch + monitor', V % ('49.30', '49.30', '49.30') + 'frames=7592 secs=154 tenths=0 tol=0.19 '
+                 'mon=49.4 mond=1', ('stopwatch: 7592 frames', 'monitor: 49.4 Hz', 'agree within')),
+                ('negative control: nominal 50', V % ('50.00', '50.00', '50.00') + 'mon=50.00 mond=0',
+                 ('monitor: 50 Hz', 'DISAGREEMENT: program 49.36', 'nominal mode rate')),
+                ('pending', 'T id=V19 st=PENDING-OPERATOR c=sys-video-timing-frame-rate v=- u=- n=0 min=- max=-',
+                 ())):
+            vv = verdicts(parse(make_file(sample(table) + fl + [vl]), table), table)['sys-video-timing-frame-rate']
+            note = ' '.join(x for x in vv['notes'] if x.startswith('V19:'))
+            if [w for w in want if w not in note] or (not want and note):
+                bad.append('V19 %s: %r' % (tag, note))
     except Refused as e:
         bad.append('good file refused: %s' % e)
     cases = {'truncated': good[:len(good) - 30],
