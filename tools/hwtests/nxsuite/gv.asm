@@ -1,5 +1,6 @@
 ; nxsuite/gv.asm - V VISUAL: the operator pass (spec section 3 V, step 4). GPL-3.0-or-later.
-; Slot-7 overlay, shares page 41 with G3 (G3's tables at $F800-$FFFF stay untouched). Only by the menu key
+; Slot-7 overlay, shares page 41 with G3 (G3's tables at $F800-$FFFF stay untouched); V15 is in
+; gv7.asm (page 40) and V16 in gv5.asm (page 61), moved for V19's monitor entry. Only by the menu key
 ; V: in RUN ALL every V test is PENDING-OPERATOR. Each test shows a picture or runs a stopwatch, then asks
 ; (ask, opr.asm): Y / N or 1 / 2 / 3 -> OPERATOR with key= / means=, S -> PENDING-OPERATOR (asked again on
 ; the next V pass). The tests built are those a key press can answer without a photograph; the others are
@@ -27,11 +28,31 @@ m_look: db "Look, then press any key.",0
 ; ticks x 256 / 28,000,000 s. The intake sets frames / watch time against frames / CTC time: a human timing
 ; error shows as a watch time unlike the CTC time (board run 8: 49.29 Hz by the watch; its F01 / F02, 311
 ; lines of 228.02 T counted in CTC clocks, give 49.36 Hz at 28 MHz; 50.02 Hz assumed a 3.5469 MHz clock).
+; Between the cable and the stopwatch (owner request 2026-11-24), each part skippable with S: the refresh
+; rate the display itself reports (info / OSD menu), typed as digits with M (or SYMBOL SHIFT + M) as the
+; point, at most 2 whole digits and 2 decimals, 40.00-80.00 (anything else is not taken or is asked again):
+; mon = Hz (2 decimals), mond = decimals typed (0-2, the precision the display gave); then optionally the
+; mode text it shows (digits / letters, up to 10, e.g. 720x576; C clears): monmode=. The monitor answer alone
+; counts as answered (OPERATOR, v = mon when the stopwatch was skipped); never in place of the watch / CTC keys.
 @t_v19: ld hl,q_cable : call ask : ret c
         ld hl,(askp) : push hl
         ld hl,EXB : ld (wp),hl                      ; the cable answer as cable= only
         ld hl,k_cable : call ex_k : pop hl : call wstr
+        xor a : ld (.mg),a
         call cls
+        ld hl,q_v19m : call ovcall                   ; its text is on the string page (gq.asm): page 41 is full
+        ld a,13 : ld (crow),a : xor a : ld (ccol),a
+        call v19_rate : jr c,.nm
+        ld (.mv),hl : ld a,1 : ld (.mg),a
+        ld hl,k_mon : call ex_k : ld hl,(.mv) : ld de,0 : call wfix
+        ld a,(v19_rate.dp) : or a : jr z,.md
+        dec a
+.md:    ld e,a : ld d,0 : ld hl,k_mond : call ex_kd
+        ld a,16 : ld (crow),a : xor a : ld (ccol),a : ld hl,m_mode : call puts
+        ld a,17 : ld (crow),a : xor a : ld (ccol),a
+        call v19_txt : jr c,.nm
+        ld hl,k_mmode : call ex_k : ld hl,v19_txt.b : call wstr
+.nm:    call cls
         ld hl,m_sw : ld a,1 : call plines
         ld a,20 : ld (crow),a : xor a : ld (ccol),a : ld hl,m_sw2 : call puts
         call keys_up
@@ -76,13 +97,102 @@ m_look: db "Look, then press any key.",0
         ld a,(.c0) : ld hl,k_cc0 : call ex_kh
         ld a,(.c1) : ld hl,k_cc1 : call ex_kh
         jp gscreen
-.pend:  ld a,ST_PENDOP : ld (R_st),a : call keys_up : jp gscreen
+.pend:  call keys_up
+        ld a,(.mg) : or a : jr z,.pd                 ; no monitor rate either: ask later
+        ld hl,(.mv) : ld de,0 : call res_num : ld hl,u_hz : call res_unit
+        ld a,ST_OPER : ld (R_st),a : jp gscreen
+.pd:    ld a,ST_PENDOP : ld (R_st),a : jp gscreen
+.mg:    db 0
+.mv:    dw 0
 .n:     dw 0
 .s:     dw 0
 .d:     db 0
 .ts:    dw 0
 .c0:    db 0
 .c1:    db 0
+k_mon:  db "mon",0
+k_mond: db "mond",0
+k_mmode: db "monmode",0
+m_mode: db "Mode shown (e.g. 720x576)?",0
+; at (crow) / (ccol): Hz typed -> HL = Hz x 100 (4000-8000), CF clear; S on an empty entry -> CF set.
+; Digits, the point (M, or SYMBOL SHIFT + M: getkey reads SYMBOL SHIFT as no key, so row $7F is read here),
+; at most 2 whole digits and 2 decimals; a second point or a third decimal is not taken; C clears; ENTER
+; outside 40.00-80.00 shows "40-80 only" and clears.
+v19_rate:
+        ld a,(ccol) : ld (.c0),a : ld a,(crow) : ld (.r0),a
+.st:    ld hl,0 : ld (.v),hl : xor a : ld (.n),a : ld (.dp),a
+.w:     call keys_up
+.k:     ld a,$7F : in a,($FE) : and 6 : jr z,.pt       ; SYMBOL SHIFT (bit 1) and M (bit 2) held
+        call getkey : or a : jr z,.k
+        cp 13 : jp z,.en
+        cp 'S' : jr z,.sk
+        cp 'C' : jr z,.cl
+        cp 'M' : jr z,.pt
+        cp '0' : jr c,.w
+        cp '9'+1 : jr nc,.w
+        ld c,a : ld a,(.dp) : cp 3 : jr z,.w          ; 2 decimals already
+        or a : jr nz,.dd
+        ld a,(.n) : cp 2 : jr nc,.w                   ; 2 whole digits already
+        jr .d1
+.dd:    inc a : ld (.dp),a
+.d1:    ld hl,.n : inc (hl)
+        ld a,c : call putc
+        ld a,c : sub '0' : ld e,a : ld d,0
+        ld hl,(.v) : call .x10 : add hl,de : ld (.v),hl
+        jr .w
+.pt:    ld a,(.n) : or a : jr z,.w                    ; no point before a digit
+        ld a,(.dp) : or a : jr nz,.w                  ; one point only
+        inc a : ld (.dp),a : ld a,'.' : call putc : jr .w
+.sk:    ld a,(.n) : or a : jr nz,.w                   ; S only on an empty entry
+        call keys_up : scf : ret
+.cl:    ld a,(.r0) : ld (crow),a : ld a,(.c0) : ld (ccol),a : ld b,12
+.c2:    ld a,' ' : call putc : djnz .c2
+        ld a,(.c0) : ld (ccol),a : jp .st
+.en:    ld a,(.n) : or a : jp z,.w
+        ld hl,(.v) : ld a,(.dp) : cp 3 : jr z,.rg      ; 2 decimals: x 1
+        cp 2 : jr z,.x1                               ; 1 decimal: x 10
+        call .x10                                     ; none: x 100
+.x1:    call .x10
+.rg:    push hl : ld de,4000 : or a : sbc hl,de : jr c,.bd
+        ld de,4001 : sbc hl,de : jr nc,.bd            ; HL was 4000 + (0-4000)
+        pop hl : call keys_up : or a : ret
+.bd:    pop hl
+.bad:   ld a,(.r0) : inc a : ld (crow),a : ld a,(.c0) : ld (ccol),a : ld hl,m_rng : call puts
+        jr .cl
+.x10:   push de : add hl,hl : push hl : add hl,hl : add hl,hl : pop de : add hl,de : pop de : ret
+.c0:    db 0
+.r0:    db 0
+.n:     db 0
+.dp:    db 0                                          ; 0 = no point, 1 + decimals typed after it
+.v:     dw 0
+m_rng:  db "40-80!",0
+; at (crow) / (ccol): up to 10 digits / letters (stored lower case) -> .b, CF clear; S or ENTER on an
+; empty entry -> CF set; C clears.
+v19_txt:
+        ld a,(ccol) : ld (.c0),a
+.st:    ld hl,.b : ld (hl),0 : xor a : ld (.n),a
+.w:     call keys_up
+.k:     call getkey : or a : jr z,.k
+        cp 13 : jr z,.en
+        cp 'C' : jr z,.cl
+        ld c,a : ld a,(.n) : or a : jr nz,.ch
+        ld a,c : cp 'S' : jr z,.sk
+.ch:    ld a,(.n) : cp 10 : jr nc,.w
+        ld a,c : cp '0' : jr c,.w
+        cp 'A' : jr c,.dg
+        or $20                                        ; letters lower case
+.dg:
+        ld c,a : ld hl,.b : ld a,(.n) : add hl,a : ld (hl),c : inc hl : ld (hl),0
+        ld hl,.n : inc (hl) : ld a,c : call putc : jr .w
+.en:    ld a,(.n) : or a : jr nz,.ok
+.sk:    call keys_up : scf : ret
+.ok:    call keys_up : or a : ret
+.cl:    ld a,(.c0) : ld (ccol),a : ld b,10
+.c2:    ld a,' ' : call putc : djnz .c2
+        ld a,(.c0) : ld (ccol),a : jr .st
+.c0:    db 0
+.n:     db 0
+.b:     ds 11
 k_ctcw: db "ctcw",0
 k_cc0:   db "c0",0
 k_cc1:   db "c1",0
@@ -115,60 +225,6 @@ m_sw:   db "STOPWATCH: a watch showing tenths",0
         db "ENTER, then the tenths, ENTER.",0,0
 m_sw2:  db "SPACE = start    S = ask later",0
 m_secs: db "Seconds on the watch: ",0
-
-; ---------------------------------------------------------------- V15 the ULA reads bank 5
-; A checkerboard and these words in bank 5 (slot 2 = page 10). Then page 36 is mapped into slot 2 and its
-; screen area filled white (paper 7, ink 7) while the operator looks; slot 2 back (restore_all also).
-; Y = the checkerboard stayed (the ULA reads bank 5: the claim), N = the screen went white.
-@t_v15: call cls
-        ld hl,$4800                                 ; checkerboard of 4 x 4 dots: rows 8-23
-.c:     ld a,h : and 4 : ld a,$F0 : jr z,.c1
-        ld a,$0F
-.c1:    ld (hl),a : inc hl : ld a,h : cp $58 : jr nz,.c
-        ld hl,m_v15 : ld a,1 : call plines
-        nextreg $52,36
-        ld hl,$4000 : ld de,$4001 : ld bc,6143 : ld (hl),0 : ldir
-        ld hl,$5800 : ld de,$5801 : ld bc,767 : ld (hl),$3F : ldir
-        call gv_key
-        nextreg $52,$0A
-        ld hl,q_v15 : jp ask
-m_v15:  db "V15: the program now fills the",0
-        db "screen white through ANOTHER",0
-        db "page mapped at $4000.",0
-        db "Look, then press any key.",0,0
-q_v15:  db 0
-        db "V15 ULA READS BANK 5",0
-        db " ",0
-        db "While you looked, did the",0
-        db "checkerboard and the words stay?",0
-        db "Y = they stayed",0
-        db "N = the screen went white",0,0
-        db "stays",0,"white",0
-
-; ---------------------------------------------------------------- V16 port $FF (Timex modes)
-; A ULA picture (stripes and words); any key: OUT ($FF),2 (Timex high colour) for 150 frames, then
-; OUT ($FF),0; $69 put back by the harness. 1 = the picture changed during the 3 s (the claim), 2 = it
-; stayed the same, 3 = other (blank, did not come back).
-@t_v16: call cls
-        ld hl,$4000 : ld de,$4001 : ld bc,$07FF : ld (hl),$F0 : ldir     ; stripes: the top third
-        ld hl,m_v16 : ld a,10 : call plines
-        call gv_key
-        ld a,2 : out ($FF),a
-        ld b,150
-.f:     push bc : call frame_sync : pop bc : djnz .f
-        xor a : out ($FF),a
-        ld hl,q_v16 : jp ask
-m_v16:  db "V16: press a key and watch: for",0
-        db "3 s the program writes port $FF",0
-        db "= 2, then $FF = 0 again.",0,0
-q_v16:  db 1
-        db "V16 PORT $FF (TIMEX)",0
-        db " ",0
-        db "During the 3 seconds:",0
-        db "1 = the picture changed",0
-        db "2 = it stayed the same",0
-        db "3 = something else (blank ...)",0,0
-        db "changed",0,"same",0,"other",0
 
 ; ---------------------------------------------------------------- V10 Layer 2 flip is not synced
 ; Layer 2 256 x 192 on top ($15 order LSU). Pages 44-47 red ($E0), 48-53 blue ($03). $12 = 22 shows pages

@@ -239,9 +239,14 @@ board runs in this file (im2hold, z80ntest, nextbench) came from the same N-Go.
    screen's last line says; S = ask later).
    Each picture is drawn under the question with a reference beside it (white / yellow lines, a square,
    a computed colour); V01, V03, V07, V09, V12 and V18 ask about two pictures, one after the other.
-   V19 first asks which cable carries the picture, then needs a watch showing seconds (SPACE starts,
-   SPACE after 60 s or more stops, type the seconds, ENTER; the machine times the same interval by its CTC,
-   and the intake sets the two against each other).
+   V19 first asks which cable carries the picture, then the refresh rate the display itself shows in its
+   info / OSD menu, if any (digits, M or SYMBOL SHIFT + M = the point, at most 2 decimals, 40-80 only; then
+   optionally the mode text it shows, e.g. 720x576; S skips each), then needs a watch showing seconds
+   (SPACE starts, SPACE after 60 s or more stops, type the seconds, ENTER; S skips it; the machine times
+   the same interval by its CTC). Either the monitor rate or the watch counts as an answer. The intake
+   puts three rates side by side - the program's (F01 lines x F02 line length, CTC-timed), the watch's
+   (+- its reading error) and the monitor's as typed (monitors round, and some show the nominal mode rate
+   rather than the measured one) - and flags only a disagreement beyond both tolerances.
 4. Optional, only if you agree to the risk shown before each test (Y runs it, N skips it):
    T (timing; the machine timing is put back after each test and at the next start after a hang),
    D (DivMMC; no SD write; when it ends check that the DONE screen's line count grew and the border is

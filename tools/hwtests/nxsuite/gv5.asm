@@ -57,3 +57,33 @@ q_v06:  db 1
         db "2 = red over every block",0
         db "3 = something else",0,0
         db "claim",0,"no-prio",0,"other",0
+
+; ---------------------------------------------------------------- V16 port $FF (Timex modes)
+; A ULA picture (stripes and words); any key: OUT ($FF),2 (Timex high colour) for 150 frames, then
+; OUT ($FF),0; $69 put back by the harness. 1 = the picture changed during the 3 s (the claim), 2 = it
+; stayed the same, 3 = other (blank, did not come back).
+@t_v16: call cls
+        ld hl,$4000 : ld de,$4001 : ld bc,$07FF : ld (hl),$F0 : ldir     ; stripes: the top third
+        ld hl,m_v16 : ld a,10 : call plines
+        call g5_key
+        ld a,2 : out ($FF),a
+        ld b,150
+.f:     push bc : call frame_sync : pop bc : djnz .f
+        xor a : out ($FF),a
+        ld hl,q_v16 : jp ask
+m_v16:  db "V16: press a key and watch: for",0
+        db "3 s the program writes port $FF",0
+        db "= 2, then $FF = 0 again.",0,0
+q_v16:  db 1
+        db "V16 PORT $FF (TIMEX)",0
+        db " ",0
+        db "During the 3 seconds:",0
+        db "1 = the picture changed",0
+        db "2 = it stayed the same",0
+        db "3 = something else (blank ...)",0,0
+        db "changed",0,"same",0,"other",0
+
+; any key (pressed and let go)
+g5_key:  call keys_up
+.w:     call getkey : or a : jr z,.w
+        jp keys_up
