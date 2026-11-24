@@ -6,8 +6,7 @@ Inputs: TOSEC `Jack the Nipper (1986)(Gremlin Graphics Software).z80` (md5 adcdb
 `[a]` (4c5398b8bcfd88ebd83656f01c3aca21); rzxarchive `j/jacknipper.rzx` (108,043 frames, 36 min; its own start
 snapshot md5 903c092495784d308cf03899b80d7110)    Branch: add-jack-the-nipper
 Checks: survey (GATE OK), inspect, figure sheet, pixel readers, depth    Pending user answers: none
-Start with: the patch plan (PLAYBOOK 2): hooks at the sprite routine 0x8009's two paths (0x80C9, 0x8273), the
-shadow screen 0x6000-0x6FFF and dirty cells 0x7D00-0x7EFF, a pattern cache (a 24 x 40 adult is six sprites)
+Start with: "Patch plan" below: its "To confirm" list, then the hooks at 0x80C9 / 0x8273 (scratch redirect + sprites)
 Read: PLAYBOOK 2-3, docs/ENGINE_CONTRACT.md, "Design decisions" below
 Open: a short recording (3-5 min) for the build runs (the 36-minute one stays for the full verification)
 
@@ -63,6 +62,26 @@ RAMTOP 0x7C60, border 0. No loader to run.
 
 ## Design decisions (the owner, 2026-11-23)
 All defaults taken: every figure a sprite (pickups included); scenery, HUD, score and text on the ULA; figures in front of all scenery, later objects over earlier; the game's own colours until the painted sheet; effects (pea, sparkle, smoke) as sprites; the masks' black outline kept; no pause or message window known (a hide gets its own fix if one turns up).
+
+## Patch plan (stage 2, 2026-11-23, in progress)
+- Technique: patch.scratch-redirect. The game's own figure draws keep running unchanged (same work, so the same pace
+  in a game with no frame sync), but into a scratch shadow mapped at slot 1 (0x2000-0x2FFF: the ROM's place; the game
+  uses the ROM for one RET at 0x0052). The real shadow then holds only the background, the dirty-cell copier and the
+  restore run as before, and the hook builds the figure's sprites from the same graphics and mask.
+- Redirect per call, at the two figure callers' returns from 0x87BB (0x80C9 and 0x8273: H - 0x40), not by patching the
+  helper's base (`ADD A,0x60` at 0x87EF): 14 other callers use 0x87BB for map lookups (0x9400 / 0x9BFC: `CP 0x72` on
+  H; 0xB273 turns H into a cell-map address at 0x7000+), and the restore keeps its own base (0x8747: `ADD A,0x60`).
+- To confirm before writing hooks: every shadow write of a figure draw goes through that HL (the shifted path 0x8147,
+  the 24-wide path 0x8228, the shifted routine near 0x85D0 with IY = 0x8000 and DE' = 0x7400, the AND-table writer
+  0x8637-0x8667); the dirty-cell marks (0x812C, 0x8209, 0x82F6, 0x845F) take the cell from H bits the 0x40 shift does
+  not touch, or map the mark back; slot 1 mapped from the 0x8009 entry to its returns, the ROM back at every exit.
+- Sprites: from DE' (graphics) and DE (mask) at the hook, rows by type; mask-clear pixels black (the outline kept), set
+  pixels in the cell's ink (the room's attribute) until a painting; a pattern cache (optimise.pattern-cache: a
+  24 x 40 adult is six sprites, 69 kinds); sprite order = object order (depth).
+- Hooks at 28 MHz with patch.restore-speed and patch.preserve-r; verify per hook against the RZX (registers, all memory
+  but the scratch page; picture = ULA + sprites against the original), pace by verify.update-locked-pace.
+- The plain build's tail at 0x6F00 is to be proven by rom_paths' tail proof (Green Beret, 2026-11-23: a RAM scan alone
+  missed a copier reading its tail before the game wrote it).
 
 ## Design question (asked 2026-11-23; PLAYBOOK 3c defaults + this game's exceptions)
 The recording draws 69 figure kinds (figures.png, from 0x8009's two paths over 108,043 frames): 36 small objects
