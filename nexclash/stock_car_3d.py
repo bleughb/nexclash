@@ -107,11 +107,18 @@ def patterns(peek):
 
 
 # ---------------------------------------------------------------------------------------------
-# Painted cars and the backdrop (assets/3d_stock_car_championship: original art, no game data)
+# Painted cars and the backdrop (specnext reference/3d_stock_car_championship/assets)
 # ---------------------------------------------------------------------------------------------
 
 def _asset(name):
-    return os.path.join(_HERE, '..', 'assets', '3d_stock_car_championship', name)
+    """The painted art lives in the maintainers' reference repo (reference/3d_stock_car_championship/assets), not here:
+    $NEXCLASH_REFERENCE, ./reference, ../specnext/reference."""
+    for d in (os.environ.get('NEXCLASH_REFERENCE'), os.path.join(_HERE, '..', 'reference'),
+              os.path.join(_HERE, '..', '..', 'specnext', 'reference')):
+        p = os.path.join(d, '3d_stock_car_championship', 'assets', name) if d else None
+        if p and os.path.exists(p):
+            return p
+    raise FileNotFoundError('3D Stock Car art %s: set NEXCLASH_REFERENCE to specnext/reference' % name)
 
 
 def nine_bit(rgb):
