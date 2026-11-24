@@ -9,7 +9,8 @@ Input script format (for `record --script FILE` / `--start`), one step per line:
 `--start "SPACE"` or `--start "4 5, wait 20, 0 5"` uses the same steps, comma-separated.
 """
 import random
-from .machine import Machine, parse_inputs, KEYPOS, KEMPSTON
+from skoolkit.snapshot import Snapshot
+from .machine import Machine, parse_inputs, refuse_128k, KEYPOS, KEMPSTON
 
 START_CANDIDATES = ['SPACE', 'ENTER', '0', '1', '2', '3', '4', '5', 'S', 'P', 'K:FIRE', 'N', 'Y', 'J', 'K']
 PLAY_ATTRS = slice(0x5860, 0x5AA0)          # attribute rows 3-20: identifies the room
@@ -30,9 +31,14 @@ def parse_script(text):
 
 
 class Recorder:
-    def __init__(self, z80, seed=1, inputs='auto', log=print, room_threshold=0.25):
+    def __init__(self, z80, seed=1, inputs='auto', log=print, room_threshold=0.25, machine=Machine):
+        """machine: the machine class. The shared Machine is 48K only, so a 128K snapshot is refused unless the
+        engine passes its own class with 7FFD paging (lesson recorder-128k-not-in-toolkit)."""
         self.room_threshold = room_threshold
-        self.m = Machine(z80)
+        if machine is Machine:
+            z80 = Snapshot.get(z80) if isinstance(z80, str) else z80
+            refuse_128k(z80, 'the recorder')
+        self.m = machine(z80)
         self.rng = random.Random(seed)
         self.inputs = inputs
         self.log = log
