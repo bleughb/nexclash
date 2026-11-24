@@ -6,7 +6,8 @@ Inputs: TOSEC `Jack the Nipper (1986)(Gremlin Graphics Software).z80` (md5 adcdb
 `[a]` (4c5398b8bcfd88ebd83656f01c3aca21); rzxarchive `j/jacknipper.rzx` (108,043 frames, 36 min; its own start
 snapshot md5 903c092495784d308cf03899b80d7110)    Branch: add-jack-the-nipper
 Checks: survey (GATE OK), inspect, figure sheet, pixel readers, depth    Pending user answers: none
-Start with: "Patch plan" below: its "To confirm" list, then the hooks at 0x80C9 / 0x8273 (scratch redirect + sprites)
+Start with: "Patch plan" below (template smashtv.py): stage A = sites + slot-1 page + the H redirect only (boot check,
+the shadow keeps the background), then sprites, verify, units + negatives, cheats, record
 Read: PLAYBOOK 2-3, docs/ENGINE_CONTRACT.md, "Design decisions" below
 Open: a short recording (3-5 min) for the build runs (the 36-minute one stays for the full verification)
 
@@ -79,6 +80,7 @@ All defaults taken: every figure a sprite (pickups included); scenery, HUD, scor
 - Sprites: from DE' (graphics) and DE (mask) at the hook, rows by type; mask-clear pixels black (the outline kept), set
   pixels in the cell's ink (the room's attribute) until a painting; a pattern cache (optimise.pattern-cache: a
   24 x 40 adult is six sprites, 69 kinds); sprite order = object order (depth).
+- Template: nexclash/smashtv.py (the game's own plotters into a scratch buffer, no frame sync; docs/ENGINE_TEMPLATES.md), with the shared hook library: hlib_pcache (pattern cache), hlib_commit (atomic attribute commit), hlib_speed, hlib_r. Sites: 0x80C9 and 0x8273 (both `PUSH HL; PUSH AF; AND A` = E5 F5 A7, right after `CALL 0x87BB`): JP to the hook, which takes the figure (DE' graphics, DE mask, rows by type, x / y from IX), moves H by -0x40, replays the three bytes and returns to +3; 0xAA4A (`CALL 0x86F9`, the copier, after Jack's own draw at 0xAA44 and the footsteps): CALL the commit first. Slot 1 = one RAM page: scratch shadow 0x2000-0x2FFF, hook code and state above it, the register block.
 - Hooks at 28 MHz with patch.restore-speed and patch.preserve-r; verify per hook against the RZX (registers, all memory
   but the scratch page; picture = ULA + sprites against the original), pace by verify.update-locked-pace.
 - Cheats (the owner, 2026-11-23: every patch carries them, off by default): the archive's POKE (Super Collection "¤ Pokes/Jack the Nipper.pok"): Immunity = 44278 and 44285 set to 58 (0xACF6 `JP NZ,0xAAB9` and 0xACFD `CALL NZ,0xA9F2` become `LD A,(nn)`; original bytes match the `[a]` snapshot). Check each in a replay, and look for more (lives, the Naughtyometer) as for Winter Sports.
