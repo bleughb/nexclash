@@ -1,0 +1,264 @@
+{
+ "name": "elite_std",
+ "order": 277,
+ "game": "Elite (standard Firebird release)",
+ "doc": "elite_std.md",
+ "engine": "elite_std",
+ "representative": true,
+ "reference": "elite_std",
+ "inputs": {
+  "snapshot": {
+   "name": "elite_std.z80",
+   "md5": "8d08854de249de00f32819cf7afd07c4",
+   "path": "elite_std/elite_std.z80",
+   "note": "Start state of the \"[a]\" tape (`python -m nexclash.elite_std start elite_std_a.tap OUT.z80`: loads, types the Lenslok code from 0xC799, stops at the entry 0xD07F). 48K."
+  },
+  "recordings": [
+   {
+    "name": "elite_std_a.tap",
+    "md5": "dc48f02c5f7424da52a9819c4b76c15b",
+    "path": "elite_std/elite_std_a.tap",
+    "role": "The \"[a]\" tape (49,068-byte block, Lenslok): the main snapshot is its start state (`python -m nexclash.elite_std start`, reproduces the .z80 byte for byte)."
+   },
+   {
+    "name": "elite_std_jcv.tap",
+    "md5": "7357800e60f9e230a9a700985a015725",
+    "path": "elite_std/elite_std_jcv.tap",
+    "role": "ELITEJCV / \"[Joystick]\" tape (42,242-byte block): rework jcv's start state (reproduces byte for byte)."
+   },
+   {
+    "name": "elite_std_e128.tap",
+    "md5": "213ca5957154bf1d3aa5b72448628ef2",
+    "path": "elite_std/elite_std_e128.tap",
+    "role": "ELITE128, the original Firebird tape (scrambled block, layout B): rework e128's start state (reproduces byte for byte)."
+   }
+  ]
+ },
+ "modules": [
+  "elite_std"
+ ],
+ "own_modules": [
+  "elite_std"
+ ],
+ "data": [
+  "asm/elite_std_hooks.asm",
+  "docs/profiles/elite_std.json"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "auto_record": false,
+  "minutes": 6,
+  "note": "No RZX of the standard game exists: lockstep from scripted states (nexclash/elite_std_verify.py): the build on a Next model against the original per instruction (PC, registers but I, RAM, port writes, bus-byte variations), title / docked / launch / flight / combat cases injected through the game's own dispatcher, 8 gap cases (equipment pokes: docking computer, escape pod, energy bomb, galactic hyperdrive, in-system jump, game over, an explosion, a missile hit; each must execute its proof routine), the title renders put back exactly (title_render_check); IM 2 unit cases with negative controls; boot check. Reworks jcv and e128 the same on their own start states."
+ },
+ "outputs": {
+  "plain": {
+   "file": "elite_std.nex",
+   "md5": "4e176c9cf03bb207782221ac05396899"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Elite (standard Firebird release)",
+  "engine_col": "elite_std (elite_std.md)",
+  "build": "elite_std.nex: the original \"[a]\" game from its real start (title, Load New Commander), 3.5 MHz, mono, the IM 2 fix only, plus the title ship redrawn every frame (50 fps) at the original's angular speed; reworks jcv (Joystick tape) and e128 (the original Firebird tape, layout B)",
+  "software": "auto: lockstep verify, every case of a / jcv / e128 (25 / 24 / 25, 8 gap cases each reaching its routine) exact against the original, title renders put back exactly, negative controls caught; boot check; CSpect: title, launch, flight all three",
+  "hardware": "untested",
+  "next": "Hardware: title ship DMA / 28 MHz copy timing, loading screen, NXC on the card, the IM 2 fix"
+ },
+ "checks": [
+  "asm2profile:elite_std"
+ ],
+ "techniques": [
+  {
+   "application": "elite_std.title-inbetween",
+   "id": "patch.inbetween-views",
+   "revision": 1,
+   "target": "title screens only: per pass the game's own frame, then renders of the slot extrapolated from the last pass's change with the game's draw (A6DF / E008) and copy, the slot, work bytes and buffer put back",
+   "phases": []
+  },
+  {
+   "application": "elite_std.altrom",
+   "id": "patch.whole-altrom-image",
+   "revision": 2,
+   "target": "alt ROM image 1 = Sinclair's 48K ROM + the uniform IM 2 table and the hook entries in its free 0xFF area",
+   "phases": []
+  }
+ ],
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/elite_std.md#survey-m1-2026-11-23"
+   ],
+   "coverage": "Title loops of the three start states (simulator, 3.5 MHz) and a CSpect pass log; flight passes from scripted runs.",
+   "result": "Title: 8.68 (jcv) / 10.90 (a) / 10.86 (e128) frames per pass; K = 8.27-8.29 lines at 3.5 MHz per 28 MHz line; flight at the original speed (no change)."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/elite_std.md#verify-m3-2026-11-23"
+   ],
+   "coverage": "Access and writer survey of layout A in flight / docked / title; layout B writers over the 17 base cases (gaps/B/writers.json); the title draw's read and write sets (drawwrites.py, widened).",
+   "result": "The game runs unchanged; only the IM 2 vector (layout A) and the title loops' CALL sites are hooked; the draw reads only the slot and blueprint."
+  },
+  "decision": "Owner 2026-11-23: the standard release is the baseline (original look), Lenslok skipped, three versions, the title ship smooth; the hack is an NXC option.",
+  "next_experiment": "Hardware: title renders at 50 fps with no tearing and the pass length within one frame of the original's over 100 passes."
+ },
+ "results": [
+  {
+   "application": "elite_std.title-inbetween",
+   "check": "lockstep verify from scripted states + title_render_check",
+   "scope": "a 25 cases, jcv 24, e128 25 (2026-11-24, 8 gap cases each: docking computer to escape pod, game over, explosion, missile hit): every case exact, title renders (a 125, jcv 70, e128 120) put back exactly, negative controls caught.",
+   "evidence": "games/elite_std.md \"Smooth title ship\"",
+   "status": "pass",
+   "build": "fdf90272"
+  }
+ ],
+ "rework": [
+  {
+   "name": "jcv",
+   "version": "1.0",
+   "snapshot": "elite_std_jcv.z80",
+   "args": [],
+   "note": "Version jcv: the Joystick / cursor tape (frozen game, title \"Press Space, Commander\", commander MILICEVIC); the same engine picks the version by signature.",
+   "inputs": [
+    {
+     "name": "elite_std_jcv.z80",
+     "md5": "6234b05d08dac50fccf60c9e6b668c4e",
+     "path": "elite_std/elite_std_jcv.z80"
+    },
+    {
+     "name": "elite_std_jcv.tap",
+     "md5": "7357800e60f9e230a9a700985a015725",
+     "path": "elite_std/elite_std_jcv.tap"
+    }
+   ],
+   "rebuild": {
+    "args": [
+     "--no-record"
+    ],
+    "decisions": null
+   },
+   "verify": {
+    "args": [
+     "--no-record"
+    ],
+    "rzx": []
+   },
+   "outputs": {
+    "plain": {
+     "file": "elite_std_jcv.nex",
+     "md5": "3426af1e9ab02f77e0020f221318798e"
+    }
+   }
+  },
+  {
+   "name": "e128",
+   "version": "1.0",
+   "snapshot": "elite_std_e128.z80",
+   "args": [],
+   "note": "Version e128: the original Firebird tape (layout B, entry 0x716B; its own IM 2 table is uniform: no fix); the same engine picks the version by signature.",
+   "inputs": [
+    {
+     "name": "elite_std_e128.z80",
+     "md5": "250b06c542aad15403ac98e83b2ba45f",
+     "path": "elite_std/elite_std_e128.z80"
+    },
+    {
+     "name": "elite_std_e128.tap",
+     "md5": "213ca5957154bf1d3aa5b72448628ef2",
+     "path": "elite_std/elite_std_e128.tap"
+    }
+   ],
+   "rebuild": {
+    "args": [
+     "--no-record"
+    ],
+    "decisions": null
+   },
+   "verify": {
+    "args": [
+     "--no-record"
+    ],
+    "rzx": []
+   },
+   "outputs": {
+    "plain": {
+     "file": "elite_std_e128.nex",
+     "md5": "b214d6fa502e5fff9a84e1711dcd6e7a"
+    }
+   }
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/elite_std_hooks.asm": "6b31fbca68cecb2b",
+   "docs/profiles/elite_std.json": "498dd57a9bb8b652",
+   "nexclash.py": "d9b430cef7478a38",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/elite_std.py": "fddcf70d120d1d41",
+   "nexclash/elite_std_verify.py": "18871da170247f62",
+   "nexclash/engines.py": "0e60737f194a4e1e",
+   "nexclash/hooklib.py": "258714a3676ee71b",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "a48f70d32f869201",
+   "nexclash/recolour.py": "28ecc65866678e42",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "fa81c3e9e44ed93d",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-24"
+ },
+ "verified": {
+  "deps": {
+   "asm/elite_std_hooks.asm": "6b31fbca68cecb2b",
+   "docs/profiles/elite_std.json": "498dd57a9bb8b652",
+   "nexclash.py": "d9b430cef7478a38",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/elite_std.py": "fddcf70d120d1d41",
+   "nexclash/elite_std_verify.py": "18871da170247f62",
+   "nexclash/engines.py": "0e60737f194a4e1e",
+   "nexclash/hooklib.py": "258714a3676ee71b",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "a48f70d32f869201",
+   "nexclash/recolour.py": "28ecc65866678e42",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "fa81c3e9e44ed93d",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-24"
+ }
+}

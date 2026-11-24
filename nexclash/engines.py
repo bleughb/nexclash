@@ -128,6 +128,8 @@ ENGINES = [
     ('arkanoid', 'is_arkanoid', None),                                    # Arkanoid (48K)
     ('cybernoid', 'is_cybernoid', None),                                  # Cybernoid (48K)
     ('pentagram', 'is_pentagram', None),                                 # Pentagram (48K), original presentation + optional Enhanced
+    ('elite_std', 'is_elite_std', None),                                  # Elite (48K, standard Firebird release): the original from its real start (M2)
+    ('elite', 'is_elite', None),                                          # Elite (128K, the Russian hack): viewport on Layer 2 in colour, 50 fps
 ]
 
 

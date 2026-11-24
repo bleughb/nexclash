@@ -1,0 +1,161 @@
+{
+ "name": "elite",
+ "order": 276,
+ "game": "Elite",
+ "doc": "elite.md",
+ "engine": "elite",
+ "representative": true,
+ "reference": "elite",
+ "inputs": {
+  "snapshot": {
+   "name": "elite.z80",
+   "md5": "800d9e11bfd7d01d1478abfe3a7b2406",
+   "path": "elite/elite.z80",
+   "note": "The snapshot embedded in DockingElite.rzx (`nexclash.py rzx extract`): the Russian 128K hack, docked, 128K (ROM 1 locked)."
+  },
+  "recordings": [
+   {
+    "name": "DockingElite.rzx",
+    "md5": "1d0381333261f05b4a07bbb5c0a2562a",
+    "path": "elite/DockingElite.rzx",
+    "role": "Docking and launch; the station, tunnel, first flight (about 3.6k frames)."
+   },
+   {
+    "name": "WitchElite.rzx",
+    "md5": "bc7b406d0a9b5da12a33097ca573f6ee",
+    "path": "elite/WitchElite.rzx",
+    "role": "Witch space: sun, planet and station fills."
+   },
+   {
+    "name": "HavocElite.rzx",
+    "md5": "95803475a6489c346c71104c8b1c125c",
+    "path": "elite/HavocElite.rzx",
+    "role": "Combat: lasers, explosions, many ships."
+   },
+   {
+    "name": "PoliceAnarchyElite.rzx",
+    "md5": "a0f0596e0f2ff29c2347369e0f85eb82",
+    "path": "elite/PoliceAnarchyElite.rzx",
+    "role": "Police ships, missiles, the most ship models."
+   },
+   {
+    "name": "ReidquatElite.rzx",
+    "md5": "2be185834d6fa8988b9645e0dcd94ffe",
+    "path": "elite/ReidquatElite.rzx",
+    "role": "A longer flight: hyperspace streaks, planet and sun."
+   }
+  ]
+ },
+ "modules": [
+  "elite"
+ ],
+ "own_modules": [
+  "elite",
+  "elite_colours",
+  "elite_verify"
+ ],
+ "data": [
+  "asm/elite_hooks.asm",
+  "asm/elite_render.inc",
+  "docs/profiles/elite.json",
+  "docs/profiles/elite_shapes.json.gz"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_iff.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "DockingElite.rzx",
+   "WitchElite.rzx",
+   "HavocElite.rzx",
+   "PoliceAnarchyElite.rzx",
+   "ReidquatElite.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 25,
+  "note": "Per main-loop pass of each recording (up to 20000 frames; Docking whole): the patched build on a Next model against the original, registers (no I, no R), banks 0-7 outside the documented exclusions and the game's port writes; the first render of each pass at full weight against that pass's mono buffer (XOR overlaps classified exactly). Unit tests: recolour exact, negative h_clear, R sequence, ISR pattern and render controls caught; boot check of both builds."
+ },
+ "outputs": {
+  "plain": {
+   "file": "elite.nex",
+   "md5": "e611573d6c45159be56936fc09dfd84d"
+  },
+  "sprites": {
+   "file": "elite_sprites.nex",
+   "md5": "93c35409631f7682e8e505dcd0284139"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Elite",
+  "engine_col": "elite (elite.md)",
+  "build": "elite_sprites.nex: the viewport on Layer 2 in colour (ship models, planet, sun, stars, lasers each their own colour), the game's logic pass at 28 MHz on a 10-frame tick with a 50 fps render between passes (interpolated ships, planet, stars, own turning), the condition light as a hardware sprite; elite.nex the plain build (IM 2 fix only)",
+  "software": "auto, 5 recordings: every pass exact against the original (Docking whole, the others to frame 20000: 1434 + 213 + 8988 + 11613 + 17505 passes), full-weight renders equal the pass's buffer except classified XOR overlaps; negative controls caught; boot check both builds",
+  "hardware": "untested",
+  "next": "CSpect and hardware check of the colours, interpolation and the 50 fps cadence; tune the tick (T = 10) and the ISR pattern on hardware"
+ },
+ "checks": [
+  "asm2profile:elite"
+ ],
+ "techniques": [
+  {
+   "application": "elite.layer2-render",
+   "id": "patch.hybrid-display-replacement",
+   "revision": 2,
+   "target": "the game's buffer writers (RST / JP into the alt ROM) mirror every changed bit to a Layer 2 back buffer in the figure's colour; the 0x7FBE copy and the ULA viewport are replaced",
+   "phases": []
+  },
+  {
+   "application": "elite.inbetween-renders",
+   "id": "patch.inbetween-views",
+   "revision": 1,
+   "target": "one render per frame between passes: the ship draw (0xA6DF) on interpolated copies, game RAM saved and restored around it",
+   "phases": []
+  },
+  {
+   "application": "elite.iff-safe",
+   "id": "patch.iff-safe-read",
+   "revision": 1,
+   "target": "HLIB_IFF_DI in h_plot, poll and stsave; h_isr keeps slot 0's page and the interrupted IFF",
+   "phases": []
+  }
+ ],
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/elite.md#pacing-stage-2-gate-2026-11-22"
+   ],
+   "coverage": "Five recordings whole (7.5k-68.6k frames): frames and interrupts per pass; no JNext or hardware timing.",
+   "result": "About 10 frames per pass (5 updates a second), 0.58-0.67 interrupts per frame; the engine ticks every 10 frames and runs the game ISR body on 16 of 25 frames."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/elite.md#findings-stage-0-docking-first-look-then-all-five-surveyed-in-full"
+   ],
+   "coverage": "Every buffer writer of the five recordings; ship draw inputs and outputs (draw_deps.py); Reidquat / Witch / Havoc / Police fills found by verifier misses.",
+   "result": "The logic pass draws into the mono buffer as the original; the renderer reruns the game's ship draw on interpolated copies and restores what it wrote."
+  },
+  "decision": "Owner's brief 2026-11-22: coloured ships, details 1-5, pacing (i) interpolate; the game's logic and speed unchanged.",
+  "next_experiment": "Hardware: 50 fps render cadence and colours; pass-to-pass time within 5% of the 10-frame tick over 300 passes."
+ },
+ "results": [
+  {
+   "application": "elite.layer2-render",
+   "check": "differential verify per main-loop pass",
+   "scope": "Docking whole, Witch / Havoc / PoliceAnarchy / Reidquat to frame 20000 (2026-11-23): all passes exact, renders exact bar classified XOR overlaps, negative controls caught.",
+   "evidence": "games/elite.md \"M5\"",
+   "status": "pass",
+   "build": "93c35409"
+  }
+ ]
+}

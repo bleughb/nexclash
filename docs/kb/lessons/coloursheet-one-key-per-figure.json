@@ -1,0 +1,19 @@
+{
+ "id": "lesson.coloursheet-one-key-per-figure",
+ "kind": "method",
+ "claim": "When a figure may only have one colour (a wireframe ship model, a category), give all its pixels one colour-map key at bit 0 on a whole-figure sheet: one painted pixel then colours the whole figure.",
+ "limit": "Needs the sheet with whole figures (unique=False): a unique painting sheet would show each key once, so one pixel per figure. Two colours painted on one figure: the first is kept and the read reports it.",
+ "evidence": [
+  {
+   "game": "games/elite.md",
+   "text": "Elite colours each ship model (blueprint in IY) and six draw categories; nexclash/elite_colours.py gives each figure one key, bit 0. A test sheet with one station pixel painted red recoloured the station byte only (0x3BC6 DB -> E0), and the redrawn sheet read back equal.",
+   "quote": "one colour per ship model: each figure is one colour-map key at bit 0",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "toolkit",
+ "words": ["colour sheet", "recolour", "key", "figure", "wireframe", "one colour", "paint"],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

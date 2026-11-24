@@ -533,6 +533,20 @@ def smoke_pacing_census(ez, er, ok):
        and r['outs'].get('0x9CA6', {}).get('count') == 751, r)
 
 
+def smoke_cell_writers(ez, er, ok):
+    import cell_writers                         # probe (tools/probes/README.md): who writes each screen cell
+    attr, pix, frames = cell_writers.census(er, stop=300)
+    multi = sum(1 for c in attr if len({v for v, pc in attr[c]}) > 1)
+    top = max(((pc, n) for p in pix.values() for pc, n in p.items()), key=lambda x: x[1])
+    tot = {}
+    for p in pix.values():
+        for pc, n in p.items():
+            tot[pc] = tot.get(pc, 0) + n
+    ok('probe cell_writers (300 frames): 768 cells, 20 with 2+ attribute values, pixel writer 43909 x141017, '
+       'no clash cells', (len(attr), multi, tot.get(43909), len(cell_writers.clash_cells(attr, pix))) == (768, 20, 141017, 0),
+       (len(attr), multi, tot.get(43909), top))
+
+
 def smoke_sprite_leftovers(ez, er, ok):
     import sprite_leftovers                     # probe: sprites a build leaves visible (no game data: synthetic logs)
     four = [w for i in range(4) for w in (('nr', 0x34, i), ('nr', 0x38, 0))]
@@ -549,7 +563,8 @@ def smoke_sprite_leftovers(ez, er, ok):
 
 PROBE_SMOKE = {'rzx_census.py': smoke_rzx_census, 'attr_census.py': smoke_attr_census,
                'routine_skip.py': smoke_routine_skip, 'pacing_census.py': smoke_pacing_census,
-               'sprite_leftovers.py': smoke_sprite_leftovers}
+               'sprite_leftovers.py': smoke_sprite_leftovers,
+               'cell_writers.py': smoke_cell_writers}
 
 
 def verification_selfcheck():
