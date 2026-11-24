@@ -7,6 +7,12 @@
    "game": "sessions",
    "text": "Editing nexclash.py would mark all 80 games for re-verification; selftest over all games re-verifies about 60 in an emulator and takes hours.",
    "shown_on": "unknown"
+  },
+  {
+   "game": "docs/LEARNINGS.md",
+   "text": "Part only: verification is keyed to hashes of everything the build reads, so shared files mean rebuilding all dependents; the doc does not give the 80 games or the hours-long full selftest.",
+   "quote": "A verification is evidence about exact inputs, not about a game",
+   "shown_on": "analysis"
   }
  ],
  "level": "observed",

@@ -1,0 +1,29 @@
+{
+ "id": "lesson.dma-copy-then-original-last-row",
+ "kind": "method",
+ "claim": "To replace an unrolled POP/PUSH screen copy by zxnDMA exactly, DMA the rows, then jump into the original's last row with only its pointer registers set: it re-copies 32 bytes and leaves every register and self-modified byte as before.",
+ "limit": "Gain only at 28 MHz and for long copies (per-row programs of 8 bytes by OTIR); 4,096 bytes saved ~17 model lines a view. A perturbation probe must show which registers matter at the entry point.",
+ "evidence": [
+  {
+   "game": "games/hard_drivin.md",
+   "text": "view copy DC37 (4,096 bytes, SP copy) by a 1,031-byte DMA program, then JP DE07 with HL 8FE0 / H'L' 4FEF, DE49 = 1, DE4F = SP, DC41 at SP - 2: copy_case equal to the original on registers and 128K",
+   "quote": "then the original's last row from DE07",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "next_check": "A test can perturb each register at the chosen entry and compare the end state (only pointers may matter).",
+ "words": [
+  "dma",
+  "copy",
+  "unrolled",
+  "registers",
+  "exact",
+  "last",
+  "row",
+  "screen"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

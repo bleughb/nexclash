@@ -1,0 +1,28 @@
+{
+ "id": "lesson.mul-replaces-shift-add-exactly",
+ "kind": "method",
+ "claim": "Replace a shift-add multiply by Z80N MUL D,E, then run the original's own final shift instructions on the product so A, flags and A' match; test exhaustively over the reachable inputs.",
+ "limit": "Short loops gain little (C541: 235 -> ~205 T); a stub shift (91BA, 54 T) is slower through a trampoline.",
+ "evidence": [
+  {
+   "game": "games/hard_drivin.md",
+   "text": "C541 (object multiply) and D030 (clip 8 x 8 path) by MUL: exhaustive 4,227,201 + 65,536 cases, every register but R equal; 8 x 8 path 216 -> ~46 T; mean busy lines a sub-step 620 -> 591 with the DMA copy",
+   "quote": "exhaustive over the reachable inputs",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "next_check": "A probe could compare any hook against the original routine over an input generator (mul_case is per engine).",
+ "words": [
+  "mul",
+  "z80n",
+  "multiply",
+  "shift-add",
+  "exhaustive",
+  "flags",
+  "speedup"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

@@ -8,6 +8,11 @@
    "text": "Hook code under the stub's register block is lost at boot; models without the stub cannot see it: compare hook bytes after a simulated boot (a register-block crash was fixed).",
    "quote": "at boot; models without the stub cannot see it: compare hook bytes after a simulated boot.",
    "shown_on": "unknown"
+  },
+  {
+   "game": "sessions",
+   "text": "Inferno: the first build crashed (green bars) because hook code at 0x3945-0x3960 sat under the stub's 20-byte register block written at the end of the ROM image; moving the hooks to 0x3960 fixed it.",
+   "shown_on": "unknown"
   }
  ],
  "level": "observed",

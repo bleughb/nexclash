@@ -864,6 +864,7 @@ CALL_SITES = (0x9E2F, 0xFC4C)                   # the loops' CALL 0x9E34 (CALL t
 STEP_GATES = {                                  # one-byte data toggles the driver writes per sub-step: open, closed, when
     0x9E38: (0x28, 0x18, 'first'),              # crash timer 958B (+ F5D5 replay start)
     0xF4AD: (0xC0, 0xC9, 'first'),              # odometer F4A9 (the whole update's speed)
+    0xA658: (0xC8, 0xC9, 'first'),              # manual gears 96AB (W / S held: one shift an update, as the original)
     0xFAD6: (0x20, 0x18, 'last'),               # traffic / ghost / scripted-path move
     0xA3B4: (0x20, 0x18, 'last'),               # clock flash XOR 5A3A
     0xA3C4: (0x3C, 0x00, 'last'),               # clock sub-count 950B (INC A -> NOP)
@@ -880,7 +881,20 @@ W16 = {'PX', 'PY', 'PZ', 'HD', 'SP', 'VX', 'VY', 'VZ'}
 C_RELAX = {1: None, 2: 75, 4: 41}               # (1 - C / 256) ^ N ~ 1 / 2: the original's halving per update
 C4ST, C4UP, C2ST, C2UP = 660, 600, 1350, 1200   # the adaptive N's thresholds (busy lines a sub-step; the .asm's)
 NL = 311
-STEPS_F28 = 1.2                                 # the model's 28 MHz instruction = 1.2 x its T (route 1's JNext ratio)
+STEPS_F28 = 1.0                                 # the model's 28 MHz instruction = f28 x its T. 1.0: core 3.03
+#   (the target; no read wait: docs/TECHNIQUES.md 1.0, KS1 3.03.00 nxsuite C01, LDIR 2048 B 8.00x). 1.2 was route 1's
+#   JNext figure (JNext 1.3.0 models core 3.02's wait state); pass f28=1.2 for a JNext / 3.02 estimate
+BLEND = True                                    # the steps build's heading blend (bl_on; StepsPatch(blend=))
+VIEW_ONLY = ([(0x4000, 0x5000), (0x8000, 0x9000), (0x90DC, 0x90E0), (0x90EA, 0x9160), (0x91AA, 0x91AE),
+              (0x91BA, 0x91BF), (0x968F, 0x9690), (0x9C00, 0x9E12), (0xA949, 0xA96B), (0xA974, 0xA988), (0xA98E, 0xA98F),
+              (0xD6B7, 0xD6B9), (0xE515, 0xE517), (0xE5EB, 0xE5ED), (0xFFDA, 0xFFFC)]
+             + [(a, a + 1) for a in (0xC60D, 0xC616, 0xC61A, 0xC622, 0xC626, 0xC62C, 0xC62E, 0xC632, 0xC636, 0xC675,
+                                     0xC6C4, 0xC6CC, 0xDADD, 0xDB0D, 0xDB10, 0xDB40, 0xDB4A, 0xDB71, 0xDB74, 0xDBA4,
+                                     0xDBAE)])
+# ^ what the blend may change: the view (screen rows 0-127, back buffer) and the render's write set (route 1's
+#   dependency probe) minus the bytes logic reads later (A96D-A973, 918E, 91CC-D, 951E, F02C-F03B); A98E = the
+#   last render's A949 (9EE6), read only by the render (9FB9 / A313: bit 0, this render's own flag)
+COPY_REGS = {'A', 'F', 'B', 'C', 'D', 'E', 'IXh', 'IXl', 'IYh', 'IYl', "A'", "F'", "B'", "C'", "D'", "E'"}  # (DC45)
 BOUNCE_NOP = (0xA4A0, 0xA4B2)                   # NOPed: the collision push-out A4B2..A4DB at the first object
 PRESETS = [(300, 4), (660, 4), (661, 4), (1350, 4), (1351, 4), (600, 2), (601, 2), (1350, 2), (1351, 2), (600, 1),
            (1200, 1), (1201, 1), (500, 2), (900, 1), (2000, 2), (1000, 2)]   # (c_sub, n_cur): every branch of the rule
@@ -903,7 +917,8 @@ def steps_syms():
     return {k: int(v, 16) for k, v in load_steps_profile()['hooks']['syms'].items()}
 
 
-_TLEN = {0xC3: 3, 0xC9: 1, 0x3A: 3, 0x2A: 3, 0xE5: 1, 0x3E: 2, 0xED: 4}     # the trampolines' instructions
+_TLEN = {0xC3: 3, 0xC9: 1, 0x3A: 3, 0x2A: 3, 0xE5: 1, 0x3E: 2, 0xED: 4, 0x0E: 2, 0x61: 1, 0xCB: 2,
+         0xDA: 3}                                    # the trampolines' instructions
 
 
 def _check_slots(S, page, rom):
@@ -927,13 +942,16 @@ class StepsPatch(HDPatch):
     `page_edits` {page offset: bytes}: a broken build (STEPS_NEG)."""
     name = "Hard Drivin' steps: N sub-steps an update at 28 MHz, real-time pace"
 
-    def __init__(self, page_edits=None, label='steps', trainers=()):
+    def __init__(self, page_edits=None, label='steps', trainers=(), blend=BLEND):
         prof = load_steps_profile()
         h = prof['hooks']
         self.S = S = steps_syms()
         self.label = label
         self.trainers = tuple(trainers)
+        self.blend = blend
         self.page_edits = dict(page_edits or {})
+        if not blend:                           # the heading blend off (bl_on = 0): the original's view at every N
+            self.page_edits[S['bl_on'] - 0x2000] = bytes(1)
         self.rom_code = bytes.fromhex(h['rom'])
         page = bytearray.fromhex(h['page'])
         for off, data in self.page_edits.items():
@@ -1082,7 +1100,8 @@ class Spec:
     bounce A4DB JP A834 (push-out): one WHOLE step at s > 0 (fractions kept).
     guards (all N): CEB9 (910A) >= 12h -> RET (a clip vertex past 9E11); C7C0 a vertex y (9E01 + 2i) >= 80h -> RET
           (span fill past row 127); A0E7 / D758 B := B & 7Fh clamped to 1..6, A := 7, on at A0EB / D75C.
-    plain the time-out update (950B = 4, 91DC = 950C = 950D = 0 at the driver entry): N = 1, no hook state change."""
+    plain the time-out update (950B = 4, 91DC = 950C = 950D = 0 at the driver entry): N = 1, no hook state change.
+    blend (display only; all N in the driver, not plain): h_blend / h_brest."""
 
     def __init__(self):
         self.N, self.s, self.I, self.C = 1, 0, 0, None
@@ -1093,13 +1112,54 @@ class Spec:
         self.VRF = False
         self.plain = False
         self.stats = collections.Counter()
+        self.blend = BLEND                      # heading blend of the render's camera matrix (display only)
+        self.restore_matrix = True              # (False: the display-only check's negative control)
+        self.active = False                     # inside the driver (whole_update's sub-steps)
+        self.bl_m = None
+
+    def h_blend(self, g):
+        """9EE3 (the render's camera matrix built, A96B-A973 = M): d = A9A5 - 80h; M2 = D1A5 at heading A94C +
+        sign(d) (run in the game, every byte it writes put back); A96B-A973 := M + sign(M2 - M) x ((|M2 - M| x |d| +
+        80h) >> 8) per entry until 9E57 (h_brest). The original instruction runs after."""
+        m = g.mem
+        d = _s8(m[0xA9A5] - 0x80)
+        if not (self.blend and self.active and d):
+            return
+        M = [_s8(m[a]) for a in range(0xA96B, 0xA974)]
+        regs, pc = list(g.R), g.R[PC]
+        sp = g.R[SP]
+        save = {a & 0xFFFF: m[a & 0xFFFF] for a in list(range(sp - 64, sp)) + list(range(0xA962, 0xA96B)) + [0xA94C]}
+        m[0xA94C] = (m[0xA94C] + (1 if d > 0 else -1)) & 255
+        g.call(0xD1A5, 0x6B80)
+        g.run_to({0x6B80}, max_t=200_000)
+        M2 = [_s8(m[a]) for a in range(0xA962, 0xA96B)]
+        for a, v in save.items():
+            m[a] = v
+        for i, v in enumerate(regs):
+            g.R[i] = v
+        g.R[PC] = pc
+        w = abs(d)
+        for i in range(9):
+            diff = M2[i] - M[i]
+            q = (abs(diff) * w + 0x80) >> 8
+            m[0xA96B + i] = (M[i] + (q if diff >= 0 else -q)) & 255
+        self.bl_m = [x & 255 for x in M]
+        self.stats['blend'] += 1
+
+    def h_brest(self, g):
+        """9E57 (the render's return): the game's camera matrix back"""
+        if self.bl_m is not None and self.restore_matrix:
+            for i, v in enumerate(self.bl_m):
+                g.mem[0xA96B + i] = v
+        self.bl_m = None
 
     def install(self, g):
         p = g.patches
         p.update({0xA834: self.h_pos, 0xA4DB: self.h_bounce, 0xA856: self.h_ang, 0xA71B: self.h_vpre,
                   0xA793: self.h_vpost, 0xA8BB: self.h_speed, 0xA7F6: self.h_vr, 0xCEB9: self.h_guard,
                   0xA6D2: lambda r: self.h_steer(r, -30), 0xA6DC: lambda r: self.h_steer(r, 30),
-                  0xC7C0: self.h_fill, 0xA0E7: self.h_shift, 0xD758: self.h_shift})
+                  0xC7C0: self.h_fill, 0xA0E7: self.h_shift, 0xD758: self.h_shift,
+                  0x9EE3: self.h_blend, 0x9E57: self.h_brest})
         for a, (op, cl, when) in STEP_GATES.items():
             assert g.mem[a] == op, 'gate %04X holds %02X' % (a, g.mem[a])
         for a, v in THROTTLE.items():
@@ -1269,14 +1329,17 @@ def whole_update(g, spec, N, cont=0x38D0):
     else:
         R[SP] = (sp + 2) & 0xFFFF
         spec.set_n(g, N)
+        spec.active = True
         for i in range(N):
             spec.set_gates(g, i)
             g.ports.reset()
             g.call(LOOP, cont)
             pc = g.run_to({cont, ESC, TOUT})
             if pc != cont:
+                spec.active = False
                 spec.restore(g)
                 return 'escape', pc
+        spec.active = False
         spec.restore(g)
         g.call(ret, ret)                        # PUSH ret; RET: the slot below SP holds ret as in the original
         g.ret()
@@ -1344,6 +1407,7 @@ class NextSteps(Next):
         self.sim.set_tracer(self)
         self.R = self.sim.registers
         self.clock = 0.0
+        self.dma, self.dma_bytes = None, 0
         self.f28, self.line0 = f28, line0
         self.bad = []
         self.ports = _Ports(st['ports'])
@@ -1370,6 +1434,17 @@ class NextSteps(Next):
             self.sel = value
         elif port == 0x253B:
             self.nextreg(self.sel, value)
+        elif port & 255 == 0x6B:                # zxnDMA (the view copy): 5 T a byte on the 28 MHz clock
+            if self.dma is None:
+                from .dma import DMA
+
+                def wr(a, v):
+                    if a < 0x4000:
+                        self.bad.append('DMA write to %04X' % a)
+                    self.mem[a] = v
+                self.dma = DMA(lambda a: self.mem[a], wr, lambda p, v: self.bad.append('DMA to port %04X' % p),
+                               stall=self.stall)
+            self.dma.feed(value)
         elif port & 0x8002 == 0:                # 7FFD: the bank at C000; on the Next MMU slots 0-1 back to ROM
             self.map(6, 2 * (value & 7))
             self.map(7, 2 * (value & 7) + 1)
@@ -1477,7 +1552,7 @@ class _PaceRec:
         self.S, self.ups, self.cur = S, [], None
 
     def watch(self):
-        return {self.S['T_DRV']: self.entry, 0xDC37: self.view, self.S['T_DEXIT']: self.exit}
+        return {self.S['T_DRV']: self.entry, self.S['vgo']: self.view, self.S['T_DEXIT']: self.exit}
 
     def entry(self, n):
         self.cur = {'E': n.clock, 'views': []}
@@ -1571,6 +1646,16 @@ def _compare(n, g, sp, rz, rs, patch):
     return bad
 
 
+_VO = []
+
+
+def _view_only():
+    """VIEW_ONLY as (bank, offset) pairs (the play mapping: banks 5, 2, 0)"""
+    if not _VO:
+        _VO.append({_where(a) for lo, hi in VIEW_ONLY for a in range(lo, hi)})
+    return _VO[0]
+
+
 def rule(c, cur):
     """the adaptive N from the last update's busy lines a sub-step c and the current N (the .asm's drv)"""
     if cur == 4:
@@ -1588,7 +1673,9 @@ MODS = {                                        # synthetic states (cases the re
     'tilt': lambda m: [(0xA98F, (m[0xA98F] + 0x20) & 255), (0xA991, (m[0xA991] - 0x20) & 255)],   # relaxation gap
     'hdcarry': lambda m: [(0xA9A5, 0xFF)], 'hdborrow': lambda m: [(0xA9A5, 0x00)],  # heading low byte at the edge
     'bounce': lambda m: [(a, 0) for a in range(*BOUNCE_NOP)],         # the push-out at the first object
-    'timeout': lambda m: [(0x950B, 4), (0x950C, 0), (0x950D, 0), (0x91DC, 0)]}     # the time-out update
+    'timeout': lambda m: [(0x950B, 4), (0x950C, 0), (0x950D, 0), (0x91DC, 0)],    # the time-out update
+    'gearup': lambda m: [(0x96AF, 1), (0x96AB, 0)], 'geardn': lambda m: [(0x96AF, 1), (0x96AB, 3)]}  # manual gears
+HELD = {'gearup': (0xFBFE, 2), 'geardn': (0xFDFE, 2)}  # ... with W (up) / S (down) held: the port's bit clear
 
 
 def _apply_mod(g, mod):
@@ -1633,11 +1720,18 @@ def steps_case(job):
     prev, cur (captured update entries: banks, o7ffd, regs, ports, esc), nxt (the next entry: N = 1 is compared
     with the recording too), n (1 / 2 / 4, or 0 = adaptive with preset), mod, edits (a negative control's page
     edits), line0. -> {'bad': [...], 'res', 'N', 'stats'}"""
-    patch = _steps_patch(job.get('edits'))
+    edits = dict(job.get('edits') or {})
     sp = Spec()
+    if job.get('noblend'):
+        sp.blend = False
+        edits[steps_syms()['bl_on'] - 0x2000] = bytes(1)
+    patch = _steps_patch(edits)
     g = warm_game(None if job.get('mod') == 'cold' else job.get('prev'), job['cur'], sp)
     if job.get('mod'):
         _apply_mod(g, job['mod'])
+    if job.get('mod') in HELD:
+        port, bit = HELD[job['mod']]
+        g.set_ports([(x[0], x[1] & ~bit if x[0] == port else x[1]) + tuple(x[2:]) for x in job['cur']['ports']])
     nf, pre = job.get('n', 0), job.get('preset')
     n = _model(g, sp, patch, nforce=nf, preset=pre, line0=job.get('line0', 0))
     try:
@@ -1657,13 +1751,60 @@ def steps_case(job):
     if rs[0] == 'ok' and nf == 1 and job.get('nxt') is not None and not job.get('mod'):
         want = job['nxt']
         st = g.state()
-        d = sum(1 for b in range(8) for o in range(16384)
-                if st[b][o] != want['banks'][b * 16384 + o]) if b''.join(st) != want['banks'] else 0
-        dr = [NAMES[i] for i in REGS_STEPS + [PC] if g.R[i] != want['regs'][i]]
+        skip = _view_only() if sp.blend else set()
+        d = sum(1 for b in range(8) for o in range(16384) if st[b][o] != want['banks'][b * 16384 + o]
+                and (b, o) not in skip) if b''.join(st) != want['banks'] else 0
+        dr = [NAMES[i] for i in REGS_STEPS + [PC] if g.R[i] != want['regs'][i]
+              and not (sp.blend and NAMES[i] in COPY_REGS)]
         if d or dr:
             bad.append('Spec N = 1 vs the recording: %d bytes, regs %s' % (d, dr))
-    return {'bad': bad, 'res': rs, 'N': nused, 'stats': dict(sp.stats), 'skip': n.w16(n.S['n_skip']),
+    return {'bad': bad, 'res': rs, 'N': nused, 'stats': dict(sp.stats), 'skip': n.w16(n.S['n_skip']), 'gear': g.mem[0x96AB],
             'drop': n.w16(n.S['n_drop']), 'clamp': n.pb(n.S['n_clamp'])}
+
+
+def blend_logic_run(job):
+    """The heading blend is display only: Spec with the blend and Spec without it from the same captured start,
+    the same recorded inputs, K updates at N = job['n']: after each, all 128K outside VIEW_ONLY and every register
+    but R and COPY_REGS equal (those may hold the view's last bytes: the copy POPs them; a leak into logic would show
+    as a byte difference in a later update of the run). job: prev, cur, ports, n, restore (False: the
+    negative control, the matrix not put back) -> {'bad', 'blends', 'view_diff'}"""
+    runs = []                                   # one game at a time (simpool keeps one simulator per slot)
+    for on in (True, False):
+        sp = Spec()
+        sp.blend = on
+        if on and job.get('restore') is False:
+            sp.restore_matrix = False
+        g = warm_game(job.get('prev'), job['cur'], sp)
+        out = []
+        for ports in job['ports']:
+            g.set_ports(ports)
+            try:
+                r = whole_update(g, sp, job['n'])
+            except (RuntimeError, AssertionError) as e:
+                r = ('error', repr(e))
+            out.append((r, g.state(), [g.R[i] for i in REGS_STEPS]))
+            if r[0] != 'ok':
+                break
+        runs.append((out, sp.stats.get('blend', 0)))
+    skip = _view_only()
+    bad, vdiff, rdiff = [], 0, 0
+    for k, ((ra, sa, rga), (rb, sb, rgb)) in enumerate(zip(runs[0][0], runs[1][0])):
+        if ra != rb:
+            bad.append('u+%d result %s / %s' % (k, ra, rb))
+            break
+        d = ['%d:%04X' % (b, o) for b in range(8) if sa[b] != sb[b] for o in range(16384)
+             if sa[b][o] != sb[b][o] and (b, o) not in skip]
+        vdiff += sum(1 for b in range(8) if sa[b] != sb[b] for o in range(16384) if sa[b][o] != sb[b][o])
+        dr = [NAMES[i] for i, x, y in zip(REGS_STEPS, rga, rgb) if x != y and NAMES[i] not in COPY_REGS]
+        rdiff += sum(1 for x, y in zip(rga, rgb) if x != y)
+        if d or dr:
+            bad.append('u+%d logic state: %d bytes %s, regs %s' % (k, len(d), d[:6], dr))
+            break
+    if not runs[0][1] and vdiff:
+        bad.append('no blend, but %d bytes differ (fraction 80h must give the original view)' % vdiff)
+    if len(runs[0][0]) != len(runs[1][0]):
+        bad.append('updates %d / %d' % (len(runs[0][0]), len(runs[1][0])))
+    return {'bad': bad, 'blends': runs[0][1], 'view_diff': vdiff, 'reg_diff': rdiff}
 
 
 def steps_run(job):
@@ -1748,6 +1889,94 @@ def hook_case(job):
     if n.slots[1] != (36 if job.get('in_drv') else 0xFF):
         bad.append('slot 1 = %d' % n.slots[1])
     return {'bad': bad}
+
+
+MUL_SITES = {0xC541: 0xC588, 0xD030: 0xCFBF}       # the Z80N multiply sites -> where both meet (CFBF: after POP AF)
+
+
+def _mul_inputs(site, part, parts):
+    """the multiply tests' inputs, exhaustive over what reaches each site: C541 (A = |A| 0..80h, DE = |DE| 0..8000h:
+    4,227,201) and D030 (8 x 8: L x E, D = H = A = 0, carry clear: 65,536) -> [(A, DE, HL)], part of parts"""
+    if site == 0xD030:
+        return [(0, e, l) for l in range(256) for e in range(256)][part::parts]
+    return [(a, de, (a * 0x101 ^ de * 3) & 0xFFFF) for a in range(0x81) for de in range(0x8001)][part::parts]
+
+
+def mul_case(job):
+    """the Z80N multiply hooks (h_mul8 at C541, h_mul88 at D030) against the original instructions, from the site to
+    where they meet, on job['part'] of _mul_inputs: every register but R (the other registers random, the same on
+    both sides), and the game's RAM unchanged on both. job: cur, site, part, parts, edits -> {'bad', 'n'}"""
+    import random
+    patch = _steps_patch(job.get('edits'))
+    site, stop = job['site'], MUL_SITES[job['site']]
+    g = _Game(job['cur'])
+    n = NextSteps(job['cur'], patch)
+    n.nextreg(0x51, 36)
+    n.setpb(n.S['in_drv'], 1)
+    ram = n.banks()
+    rnd = random.Random(site + job['part'])
+    bad, cnt = [], 0
+    for a, de, hl in _mul_inputs(site, job['part'], job['parts']):
+        regs = [rnd.randrange(256) for _ in range(24)]
+        regs[12] = 0xFF00                       # SP (unused by both)
+        regs[0], regs[4], regs[5], regs[6], regs[7] = a, de >> 8, de & 255, hl >> 8, hl & 255
+        if site == 0xD030:
+            regs[1] &= 0xFE                      # carry clear (AND A before the JR Z)
+            regs[6] = 0
+        for i, v in enumerate(regs):
+            if i not in (14, 15):
+                g.R[i] = n.R[i] = v
+        g.R[PC] = n.R[PC] = site
+        g.run_to({stop})
+        n.run({stop}, max_ins=1000)
+        dr = ['%s %X/%X' % (NAMES[i], n.R[i], g.R[i]) for i in REGS_STEPS if n.R[i] != g.R[i]]
+        cnt += 1
+        if dr and len(bad) < 5:
+            bad.append('%04X A=%02X DE=%04X HL=%04X: %s' % (site, a, de, hl, ' '.join(dr)))
+    if n.banks() != ram or n.bad:
+        bad.append('%04X: game RAM written / model %s' % (site, n.bad[:2]))
+    return {'bad': bad, 'n': cnt}
+
+
+def copy_case(job):
+    """the view copy at 9E6B (CALL T_COPY: pace, then the DMA + the original's last row) against the original CALL
+    DC37, to 9E6E, with the back buffer 8000-8FFF filled by job['fill'] ('keep' / 'random' / a byte): every register
+    but R, all 128K (site bytes as built), the model's checks (DMA at 28 MHz, no write below 4000h). job: cur, fill,
+    edits -> {'bad'}"""
+    import random
+    patch = _steps_patch(job.get('edits'))
+    st = dict(job['cur'])
+    banks = bytearray(st['banks'])
+    fill, rnd = job['fill'], random.Random(7)
+    if fill != 'keep':
+        b, o = _where(0x8000)
+        banks[b * 16384 + o:b * 16384 + o + 4096] = bytes(rnd.randrange(256) if fill == 'random' else fill
+                                                          for _ in range(4096))
+    st['banks'] = bytes(banks)
+    g = _Game(st)
+    n = NextSteps(st, patch)
+    n.nextreg(0x51, 36)
+    n.setpb(n.S['in_drv'], 1)
+    g.R[PC] = n.R[PC] = 0x9E6B
+    g.run_to({0x9E6E})
+    n.run({0x9E6E}, max_ins=2_000_000)
+    bad = ['regs ' + ' '.join('%s %X/%X' % (NAMES[i], n.R[i], g.R[i]) for i in REGS_STEPS if n.R[i] != g.R[i])]
+    bad = bad if bad[0] != 'regs ' else []
+    d = _mem_diff(n, g, patch)
+    if d:
+        bad.append('RAM %d bytes: %s' % (len(d), ' '.join(d[:6])))
+    if n.bad or n.dma_bytes != 4096 or n.slots[1] != 36:
+        bad.append('model: %s, DMA bytes %d, slot 1 %d' % (n.bad[:2], n.dma_bytes, n.slots[1]))
+    return {'bad': bad}
+
+
+def _copy_jobs(states, edits=None):
+    return [(copy_case, {'cur': q, 'fill': f, 'edits': edits}) for q in states for f in ('keep', 'random', 0, 0xFF)]
+
+
+def _mul_jobs(cur, edits=None, parts=16):
+    return [(mul_case, {'cur': cur, 'site': s, 'part': i, 'parts': parts, 'edits': edits})
+            for s in MUL_SITES for i in range(parts)]
 
 
 def _pool_map(fn, jobs, workers):
@@ -1936,6 +2165,12 @@ def steps_negatives():
         ('no pace wait', _neg(S, 'h_copy.pv', [0, 0, 0]), 'pace'),
         ('page not mapped again after 7FFD', _neg(S, 'h_rmap.j', w(S['T_RMEXIT']), 1), 'single'),
         ('N rule: stay-at-4 threshold 661', _neg(S, 'drv.f4', w(C4ST + 2), 1), 'rule'),
+        ('manual gears not gated', _neg(S, 'g_gear', [0xC8], 3), 'gear'),
+        ('heading blend: the game matrix not put back', _neg(S, 'h_rpost.rs', [0, 0, 0]), 'single'),
+        ('heading blend: M + q as M - q', _neg(S, 'h_blend.pa', [0x96]), 'single'),
+        ('h_mul8: the middle byte carry lost', _neg(S, 'h_mul8.ac', [0xC6]), 'mul'),
+        ('h_mul88: L not cleared', _neg(S, 'h_mul88.lh', [0]), 'mul'),
+        ('view copy DMA: row 65 to screen row 64', _neg(S, 'dmatab', w(0x4800), 15 + 64 * 8 + 4), 'copy'),
     ]
 
 
@@ -1989,6 +2224,12 @@ def _kind_jobs(kind, kept, edits=None):
                                                                                 if kind == 'guard' else [])
     if kind == 'rule':
         return one(spread[:3], n=0, preset=(661, 4))
+    if kind == 'gear':
+        return one(spread[:3], mod='gearup') + one(spread[:3], mod='geardn')
+    if kind == 'mul':
+        return _mul_jobs(spread[0][1], edits)
+    if kind == 'copy':
+        return _copy_jobs([q for _, q in spread[:2]], edits)
     if kind == 'pace':
         r = kept['runs'][0]
         return [(steps_run, dict(r, n=0, edits=edits, ports=r['ports'][:8]))]
@@ -2030,12 +2271,29 @@ def unit_tests_steps(patch, kept, neg=None, workers=None):
             tests.append(('synthetic %s, N=4' % mod, 'case', (steps_case, {'prev': p, 'cur': q, 'n': 4, 'mod': mod})))
             tests.append(('synthetic %s, adaptive' % mod, 'case', (steps_case, {'prev': p, 'cur': q, 'n': 0,
                                                                                 'mod': mod, 'preset': (300, 4)})))
+    for r in kept['runs']:
+        for nf in (1, 4):
+            tests.append(('heading blend display only: %d updates, N=%d, logic state = no blend' % (len(r['ports']), nf),
+                          'blend', (blend_logic_run, dict(r, n=nf))))
+    for p, q in kept['spread'][:3]:
+        tests.append(('heading blend off (bl_on 0), N=4 = Spec without the blend', 'case',
+                      (steps_case, {'prev': p, 'cur': q, 'n': 4, 'noblend': True})))
+    for mod, want in (('gearup', 1), ('geardn', 2)):
+        for p, q in kept['spread'][:3]:
+            for nf in (2, 4):
+                tests.append(('synthetic %s held, N=%d: one shift an update' % (mod, nf), 'gear%d' % want,
+                              (steps_case, {'prev': p, 'cur': q, 'n': nf, 'mod': mod})))
     for p, q in kept['spread'][:3]:
         tests.append(('synthetic time-out (plain update, escape)', 'esc', (steps_case, {'prev': p, 'cur': q, 'n': 4,
                                                                                         'mod': 'timeout'})))
     for kind in ('guard', 'fill', 'shift'):
         for j in _hook_jobs(kept['spread'][0][1], kind):
             tests.append(('%s guard edges' % kind, 'case', (hook_case, j)))
+    for fj in _copy_jobs([q for _, q in kept['spread'][:2]]):
+        tests.append(('view copy by DMA vs the original (back buffer %s)' % fj[1]['fill'], 'case', fj))
+    for fj in _mul_jobs(kept['spread'][0][1]):
+        tests.append(('Z80N multiply %04X vs the original (%s)' % (fj[1]['site'], 'all 8 x 8' if fj[1]['site'] == 0xD030
+                                                                    else 'A 0-80h x DE 0-8000h'), 'case', fj))
     negs = neg if neg is not None else steps_negatives()
     nj = [(name, fj) for name, edits, kind in negs for fj in _kind_jobs(kind, kept, edits)]
     res = _pool_map(_call, [t[2] for t in tests] + [fj for _, fj in nj], workers)
@@ -2047,6 +2305,10 @@ def unit_tests_steps(patch, kept, neg=None, workers=None):
                 pace['dur'] += r['pace']['dur']
                 pace['early'] += r['pace']['early']
                 pace['N'].update(r['pace']['N'])
+        elif check == 'blend':
+            bad = r['bad'] + ([] if r['blends'] else ['no blend in the run'])
+        elif check.startswith('gear'):
+            bad = r['bad'] + (['gear %d, expected %s' % (r['gear'], check[4:])] if r['gear'] != int(check[4:]) else [])
         else:
             bad = r['bad'] + (['no escape'] if check == 'esc' and r['res'][0] != 'escape' else [])
         c[name + ('!' if bad else '')] += 1
@@ -2056,6 +2318,9 @@ def unit_tests_steps(patch, kept, neg=None, workers=None):
         caught[name] |= bool(bad)
     for name, _, _ in negs:
         c['negative: %s %s' % (name, 'detected' if caught[name] else 'MISSED!')] += 1
+    rb = _pool_map(blend_logic_run, [dict(r, n=4, restore=False) for r in kept['runs'][:3]], workers)
+    c['negative: display-only check, Spec matrix not put back %s' % (
+        'detected' if any(x['bad'] for x in rb) else 'MISSED!')] += 1
     return c, pace
 
 

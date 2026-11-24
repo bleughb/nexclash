@@ -25,6 +25,6 @@
   "slot 0",
   "simulator"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

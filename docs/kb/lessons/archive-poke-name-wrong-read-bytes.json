@@ -1,0 +1,29 @@
+{
+ "id": "lesson.archive-poke-name-wrong-read-bytes",
+ "kind": "pitfall",
+ "claim": "An archive POKE's name can be wrong: read what it writes, in the code page in play, before accepting or rejecting it; the saved bank at 0xC000 may not be the one the game runs.",
+ "limit": "Shown for one POKE of one game; the bank rule applies to any 128K snapshot saved with another bank paged at 0xC000.",
+ "evidence": [
+  {
+   "game": "games/hard_drivin.md",
+   "text": "Easy steering 62869-72 was rejected as writing ROM by decoding it against the saved bank at 0xC000; in the code page in play (bank 0) it is code that blanks the dashboard steering-wheel marker only: display, misnamed. Real steering is 0x96AC.",
+   "quote": "an archive POKE's name can be wrong",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "facts": {
+  "machine": "128K"
+ },
+ "words": [
+  "POKE",
+  "trainer",
+  "bank",
+  "0xC000",
+  "misnamed",
+  "code page"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}
