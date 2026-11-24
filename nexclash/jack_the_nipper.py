@@ -12,22 +12,23 @@ address moves to a scratch shadow at 0x2000-0x2FFF (RES 6,H), so the game's own 
 so the same pace) and the real shadow keeps the background. The cell marks take only H bits 3 and 0-2 and L (0x8123),
 so they mark the same cells.
 
-Stage A (2026-11-23): the redirect only; sprites, the verifier and the unit tests follow (games/jack_the_nipper.md
-"Patch plan").
+The commit at the copier's entry 0x86F9 turns the recorded figures into 4-bit sprites: black lines, the body in the
+paper of the cell under the figure's feet (one palette bank per Spectrum colour), mirrored by the sprite's X mirror.
+Stage B (2026-11-23): sprites; the verifier checks the redirect so far (games/jack_the_nipper.md "Patch plan").
 """
 import json
 import os
 
 JTN_PAGE = 24               # Next page at MMU slot 1 for the whole game (bank 12's first half)
-CODE_ORG = 0x3800           # hook code in the page (asm ORG)
+CODE_ORG = 0x3600           # hook code in the page (asm ORG); state 0x3000-0x35FF below it
 RESTORE = 0x3E00            # restore_tail: the tail's backup, then its code
 REGBLOCK = 0x3F00           # the stub's register block (20 bytes)
 SCRATCH = (0x2000, 0x3000)  # the scratch shadow the figure draws land in
 SHADOW = (0x6000, 0x7000)   # the game's shadow screen
 TAIL_ADDR = 0x6F00          # the start-up tail; restore_tail puts its bytes back before the game starts
-SITES_ORIG = {0x80C9: 'e5f5a7', 0x8273: 'e5f5a7', 0xAA4A: 'cdf986'}
-SITE_OP = {0x80C9: (0xC3, 'e_d16'), 0x8273: (0xC3, 'e_d24'), 0xAA4A: (0xCD, 'e_cmt')}
-INTERIORS = (0x80CA, 0x80CB, 0x8274, 0x8275, 0xAA4B, 0xAA4C)
+SITES_ORIG = {0x80C9: 'e5f5a7', 0x8273: 'e5f5a7', 0x86F9: '21ff7c'}
+SITE_OP = {0x80C9: (0xC3, 'e_d16'), 0x8273: (0xC3, 'e_d24'), 0x86F9: (0xC3, 'e_cmt')}
+INTERIORS = (0x80CA, 0x80CB, 0x8274, 0x8275, 0x86FA, 0x86FB)
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -128,6 +129,8 @@ class JtnPatch(_PagePatch):
         if self.syms['code_start'] != CODE_ORG:
             raise ValueError('hook code assembled at 0x%04X, not CODE_ORG' % self.syms['code_start'])
         super().__init__(bytes.fromhex(h['page']))
+        self.stub_extra = bytes.fromhex(h['setup'])      # the sprite palette and NR 0x15, once (asm `setup`)
+        self.setup_call = self.syms['setup']
         self.sites = [(a, bytes.fromhex(old), bytes([SITE_OP[a][0]]) + self.syms[SITE_OP[a][1]].to_bytes(2, 'little'))
                       for a, old in SITES_ORIG.items()]
 
