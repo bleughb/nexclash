@@ -1,12 +1,19 @@
 {
  "id": "lesson.zxn-dma-wr4-interrupt-lock",
  "kind": "pitfall",
- "claim": "Writing a Z80 DMA WR4 byte with 'interrupt control follows' (91) locks the Next DMA until power-off; do not port such code onto the zxnDMA.",
- "limit": "Only byte 91 tested; hard reset untested.",
+ "claim": "Writing a Z80 DMA WR4 byte with 'interrupt control follows' ($91) locks the Next DMA until the machine is reset (power-off, or an F4 soft reset on core 3.03.00); do not port such code onto the zxnDMA.",
+ "limit": "Only byte $91 tested, on the N-Go board (Issue 2-compatible clone) with core 3.03.00; DMA resets ($C3 x6, $A3, $AF, $8B) do not free it.",
  "evidence": [
   {
    "game": "notes",
-   "text": "N-Go board (Issue 2-compatible), core 3.03.00: after WR4 byte 91 then 87 every later transfer failed; six C3 resets, A3, AF, 8B did not recover it, only power-off.",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00: after WR4 byte 91 then 87 every later transfer failed; six C3 resets, A3, AF, 8B did not recover it, only power-off.",
+   "shown_on": "hardware"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
+   "test": "XH2",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite XH2): one byte copied before WR4 $91, none after it; after an F4 soft reset the DMA answered again. An earlier run of an older build: a power-cycle frees it too.",
    "shown_on": "hardware"
   }
  ],
@@ -17,7 +24,8 @@
   "WR4",
   "interrupt control",
   "DMA lock",
-  "power cycle"
+  "power cycle",
+  "soft reset"
  ],
  "review": "extracted",
  "as_of": "0.1.7"

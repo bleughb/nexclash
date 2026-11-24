@@ -2,13 +2,20 @@
  "id": "lesson.sprite-line-time-budget",
  "kind": "fact",
  "claim": "The sprite engine has 1,824 clocks a line (1,792 at 48K timing): a sprite not on the line costs 1, one on it 1 + its drawn width in dots (17 unscaled, 129 at 8x), transparent dots included, and later sprites in the table are dropped.",
- "limit": "From the book, not measured here: it gives about 75 unscaled sprites when all sit on one line, where the Next wiki promises 100; plan for the lower figure and keep sprites that must show low in the table.",
+ "limit": "Measured on the N-Go board (Issue 2 clone, 3.03.00, 128K timing, nxsuite SP10): 105 unscaled fit on a line, 52 / 26 / 13 at 2x / 4x / 8x, as this model predicts; the book says about 75. Keep sprites that must show low in the table.",
  "evidence": [
   {
    "game": "reference",
    "source": "I. Novak, Unraveling the ZX Spectrum Next, Vol 1 (2026; core 3.03.03), chapter 16",
    "text": "The engine starts at sprite 0 each line; when it reaches a sprite inside that sprite's cut-off window near the end of the line it draws neither it nor any after it and sets bit 1 of port 0x303B, which stays set until read.",
    "shown_on": "documentation"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
+   "test": "SP10",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite SP10): the overflow flag set at the 106th unscaled sprite on one line, the 53rd / 27th / 14th at 2x / 4x / 8x (the model: 1,824 clocks, 1 + 16 x scale a drawn sprite, 1 each other of the 128).",
+   "shown_on": "hardware"
   }
  ],
  "level": "inferred",

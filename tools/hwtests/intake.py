@@ -2,7 +2,7 @@
 
     python tools/hwtests/intake.py NXSUITE.TXT [--board NAME] [--platform board|"JNext 1.3.0"|...] [--out DIR]
                                    [--dry-run]
-    python tools/hwtests/intake.py --compare A.json B.json
+    python tools/hwtests/intake.py --compare A.json B.json [C.json ...]   (3 or more: a Markdown table)
     python tools/hwtests/intake.py --selfcheck
 
 Reads the file (format: tools/hwtests/README.md "nxsuite", spec section 2), REFUSES one that is malformed or
@@ -1139,6 +1139,44 @@ def compare(a, b, out=sys.stdout):
     return diff
 
 
+def _cell(c):
+    """one claim of a record -> a short table cell; '-' when that record did not answer it"""
+    v = c.get('verdict')
+    if not v or v in ('not-run', 'pending-operator', 'not-answered', 'skipped', 'hung', 'not-built'):
+        return '-'
+    x = c.get('value') if c.get('value') is not None else c.get('choice') or ''
+    if isinstance(x, float):
+        x = ('%.2f' % x).rstrip('0').rstrip('.')
+    return ('%s %s' % (v, x)).strip()
+
+
+def compare_table(paths, out=sys.stdout):
+    """the first record against several others (board vs emulators): a Markdown table of the claims where an
+    answered cell differs from the first record's; claims the others did not answer are counted, not listed.
+    Returns the number of rows."""
+    D = [json.load(open(p)) for p in paths]
+    def name(d):
+        pf = d.get('platform', {'kind': 'board'})
+        return '%s %s' % (('board ' + d['board']['name']) if pf['kind'] == 'board' else pf['name'], d['core'])
+    print('| claim | ' + ' | '.join(name(d) for d in D) + ' |', file=out)
+    print('|---' * (len(D) + 1) + '|', file=out)
+    rows = quiet = 0
+    for cid in sorted(set().union(*(set(d['claims']) for d in D))):
+        cells = [_cell(d['claims'].get(cid, {})) for d in D]
+        rest = [c for c in cells[1:] if c != '-']
+        if not rest:
+            quiet += 1
+            continue
+        if all(c == cells[0] for c in rest):
+            continue
+        rows += 1
+        print('| %s | %s |' % (cid, ' | '.join(cells)), file=out)
+    print('\n%d claims differ; %d claims none of the others answered (operator questions not driven, opt-in or '
+          'skipped tests) are left out. Emulator columns are what that emulator does, not hardware evidence.'
+          % (rows, quiet), file=out)
+    return rows
+
+
 # tests whose method has a known resolution wider than its within-run spread (value units)
 RUN_TOL = {'I10': 12}
 # extras that are memory contents, not measurements (S03: CRCs of page 96 and the suite's own slot-6 page,
@@ -1605,6 +1643,11 @@ def selfcheck():
             compare(p, pe, out=o)
             if 'board vs emulator' not in o.getvalue():
                 bad.append('--compare does not mark board vs emulator')
+            o = io.StringIO()
+            if compare_table([p, pf, pe], out=o) != 1 or '| sys-nextreg-keeps-select |' not in o.getvalue():
+                bad.append('--compare table does not list exactly the one changed claim')
+            if compare_table([p, pe, pe], out=io.StringIO()) != 0:
+                bad.append('--compare table lists claims that agree')
             if conformance(p, p, table, out=io.StringIO())['DIFFERENT'] != 0:
                 bad.append('--conformance finds differences between a record and itself')
             nc = conformance(pf, p, table, out=io.StringIO())
@@ -1757,7 +1800,9 @@ def main(argv=None):
                                     'by default the label the operator typed is withheld')
     ap.add_argument('--keep-label', action='store_true',
                     help='keep the label the operator typed (only when its owner agreed to publish it)')
-    ap.add_argument('--compare', nargs=2, metavar=('A', 'B'))
+    ap.add_argument('--compare', nargs='+', metavar='JSON',
+                    help='two records: the claims that differ; three or more: a Markdown table of the first '
+                         'against the others')
     ap.add_argument('--runs', nargs='+', metavar='TXT',
                     help='two or more NXSUITE.TXT files of one board + core: list the tests whose values differ '
                          'beyond tolerance (unstable)')
@@ -1795,7 +1840,12 @@ def main(argv=None):
         conformance(a.conformance, a.against)
         return 0
     if a.compare:
-        compare(*a.compare)
+        if len(a.compare) < 2:
+            ap.error('--compare needs two or more records')
+        if len(a.compare) == 2:
+            compare(*a.compare)
+        else:
+            compare_table(a.compare)
         return 0
     if a.runs:
         if len(a.runs) < 2:

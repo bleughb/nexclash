@@ -21,6 +21,13 @@
    "text": "The redraw after a lost life went from 124 frames to 57-58 on JNext; the update then starts at the next interrupt, so it moves in 20 ms steps.",
    "quote": "Result 57 to 58 frames, on JNext; the update then starts at the next interrupt, so it moves in 20 ms steps.",
    "shown_on": "jnext"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
+   "test": "I03",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite I03): im2hold T1-T7 held: interrupts held through a 3-frame DI in hold mode, lost in pulse mode; a RET-ended handler blocked later ones until a RETI.",
+   "shown_on": "hardware"
   }
  ],
  "level": "observed",

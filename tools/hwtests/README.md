@@ -324,6 +324,12 @@ in modes 0 and 1, $11 is set by the firmware from the display settings; the star
 shows the digital test card.) `geom=` is what the measurements match: line length in CTC ticks (16 clocks) and lines per frame:
 108 = hdmi, 112 / 312 = vga48, 112 / 320 = pentagon, 114 / 311 = vga128, else other.
 
+Board results so far: docs/kb/hardware/n-go-3.03.00.json (N-Go board (Issue 2-compatible clone), core 3.03.00, RUN ALL of
+4548f5f: 83 confirmed, 32 measured, 21 choices, 4 disproved - V01 two lines late, V17 $15 keeps the clips,
+D02 4.96 clocks at 28 MHz, XT2 $03 taken at once - 2 left out). The same build in JNext 1.3.0 and CSpect
+4.5.9.0 (50 / 60 Hz): docs/kb/hardware/emulator/, compared in board-vs-emulators.md there. The lessons and
+doc lines each result corrects cite the test id and the record (knowledge.py `hardware` evidence).
+
 Statuses: PASS, FAIL (the claim's expectation is wrong on this machine), INFO (a number or a choice, no
 verdict), SKIP (`why=not-built`, `not-selected`, `hung-last-run`, `no-blitter` - D09's probe found no blitter, or
 D09 did not run this session and the core is below 3.03 -, `dma-deaf` - XH: the DMA still locked by an earlier XH2 -, `left-out` -
