@@ -25,6 +25,7 @@ MAXFIG    EQU 24
 FIGSZ     EQU 10            ; +0 gfx, +2 colour, +3 -, +4 rows, +5 width bytes, +6 x, +7 top, +8 mirror, +9 bank
 SPR0      EQU 0
 PROBE     EQU 8
+MUT0      EQU 48            ; slots 48-63 for figures in several colours (cached by signature, else rebuilt)
 
 FIGS      EQU 0x2000
 HLIB_PCACHE EQU 0x2100
@@ -59,6 +60,15 @@ F_CX1     EQU 0x21EC
 F_CY0     EQU 0x21ED
 F_CY1     EQU 0x21EE
 F_COL     EQU 0x21EF
+PTAB      EQU 0x2680        ; build: a one-colour figure's 16 pixel pairs (16-aligned, after ATTRTAB)
+T_LEFT    EQU 0x21F0        ; cls: pixels left in the current cell (0: look the next one up)
+C_NREST   EQU 0x21F3        ; cells: distinct slots given back this update
+C_NTGT    EQU 0x21F4        ; cells: the slots the game gave out (counter - 3)
+SEEN      EQU 0x2700        ; cells: the update each slot was given back in (128)
+SLOTCTR   EQU 0xBDF1        ; the game's next free slot (from 3 each update)
+F_SP      EQU 0x21F1        ; fcolour: the next signature byte (2)
+SIGT      EQU 0x2690        ; fcolour: a figure's colour signature (10: alignment, then up to 9 cell colours)
+MSIG      EQU 0x2800        ; the signature each mutable slot was built for (16 x 10)
 T_INK     EQU 0x21E6        ; tile: the ink and paper pixel values (colour + 1)
 T_PAP     EQU 0x21E7
 TILEBUF   EQU 0x2200
@@ -239,18 +249,91 @@ e_cmt:  ld (V_HSP),sp
         ld hl,0xFD80
         jp COPY_BACK
 
-; cells: every dirty cell holding a slot (3 and up) gets the scenery's colour in that slot's colour list entry:
-; TILEATTR[TILEMAP[cell]], as the copier's background path (0xBD4B) colours a cell with no figure.
-cells:  ld hl,DIRTY
-        ld de,TILEMAP
+; cells: every cell holding a slot (3 and up) gets the scenery's colour in that slot's colour list entry:
+; TILEATTR[TILEMAP[cell]], as the copier's background path (0xBD4B) colours a cell with no figure. First the recorded
+; figures' boxes; the slots are distinct and below the game's counter, so when those give back counter - 3 slots there
+; is no other; else (an object drawn another way, as a rope) every cell of the map.
+cells:  xor a
+        ld (C_NREST),a
+        ld a,(V_NFIG)
+        or a
+        jr z,.chk
+        ld b,a
+        ld ix,FIGS
+.f:     push bc
+        call fbox
+        jr c,.nf                ; nothing of it on the map
+        ld a,(F_CY0)
+.row:   ld b,a                  ; B = cell row
+        ld a,(F_CX0)
+.col:   ld c,a                  ; C = cell column
+        push bc
+        ld l,b
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld e,c
+        ld d,0
+        add hl,de               ; the cell's index
+        ld de,DIRTY
+        add hl,de
+        ld a,(hl)
+        cp 3
+        call nc,rest
+        pop bc
+        ld a,(F_CX1)
+        cp c
+        jr z,.nr
+        ld a,c
+        inc a
+        jr .col
+.nr:    ld a,(F_CY1)
+        cp b
+        jr z,.nf
+        ld a,b
+        inc a
+        jr .row
+.nf:    pop bc
+        ld de,FIGSZ
+        add ix,de
+        djnz .f
+.chk:   ld a,(SLOTCTR)
+        sub 3
+        ret c
+        ld (C_NTGT),a
+        ld b,a
+        ld a,(C_NREST)
+        cp b
+        ret nc                  ; every slot given back
+        ld hl,DIRTY             ; a slot outside the figures: the map, until every slot is given back
         ld bc,640
 .c:     ld a,(hl)
         cp 3
-        jr c,.n
-        push hl
+        jr c,.cn
+        call rest
+        ld a,(C_NTGT)
+        ld e,a
+        ld a,(C_NREST)
+        cp e
+        ret nc
+.cn:    inc hl
+        dec bc
+        ld a,b
+        or c
+        jr nz,.c
+        ret
+
+; rest: A = a slot, HL = its dirty map entry -> the slot's colour list entry = the cell's scenery colour; counted in
+; C_NREST once an update. Keeps BC, HL.
+rest:   push hl
         push bc
         ld c,a                  ; the slot
-        ld a,(de)               ; the cell's tile
+        ld de,TILEMAP-DIRTY
+        add hl,de
+        ld a,(hl)               ; the cell's tile
         ld l,a
         ld h,high TILEATTR
         ld a,(hl)               ; its colour
@@ -258,14 +341,17 @@ cells:  ld hl,DIRTY
         ld b,0
         add hl,bc
         ld (hl),a
-        pop bc
+        ld hl,SEEN
+        add hl,bc
+        ld a,(V_UPD)
+        cp (hl)
+        jr z,.d                 ; counted already (an overlapping box)
+        ld (hl),a
+        ld a,(C_NREST)
+        inc a
+        ld (C_NREST),a
+.d:     pop bc
         pop hl
-.n:     inc hl
-        inc de
-        dec bc
-        ld a,b
-        or c
-        jr nz,.c
         ret
 
 ; commit: pass 1 uploads the tiles not cached and fills ATTRTAB; pass 2 writes the attributes and hides the rest.
@@ -391,10 +477,67 @@ slot:   ld e,(ix+0)
         adc a,d
         sub e
         ld d,a                  ; graphics address + pair
-        ld a,(ix+3)             ; a figure in several colours (an item's own table, 0xBA8A): built every time
+        ld a,(ix+3)             ; a figure in several colours (an item's own table, 0xBA8A): its signature
         or a
         jr nz,.uni
-        ld de,0                 ; key 0 = mutable: always uploaded
+        ld a,(SIGT)
+        inc a
+        jr z,.k0                ; more than 9 cells: built every time
+        ld a,d
+        or e
+        jr nz,.mk
+        inc e
+.mk:    ld c,MUT0               ; a mutable slot built for this image and this signature?
+.ms:    ld l,c
+        ld h,high HLIB_PCACHE
+        ld a,(hl)
+        cp e
+        jr nz,.mn
+        set 6,l
+        ld a,(hl)
+        cp d
+        jr nz,.mn
+        call sigeq
+        jr nz,.mn
+        ld a,c                  ; hit: no upload
+        jp .use
+.mn:    inc c
+        ld a,c
+        cp 64
+        jr c,.ms
+        push de                 ; a miss: the least recently used mutable slot not serving this update
+        ld a,MUT0
+        ld b,64-MUT0
+        ld c,0
+        ld d,64
+.ml:    ld e,a
+        add a,low SLOTUSE
+        ld l,a
+        ld h,high SLOTUSE
+        ld a,(hl)
+        or a
+        ld a,255
+        jr z,.mage
+        ld a,(V_UPD)
+        sub (hl)
+.mage:  cp c
+        jr c,.mln
+        jr z,.mln
+        ld c,a
+        ld d,e
+.mln:   ld a,e
+        inc a
+        djnz .ml
+        ld a,d
+        pop de
+        ld c,a
+        cp 64
+        jr nc,.k0               ; all serving this update
+        call sigsave            ; MSIG[slot] = SIGT
+        ld a,c
+        call hlib_pc_inval      ; its old image gone: the upload below always happens
+        jp .free
+.k0:    ld de,0                 ; key 0 = mutable: always uploaded
         jr .k
 .uni:   ld a,(ix+2)             ; one colour: + the colour baked in: the key names the image AND its colour
         add a,a
@@ -411,7 +554,10 @@ slot:   ld e,(ix+0)
         ld a,e
         xor d
         and 63
-        ld (V_HASH),a
+        cp MUT0
+        jr c,.h
+        sub 64-MUT0             ; one-colour keys hash into 0 .. MUT0-1, clear of the mutable slots
+.h:     ld (V_HASH),a
         ld b,PROBE              ; a slot already holding the key?
 .p:     ld l,a
         ld h,high HLIB_PCACHE
@@ -424,15 +570,62 @@ slot:   ld e,(ix+0)
         cp d
         jr nz,.n
         ld a,c                  ; hit: no upload
-        jr .use
+        jp .use
 .n:     ld a,c
         inc a
-        and 63
-        djnz .p
-        ld a,(V_HASH)           ; a slot not serving this update
-        jr .q0
-.mut:   ld a,(ix+0)
-        and 63
+        cp MUT0
+        jr c,.n2
+        xor a                   ; the window wraps within 0 .. MUT0-1
+.n2:    djnz .p
+        push de                 ; a miss: the least recently used slot of the window (an animation's frames stay)
+        ld a,(V_HASH)
+        ld b,PROBE
+        ld c,0                  ; the oldest age so far (0 = serving this update: never taken)
+        ld d,MUT0               ; its slot (MUT0: none)
+.l:     ld e,a
+        add a,low SLOTUSE
+        ld l,a
+        ld h,high SLOTUSE
+        ld a,(hl)
+        or a
+        ld a,255                ; never used: the oldest
+        jr z,.age
+        ld a,(V_UPD)
+        sub (hl)                ; updates since its last use
+.age:   cp c
+        jr c,.ln
+        jr z,.ln
+        ld c,a
+        ld d,e
+.ln:    ld a,e
+        inc a
+        cp MUT0
+        jr c,.l2
+        xor a
+.l2:    djnz .l
+        ld a,d
+        pop de
+        ld c,a
+        cp MUT0
+        jr c,.free
+        ld a,(V_HASH)           ; every one in the window serving this update: any of 0 .. MUT0-1 not serving it
+        ld b,MUT0
+.qu:    ld c,a
+        add a,low SLOTUSE
+        ld l,a
+        ld h,high SLOTUSE
+        ld a,(V_UPD)
+        cp (hl)
+        jr nz,.free
+        ld a,c
+        inc a
+        cp MUT0
+        jr c,.qu2
+        xor a
+.qu2:   djnz .qu
+        ld a,c                  ; all serving this update: reuse the last
+        jr .free
+.mut:   ld a,MUT0               ; several colours: from the mutable slots (MUT0 ..), so cached figures stay
         ld (V_HASH),a
 .q0:    ld b,64
 .q:     ld c,a
@@ -470,6 +663,9 @@ slot:   ld e,(ix+0)
 ; else 0 (the palette bank gives the bright ones).
 build:  ld a,(ix+2)             ; one colour: its two pixel values once (cls looks up each pixel's cell otherwise)
         call codes
+        ld a,(ix+3)
+        or a
+        call nz,ptab            ; and its 16 pixel pairs
         ld hl,TILEBUF
         ld a,(C_PAIR)
         add a,a
@@ -555,11 +751,36 @@ byte2:  push de
         add a,a
         ld (T_PX),a             ; the byte's first image column
         pop af
+        xor a
+        ld (T_LEFT),a           ; its first pixel looks its cell up
         ld a,(de)
         ld d,a                  ; D = graphics
         ld a,(bc)
         ld e,a                  ; E = mask
-        ld b,4
+        ld a,(ix+3)
+        or a
+        jr z,.multi
+        ld b,high PTAB          ; one colour: two pixels a look-up (graphics bits, then mask bits)
+        DUP 4
+        xor a
+        sla d
+        rla
+        sla d
+        rla
+        sla e
+        rla
+        sla e
+        rla
+        or low PTAB
+        ld c,a
+        ld a,(bc)
+        ld (hl),a
+        inc hl
+        EDUP
+        pop bc
+        pop de
+        ret
+.multi: ld b,4
 .px:    call cls
         rlca
         rlca
@@ -589,8 +810,14 @@ byte2:  push de
 
 cls:    ld a,(ix+3)
         or a
-        call z,pixcol           ; several colours: this pixel's cell
-        ld a,(T_PX)
+        jr nz,.go               ; one colour: T_INK / T_PAP set once (build)
+        ld a,(T_LEFT)
+        or a
+        call z,pixcol           ; a new cell: its colour, and how many pixels stay in it
+        ld a,(T_LEFT)
+        dec a
+        ld (T_LEFT),a
+.go:    ld a,(T_PX)
         inc a
         ld (T_PX),a
         sla d
@@ -602,6 +829,40 @@ cls:    ld a,(ix+3)
         ret
 .ink:   sla e
         ld a,(T_INK)
+        ret
+
+; ptab: PTAB[g1 g2 m1 m2] = the two pixels (high nibble first) for those graphics and mask bits: ink where the
+; graphics bit is set, else paper where the mask bit is clear, else 0 (see-through).
+ptab:   ld hl,PTAB
+        xor a
+.e:     push af
+        ld c,a
+        bit 3,c
+        ld a,(T_INK)
+        jr nz,.p1
+        bit 1,c
+        ld a,0
+        jr nz,.p1
+        ld a,(T_PAP)
+.p1:    rlca
+        rlca
+        rlca
+        rlca
+        ld b,a
+        bit 2,c
+        ld a,(T_INK)
+        jr nz,.p2
+        bit 0,c
+        ld a,0
+        jr nz,.p2
+        ld a,(T_PAP)
+.p2:    or b
+        ld (hl),a
+        inc l
+        pop af
+        inc a
+        cp 16
+        jr nz,.e
         ret
 
 ; codes: A = an attribute -> T_INK, T_PAP = its ink and paper as pixel values (1-8 normal, 9-15 bright, bright black 1).
@@ -629,7 +890,8 @@ code:   bit 6,b
         ret
 
 ; pixcol: the colour of the cell the next pixel (image column T_PX, figure row B_ROW) shows on, from the game's own
-; colour list (read before cells puts the scenery's back) -> T_INK, T_PAP. Keeps BC, DE, HL.
+; colour list (read before cells puts the scenery's back) -> T_INK, T_PAP, and T_LEFT = the pixels of this row that stay
+; in that cell. Keeps BC, DE, HL.
 pixcol: push hl
         push de
         push bc
@@ -649,6 +911,15 @@ pixcol: push hl
         ld e,(ix+6)
         ld d,0
         add hl,de               ; 9-bit screen column
+        ld a,l
+        and 7
+        bit 0,(ix+8)
+        jr nz,.ml
+        neg
+        add a,8                 ; 8 - (column & 7) pixels to the cell's right edge
+        jr .lf
+.ml:    inc a                   ; mirrored: (column & 7) + 1 to its left edge
+.lf:    ld (T_LEFT),a
         srl h
         rr l
         srl l
@@ -690,11 +961,79 @@ pixcol: push hl
         pop hl
         ret
 
-; fcolour: the figure at IX -> (IX+3) = 1 when every cell it covers holds one colour in the game's colour list (then
-; (IX+2) = it), else 0 (an item with a colour per cell). Cells: columns x >> 3 .. (x + width x 8 - 1) >> 3, rows
-; top >> 3 .. (top + rows - 1) >> 3, inside the 32 x 20 map.
-fcolour:
-        ld a,(ix+6)
+; sigput: A -> the next signature byte; past 9 cells the signature is spoilt (SIGT = 0xFF: built every time).
+; Keeps BC, DE, HL.
+sigput: push hl
+        push af
+        ld hl,(F_SP)
+        ld a,l
+        cp low (SIGT+10)
+        jr c,.ok
+        pop af
+        ld a,0xFF
+        ld (SIGT),a
+        pop hl
+        ret
+.ok:    pop af
+        ld (hl),a
+        inc hl
+        ld (F_SP),hl
+        pop hl
+        ret
+
+; sigeq: C = a mutable slot -> Z when MSIG for it equals SIGT. Keeps BC, DE, HL.
+sigeq:  push bc
+        push de
+        push hl
+        call sigat
+        ld de,SIGT
+        ld b,10
+.q:     ld a,(de)
+        cp (hl)
+.n_sig: jr nz,.x                ; (negative control: NOPped = the colours ignored, a stale image served)
+        inc e
+        inc l
+        djnz .q
+        xor a                   ; Z: equal
+.x:     pop hl
+        pop de
+        pop bc
+        ret
+
+; sigsave: C = a mutable slot -> MSIG for it = SIGT. Keeps BC, DE, HL.
+sigsave: push bc
+        push de
+        push hl
+        call sigat
+        ex de,hl
+        ld hl,SIGT
+        ld b,10
+.c:     ld a,(hl)
+        ld (de),a
+        inc l
+        inc e
+        djnz .c
+        pop hl
+        pop de
+        pop bc
+        ret
+
+; sigat: C = a mutable slot -> HL = its MSIG entry (10 x (slot - MUT0)).
+sigat:  ld a,c
+        sub MUT0
+        ld l,a
+        add a,a
+        add a,a
+        add a,l
+        add a,a
+        add a,low MSIG
+        ld l,a
+        ld h,high MSIG
+        ret
+
+; fbox: the figure at IX -> F_CX0..F_CX1, F_CY0..F_CY1 = the cells it covers inside the 32 x 20 map: columns x >> 3 ..
+; (x + width x 8 - 1) >> 3, rows top >> 3 .. (top + rows - 1) >> 3. Carry: none (it lies below the map).
+fbox:   ld a,(ix+6)
         rrca
         rrca
         rrca
@@ -720,6 +1059,9 @@ fcolour:
         ld a,31
 .c1:    ld (F_CX1),a
         ld a,(ix+7)
+        cp 160
+        ccf
+        ret c                   ; top below the map
         rrca
         rrca
         rrca
@@ -728,17 +1070,53 @@ fcolour:
         ld a,(ix+7)
         add a,(ix+4)
         dec a
+        jr c,.r19               ; past row 255
         rrca
         rrca
         rrca
         and 31
         cp 20
         jr c,.r1
-        ld a,19
+.r19:   ld a,19
 .r1:    ld (F_CY1),a
+        or a                    ; no carry
+        ret
+
+; fcolour: the figure at IX -> (IX+3) = 1 when every cell it covers holds one colour in the game's colour list (then
+; (IX+2) = it), else 0 (an item with a colour per cell). Cells: columns x >> 3 .. (x + width x 8 - 1) >> 3, rows
+; top >> 3 .. (top + rows - 1) >> 3, inside the 32 x 20 map.
+fcolour:
+        ld a,0xFF
+        ld (SIGT),a             ; no signature yet (0xFF: not cacheable)
+        call fbox
+        ld (ix+3),1
+        ret c                   ; nothing on the map: one colour, the object's
+        ld hl,SIGT+1            ; the signature: alignment, then each cell's colour (0xFF: no slot)
+        ld b,9
+        ld a,0xFE
+.sc:    ld (hl),a
+        inc l
+        djnz .sc
+        ld hl,SIGT+1
+        ld (F_SP),hl
+        ld a,(ix+8)
+        and 1
+        rrca
+        rrca
+        ld b,a                  ; mirror -> bit 6
+        ld a,(ix+7)
+        and 7
+        add a,a
+        add a,a
+        add a,a
+        or b
+        ld b,a
+        ld a,(ix+6)
+        and 7
+        or b
+        ld (SIGT),a             ; x & 7 | (top & 7) << 3 | mirror << 6
         ld a,0xFF
         ld (F_COL),a
-        ld (ix+3),1
         ld a,(F_CY0)
 .row:   ld b,a                  ; B = cell row
         ld a,(F_CX0)
@@ -758,13 +1136,14 @@ fcolour:
         add hl,de
         ld a,(hl)
         cp 3
-        jr c,.skip              ; no slot here
+        jr c,.noslot            ; no slot here
         ld e,a
         ld d,0
         ld hl,SLOTCOL
         add hl,de
         ld a,(hl)
         ld e,a
+        call sigput
         ld a,(F_COL)
         cp 0xFF
         jr nz,.cmp
@@ -773,7 +1152,10 @@ fcolour:
         jr .skip
 .cmp:   cp e
         jr z,.skip
-        ld (ix+3),0             ; a second colour
+.n_multi: ld (ix+3),0           ; a second colour (negative control: LD (IX+3),1 = one colour for every figure)
+        jr .skip
+.noslot: ld a,0xFF
+        call sigput
 .skip:  pop bc
         ld a,(F_CX1)
         cp c
@@ -877,6 +1259,10 @@ attrs:  ld hl,(C_ATP)
 
 code_end:
         ASSERT code_end <= 0x3E00
+        ASSERT (SLOTUSE & 255) + 64 <= 256
+        ASSERT (SIGT & 255) + 10 <= 256 && SIGT >= PTAB + 16 && SEEN >= SIGT + 10 && (SEEN & 255) + 128 <= 256
+        ASSERT MSIG >= SEEN + 128 && (MSIG & 255) + 160 <= 256 && MSIG + 160 <= 0x2900
+        ASSERT (PTAB & 15) == 0 && PTAB >= ATTRTAB + 640 && PTAB + 16 <= 0x2900
 
         SAVEBIN "jtn2_page.bin", code_start, code_end - code_start
 

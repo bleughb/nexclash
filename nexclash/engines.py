@@ -128,6 +128,7 @@ ENGINES = [
     ('cybernoid', 'is_cybernoid', None),                                  # Cybernoid (48K)
     ('pentagram', 'is_pentagram', None),                                 # Pentagram (48K), original presentation + optional Enhanced
     ('jack_the_nipper', 'is_jack_the_nipper', None),                      # Jack the Nipper (48K)
+    ('jack_the_nipper_2', 'is_jack_the_nipper_2', None),                  # Jack the Nipper II: Coconut Capers (128K)
 ]
 
 
