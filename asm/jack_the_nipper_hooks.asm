@@ -570,7 +570,7 @@ cls:    sla d
         ret
 
 ; attrs: the tile (C_TR, C_TC) of the figure at IX in C_SLOT -> 5 bytes at C_ATP. X = x + 32 + 16 x column (mirrored:
-; the columns run right to left), Y = top + 32 + 16 x row; attribute 2 = bank << 4 | mirror << 3 | X bit 8;
+; the columns run right to left, and a 24-wide figure's box starts 8 pixels left), Y = top + 32 + 16 x row; attribute 2 = bank << 4 | mirror << 3 | X bit 8;
 ; attribute 3 = visible, attribute 4 on, pattern slot; attribute 4 = 4-bit, N6 = the tile's half, Y bit 8.
 attrs:  ld hl,(C_ATP)
         ld a,(C_TC)
@@ -598,7 +598,15 @@ attrs:  ld hl,(C_ATP)
         ex de,hl
         ld bc,32
         add hl,bc               ; + 32
-        ex de,hl
+        ld a,(ix+8)
+        or a
+        jr z,.nx8
+        ld a,(ix+5)
+        cp 3
+        jr nz,.nx8
+        ld bc,-8                ; a mirrored 24-wide figure: its 32-pixel box's 8 empty columns are on the left now
+        add hl,bc
+.nx8:   ex de,hl
         ld (hl),e               ; attribute 0
         inc hl
         ld a,(C_TR)
