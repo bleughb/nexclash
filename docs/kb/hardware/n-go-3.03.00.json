@@ -7,7 +7,7 @@
  },
  "board": {
   "name": "n-go",
-  "named_from": "owner (relabelled 2026-11-24: the registers read $0A / $00, as an official Issue 2 does; the run predates the first-start questions)",
+  "named_from": "operator",
   "nr00": "nr00:$0A",
   "nr0f": "nr0f:$00",
   "ram": "distinct",
@@ -15,25 +15,39 @@
   "geom": "vga128"
  },
  "core": "3.03.00",
- "intake_runs": 1,
+ "operator": {
+  "model": "NG",
+  "model_name": "N-GO",
+  "conn": "HDMI",
+  "disp": "monitor",
+  "ramq": "2 MB",
+  "pi": "yes",
+  "label": null,
+  "label_note": "withheld at intake"
+ },
+ "intake_runs": 2,
  "intakes": [
   {
    "date": "2026-11-24",
    "file_sha256": "7bef8a3ca997e88905a181cc382d0d7f155e015035e642b6209053e96f61c1dd"
+  },
+  {
+   "date": "2026-11-24",
+   "file_sha256": "45a099d1b5cec09fdaea8b274fd7bf4f27fecee288c6d86e0e26ee1ac02f59f6"
   }
  ],
  "run": {
   "suite": "1.0",
-  "src": "4548f5f8",
+  "src": "754bd120",
   "file": "NXSUITE.TXT",
-  "file_sha256": "7bef8a3ca997e88905a181cc382d0d7f155e015035e642b6209053e96f61c1dd",
+  "file_sha256": "45a099d1b5cec09fdaea8b274fd7bf4f27fecee288c6d86e0e26ee1ac02f59f6",
   "sessions": [
    {
     "suite": "1.0",
-    "src": "4548f5f8",
+    "src": "754bd120",
     "built": "2026-11-24",
     "run": "1",
-    "mode": "GROUP:V",
+    "mode": "ALL",
     "resumed_from": "-",
     "core": "3.03.00",
     "nr01": "$33",
@@ -57,11 +71,17 @@
     "nrb8": "$82",
     "nrb9": "$00",
     "nrba": "$00",
-    "nrbb": "$F2"
+    "nrbb": "$F2",
+    "model": "NG",
+    "conn": "1",
+    "disp": "1",
+    "ramq": "2",
+    "pi": "1",
+    "label": "-"
    },
    {
     "suite": "1.0",
-    "src": "4548f5f8",
+    "src": "754bd120",
     "built": "2026-11-24",
     "run": "2",
     "mode": "GROUP:XH",
@@ -88,13 +108,56 @@
     "nrb8": "$82",
     "nrb9": "$00",
     "nrba": "$00",
-    "nrbb": "$F2"
+    "nrbb": "$F2",
+    "model": "NG",
+    "conn": "1",
+    "disp": "1",
+    "ramq": "2",
+    "pi": "1",
+    "label": "-"
+   },
+   {
+    "suite": "1.0",
+    "src": "754bd120",
+    "built": "2026-11-24",
+    "run": "3",
+    "mode": "GROUP:XH",
+    "resumed_from": "-",
+    "core": "3.03.00",
+    "nr01": "$33",
+    "nr0e": "$00",
+    "machine": "nr00:$0A",
+    "board": "nr0f:$00",
+    "ram": "distinct",
+    "video": "unknown",
+    "nr11": "$00",
+    "timing": "nr03:$33",
+    "hz": "50",
+    "nr05": "$5B",
+    "lines": "311",
+    "line_t": "228.02",
+    "geom": "vga128",
+    "speed_start": "nr07:$33",
+    "cal35": "682",
+    "cal_ctc": "114.01",
+    "t_per_line": "228.22",
+    "nr0a": "$11",
+    "nrb8": "$82",
+    "nrb9": "$00",
+    "nrba": "$00",
+    "nrbb": "$F2",
+    "model": "NG",
+    "conn": "1",
+    "disp": "1",
+    "ramq": "2",
+    "pi": "1",
+    "label": "-"
    }
   ],
   "nextregs": {
    "$00": "$0A",
    "$01": "$33",
-   "$02": "$01",
+   "$02": "$02",
    "$03": "$33",
    "$04": "$00",
    "$05": "$5B",
@@ -123,7 +186,7 @@
    "$1C": "$00",
    "$1D": "$00",
    "$1E": "$00",
-   "$1F": "$4F",
+   "$1F": "$65",
    "$20": "$40",
    "$21": "$00",
    "$22": "$00",
@@ -294,7 +357,7 @@
    "$C7": "$00",
    "$C8": "$01",
    "$C9": "$00",
-   "$CA": "$44",
+   "$CA": "$47",
    "$CB": "$00",
    "$CC": "$00",
    "$CD": "$00",
@@ -350,327 +413,11 @@
    "$FF": "$00"
   },
   "tests": {
-   "V01": {
-    "id": "V01",
-    "status": "OPERATOR",
-    "line": 265,
-    "pass": 1,
-    "v": "two-late",
-    "u": "book",
-    "n": "1",
-    "min": "two-late",
-    "max": "two-late",
-    "c": "spr-clip-units,spr-change-one-line-late",
-    "extra": {
-     "l": "two-late",
-     "means": "book-two-late"
-    }
-   },
-   "V02": {
-    "id": "V02",
-    "status": "OPERATOR",
-    "line": 266,
-    "pass": 1,
-    "v": "red",
-    "u": "-",
-    "n": "1",
-    "min": "red",
-    "max": "red",
-    "c": "spr-order-bit6",
-    "extra": {
-     "b0": "green",
-     "b1": "red",
-     "means": "green-red"
-    }
-   },
-   "V03": {
-    "id": "V03",
-    "status": "OPERATOR",
-    "line": 267,
-    "pass": 1,
-    "v": "tl",
-    "u": "-",
-    "n": "1",
-    "min": "tl",
-    "max": "tl",
-    "c": "spr-scale-rotate",
-    "extra": {
-     "s": "wide",
-     "o": "tl",
-     "means": "wide-tl"
-    }
-   },
-   "V04": {
-    "id": "V04",
-    "status": "OPERATOR",
-    "line": 268,
-    "pass": 1,
-    "v": "claim",
-    "u": "-",
-    "n": "1",
-    "min": "claim",
-    "max": "claim",
-    "c": "lay-transparency-rules",
-    "extra": {
-     "key": "1",
-     "means": "claim"
-    }
-   },
-   "V05": {
-    "id": "V05",
-    "status": "OPERATOR",
-    "line": 269,
-    "pass": 1,
-    "v": "lower-green",
-    "u": "-",
-    "n": "1",
-    "min": "lower-green",
-    "max": "lower-green",
-    "c": "lay-border-transparent",
-    "extra": {
-     "key": "2",
-     "means": "lower-green"
-    }
-   },
-   "V06": {
-    "id": "V06",
-    "status": "OPERATOR",
-    "line": 270,
-    "pass": 1,
-    "v": "claim",
-    "u": "-",
-    "n": "1",
-    "min": "claim",
-    "max": "claim",
-    "c": "lay-l2-priority-bit",
-    "extra": {
-     "key": "1",
-     "means": "claim"
-    }
-   },
-   "V07": {
-    "id": "V07",
-    "status": "OPERATOR",
-    "line": 271,
-    "pass": 1,
-    "v": "both",
-    "u": "-",
-    "n": "1",
-    "min": "both",
-    "max": "both",
-    "c": "lay-l2-wide-clip-default",
-    "extra": {
-     "c0": "top",
-     "c1": "both",
-     "means": "top-both"
-    }
-   },
-   "V08": {
-    "id": "V08",
-    "status": "SKIP",
-    "line": 724,
-    "pass": 3,
-    "v": "-",
-    "u": "-",
-    "n": "0",
-    "min": "-",
-    "max": "-",
-    "why": "left-out",
-    "c": "lay-l2-640-whole-pixels",
-    "extra": {}
-   },
-   "V09": {
-    "id": "V09",
-    "status": "OPERATOR",
-    "line": 273,
-    "pass": 1,
-    "v": "on",
-    "u": "-",
-    "n": "1",
-    "min": "on",
-    "max": "on",
-    "c": "lay-l2-scroll-ranges",
-    "extra": {
-     "a": "on",
-     "w": "on",
-     "means": "on-on"
-    }
-   },
-   "V10": {
-    "id": "V10",
-    "status": "OPERATOR",
-    "line": 274,
-    "pass": 1,
-    "v": "split-clean",
-    "u": "-",
-    "n": "1",
-    "min": "split-clean",
-    "max": "split-clean",
-    "c": "lay-l2-flip-not-synced",
-    "extra": {
-     "key": "1",
-     "means": "split-clean"
-    }
-   },
-   "V11": {
-    "id": "V11",
-    "status": "OPERATOR",
-    "line": 275,
-    "pass": 1,
-    "v": "wrap",
-    "u": "-",
-    "n": "1",
-    "min": "wrap",
-    "max": "wrap",
-    "c": "lay-tilemap-bank7-wrap",
-    "extra": {
-     "key": "1",
-     "means": "wrap"
-    }
-   },
-   "V12": {
-    "id": "V12",
-    "status": "OPERATOR",
-    "line": 276,
-    "pass": 1,
-    "v": "lower",
-    "u": "-",
-    "n": "1",
-    "min": "lower",
-    "max": "lower",
-    "c": "lay-tilemap-text-and-6b",
-    "extra": {
-     "t": "grey",
-     "f": "lower",
-     "means": "grey-lower"
-    }
-   },
-   "V13": {
-    "id": "V13",
-    "status": "OPERATOR",
-    "line": 277,
-    "pass": 1,
-    "v": "claim",
-    "u": "-",
-    "n": "1",
-    "min": "claim",
-    "max": "claim",
-    "c": "lay-sprites-between-ula-tilemap",
-    "extra": {
-     "key": "1",
-     "means": "claim"
-    }
-   },
-   "V14": {
-    "id": "V14",
-    "status": "OPERATOR",
-    "line": 278,
-    "pass": 1,
-    "v": "match",
-    "u": "-",
-    "n": "1",
-    "min": "match",
-    "max": "match",
-    "c": "lay-blend-stencil",
-    "extra": {
-     "key": "1",
-     "means": "match"
-    }
-   },
-   "V15": {
-    "id": "V15",
-    "status": "OPERATOR",
-    "line": 279,
-    "pass": 1,
-    "v": "stays",
-    "u": "-",
-    "n": "1",
-    "min": "stays",
-    "max": "stays",
-    "c": "lay-ula-reads-bank5",
-    "extra": {
-     "key": "Y",
-     "means": "stays"
-    }
-   },
-   "V16": {
-    "id": "V16",
-    "status": "OPERATOR",
-    "line": 280,
-    "pass": 1,
-    "v": "changed",
-    "u": "-",
-    "n": "1",
-    "min": "changed",
-    "max": "changed",
-    "c": "lay-port-ff-timex",
-    "extra": {
-     "key": "1",
-     "means": "changed"
-    }
-   },
-   "V17": {
-    "id": "V17",
-    "status": "OPERATOR",
-    "line": 281,
-    "pass": 1,
-    "v": "inside",
-    "u": "-",
-    "n": "1",
-    "min": "inside",
-    "max": "inside",
-    "c": "copper-15-resets-clip",
-    "extra": {
-     "key": "1",
-     "means": "inside"
-    }
-   },
-   "V18": {
-    "id": "V18",
-    "status": "OPERATOR",
-    "line": 282,
-    "pass": 1,
-    "v": "part-right",
-    "u": "-",
-    "n": "1",
-    "min": "part-right",
-    "max": "part-right",
-    "c": "frame-64-33-l2-top",
-    "extra": {
-     "o33": "part-left",
-     "o32": "part-right",
-     "means": "part-left-part-right"
-    }
-   },
-   "V19": {
-    "id": "V19",
-    "status": "OPERATOR",
-    "line": 283,
-    "pass": 1,
-    "v": "49.35",
-    "u": "Hz",
-    "n": "1",
-    "min": "49.35",
-    "max": "49.35",
-    "c": "sys-video-timing-frame-rate",
-    "extra": {
-     "cable": "hdmi",
-     "frames": "35535",
-     "secs": "720",
-     "tenths": "0",
-     "tol": "0.04",
-     "r05": "$5B",
-     "r11": "$00",
-     "ctcw": "307578",
-     "c0": "$00",
-     "c1": "$CF"
-    }
-   },
    "S00": {
     "id": "S00",
     "status": "INFO",
-    "line": 298,
-    "pass": 3,
+    "line": 266,
+    "pass": 1,
     "v": "0",
     "u": "bytes",
     "n": "1",
@@ -682,8 +429,8 @@
    "S01": {
     "id": "S01",
     "status": "INFO",
-    "line": 299,
-    "pass": 3,
+    "line": 267,
+    "pass": 1,
     "v": "$DE",
     "u": "-",
     "n": "1",
@@ -711,8 +458,8 @@
    "S02": {
     "id": "S02",
     "status": "INFO",
-    "line": 300,
-    "pass": 3,
+    "line": 268,
+    "pass": 1,
     "v": "3.03.00",
     "u": "-",
     "n": "1",
@@ -728,8 +475,8 @@
    "S03": {
     "id": "S03",
     "status": "INFO",
-    "line": 301,
-    "pass": 3,
+    "line": 269,
+    "pass": 1,
     "v": "distinct",
     "u": "-",
     "n": "1",
@@ -737,16 +484,16 @@
     "max": "distinct",
     "c": "sys-ram-size",
     "extra": {
-     "crc96": "$7891",
-     "crc0": "$FFDB",
+     "crc96": "$DB31",
+     "crc0": "$1149",
      "crcrom0": "$3CA9"
     }
    },
    "S04": {
     "id": "S04",
     "status": "INFO",
-    "line": 302,
-    "pass": 3,
+    "line": 270,
+    "pass": 1,
     "v": "$EEE2",
     "u": "-",
     "n": "1",
@@ -762,8 +509,8 @@
    "S05": {
     "id": "S05",
     "status": "PASS",
-    "line": 303,
-    "pass": 3,
+    "line": 271,
+    "pass": 1,
     "v": "0",
     "u": "-",
     "n": "1",
@@ -780,8 +527,8 @@
    "S06": {
     "id": "S06",
     "status": "PASS",
-    "line": 304,
-    "pass": 3,
+    "line": 272,
+    "pass": 1,
     "v": "0",
     "u": "-",
     "n": "1",
@@ -802,8 +549,8 @@
    "S07": {
     "id": "S07",
     "status": "PASS",
-    "line": 305,
-    "pass": 3,
+    "line": 273,
+    "pass": 1,
     "v": "64",
     "u": "-",
     "n": "1",
@@ -815,8 +562,8 @@
    "C01": {
     "id": "C01",
     "status": "PASS",
-    "line": 308,
-    "pass": 3,
+    "line": 276,
+    "pass": 1,
     "v": "4",
     "u": "clocks",
     "n": "5",
@@ -836,8 +583,8 @@
    "C02": {
     "id": "C02",
     "status": "INFO",
-    "line": 309,
-    "pass": 3,
+    "line": 277,
+    "pass": 1,
     "v": "4",
     "u": "clocks",
     "n": "5",
@@ -851,8 +598,8 @@
    "C03": {
     "id": "C03",
     "status": "INFO",
-    "line": 310,
-    "pass": 3,
+    "line": 278,
+    "pass": 1,
     "v": "4",
     "u": "clocks",
     "n": "5",
@@ -866,8 +613,8 @@
    "C04": {
     "id": "C04",
     "status": "INFO",
-    "line": 311,
-    "pass": 3,
+    "line": 279,
+    "pass": 1,
     "v": "4",
     "u": "clocks",
     "n": "5",
@@ -881,8 +628,8 @@
    "C05": {
     "id": "C05",
     "status": "INFO",
-    "line": 312,
-    "pass": 3,
+    "line": 280,
+    "pass": 1,
     "v": "7.01",
     "u": "clocks",
     "n": "5",
@@ -897,8 +644,8 @@
    "C06": {
     "id": "C06",
     "status": "INFO",
-    "line": 313,
-    "pass": 3,
+    "line": 281,
+    "pass": 1,
     "v": "4",
     "u": "clocks",
     "n": "5",
@@ -921,8 +668,8 @@
    "C07": {
     "id": "C07",
     "status": "INFO",
-    "line": 314,
-    "pass": 3,
+    "line": 282,
+    "pass": 1,
     "v": "0",
     "u": "T",
     "n": "5",
@@ -934,8 +681,8 @@
    "C08": {
     "id": "C08",
     "status": "INFO",
-    "line": 315,
-    "pass": 3,
+    "line": 283,
+    "pass": 1,
     "v": "0.03",
     "u": "T",
     "n": "5",
@@ -950,8 +697,8 @@
    "C09": {
     "id": "C09",
     "status": "INFO",
-    "line": 316,
-    "pass": 3,
+    "line": 284,
+    "pass": 1,
     "v": "23",
     "u": "T",
     "n": "8",
@@ -965,23 +712,23 @@
    "C10": {
     "id": "C10",
     "status": "INFO",
-    "line": 317,
-    "pass": 3,
-    "v": "11",
+    "line": 285,
+    "pass": 1,
+    "v": "10.99",
     "u": "T",
     "n": "5",
     "min": "10.96",
     "max": "11.01",
     "c": "cpu-io-contention",
     "extra": {
-     "border": "10.97"
+     "border": "10.96"
     }
    },
    "C11": {
     "id": "C11",
     "status": "INFO",
-    "line": 318,
-    "pass": 3,
+    "line": 286,
+    "pass": 1,
     "v": "8.01",
     "u": "T",
     "n": "5",
@@ -989,16 +736,16 @@
     "max": "8.01",
     "c": "cpu-undoc-timings",
     "extra": {
-     "ed63": "20",
-     "ed6b": "19.99",
-     "dd00": "8.01"
+     "ed63": "19.99",
+     "ed6b": "20",
+     "dd00": "8"
     }
    },
    "C12": {
     "id": "C12",
     "status": "PASS",
-    "line": 319,
-    "pass": 3,
+    "line": 287,
+    "pass": 1,
     "v": "$00",
     "u": "-",
     "n": "1",
@@ -1010,8 +757,8 @@
    "C13": {
     "id": "C13",
     "status": "INFO",
-    "line": 320,
-    "pass": 3,
+    "line": 288,
+    "pass": 1,
     "v": "50",
     "u": "-",
     "n": "1",
@@ -1029,8 +776,8 @@
    "C14": {
     "id": "C14",
     "status": "INFO",
-    "line": 321,
-    "pass": 3,
+    "line": 289,
+    "pass": 1,
     "v": "24",
     "u": "-",
     "n": "1",
@@ -1050,8 +797,8 @@
    "C15": {
     "id": "C15",
     "status": "PASS",
-    "line": 322,
-    "pass": 3,
+    "line": 290,
+    "pass": 1,
     "v": "20.97",
     "u": "clocks",
     "n": "5",
@@ -1065,8 +812,8 @@
    "Z01": {
     "id": "Z01",
     "status": "FAIL",
-    "line": 371,
-    "pass": 3,
+    "line": 339,
+    "pass": 1,
     "v": "44",
     "u": "count",
     "n": "1",
@@ -1078,8 +825,8 @@
    "Z02": {
     "id": "Z02",
     "status": "PASS",
-    "line": 372,
-    "pass": 3,
+    "line": 340,
+    "pass": 1,
     "v": "0",
     "u": "count",
     "n": "1",
@@ -1103,8 +850,8 @@
    "Z03": {
     "id": "Z03",
     "status": "INFO",
-    "line": 373,
-    "pass": 3,
+    "line": 341,
+    "pass": 1,
     "v": "ADD-D-1",
     "u": "-",
     "n": "1",
@@ -1122,8 +869,8 @@
    "Z04": {
     "id": "Z04",
     "status": "INFO",
-    "line": 374,
-    "pass": 3,
+    "line": 342,
+    "pass": 1,
     "v": "same-as-LDIRX",
     "u": "-",
     "n": "1",
@@ -1141,8 +888,8 @@
    "Z05": {
     "id": "Z05",
     "status": "INFO",
-    "line": 375,
-    "pass": 3,
+    "line": 343,
+    "pass": 1,
     "v": "8",
     "u": "count",
     "n": "1",
@@ -1163,8 +910,8 @@
    "Z06": {
     "id": "Z06",
     "status": "PASS",
-    "line": 407,
-    "pass": 3,
+    "line": 375,
+    "pass": 1,
     "v": "31",
     "u": "count",
     "n": "1",
@@ -1176,8 +923,8 @@
    "Z07": {
     "id": "Z07",
     "status": "PASS",
-    "line": 439,
-    "pass": 3,
+    "line": 407,
+    "pass": 1,
     "v": "31",
     "u": "count",
     "n": "1",
@@ -1189,8 +936,8 @@
    "I01": {
     "id": "I01",
     "status": "PASS",
-    "line": 442,
-    "pass": 3,
+    "line": 410,
+    "pass": 1,
     "v": "5",
     "u": "count",
     "n": "1",
@@ -1204,8 +951,8 @@
    "I02": {
     "id": "I02",
     "status": "PASS",
-    "line": 443,
-    "pass": 3,
+    "line": 411,
+    "pass": 1,
     "v": "5",
     "u": "count",
     "n": "1",
@@ -1219,8 +966,8 @@
    "I03": {
     "id": "I03",
     "status": "PASS",
-    "line": 451,
-    "pass": 3,
+    "line": 419,
+    "pass": 1,
     "v": "6",
     "u": "count",
     "n": "1",
@@ -1232,8 +979,8 @@
    "I04": {
     "id": "I04",
     "status": "INFO",
-    "line": 452,
-    "pass": 3,
+    "line": 420,
+    "pass": 1,
     "v": "-1",
     "u": "T",
     "n": "1",
@@ -1249,8 +996,8 @@
    "I05": {
     "id": "I05",
     "status": "INFO",
-    "line": 453,
-    "pass": 3,
+    "line": 421,
+    "pass": 1,
     "v": "-1",
     "u": "clocks",
     "n": "1",
@@ -1268,8 +1015,8 @@
    "I06": {
     "id": "I06",
     "status": "PASS",
-    "line": 454,
-    "pass": 3,
+    "line": 422,
+    "pass": 1,
     "v": "$F6",
     "u": "-",
     "n": "1",
@@ -1284,8 +1031,8 @@
    "I07": {
     "id": "I07",
     "status": "PASS",
-    "line": 455,
-    "pass": 3,
+    "line": 423,
+    "pass": 1,
     "v": "$01",
     "u": "-",
     "n": "1",
@@ -1306,8 +1053,8 @@
    "I08": {
     "id": "I08",
     "status": "INFO",
-    "line": 456,
-    "pass": 3,
+    "line": 424,
+    "pass": 1,
     "v": "23",
     "u": "clocks",
     "n": "5",
@@ -1321,8 +1068,8 @@
    "I09": {
     "id": "I09",
     "status": "INFO",
-    "line": 457,
-    "pass": 3,
+    "line": 425,
+    "pass": 1,
     "v": "248",
     "u": "lines",
     "n": "250",
@@ -1330,15 +1077,15 @@
     "max": "248",
     "c": "irq-ula-int-line",
     "extra": {
-     "ctcmin": "1",
+     "ctcmin": "0",
      "ctcmax": "255"
     }
    },
    "I10": {
     "id": "I10",
     "status": "INFO",
-    "line": 458,
-    "pass": 3,
+    "line": 426,
+    "pass": 1,
     "v": "-150",
     "u": "T",
     "n": "1",
@@ -1346,8 +1093,8 @@
     "max": "-150",
     "c": "irq-line-int-position",
     "extra": {
-     "p0": "-22",
-     "s0": "68",
+     "p0": "-17",
+     "s0": "38",
      "p100": "-150",
      "s100": "0",
      "p191": "-149",
@@ -1359,8 +1106,8 @@
    "I11": {
     "id": "I11",
     "status": "PASS",
-    "line": 459,
-    "pass": 3,
+    "line": 427,
+    "pass": 1,
     "v": "5",
     "u": "count",
     "n": "1",
@@ -1378,8 +1125,8 @@
    "I12": {
     "id": "I12",
     "status": "PASS",
-    "line": 460,
-    "pass": 3,
+    "line": 428,
+    "pass": 1,
     "v": "2216.37",
     "u": "ticks",
     "n": "1",
@@ -1387,7 +1134,7 @@
     "max": "2216.37",
     "c": "irq-ctc-rate-fixed",
     "extra": {
-     "s7": "2216",
+     "s7": "2216.12",
      "s14": "2215.87",
      "s28": "2215.87"
     }
@@ -1395,13 +1142,13 @@
    "I13": {
     "id": "I13",
     "status": "PASS",
-    "line": 461,
-    "pass": 3,
-    "v": "16138",
+    "line": 429,
+    "pass": 1,
+    "v": "16136",
     "u": "count",
     "n": "1",
-    "min": "16138",
-    "max": "16138",
+    "min": "16136",
+    "max": "16136",
     "c": "irq-ctc-time-constant,irq-ctc-status-polled",
     "extra": {
      "c219": "8094",
@@ -1413,8 +1160,8 @@
    "I14": {
     "id": "I14",
     "status": "INFO",
-    "line": 462,
-    "pass": 3,
+    "line": 430,
+    "pass": 1,
     "v": "33.46",
     "u": "T",
     "n": "1",
@@ -1431,8 +1178,8 @@
    "I15": {
     "id": "I15",
     "status": "INFO",
-    "line": 463,
-    "pass": 3,
+    "line": 431,
+    "pass": 1,
     "v": "0",
     "u": "count",
     "n": "1",
@@ -1446,8 +1193,8 @@
    "I16": {
     "id": "I16",
     "status": "PASS",
-    "line": 464,
-    "pass": 3,
+    "line": 432,
+    "pass": 1,
     "v": "100",
     "u": "count",
     "n": "1",
@@ -1459,8 +1206,8 @@
    "I17": {
     "id": "I17",
     "status": "PASS",
-    "line": 465,
-    "pass": 3,
+    "line": 433,
+    "pass": 1,
     "v": "5",
     "u": "count",
     "n": "1",
@@ -1478,8 +1225,8 @@
    "I18": {
     "id": "I18",
     "status": "INFO",
-    "line": 466,
-    "pass": 3,
+    "line": 434,
+    "pass": 1,
     "v": "2",
     "u": "count",
     "n": "1",
@@ -1497,8 +1244,8 @@
    "I19": {
     "id": "I19",
     "status": "PASS",
-    "line": 467,
-    "pass": 3,
+    "line": 435,
+    "pass": 1,
     "v": "1",
     "u": "count",
     "n": "1",
@@ -1513,8 +1260,8 @@
    "I20": {
     "id": "I20",
     "status": "PASS",
-    "line": 468,
-    "pass": 3,
+    "line": 436,
+    "pass": 1,
     "v": "1",
     "u": "count",
     "n": "1",
@@ -1530,8 +1277,8 @@
    "I21": {
     "id": "I21",
     "status": "INFO",
-    "line": 469,
-    "pass": 3,
+    "line": 437,
+    "pass": 1,
     "v": "1",
     "u": "count",
     "n": "1",
@@ -1551,8 +1298,8 @@
    "I22": {
     "id": "I22",
     "status": "PASS",
-    "line": 470,
-    "pass": 3,
+    "line": 438,
+    "pass": 1,
     "v": "0",
     "u": "count",
     "n": "1",
@@ -1570,8 +1317,8 @@
    "I23": {
     "id": "I23",
     "status": "PASS",
-    "line": 471,
-    "pass": 3,
+    "line": 439,
+    "pass": 1,
     "v": "12",
     "u": "count",
     "n": "1",
@@ -1586,18 +1333,18 @@
    "I24": {
     "id": "I24",
     "status": "PASS",
-    "line": 472,
-    "pass": 3,
-    "v": "1214",
+    "line": 440,
+    "pass": 1,
+    "v": "1211",
     "u": "bytes",
     "n": "1",
-    "min": "1214",
-    "max": "1214",
+    "min": "1211",
+    "max": "1211",
     "c": "dma-hwim2-yield",
     "extra": {
      "ran": "1",
      "bad": "0",
-     "dbad": "15201",
+     "dbad": "15205",
      "start": "243",
      "pend": "2",
      "di": "paused-at-request"
@@ -1606,8 +1353,8 @@
    "F01": {
     "id": "F01",
     "status": "PASS",
-    "line": 475,
-    "pass": 3,
+    "line": 443,
+    "pass": 1,
     "v": "311",
     "u": "lines",
     "n": "1",
@@ -1622,8 +1369,8 @@
    "F02": {
     "id": "F02",
     "status": "INFO",
-    "line": 476,
-    "pass": 3,
+    "line": 444,
+    "pass": 1,
     "v": "228.02",
     "u": "T",
     "n": "1",
@@ -1637,8 +1384,8 @@
    "F03": {
     "id": "F03",
     "status": "INFO",
-    "line": 477,
-    "pass": 3,
+    "line": 445,
+    "pass": 1,
     "v": "264",
     "u": "lines",
     "n": "1",
@@ -1659,8 +1406,8 @@
    "F04": {
     "id": "F04",
     "status": "PASS",
-    "line": 478,
-    "pass": 3,
+    "line": 446,
+    "pass": 1,
     "v": "0",
     "u": "count",
     "n": "1",
@@ -1676,8 +1423,8 @@
    "F05": {
     "id": "F05",
     "status": "INFO",
-    "line": 479,
-    "pass": 3,
+    "line": 447,
+    "pass": 1,
     "v": "100",
     "u": "lines",
     "n": "1",
@@ -1698,8 +1445,8 @@
    "F06": {
     "id": "F06",
     "status": "INFO",
-    "line": 480,
-    "pass": 3,
+    "line": 448,
+    "pass": 1,
     "v": "264",
     "u": "lines",
     "n": "1",
@@ -1718,8 +1465,8 @@
    "P01": {
     "id": "P01",
     "status": "INFO",
-    "line": 483,
-    "pass": 3,
+    "line": 451,
+    "pass": 1,
     "v": "holds",
     "u": "-",
     "n": "1",
@@ -1737,8 +1484,8 @@
    "P02": {
     "id": "P02",
     "status": "PASS",
-    "line": 484,
-    "pass": 3,
+    "line": 452,
+    "pass": 1,
     "v": "100",
     "u": "-",
     "n": "1",
@@ -1754,8 +1501,8 @@
    "P03": {
     "id": "P03",
     "status": "INFO",
-    "line": 485,
-    "pass": 3,
+    "line": 453,
+    "pass": 1,
     "v": "$3F",
     "u": "-",
     "n": "1",
@@ -1769,8 +1516,8 @@
    "P04": {
     "id": "P04",
     "status": "PASS",
-    "line": 486,
-    "pass": 3,
+    "line": 454,
+    "pass": 1,
     "v": "1",
     "u": "-",
     "n": "1",
@@ -1795,8 +1542,8 @@
    "P05": {
     "id": "P05",
     "status": "INFO",
-    "line": 487,
-    "pass": 3,
+    "line": 455,
+    "pass": 1,
     "v": "1.88",
     "u": "clocks",
     "n": "1",
@@ -1804,16 +1551,16 @@
     "max": "1.88",
     "c": "copper-instruction-time",
     "extra": {
-     "wait": "0.92",
+     "wait": "0.94",
      "mt": "118",
-     "wt": "58"
+     "wt": "59"
     }
    },
    "P06": {
     "id": "P06",
     "status": "INFO",
-    "line": 488,
-    "pass": 3,
+    "line": 456,
+    "pass": 1,
     "v": "0",
     "u": "-",
     "n": "1",
@@ -1825,8 +1572,8 @@
    "P07": {
     "id": "P07",
     "status": "PASS",
-    "line": 489,
-    "pass": 3,
+    "line": 457,
+    "pass": 1,
     "v": "$A5",
     "u": "-",
     "n": "1",
@@ -1840,8 +1587,8 @@
    "P08": {
     "id": "P08",
     "status": "PASS",
-    "line": 490,
-    "pass": 3,
+    "line": 458,
+    "pass": 1,
     "v": "0",
     "u": "-",
     "n": "1",
@@ -1858,8 +1605,8 @@
    "P09": {
     "id": "P09",
     "status": "INFO",
-    "line": 491,
-    "pass": 3,
+    "line": 459,
+    "pass": 1,
     "v": "21.75",
     "u": "clocks",
     "n": "1",
@@ -1880,8 +1627,8 @@
    "P10": {
     "id": "P10",
     "status": "PASS",
-    "line": 492,
-    "pass": 3,
+    "line": 460,
+    "pass": 1,
     "v": "$00",
     "u": "-",
     "n": "1",
@@ -1893,8 +1640,8 @@
    "D01": {
     "id": "D01",
     "status": "PASS",
-    "line": 495,
-    "pass": 3,
+    "line": 463,
+    "pass": 1,
     "v": "0",
     "u": "-",
     "n": "1",
@@ -1911,8 +1658,8 @@
    "D02": {
     "id": "D02",
     "status": "PASS",
-    "line": 496,
-    "pass": 3,
+    "line": 464,
+    "pass": 1,
     "v": "5.92",
     "u": "clocks",
     "n": "1",
@@ -1941,8 +1688,8 @@
    "D03": {
     "id": "D03",
     "status": "PASS",
-    "line": 497,
-    "pass": 3,
+    "line": 465,
+    "pass": 1,
     "v": "16",
     "u": "bytes",
     "n": "1",
@@ -1961,8 +1708,8 @@
    "D04": {
     "id": "D04",
     "status": "INFO",
-    "line": 498,
-    "pass": 3,
+    "line": 466,
+    "pass": 1,
     "v": "3195.36",
     "u": "clocks",
     "n": "1",
@@ -1987,8 +1734,8 @@
    "D05": {
     "id": "D05",
     "status": "INFO",
-    "line": 499,
-    "pass": 3,
+    "line": 467,
+    "pass": 1,
     "v": "99.37",
     "u": "%",
     "n": "1",
@@ -2002,8 +1749,8 @@
    "D06": {
     "id": "D06",
     "status": "PASS",
-    "line": 500,
-    "pass": 3,
+    "line": 468,
+    "pass": 1,
     "v": "$3A",
     "u": "-",
     "n": "1",
@@ -2024,8 +1771,8 @@
    "D07": {
     "id": "D07",
     "status": "PASS",
-    "line": 501,
-    "pass": 3,
+    "line": 469,
+    "pass": 1,
     "v": "7.68",
     "u": "clocks",
     "n": "1",
@@ -2041,8 +1788,8 @@
    "D08": {
     "id": "D08",
     "status": "PASS",
-    "line": 502,
-    "pass": 3,
+    "line": 470,
+    "pass": 1,
     "v": "0",
     "u": "bytes",
     "n": "1",
@@ -2054,8 +1801,8 @@
    "D09": {
     "id": "D09",
     "status": "INFO",
-    "line": 503,
-    "pass": 3,
+    "line": 471,
+    "pass": 1,
     "v": "blitter",
     "u": "-",
     "n": "1",
@@ -2070,8 +1817,8 @@
    "D10": {
     "id": "D10",
     "status": "PASS",
-    "line": 504,
-    "pass": 3,
+    "line": 472,
+    "pass": 1,
     "v": "0",
     "u": "bytes",
     "n": "1",
@@ -2085,8 +1832,8 @@
    "D11": {
     "id": "D11",
     "status": "PASS",
-    "line": 505,
-    "pass": 3,
+    "line": 473,
+    "pass": 1,
     "v": "twin",
     "u": "-",
     "n": "1",
@@ -2101,8 +1848,8 @@
    "D12": {
     "id": "D12",
     "status": "PASS",
-    "line": 506,
-    "pass": 3,
+    "line": 474,
+    "pass": 1,
     "v": "0",
     "u": "bytes",
     "n": "1",
@@ -2119,8 +1866,8 @@
    "D13": {
     "id": "D13",
     "status": "PASS",
-    "line": 507,
-    "pass": 3,
+    "line": 475,
+    "pass": 1,
     "v": "2.88",
     "u": "clocks",
     "n": "1",
@@ -2138,8 +1885,8 @@
    "D14": {
     "id": "D14",
     "status": "PASS",
-    "line": 508,
-    "pass": 3,
+    "line": 476,
+    "pass": 1,
     "v": "0",
     "u": "bytes",
     "n": "1",
@@ -2155,8 +1902,8 @@
    "D15": {
     "id": "D15",
     "status": "SKIP",
-    "line": 509,
-    "pass": 3,
+    "line": 477,
+    "pass": 1,
     "v": "-",
     "u": "-",
     "n": "0",
@@ -2169,8 +1916,8 @@
    "D16": {
     "id": "D16",
     "status": "SKIP",
-    "line": 510,
-    "pass": 3,
+    "line": 478,
+    "pass": 1,
     "v": "-",
     "u": "-",
     "n": "0",
@@ -2183,8 +1930,8 @@
    "N01": {
     "id": "N01",
     "status": "INFO",
-    "line": 693,
-    "pass": 3,
+    "line": 661,
+    "pass": 1,
     "v": "90",
     "u": "count",
     "n": "1",
@@ -2200,8 +1947,8 @@
    "SP01": {
     "id": "SP01",
     "status": "PASS",
-    "line": 696,
-    "pass": 3,
+    "line": 664,
+    "pass": 1,
     "v": "$01",
     "u": "-",
     "n": "1",
@@ -2220,8 +1967,8 @@
    "SP02": {
     "id": "SP02",
     "status": "PASS",
-    "line": 697,
-    "pass": 3,
+    "line": 665,
+    "pass": 1,
     "v": "$01",
     "u": "-",
     "n": "1",
@@ -2233,8 +1980,8 @@
    "SP03": {
     "id": "SP03",
     "status": "PASS",
-    "line": 698,
-    "pass": 3,
+    "line": 666,
+    "pass": 1,
     "v": "3",
     "u": "-",
     "n": "1",
@@ -2248,8 +1995,8 @@
    "SP04": {
     "id": "SP04",
     "status": "PASS",
-    "line": 699,
-    "pass": 3,
+    "line": 667,
+    "pass": 1,
     "v": "$01",
     "u": "-",
     "n": "1",
@@ -2265,8 +2012,8 @@
    "SP05": {
     "id": "SP05",
     "status": "PASS",
-    "line": 700,
-    "pass": 3,
+    "line": 668,
+    "pass": 1,
     "v": "$01",
     "u": "-",
     "n": "1",
@@ -2281,8 +2028,8 @@
    "SP06": {
     "id": "SP06",
     "status": "PASS",
-    "line": 701,
-    "pass": 3,
+    "line": 669,
+    "pass": 1,
     "v": "$01",
     "u": "-",
     "n": "1",
@@ -2297,8 +2044,8 @@
    "SP07": {
     "id": "SP07",
     "status": "PASS",
-    "line": 702,
-    "pass": 3,
+    "line": 670,
+    "pass": 1,
     "v": "$00",
     "u": "-",
     "n": "1",
@@ -2310,8 +2057,8 @@
    "SP08": {
     "id": "SP08",
     "status": "INFO",
-    "line": 703,
-    "pass": 3,
+    "line": 671,
+    "pass": 1,
     "v": "relative",
     "u": "-",
     "n": "1",
@@ -2326,8 +2073,8 @@
    "SP09": {
     "id": "SP09",
     "status": "PASS",
-    "line": 704,
-    "pass": 3,
+    "line": 672,
+    "pass": 1,
     "v": "$0F",
     "u": "-",
     "n": "1",
@@ -2339,8 +2086,8 @@
    "SP10": {
     "id": "SP10",
     "status": "INFO",
-    "line": 705,
-    "pass": 3,
+    "line": 673,
+    "pass": 1,
     "v": "106",
     "u": "count",
     "n": "1",
@@ -2357,8 +2104,8 @@
    "SP11": {
     "id": "SP11",
     "status": "PASS",
-    "line": 706,
-    "pass": 3,
+    "line": 674,
+    "pass": 1,
     "v": "$01",
     "u": "-",
     "n": "1",
@@ -2370,8 +2117,8 @@
    "M01": {
     "id": "M01",
     "status": "PASS",
-    "line": 709,
-    "pass": 3,
+    "line": 677,
+    "pass": 1,
     "v": "$06",
     "u": "-",
     "n": "1",
@@ -2393,8 +2140,8 @@
    "M02": {
     "id": "M02",
     "status": "PASS",
-    "line": 710,
-    "pass": 3,
+    "line": 678,
+    "pass": 1,
     "v": "$00",
     "u": "-",
     "n": "1",
@@ -2419,8 +2166,8 @@
    "M03": {
     "id": "M03",
     "status": "PASS",
-    "line": 711,
-    "pass": 3,
+    "line": 679,
+    "pass": 1,
     "v": "$3D",
     "u": "-",
     "n": "1",
@@ -2437,8 +2184,8 @@
    "M04": {
     "id": "M04",
     "status": "PASS",
-    "line": 712,
-    "pass": 3,
+    "line": 680,
+    "pass": 1,
     "v": "$5A",
     "u": "-",
     "n": "1",
@@ -2453,8 +2200,8 @@
    "M05": {
     "id": "M05",
     "status": "INFO",
-    "line": 713,
-    "pass": 3,
+    "line": 681,
+    "pass": 1,
     "v": "$C0",
     "u": "-",
     "n": "1",
@@ -2469,8 +2216,8 @@
    "M06": {
     "id": "M06",
     "status": "PASS",
-    "line": 714,
-    "pass": 3,
+    "line": 682,
+    "pass": 1,
     "v": "$77",
     "u": "-",
     "n": "1",
@@ -2479,11 +2226,321 @@
     "c": "mem-fetch-wrap-ffff",
     "extra": {}
    },
+   "V01": {
+    "id": "V01",
+    "status": "OPERATOR",
+    "line": 724,
+    "pass": 2,
+    "v": "two-late",
+    "u": "book",
+    "n": "1",
+    "min": "two-late",
+    "max": "two-late",
+    "c": "spr-clip-units,spr-change-one-line-late",
+    "extra": {
+     "l": "two-late",
+     "means": "book-two-late"
+    }
+   },
+   "V02": {
+    "id": "V02",
+    "status": "OPERATOR",
+    "line": 725,
+    "pass": 2,
+    "v": "red",
+    "u": "-",
+    "n": "1",
+    "min": "red",
+    "max": "red",
+    "c": "spr-order-bit6",
+    "extra": {
+     "b0": "green",
+     "b1": "red",
+     "means": "green-red"
+    }
+   },
+   "V03": {
+    "id": "V03",
+    "status": "OPERATOR",
+    "line": 726,
+    "pass": 2,
+    "v": "tl",
+    "u": "-",
+    "n": "1",
+    "min": "tl",
+    "max": "tl",
+    "c": "spr-scale-rotate",
+    "extra": {
+     "s": "wide",
+     "o": "tl",
+     "means": "wide-tl"
+    }
+   },
+   "V04": {
+    "id": "V04",
+    "status": "OPERATOR",
+    "line": 727,
+    "pass": 2,
+    "v": "claim",
+    "u": "-",
+    "n": "1",
+    "min": "claim",
+    "max": "claim",
+    "c": "lay-transparency-rules",
+    "extra": {
+     "key": "1",
+     "means": "claim"
+    }
+   },
+   "V05": {
+    "id": "V05",
+    "status": "OPERATOR",
+    "line": 728,
+    "pass": 2,
+    "v": "lower-green",
+    "u": "-",
+    "n": "1",
+    "min": "lower-green",
+    "max": "lower-green",
+    "c": "lay-border-transparent",
+    "extra": {
+     "key": "2",
+     "means": "lower-green"
+    }
+   },
+   "V06": {
+    "id": "V06",
+    "status": "OPERATOR",
+    "line": 729,
+    "pass": 2,
+    "v": "claim",
+    "u": "-",
+    "n": "1",
+    "min": "claim",
+    "max": "claim",
+    "c": "lay-l2-priority-bit",
+    "extra": {
+     "key": "1",
+     "means": "claim"
+    }
+   },
+   "V07": {
+    "id": "V07",
+    "status": "OPERATOR",
+    "line": 730,
+    "pass": 2,
+    "v": "both",
+    "u": "-",
+    "n": "1",
+    "min": "both",
+    "max": "both",
+    "c": "lay-l2-wide-clip-default",
+    "extra": {
+     "c0": "top",
+     "c1": "both",
+     "means": "top-both"
+    }
+   },
+   "V08": {
+    "id": "V08",
+    "status": "OPERATOR",
+    "line": 731,
+    "pass": 2,
+    "v": "none",
+    "u": "-",
+    "n": "1",
+    "min": "none",
+    "max": "none",
+    "c": "lay-l2-640-whole-pixels",
+    "extra": {
+     "s0": "none",
+     "s1": "none",
+     "means": "none-none"
+    }
+   },
+   "V09": {
+    "id": "V09",
+    "status": "OPERATOR",
+    "line": 732,
+    "pass": 2,
+    "v": "on",
+    "u": "-",
+    "n": "1",
+    "min": "on",
+    "max": "on",
+    "c": "lay-l2-scroll-ranges",
+    "extra": {
+     "a": "on",
+     "w": "on",
+     "means": "on-on"
+    }
+   },
+   "V10": {
+    "id": "V10",
+    "status": "OPERATOR",
+    "line": 733,
+    "pass": 2,
+    "v": "split-clean",
+    "u": "-",
+    "n": "1",
+    "min": "split-clean",
+    "max": "split-clean",
+    "c": "lay-l2-flip-not-synced",
+    "extra": {
+     "key": "1",
+     "means": "split-clean"
+    }
+   },
+   "V11": {
+    "id": "V11",
+    "status": "OPERATOR",
+    "line": 734,
+    "pass": 2,
+    "v": "wrap",
+    "u": "-",
+    "n": "1",
+    "min": "wrap",
+    "max": "wrap",
+    "c": "lay-tilemap-bank7-wrap",
+    "extra": {
+     "key": "1",
+     "means": "wrap"
+    }
+   },
+   "V12": {
+    "id": "V12",
+    "status": "OPERATOR",
+    "line": 735,
+    "pass": 2,
+    "v": "lower",
+    "u": "-",
+    "n": "1",
+    "min": "lower",
+    "max": "lower",
+    "c": "lay-tilemap-text-and-6b",
+    "extra": {
+     "t": "grey",
+     "f": "lower",
+     "means": "grey-lower"
+    }
+   },
+   "V13": {
+    "id": "V13",
+    "status": "OPERATOR",
+    "line": 736,
+    "pass": 2,
+    "v": "claim",
+    "u": "-",
+    "n": "1",
+    "min": "claim",
+    "max": "claim",
+    "c": "lay-sprites-between-ula-tilemap",
+    "extra": {
+     "key": "1",
+     "means": "claim"
+    }
+   },
+   "V14": {
+    "id": "V14",
+    "status": "OPERATOR",
+    "line": 737,
+    "pass": 2,
+    "v": "match",
+    "u": "-",
+    "n": "1",
+    "min": "match",
+    "max": "match",
+    "c": "lay-blend-stencil",
+    "extra": {
+     "key": "1",
+     "means": "match"
+    }
+   },
+   "V15": {
+    "id": "V15",
+    "status": "OPERATOR",
+    "line": 738,
+    "pass": 2,
+    "v": "stays",
+    "u": "-",
+    "n": "1",
+    "min": "stays",
+    "max": "stays",
+    "c": "lay-ula-reads-bank5",
+    "extra": {
+     "key": "Y",
+     "means": "stays"
+    }
+   },
+   "V16": {
+    "id": "V16",
+    "status": "OPERATOR",
+    "line": 739,
+    "pass": 2,
+    "v": "changed",
+    "u": "-",
+    "n": "1",
+    "min": "changed",
+    "max": "changed",
+    "c": "lay-port-ff-timex",
+    "extra": {
+     "key": "1",
+     "means": "changed"
+    }
+   },
+   "V17": {
+    "id": "V17",
+    "status": "OPERATOR",
+    "line": 740,
+    "pass": 2,
+    "v": "inside",
+    "u": "-",
+    "n": "1",
+    "min": "inside",
+    "max": "inside",
+    "c": "copper-15-resets-clip",
+    "extra": {
+     "key": "1",
+     "means": "inside"
+    }
+   },
+   "V18": {
+    "id": "V18",
+    "status": "OPERATOR",
+    "line": 741,
+    "pass": 2,
+    "v": "part-left",
+    "u": "-",
+    "n": "1",
+    "min": "part-left",
+    "max": "part-left",
+    "c": "frame-64-33-l2-top",
+    "extra": {
+     "o33": "part-left",
+     "o32": "part-left",
+     "means": "part-left-part-left"
+    }
+   },
+   "V19": {
+    "id": "V19",
+    "status": "PENDING-OPERATOR",
+    "line": 742,
+    "pass": 2,
+    "v": "hdmi",
+    "u": "-",
+    "n": "1",
+    "min": "hdmi",
+    "max": "hdmi",
+    "c": "sys-video-timing-frame-rate",
+    "extra": {
+     "cable": "hdmi"
+    }
+   },
    "XT1": {
     "id": "XT1",
     "status": "PASS",
-    "line": 756,
-    "pass": 4,
+    "line": 796,
+    "pass": 10,
     "v": "4",
     "u": "count",
     "n": "1",
@@ -2508,8 +2565,8 @@
    "XT2": {
     "id": "XT2",
     "status": "FAIL",
-    "line": 757,
-    "pass": 4,
+    "line": 797,
+    "pass": 10,
     "v": "320",
     "u": "lines",
     "n": "1",
@@ -2528,8 +2585,8 @@
    "XT3": {
     "id": "XT3",
     "status": "INFO",
-    "line": 758,
-    "pass": 4,
+    "line": 798,
+    "pass": 10,
     "v": "book",
     "u": "-",
     "n": "1",
@@ -2548,8 +2605,8 @@
    "XT4": {
     "id": "XT4",
     "status": "INFO",
-    "line": 759,
-    "pass": 4,
+    "line": 799,
+    "pass": 10,
     "v": "$06",
     "u": "-",
     "n": "1",
@@ -2568,8 +2625,8 @@
    "XT5": {
     "id": "XT5",
     "status": "PASS",
-    "line": 760,
-    "pass": 4,
+    "line": 800,
+    "pass": 10,
     "v": "$DFF3",
     "u": "-",
     "n": "1",
@@ -2587,8 +2644,8 @@
    "XT6": {
     "id": "XT6",
     "status": "PASS",
-    "line": 761,
-    "pass": 4,
+    "line": 801,
+    "pass": 10,
     "v": "311",
     "u": "lines",
     "n": "1",
@@ -2604,8 +2661,8 @@
    "XD1": {
     "id": "XD1",
     "status": "INFO",
-    "line": 770,
-    "pass": 6,
+    "line": 779,
+    "pass": 8,
     "v": "set-enables",
     "u": "-",
     "n": "1",
@@ -2624,8 +2681,8 @@
    "XD2": {
     "id": "XD2",
     "status": "PASS",
-    "line": 771,
-    "pass": 6,
+    "line": 780,
+    "pass": 8,
     "v": "instant",
     "u": "-",
     "n": "1",
@@ -2640,8 +2697,8 @@
    "XD3": {
     "id": "XD3",
     "status": "PASS",
-    "line": 772,
-    "pass": 6,
+    "line": 781,
+    "pass": 8,
     "v": "trap",
     "u": "-",
     "n": "1",
@@ -2656,8 +2713,8 @@
    "XH1": {
     "id": "XH1",
     "status": "PASS",
-    "line": 765,
-    "pass": 5,
+    "line": 791,
+    "pass": 9,
     "v": "1",
     "u": "count",
     "n": "1",
@@ -2672,8 +2729,8 @@
    "XH2": {
     "id": "XH2",
     "status": "PASS",
-    "line": 766,
-    "pass": 5,
+    "line": 792,
+    "pass": 9,
     "v": "deaf",
     "u": "-",
     "n": "1",
@@ -2688,7 +2745,7 @@
      {
       "id": "XH2",
       "status": "OPERATOR",
-      "line": 780,
+      "line": 776,
       "pass": 7,
       "v": "reset-frees",
       "u": "-",
@@ -2708,8 +2765,8 @@
     "zf.SWAPNIB": {
      "id": "zf.SWAPNIB",
      "status": "PASS",
-     "line": 325,
-     "pass": 3,
+     "line": 293,
+     "pass": 1,
      "v": "$A5",
      "u": "-",
      "n": "1",
@@ -2723,8 +2780,8 @@
     "zf.MIRROR": {
      "id": "zf.MIRROR",
      "status": "PASS",
-     "line": 326,
-     "pass": 3,
+     "line": 294,
+     "pass": 1,
      "v": "$A5",
      "u": "-",
      "n": "1",
@@ -2738,8 +2795,8 @@
     "zf.TESTz0": {
      "id": "zf.TESTz0",
      "status": "PASS",
-     "line": 327,
-     "pass": 3,
+     "line": 295,
+     "pass": 1,
      "v": "$54",
      "u": "-",
      "n": "1",
@@ -2753,8 +2810,8 @@
     "zf.TESTzF": {
      "id": "zf.TESTzF",
      "status": "PASS",
-     "line": 328,
-     "pass": 3,
+     "line": 296,
+     "pass": 1,
      "v": "$54",
      "u": "-",
      "n": "1",
@@ -2768,8 +2825,8 @@
     "zf.TESTnz": {
      "id": "zf.TESTnz",
      "status": "PASS",
-     "line": 329,
-     "pass": 3,
+     "line": 297,
+     "pass": 1,
      "v": "$B4",
      "u": "-",
      "n": "1",
@@ -2783,8 +2840,8 @@
     "zf.BSLA": {
      "id": "zf.BSLA",
      "status": "PASS",
-     "line": 330,
-     "pass": 3,
+     "line": 298,
+     "pass": 1,
      "v": "$A5",
      "u": "-",
      "n": "1",
@@ -2798,8 +2855,8 @@
     "zf.BSRA": {
      "id": "zf.BSRA",
      "status": "PASS",
-     "line": 331,
-     "pass": 3,
+     "line": 299,
+     "pass": 1,
      "v": "$A5",
      "u": "-",
      "n": "1",
@@ -2813,8 +2870,8 @@
     "zf.BSRL": {
      "id": "zf.BSRL",
      "status": "PASS",
-     "line": 332,
-     "pass": 3,
+     "line": 300,
+     "pass": 1,
      "v": "$A5",
      "u": "-",
      "n": "1",
@@ -2828,8 +2885,8 @@
     "zf.BSRF": {
      "id": "zf.BSRF",
      "status": "PASS",
-     "line": 333,
-     "pass": 3,
+     "line": 301,
+     "pass": 1,
      "v": "$A5",
      "u": "-",
      "n": "1",
@@ -2843,8 +2900,8 @@
     "zf.BSRF20": {
      "id": "zf.BSRF20",
      "status": "PASS",
-     "line": 334,
-     "pass": 3,
+     "line": 302,
+     "pass": 1,
      "v": "$A5",
      "u": "-",
      "n": "1",
@@ -2858,8 +2915,8 @@
     "zf.BRLC": {
      "id": "zf.BRLC",
      "status": "PASS",
-     "line": 335,
-     "pass": 3,
+     "line": 303,
+     "pass": 1,
      "v": "$A5",
      "u": "-",
      "n": "1",
@@ -2873,8 +2930,8 @@
     "zf.MUL": {
      "id": "zf.MUL",
      "status": "PASS",
-     "line": 336,
-     "pass": 3,
+     "line": 304,
+     "pass": 1,
      "v": "$A5",
      "u": "-",
      "n": "1",
@@ -2888,8 +2945,8 @@
     "zf.ADDHLA0": {
      "id": "zf.ADDHLA0",
      "status": "PASS",
-     "line": 337,
-     "pass": 3,
+     "line": 305,
+     "pass": 1,
      "v": "$00",
      "u": "-",
      "n": "1",
@@ -2903,8 +2960,8 @@
     "zf.ADDHLAF": {
      "id": "zf.ADDHLAF",
      "status": "PASS",
-     "line": 338,
-     "pass": 3,
+     "line": 306,
+     "pass": 1,
      "v": "$FE",
      "u": "-",
      "n": "1",
@@ -2918,8 +2975,8 @@
     "zf.ADDDEA0": {
      "id": "zf.ADDDEA0",
      "status": "PASS",
-     "line": 339,
-     "pass": 3,
+     "line": 307,
+     "pass": 1,
      "v": "$00",
      "u": "-",
      "n": "1",
@@ -2933,8 +2990,8 @@
     "zf.ADDDEAF": {
      "id": "zf.ADDDEAF",
      "status": "PASS",
-     "line": 340,
-     "pass": 3,
+     "line": 308,
+     "pass": 1,
      "v": "$FE",
      "u": "-",
      "n": "1",
@@ -2948,8 +3005,8 @@
     "zf.ADDBCA": {
      "id": "zf.ADDBCA",
      "status": "PASS",
-     "line": 341,
-     "pass": 3,
+     "line": 309,
+     "pass": 1,
      "v": "$A4",
      "u": "-",
      "n": "1",
@@ -2963,8 +3020,8 @@
     "zf.ADDHLnn": {
      "id": "zf.ADDHLnn",
      "status": "PASS",
-     "line": 342,
-     "pass": 3,
+     "line": 310,
+     "pass": 1,
      "v": "$A5",
      "u": "-",
      "n": "1",
@@ -2978,8 +3035,8 @@
     "zf.ADDDEnn": {
      "id": "zf.ADDDEnn",
      "status": "PASS",
-     "line": 343,
-     "pass": 3,
+     "line": 311,
+     "pass": 1,
      "v": "$A5",
      "u": "-",
      "n": "1",
@@ -2993,8 +3050,8 @@
     "zf.ADDBCnn": {
      "id": "zf.ADDBCnn",
      "status": "PASS",
-     "line": 344,
-     "pass": 3,
+     "line": 312,
+     "pass": 1,
      "v": "$A5",
      "u": "-",
      "n": "1",
@@ -3008,8 +3065,8 @@
     "zf.PUSHnn": {
      "id": "zf.PUSHnn",
      "status": "PASS",
-     "line": 345,
-     "pass": 3,
+     "line": 313,
+     "pass": 1,
      "v": "$A5",
      "u": "-",
      "n": "1",
@@ -3023,8 +3080,8 @@
     "zf.NEXTRGn": {
      "id": "zf.NEXTRGn",
      "status": "PASS",
-     "line": 346,
-     "pass": 3,
+     "line": 314,
+     "pass": 1,
      "v": "$A5",
      "u": "-",
      "n": "1",
@@ -3038,8 +3095,8 @@
     "zf.NEXTRGA": {
      "id": "zf.NEXTRGA",
      "status": "PASS",
-     "line": 347,
-     "pass": 3,
+     "line": 315,
+     "pass": 1,
      "v": "$A5",
      "u": "-",
      "n": "1",
@@ -3053,8 +3110,8 @@
     "zf.PXDN1": {
      "id": "zf.PXDN1",
      "status": "PASS",
-     "line": 348,
-     "pass": 3,
+     "line": 316,
+     "pass": 1,
      "v": "$A5",
      "u": "-",
      "n": "1",
@@ -3068,8 +3125,8 @@
     "zf.PXDN2": {
      "id": "zf.PXDN2",
      "status": "PASS",
-     "line": 349,
-     "pass": 3,
+     "line": 317,
+     "pass": 1,
      "v": "$A5",
      "u": "-",
      "n": "1",
@@ -3083,8 +3140,8 @@
     "zf.PXDN3": {
      "id": "zf.PXDN3",
      "status": "PASS",
-     "line": 350,
-     "pass": 3,
+     "line": 318,
+     "pass": 1,
      "v": "$A5",
      "u": "-",
      "n": "1",
@@ -3098,8 +3155,8 @@
     "zf.PXDN4": {
      "id": "zf.PXDN4",
      "status": "PASS",
-     "line": 351,
-     "pass": 3,
+     "line": 319,
+     "pass": 1,
      "v": "$A5",
      "u": "-",
      "n": "1",
@@ -3113,8 +3170,8 @@
     "zf.PXAD1": {
      "id": "zf.PXAD1",
      "status": "PASS",
-     "line": 352,
-     "pass": 3,
+     "line": 320,
+     "pass": 1,
      "v": "$A5",
      "u": "-",
      "n": "1",
@@ -3128,8 +3185,8 @@
     "zf.PXAD2": {
      "id": "zf.PXAD2",
      "status": "PASS",
-     "line": 353,
-     "pass": 3,
+     "line": 321,
+     "pass": 1,
      "v": "$A5",
      "u": "-",
      "n": "1",
@@ -3143,8 +3200,8 @@
     "zf.SETAE": {
      "id": "zf.SETAE",
      "status": "PASS",
-     "line": 354,
-     "pass": 3,
+     "line": 322,
+     "pass": 1,
      "v": "$A5",
      "u": "-",
      "n": "1",
@@ -3158,8 +3215,8 @@
     "zf.LDIX0": {
      "id": "zf.LDIX0",
      "status": "PASS",
-     "line": 355,
-     "pass": 3,
+     "line": 323,
+     "pass": 1,
      "v": "$04",
      "u": "-",
      "n": "1",
@@ -3173,8 +3230,8 @@
     "zf.LDIXF": {
      "id": "zf.LDIXF",
      "status": "PASS",
-     "line": 356,
-     "pass": 3,
+     "line": 324,
+     "pass": 1,
      "v": "$C5",
      "u": "-",
      "n": "1",
@@ -3188,8 +3245,8 @@
     "zf.LDIRX0": {
      "id": "zf.LDIRX0",
      "status": "PASS",
-     "line": 357,
-     "pass": 3,
+     "line": 325,
+     "pass": 1,
      "v": "$00",
      "u": "-",
      "n": "1",
@@ -3203,8 +3260,8 @@
     "zf.LDIRXF": {
      "id": "zf.LDIRXF",
      "status": "PASS",
-     "line": 358,
-     "pass": 3,
+     "line": 326,
+     "pass": 1,
      "v": "$C1",
      "u": "-",
      "n": "1",
@@ -3218,8 +3275,8 @@
     "zf.LDDX0": {
      "id": "zf.LDDX0",
      "status": "PASS",
-     "line": 359,
-     "pass": 3,
+     "line": 327,
+     "pass": 1,
      "v": "$04",
      "u": "-",
      "n": "1",
@@ -3233,8 +3290,8 @@
     "zf.LDDXF": {
      "id": "zf.LDDXF",
      "status": "PASS",
-     "line": 360,
-     "pass": 3,
+     "line": 328,
+     "pass": 1,
      "v": "$C5",
      "u": "-",
      "n": "1",
@@ -3248,8 +3305,8 @@
     "zf.LDDRX0": {
      "id": "zf.LDDRX0",
      "status": "PASS",
-     "line": 361,
-     "pass": 3,
+     "line": 329,
+     "pass": 1,
      "v": "$00",
      "u": "-",
      "n": "1",
@@ -3263,8 +3320,8 @@
     "zf.LDDRXF": {
      "id": "zf.LDDRXF",
      "status": "PASS",
-     "line": 362,
-     "pass": 3,
+     "line": 330,
+     "pass": 1,
      "v": "$C1",
      "u": "-",
      "n": "1",
@@ -3278,8 +3335,8 @@
     "zf.LDPIRX0": {
      "id": "zf.LDPIRX0",
      "status": "FAIL",
-     "line": 363,
-     "pass": 3,
+     "line": 331,
+     "pass": 1,
      "v": "$00",
      "u": "-",
      "n": "1",
@@ -3294,8 +3351,8 @@
     "zf.LDPIRXF": {
      "id": "zf.LDPIRXF",
      "status": "FAIL",
-     "line": 364,
-     "pass": 3,
+     "line": 332,
+     "pass": 1,
      "v": "$C1",
      "u": "-",
      "n": "1",
@@ -3310,8 +3367,8 @@
     "zf.LDWS7F": {
      "id": "zf.LDWS7F",
      "status": "PASS",
-     "line": 365,
-     "pass": 3,
+     "line": 333,
+     "pass": 1,
      "v": "$94",
      "u": "-",
      "n": "1",
@@ -3325,8 +3382,8 @@
     "zf.LDWSFF": {
      "id": "zf.LDWSFF",
      "status": "PASS",
-     "line": 366,
-     "pass": 3,
+     "line": 334,
+     "pass": 1,
      "v": "$51",
      "u": "-",
      "n": "1",
@@ -3340,8 +3397,8 @@
     "zf.OUTINB0": {
      "id": "zf.OUTINB0",
      "status": "PASS",
-     "line": 367,
-     "pass": 3,
+     "line": 335,
+     "pass": 1,
      "v": "$00",
      "u": "-",
      "n": "1",
@@ -3355,8 +3412,8 @@
     "zf.OUTINBF": {
      "id": "zf.OUTINBF",
      "status": "PASS",
-     "line": 368,
-     "pass": 3,
+     "line": 336,
+     "pass": 1,
      "v": "$FF",
      "u": "-",
      "n": "1",
@@ -3370,8 +3427,8 @@
     "zf.JPC": {
      "id": "zf.JPC",
      "status": "PASS",
-     "line": 369,
-     "pass": 3,
+     "line": 337,
+     "pass": 1,
      "v": "$A5",
      "u": "-",
      "n": "1",
@@ -3385,8 +3442,8 @@
     "zf.JPCedge": {
      "id": "zf.JPCedge",
      "status": "PASS",
-     "line": 370,
-     "pass": 3,
+     "line": 338,
+     "pass": 1,
      "v": "$A5",
      "u": "-",
      "n": "1",
@@ -3402,8 +3459,8 @@
     "zt.NEGz80": {
      "id": "zt.NEGz80",
      "status": "PASS",
-     "line": 376,
-     "pass": 3,
+     "line": 344,
+     "pass": 1,
      "v": "7.99",
      "u": "clocks",
      "n": "5",
@@ -3415,8 +3472,8 @@
     "zt.LDIz80": {
      "id": "zt.LDIz80",
      "status": "PASS",
-     "line": 377,
-     "pass": 3,
+     "line": 345,
+     "pass": 1,
      "v": "15.99",
      "u": "clocks",
      "n": "5",
@@ -3428,8 +3485,8 @@
     "zt.LDIRz80": {
      "id": "zt.LDIRz80",
      "status": "PASS",
-     "line": 378,
-     "pass": 3,
+     "line": 346,
+     "pass": 1,
      "v": "20.98",
      "u": "clocks",
      "n": "5",
@@ -3441,34 +3498,34 @@
     "zt.SWAPNIB": {
      "id": "zt.SWAPNIB",
      "status": "PASS",
-     "line": 379,
-     "pass": 3,
-     "v": "7.99",
+     "line": 347,
+     "pass": 1,
+     "v": "7.98",
      "u": "clocks",
      "n": "5",
      "min": "7.98",
-     "max": "8.01",
+     "max": "7.98",
      "exp": "8",
      "extra": {}
     },
     "zt.MIRROR": {
      "id": "zt.MIRROR",
      "status": "PASS",
-     "line": 380,
-     "pass": 3,
-     "v": "7.99",
+     "line": 348,
+     "pass": 1,
+     "v": "7.98",
      "u": "clocks",
      "n": "5",
      "min": "7.98",
-     "max": "8.01",
+     "max": "7.98",
      "exp": "8",
      "extra": {}
     },
     "zt.TESTn": {
      "id": "zt.TESTn",
      "status": "PASS",
-     "line": 381,
-     "pass": 3,
+     "line": 349,
+     "pass": 1,
      "v": "10.98",
      "u": "clocks",
      "n": "5",
@@ -3480,21 +3537,21 @@
     "zt.BSLA": {
      "id": "zt.BSLA",
      "status": "PASS",
-     "line": 382,
-     "pass": 3,
-     "v": "7.98",
+     "line": 350,
+     "pass": 1,
+     "v": "7.99",
      "u": "clocks",
      "n": "5",
      "min": "7.98",
-     "max": "7.98",
+     "max": "8.01",
      "exp": "8",
      "extra": {}
     },
     "zt.BSRA": {
      "id": "zt.BSRA",
      "status": "PASS",
-     "line": 383,
-     "pass": 3,
+     "line": 351,
+     "pass": 1,
      "v": "7.99",
      "u": "clocks",
      "n": "5",
@@ -3506,8 +3563,8 @@
     "zt.BSRL": {
      "id": "zt.BSRL",
      "status": "PASS",
-     "line": 384,
-     "pass": 3,
+     "line": 352,
+     "pass": 1,
      "v": "7.99",
      "u": "clocks",
      "n": "5",
@@ -3519,8 +3576,8 @@
     "zt.BSRF": {
      "id": "zt.BSRF",
      "status": "PASS",
-     "line": 385,
-     "pass": 3,
+     "line": 353,
+     "pass": 1,
      "v": "7.99",
      "u": "clocks",
      "n": "5",
@@ -3532,8 +3589,8 @@
     "zt.BRLC": {
      "id": "zt.BRLC",
      "status": "PASS",
-     "line": 386,
-     "pass": 3,
+     "line": 354,
+     "pass": 1,
      "v": "7.99",
      "u": "clocks",
      "n": "5",
@@ -3545,8 +3602,21 @@
     "zt.MUL": {
      "id": "zt.MUL",
      "status": "PASS",
-     "line": 387,
-     "pass": 3,
+     "line": 355,
+     "pass": 1,
+     "v": "8",
+     "u": "clocks",
+     "n": "5",
+     "min": "7.98",
+     "max": "8.01",
+     "exp": "8",
+     "extra": {}
+    },
+    "zt.ADDHLA": {
+     "id": "zt.ADDHLA",
+     "status": "PASS",
+     "line": 356,
+     "pass": 1,
      "v": "7.98",
      "u": "clocks",
      "n": "5",
@@ -3555,24 +3625,11 @@
      "exp": "8",
      "extra": {}
     },
-    "zt.ADDHLA": {
-     "id": "zt.ADDHLA",
-     "status": "PASS",
-     "line": 388,
-     "pass": 3,
-     "v": "7.99",
-     "u": "clocks",
-     "n": "5",
-     "min": "7.98",
-     "max": "8.01",
-     "exp": "8",
-     "extra": {}
-    },
     "zt.ADDDEA": {
      "id": "zt.ADDDEA",
      "status": "PASS",
-     "line": 389,
-     "pass": 3,
+     "line": 357,
+     "pass": 1,
      "v": "7.99",
      "u": "clocks",
      "n": "5",
@@ -3584,8 +3641,8 @@
     "zt.ADDBCA": {
      "id": "zt.ADDBCA",
      "status": "PASS",
-     "line": 390,
-     "pass": 3,
+     "line": 358,
+     "pass": 1,
      "v": "7.99",
      "u": "clocks",
      "n": "5",
@@ -3597,8 +3654,8 @@
     "zt.ADDHLnn": {
      "id": "zt.ADDHLnn",
      "status": "PASS",
-     "line": 391,
-     "pass": 3,
+     "line": 359,
+     "pass": 1,
      "v": "15.99",
      "u": "clocks",
      "n": "5",
@@ -3610,8 +3667,8 @@
     "zt.ADDDEnn": {
      "id": "zt.ADDDEnn",
      "status": "PASS",
-     "line": 392,
-     "pass": 3,
+     "line": 360,
+     "pass": 1,
      "v": "15.99",
      "u": "clocks",
      "n": "5",
@@ -3623,8 +3680,8 @@
     "zt.ADDBCnn": {
      "id": "zt.ADDBCnn",
      "status": "PASS",
-     "line": 393,
-     "pass": 3,
+     "line": 361,
+     "pass": 1,
      "v": "15.99",
      "u": "clocks",
      "n": "5",
@@ -3636,21 +3693,21 @@
     "zt.PUSHnn": {
      "id": "zt.PUSHnn",
      "status": "PASS",
-     "line": 394,
-     "pass": 3,
-     "v": "22.97",
+     "line": 362,
+     "pass": 1,
+     "v": "22.98",
      "u": "clocks",
      "n": "5",
      "min": "22.97",
-     "max": "22.97",
+     "max": "23",
      "exp": "23",
      "extra": {}
     },
     "zt.OUTINB": {
      "id": "zt.OUTINB",
      "status": "PASS",
-     "line": 395,
-     "pass": 3,
+     "line": 363,
+     "pass": 1,
      "v": "15.99",
      "u": "clocks",
      "n": "5",
@@ -3662,8 +3719,8 @@
     "zt.NEXTRGn": {
      "id": "zt.NEXTRGn",
      "status": "PASS",
-     "line": 396,
-     "pass": 3,
+     "line": 364,
+     "pass": 1,
      "v": "20",
      "u": "clocks",
      "n": "5",
@@ -3675,8 +3732,8 @@
     "zt.NEXTRGA": {
      "id": "zt.NEXTRGA",
      "status": "PASS",
-     "line": 397,
-     "pass": 3,
+     "line": 365,
+     "pass": 1,
      "v": "16.99",
      "u": "clocks",
      "n": "5",
@@ -3688,21 +3745,21 @@
     "zt.PIXELDN": {
      "id": "zt.PIXELDN",
      "status": "PASS",
-     "line": 398,
-     "pass": 3,
-     "v": "7.98",
+     "line": 366,
+     "pass": 1,
+     "v": "7.99",
      "u": "clocks",
      "n": "5",
      "min": "7.98",
-     "max": "7.98",
+     "max": "8.01",
      "exp": "8",
      "extra": {}
     },
     "zt.PIXELAD": {
      "id": "zt.PIXELAD",
      "status": "PASS",
-     "line": 399,
-     "pass": 3,
+     "line": 367,
+     "pass": 1,
      "v": "7.99",
      "u": "clocks",
      "n": "5",
@@ -3714,8 +3771,8 @@
     "zt.SETAE": {
      "id": "zt.SETAE",
      "status": "PASS",
-     "line": 400,
-     "pass": 3,
+     "line": 368,
+     "pass": 1,
      "v": "7.99",
      "u": "clocks",
      "n": "5",
@@ -3727,8 +3784,8 @@
     "zt.LDIX": {
      "id": "zt.LDIX",
      "status": "PASS",
-     "line": 401,
-     "pass": 3,
+     "line": 369,
+     "pass": 1,
      "v": "15.99",
      "u": "clocks",
      "n": "5",
@@ -3740,8 +3797,8 @@
     "zt.LDWS": {
      "id": "zt.LDWS",
      "status": "PASS",
-     "line": 402,
-     "pass": 3,
+     "line": 370,
+     "pass": 1,
      "v": "13.96",
      "u": "clocks",
      "n": "5",
@@ -3753,8 +3810,8 @@
     "zt.LDDX": {
      "id": "zt.LDDX",
      "status": "PASS",
-     "line": 403,
-     "pass": 3,
+     "line": 371,
+     "pass": 1,
      "v": "15.99",
      "u": "clocks",
      "n": "5",
@@ -3766,8 +3823,8 @@
     "zt.LDIRX": {
      "id": "zt.LDIRX",
      "status": "PASS",
-     "line": 404,
-     "pass": 3,
+     "line": 372,
+     "pass": 1,
      "v": "20.98",
      "u": "clocks",
      "n": "5",
@@ -3779,12 +3836,12 @@
     "zt.LDPIRX": {
      "id": "zt.LDPIRX",
      "status": "PASS",
-     "line": 405,
-     "pass": 3,
+     "line": 373,
+     "pass": 1,
      "v": "20.98",
      "u": "clocks",
      "n": "5",
-     "min": "20.94",
+     "min": "20.97",
      "max": "21",
      "exp": "21",
      "extra": {}
@@ -3792,8 +3849,8 @@
     "zt.LDDRX": {
      "id": "zt.LDDRX",
      "status": "PASS",
-     "line": 406,
-     "pass": 3,
+     "line": 374,
+     "pass": 1,
      "v": "20.98",
      "u": "clocks",
      "n": "5",
@@ -3807,8 +3864,8 @@
     "zu.NEGz80": {
      "id": "zu.NEGz80",
      "status": "PASS",
-     "line": 408,
-     "pass": 3,
+     "line": 376,
+     "pass": 1,
      "v": "7.98",
      "u": "clocks",
      "n": "5",
@@ -3820,8 +3877,8 @@
     "zu.LDIz80": {
      "id": "zu.LDIz80",
      "status": "PASS",
-     "line": 409,
-     "pass": 3,
+     "line": 377,
+     "pass": 1,
      "v": "15.99",
      "u": "clocks",
      "n": "5",
@@ -3833,8 +3890,8 @@
     "zu.LDIRz80": {
      "id": "zu.LDIRz80",
      "status": "PASS",
-     "line": 410,
-     "pass": 3,
+     "line": 378,
+     "pass": 1,
      "v": "21",
      "u": "clocks",
      "n": "5",
@@ -3846,8 +3903,8 @@
     "zu.SWAPNIB": {
      "id": "zu.SWAPNIB",
      "status": "PASS",
-     "line": 411,
-     "pass": 3,
+     "line": 379,
+     "pass": 1,
      "v": "7.98",
      "u": "clocks",
      "n": "5",
@@ -3859,8 +3916,8 @@
     "zu.MIRROR": {
      "id": "zu.MIRROR",
      "status": "PASS",
-     "line": 412,
-     "pass": 3,
+     "line": 380,
+     "pass": 1,
      "v": "7.98",
      "u": "clocks",
      "n": "5",
@@ -3872,8 +3929,8 @@
     "zu.TESTn": {
      "id": "zu.TESTn",
      "status": "PASS",
-     "line": 413,
-     "pass": 3,
+     "line": 381,
+     "pass": 1,
      "v": "10.98",
      "u": "clocks",
      "n": "5",
@@ -3885,8 +3942,8 @@
     "zu.BSLA": {
      "id": "zu.BSLA",
      "status": "PASS",
-     "line": 414,
-     "pass": 3,
+     "line": 382,
+     "pass": 1,
      "v": "7.98",
      "u": "clocks",
      "n": "5",
@@ -3898,8 +3955,8 @@
     "zu.BSRA": {
      "id": "zu.BSRA",
      "status": "PASS",
-     "line": 415,
-     "pass": 3,
+     "line": 383,
+     "pass": 1,
      "v": "7.98",
      "u": "clocks",
      "n": "5",
@@ -3911,8 +3968,8 @@
     "zu.BSRL": {
      "id": "zu.BSRL",
      "status": "PASS",
-     "line": 416,
-     "pass": 3,
+     "line": 384,
+     "pass": 1,
      "v": "7.98",
      "u": "clocks",
      "n": "5",
@@ -3924,8 +3981,8 @@
     "zu.BSRF": {
      "id": "zu.BSRF",
      "status": "PASS",
-     "line": 417,
-     "pass": 3,
+     "line": 385,
+     "pass": 1,
      "v": "7.98",
      "u": "clocks",
      "n": "5",
@@ -3937,8 +3994,8 @@
     "zu.BRLC": {
      "id": "zu.BRLC",
      "status": "PASS",
-     "line": 418,
-     "pass": 3,
+     "line": 386,
+     "pass": 1,
      "v": "7.98",
      "u": "clocks",
      "n": "5",
@@ -3950,8 +4007,8 @@
     "zu.MUL": {
      "id": "zu.MUL",
      "status": "PASS",
-     "line": 419,
-     "pass": 3,
+     "line": 387,
+     "pass": 1,
      "v": "7.98",
      "u": "clocks",
      "n": "5",
@@ -3963,8 +4020,8 @@
     "zu.ADDHLA": {
      "id": "zu.ADDHLA",
      "status": "PASS",
-     "line": 420,
-     "pass": 3,
+     "line": 388,
+     "pass": 1,
      "v": "7.98",
      "u": "clocks",
      "n": "5",
@@ -3976,8 +4033,8 @@
     "zu.ADDDEA": {
      "id": "zu.ADDDEA",
      "status": "PASS",
-     "line": 421,
-     "pass": 3,
+     "line": 389,
+     "pass": 1,
      "v": "7.98",
      "u": "clocks",
      "n": "5",
@@ -3989,8 +4046,8 @@
     "zu.ADDBCA": {
      "id": "zu.ADDBCA",
      "status": "PASS",
-     "line": 422,
-     "pass": 3,
+     "line": 390,
+     "pass": 1,
      "v": "7.98",
      "u": "clocks",
      "n": "5",
@@ -4002,8 +4059,8 @@
     "zu.ADDHLnn": {
      "id": "zu.ADDHLnn",
      "status": "PASS",
-     "line": 423,
-     "pass": 3,
+     "line": 391,
+     "pass": 1,
      "v": "15.99",
      "u": "clocks",
      "n": "5",
@@ -4015,8 +4072,8 @@
     "zu.ADDDEnn": {
      "id": "zu.ADDDEnn",
      "status": "PASS",
-     "line": 424,
-     "pass": 3,
+     "line": 392,
+     "pass": 1,
      "v": "15.99",
      "u": "clocks",
      "n": "5",
@@ -4028,8 +4085,8 @@
     "zu.ADDBCnn": {
      "id": "zu.ADDBCnn",
      "status": "PASS",
-     "line": 425,
-     "pass": 3,
+     "line": 393,
+     "pass": 1,
      "v": "15.99",
      "u": "clocks",
      "n": "5",
@@ -4041,8 +4098,8 @@
     "zu.PUSHnn": {
      "id": "zu.PUSHnn",
      "status": "PASS",
-     "line": 426,
-     "pass": 3,
+     "line": 394,
+     "pass": 1,
      "v": "22.97",
      "u": "clocks",
      "n": "5",
@@ -4054,8 +4111,8 @@
     "zu.OUTINB": {
      "id": "zu.OUTINB",
      "status": "PASS",
-     "line": 427,
-     "pass": 3,
+     "line": 395,
+     "pass": 1,
      "v": "15.99",
      "u": "clocks",
      "n": "5",
@@ -4067,8 +4124,8 @@
     "zu.NEXTRGn": {
      "id": "zu.NEXTRGn",
      "status": "PASS",
-     "line": 428,
-     "pass": 3,
+     "line": 396,
+     "pass": 1,
      "v": "19.98",
      "u": "clocks",
      "n": "5",
@@ -4080,8 +4137,8 @@
     "zu.NEXTRGA": {
      "id": "zu.NEXTRGA",
      "status": "PASS",
-     "line": 429,
-     "pass": 3,
+     "line": 397,
+     "pass": 1,
      "v": "16.99",
      "u": "clocks",
      "n": "5",
@@ -4093,8 +4150,8 @@
     "zu.PIXELDN": {
      "id": "zu.PIXELDN",
      "status": "PASS",
-     "line": 430,
-     "pass": 3,
+     "line": 398,
+     "pass": 1,
      "v": "7.98",
      "u": "clocks",
      "n": "5",
@@ -4106,8 +4163,8 @@
     "zu.PIXELAD": {
      "id": "zu.PIXELAD",
      "status": "PASS",
-     "line": 431,
-     "pass": 3,
+     "line": 399,
+     "pass": 1,
      "v": "7.98",
      "u": "clocks",
      "n": "5",
@@ -4119,8 +4176,8 @@
     "zu.SETAE": {
      "id": "zu.SETAE",
      "status": "PASS",
-     "line": 432,
-     "pass": 3,
+     "line": 400,
+     "pass": 1,
      "v": "7.98",
      "u": "clocks",
      "n": "5",
@@ -4132,8 +4189,8 @@
     "zu.LDIX": {
      "id": "zu.LDIX",
      "status": "PASS",
-     "line": 433,
-     "pass": 3,
+     "line": 401,
+     "pass": 1,
      "v": "15.99",
      "u": "clocks",
      "n": "5",
@@ -4145,8 +4202,8 @@
     "zu.LDWS": {
      "id": "zu.LDWS",
      "status": "PASS",
-     "line": 434,
-     "pass": 3,
+     "line": 402,
+     "pass": 1,
      "v": "13.98",
      "u": "clocks",
      "n": "5",
@@ -4158,8 +4215,8 @@
     "zu.LDDX": {
      "id": "zu.LDDX",
      "status": "PASS",
-     "line": 435,
-     "pass": 3,
+     "line": 403,
+     "pass": 1,
      "v": "15.99",
      "u": "clocks",
      "n": "5",
@@ -4171,8 +4228,8 @@
     "zu.LDIRX": {
      "id": "zu.LDIRX",
      "status": "PASS",
-     "line": 436,
-     "pass": 3,
+     "line": 404,
+     "pass": 1,
      "v": "21",
      "u": "clocks",
      "n": "5",
@@ -4184,8 +4241,8 @@
     "zu.LDPIRX": {
      "id": "zu.LDPIRX",
      "status": "PASS",
-     "line": 437,
-     "pass": 3,
+     "line": 405,
+     "pass": 1,
      "v": "21",
      "u": "clocks",
      "n": "5",
@@ -4197,8 +4254,8 @@
     "zu.LDDRX": {
      "id": "zu.LDDRX",
      "status": "PASS",
-     "line": 438,
-     "pass": 3,
+     "line": 406,
+     "pass": 1,
      "v": "21",
      "u": "clocks",
      "n": "5",
@@ -4212,8 +4269,8 @@
     "ih.t1": {
      "id": "ih.t1",
      "status": "PASS",
-     "line": 444,
-     "pass": 3,
+     "line": 412,
+     "pass": 1,
      "v": "1",
      "u": "count",
      "n": "1",
@@ -4224,8 +4281,8 @@
     "ih.t2": {
      "id": "ih.t2",
      "status": "PASS",
-     "line": 445,
-     "pass": 3,
+     "line": 413,
+     "pass": 1,
      "v": "1",
      "u": "count",
      "n": "1",
@@ -4236,8 +4293,8 @@
     "ih.t3": {
      "id": "ih.t3",
      "status": "PASS",
-     "line": 446,
-     "pass": 3,
+     "line": 414,
+     "pass": 1,
      "v": "0",
      "u": "count",
      "n": "1",
@@ -4248,8 +4305,8 @@
     "ih.t4": {
      "id": "ih.t4",
      "status": "INFO",
-     "line": 447,
-     "pass": 3,
+     "line": 415,
+     "pass": 1,
      "v": "1",
      "u": "count",
      "n": "1",
@@ -4260,8 +4317,8 @@
     "ih.t5": {
      "id": "ih.t5",
      "status": "PASS",
-     "line": 448,
-     "pass": 3,
+     "line": 416,
+     "pass": 1,
      "v": "6",
      "u": "count",
      "n": "1",
@@ -4272,8 +4329,8 @@
     "ih.t6": {
      "id": "ih.t6",
      "status": "PASS",
-     "line": 449,
-     "pass": 3,
+     "line": 417,
+     "pass": 1,
      "v": "6",
      "u": "count",
      "n": "1",
@@ -4284,8 +4341,8 @@
     "ih.t7": {
      "id": "ih.t7",
      "status": "PASS",
-     "line": 450,
-     "pass": 3,
+     "line": 418,
+     "pass": 1,
      "v": "6",
      "u": "count",
      "n": "1",
@@ -4298,8 +4355,8 @@
     "nb.LDIR.1.35": {
      "id": "nb.LDIR.1.35",
      "status": "PASS",
-     "line": 513,
-     "pass": 3,
+     "line": 481,
+     "pass": 1,
      "v": "13.17",
      "u": "us",
      "n": "5",
@@ -4312,8 +4369,8 @@
     "nb.LDIR.1.28": {
      "id": "nb.LDIR.1.28",
      "status": "PASS",
-     "line": 514,
-     "pass": 3,
+     "line": 482,
+     "pass": 1,
      "v": "1.59",
      "u": "us",
      "n": "5",
@@ -4326,12 +4383,12 @@
     "nb.LDIR.16.35": {
      "id": "nb.LDIR.16.35",
      "status": "PASS",
-     "line": 515,
-     "pass": 3,
-     "v": "103.01",
+     "line": 483,
+     "pass": 1,
+     "v": "103.18",
      "u": "us",
      "n": "5",
-     "min": "102.9",
+     "min": "103.18",
      "max": "103.18",
      "extra": {
       "R": "59"
@@ -4340,8 +4397,8 @@
     "nb.LDIR.16.28": {
      "id": "nb.LDIR.16.28",
      "status": "PASS",
-     "line": 516,
-     "pass": 3,
+     "line": 484,
+     "pass": 1,
      "v": "12.83",
      "u": "us",
      "n": "5",
@@ -4354,8 +4411,8 @@
     "nb.LDIR.64.35": {
      "id": "nb.LDIR.64.35",
      "status": "PASS",
-     "line": 517,
-     "pass": 3,
+     "line": 485,
+     "pass": 1,
      "v": "390.66",
      "u": "us",
      "n": "5",
@@ -4368,8 +4425,8 @@
     "nb.LDIR.64.28": {
      "id": "nb.LDIR.64.28",
      "status": "PASS",
-     "line": 518,
-     "pass": 3,
+     "line": 486,
+     "pass": 1,
      "v": "48.93",
      "u": "us",
      "n": "5",
@@ -4382,12 +4439,12 @@
     "nb.LDIR.256.35": {
      "id": "nb.LDIR.256.35",
      "status": "PASS",
-     "line": 519,
-     "pass": 3,
-     "v": "1543.14",
+     "line": 487,
+     "pass": 1,
+     "v": "1542.48",
      "u": "us",
      "n": "5",
-     "min": "1543.14",
+     "min": "1539.88",
      "max": "1543.14",
      "extra": {
       "R": "5"
@@ -4396,8 +4453,8 @@
     "nb.LDIR.256.28": {
      "id": "nb.LDIR.256.28",
      "status": "PASS",
-     "line": 520,
-     "pass": 3,
+     "line": 488,
+     "pass": 1,
      "v": "192.8",
      "u": "us",
      "n": "5",
@@ -4410,9 +4467,9 @@
     "nb.LDIR.1024.35": {
      "id": "nb.LDIR.1024.35",
      "status": "PASS",
-     "line": 521,
-     "pass": 3,
-     "v": "6149.78",
+     "line": 489,
+     "pass": 1,
+     "v": "6146.52",
      "u": "us",
      "n": "5",
      "min": "6136.76",
@@ -4424,8 +4481,8 @@
     "nb.LDIR.1024.28": {
      "id": "nb.LDIR.1024.28",
      "status": "PASS",
-     "line": 522,
-     "pass": 3,
+     "line": 490,
+     "pass": 1,
      "v": "769.5",
      "u": "us",
      "n": "5",
@@ -4438,12 +4495,12 @@
     "nb.LDIR.2048.35": {
      "id": "nb.LDIR.2048.35",
      "status": "PASS",
-     "line": 523,
-     "pass": 3,
-     "v": "12296.31",
+     "line": 491,
+     "pass": 1,
+     "v": "12289.8",
      "u": "us",
      "n": "5",
-     "min": "12289.8",
+     "min": "12273.53",
      "max": "12306.08",
      "extra": {
       "R": "1"
@@ -4452,8 +4509,8 @@
     "nb.LDIR.2048.28": {
      "id": "nb.LDIR.2048.28",
      "status": "PASS",
-     "line": 524,
-     "pass": 3,
+     "line": 492,
+     "pass": 1,
      "v": "1536.63",
      "u": "us",
      "n": "5",
@@ -4466,9 +4523,9 @@
     "nb.LDI_unr.1.35": {
      "id": "nb.LDI_unr.1.35",
      "status": "PASS",
-     "line": 525,
-     "pass": 3,
-     "v": "13.17",
+     "line": 493,
+     "pass": 1,
+     "v": "13.11",
      "u": "us",
      "n": "5",
      "min": "13.09",
@@ -4480,8 +4537,8 @@
     "nb.LDI_unr.1.28": {
      "id": "nb.LDI_unr.1.28",
      "status": "PASS",
-     "line": 526,
-     "pass": 3,
+     "line": 494,
+     "pass": 1,
      "v": "1.59",
      "u": "us",
      "n": "5",
@@ -4494,8 +4551,8 @@
     "nb.LDI_unr.16.35": {
      "id": "nb.LDI_unr.16.35",
      "status": "PASS",
-     "line": 527,
-     "pass": 3,
+     "line": 495,
+     "pass": 1,
      "v": "81.66",
      "u": "us",
      "n": "5",
@@ -4508,8 +4565,8 @@
     "nb.LDI_unr.16.28": {
      "id": "nb.LDI_unr.16.28",
      "status": "PASS",
-     "line": 528,
-     "pass": 3,
+     "line": 496,
+     "pass": 1,
      "v": "10.21",
      "u": "us",
      "n": "5",
@@ -4522,9 +4579,9 @@
     "nb.LDI_unr.64.35": {
      "id": "nb.LDI_unr.64.35",
      "status": "PASS",
-     "line": 529,
-     "pass": 3,
-     "v": "300.94",
+     "line": 497,
+     "pass": 1,
+     "v": "301.33",
      "u": "us",
      "n": "5",
      "min": "300.81",
@@ -4536,8 +4593,8 @@
     "nb.LDI_unr.64.28": {
      "id": "nb.LDI_unr.64.28",
      "status": "PASS",
-     "line": 530,
-     "pass": 3,
+     "line": 498,
+     "pass": 1,
      "v": "37.6",
      "u": "us",
      "n": "5",
@@ -4550,8 +4607,8 @@
     "nb.LDI_unr.256.35": {
      "id": "nb.LDI_unr.256.35",
      "status": "PASS",
-     "line": 531,
-     "pass": 3,
+     "line": 499,
+     "pass": 1,
      "v": "1178.98",
      "u": "us",
      "n": "5",
@@ -4564,8 +4621,8 @@
     "nb.LDI_unr.256.28": {
      "id": "nb.LDI_unr.256.28",
      "status": "PASS",
-     "line": 532,
-     "pass": 3,
+     "line": 500,
+     "pass": 1,
      "v": "147.32",
      "u": "us",
      "n": "5",
@@ -4578,8 +4635,8 @@
     "nb.LDI_unr.1024.35": {
      "id": "nb.LDI_unr.1024.35",
      "status": "PASS",
-     "line": 533,
-     "pass": 3,
+     "line": 501,
+     "pass": 1,
      "v": "4727.09",
      "u": "us",
      "n": "5",
@@ -4592,8 +4649,8 @@
     "nb.LDI_unr.1024.28": {
      "id": "nb.LDI_unr.1024.28",
      "status": "PASS",
-     "line": 534,
-     "pass": 3,
+     "line": 502,
+     "pass": 1,
      "v": "591.43",
      "u": "us",
      "n": "5",
@@ -4606,8 +4663,8 @@
     "nb.LDI_unr.2048.35": {
      "id": "nb.LDI_unr.2048.35",
      "status": "PASS",
-     "line": 535,
-     "pass": 3,
+     "line": 503,
+     "pass": 1,
      "v": "9467.21",
      "u": "us",
      "n": "5",
@@ -4620,8 +4677,8 @@
     "nb.LDI_unr.2048.28": {
      "id": "nb.LDI_unr.2048.28",
      "status": "PASS",
-     "line": 536,
-     "pass": 3,
+     "line": 504,
+     "pass": 1,
      "v": "1183.63",
      "u": "us",
      "n": "5",
@@ -4634,13 +4691,13 @@
     "nb.STACK.16.35": {
      "id": "nb.STACK.16.35",
      "status": "PASS",
-     "line": 537,
-     "pass": 3,
-     "v": "73.66",
+     "line": 505,
+     "pass": 1,
+     "v": "73.58",
      "u": "us",
      "n": "5",
      "min": "73.58",
-     "max": "73.8",
+     "max": "73.58",
      "extra": {
       "R": "73"
      }
@@ -4648,8 +4705,8 @@
     "nb.STACK.16.28": {
      "id": "nb.STACK.16.28",
      "status": "PASS",
-     "line": 538,
-     "pass": 3,
+     "line": 506,
+     "pass": 1,
      "v": "9.19",
      "u": "us",
      "n": "5",
@@ -4662,9 +4719,9 @@
     "nb.STACK.64.35": {
      "id": "nb.STACK.64.35",
      "status": "PASS",
-     "line": 539,
-     "pass": 3,
-     "v": "251.79",
+     "line": 507,
+     "pass": 1,
+     "v": "251.68",
      "u": "us",
      "n": "5",
      "min": "251.46",
@@ -4676,8 +4733,8 @@
     "nb.STACK.64.28": {
      "id": "nb.STACK.64.28",
      "status": "PASS",
-     "line": 540,
-     "pass": 3,
+     "line": 508,
+     "pass": 1,
      "v": "31.51",
      "u": "us",
      "n": "5",
@@ -4690,8 +4747,8 @@
     "nb.STACK.256.35": {
      "id": "nb.STACK.256.35",
      "status": "PASS",
-     "line": 541,
-     "pass": 3,
+     "line": 509,
+     "pass": 1,
      "v": "964.46",
      "u": "us",
      "n": "5",
@@ -4704,8 +4761,8 @@
     "nb.STACK.256.28": {
      "id": "nb.STACK.256.28",
      "status": "PASS",
-     "line": 542,
-     "pass": 3,
+     "line": 510,
+     "pass": 1,
      "v": "120.36",
      "u": "us",
      "n": "5",
@@ -4718,8 +4775,8 @@
     "nb.STACK.1024.35": {
      "id": "nb.STACK.1024.35",
      "status": "PASS",
-     "line": 543,
-     "pass": 3,
+     "line": 511,
+     "pass": 1,
      "v": "3817.16",
      "u": "us",
      "n": "5",
@@ -4732,8 +4789,8 @@
     "nb.STACK.1024.28": {
      "id": "nb.STACK.1024.28",
      "status": "PASS",
-     "line": 544,
-     "pass": 3,
+     "line": 512,
+     "pass": 1,
      "v": "476.58",
      "u": "us",
      "n": "5",
@@ -4746,9 +4803,9 @@
     "nb.STACK.2048.35": {
      "id": "nb.STACK.2048.35",
      "status": "PASS",
-     "line": 545,
-     "pass": 3,
-     "v": "7611.53",
+     "line": 513,
+     "pass": 1,
+     "v": "7614.79",
      "u": "us",
      "n": "5",
      "min": "7601.77",
@@ -4760,8 +4817,8 @@
     "nb.STACK.2048.28": {
      "id": "nb.STACK.2048.28",
      "status": "PASS",
-     "line": 546,
-     "pass": 3,
+     "line": 514,
+     "pass": 1,
      "v": "951.35",
      "u": "us",
      "n": "5",
@@ -4774,8 +4831,8 @@
     "nb.DMA.1.35": {
      "id": "nb.DMA.1.35",
      "status": "PASS",
-     "line": 547,
-     "pass": 3,
+     "line": 515,
+     "pass": 1,
      "v": "102.73",
      "u": "us",
      "n": "5",
@@ -4788,8 +4845,8 @@
     "nb.DMA.1.28": {
      "id": "nb.DMA.1.28",
      "status": "PASS",
-     "line": 548,
-     "pass": 3,
+     "line": 516,
+     "pass": 1,
      "v": "12.83",
      "u": "us",
      "n": "5",
@@ -4802,12 +4859,12 @@
     "nb.DMA.16.35": {
      "id": "nb.DMA.16.35",
      "status": "PASS",
-     "line": 549,
-     "pass": 3,
-     "v": "119.88",
+     "line": 517,
+     "pass": 1,
+     "v": "120.01",
      "u": "us",
      "n": "5",
-     "min": "119.57",
+     "min": "119.89",
      "max": "120.2",
      "extra": {
       "R": "52"
@@ -4816,8 +4873,8 @@
     "nb.DMA.16.28": {
      "id": "nb.DMA.16.28",
      "status": "PASS",
-     "line": 550,
-     "pass": 3,
+     "line": 518,
+     "pass": 1,
      "v": "15.57",
      "u": "us",
      "n": "5",
@@ -4830,8 +4887,8 @@
     "nb.DMA.64.35": {
      "id": "nb.DMA.64.35",
      "status": "PASS",
-     "line": 551,
-     "pass": 3,
+     "line": 519,
+     "pass": 1,
      "v": "174.88",
      "u": "us",
      "n": "5",
@@ -4844,8 +4901,8 @@
     "nb.DMA.64.28": {
      "id": "nb.DMA.64.28",
      "status": "PASS",
-     "line": 552,
-     "pass": 3,
+     "line": 520,
+     "pass": 1,
      "v": "24.12",
      "u": "us",
      "n": "5",
@@ -4858,8 +4915,8 @@
     "nb.DMA.256.35": {
      "id": "nb.DMA.256.35",
      "status": "PASS",
-     "line": 553,
-     "pass": 3,
+     "line": 521,
+     "pass": 1,
      "v": "393.92",
      "u": "us",
      "n": "5",
@@ -4872,8 +4929,8 @@
     "nb.DMA.256.28": {
      "id": "nb.DMA.256.28",
      "status": "PASS",
-     "line": 554,
-     "pass": 3,
+     "line": 522,
+     "pass": 1,
      "v": "58.45",
      "u": "us",
      "n": "5",
@@ -4886,8 +4943,8 @@
     "nb.DMA.1024.35": {
      "id": "nb.DMA.1024.35",
      "status": "PASS",
-     "line": 555,
-     "pass": 3,
+     "line": 523,
+     "pass": 1,
      "v": "1272.38",
      "u": "us",
      "n": "5",
@@ -4900,8 +4957,8 @@
     "nb.DMA.1024.28": {
      "id": "nb.DMA.1024.28",
      "status": "PASS",
-     "line": 556,
-     "pass": 3,
+     "line": 524,
+     "pass": 1,
      "v": "195.33",
      "u": "us",
      "n": "5",
@@ -4914,13 +4971,13 @@
     "nb.DMA.2048.35": {
      "id": "nb.DMA.2048.35",
      "status": "PASS",
-     "line": 557,
-     "pass": 3,
-     "v": "2442.76",
+     "line": 525,
+     "pass": 1,
+     "v": "2441.68",
      "u": "us",
      "n": "5",
      "min": "2441.68",
-     "max": "2447.1",
+     "max": "2441.68",
      "extra": {
       "R": "3"
      }
@@ -4928,8 +4985,8 @@
     "nb.DMA.2048.28": {
      "id": "nb.DMA.2048.28",
      "status": "PASS",
-     "line": 558,
-     "pass": 3,
+     "line": 526,
+     "pass": 1,
      "v": "377.93",
      "u": "us",
      "n": "5",
@@ -4942,9 +4999,9 @@
     "nb.DMA_rtg.16.35": {
      "id": "nb.DMA_rtg.16.35",
      "status": "PASS",
-     "line": 559,
-     "pass": 3,
-     "v": "90",
+     "line": 527,
+     "pass": 1,
+     "v": "90.05",
      "u": "us",
      "n": "5",
      "min": "89.9",
@@ -4956,8 +5013,8 @@
     "nb.DMA_rtg.16.28": {
      "id": "nb.DMA_rtg.16.28",
      "status": "PASS",
-     "line": 560,
-     "pass": 3,
+     "line": 528,
+     "pass": 1,
      "v": "11.8",
      "u": "us",
      "n": "5",
@@ -4970,13 +5027,13 @@
     "nb.DMA_rtg.256.35": {
      "id": "nb.DMA_rtg.256.35",
      "status": "PASS",
-     "line": 561,
-     "pass": 3,
-     "v": "363.99",
+     "line": 529,
+     "pass": 1,
+     "v": "364.3",
      "u": "us",
      "n": "5",
      "min": "363.53",
-     "max": "364.31",
+     "max": "365.08",
      "extra": {
       "R": "21"
      }
@@ -4984,8 +5041,8 @@
     "nb.DMA_rtg.256.28": {
      "id": "nb.DMA_rtg.256.28",
      "status": "PASS",
-     "line": 562,
-     "pass": 3,
+     "line": 530,
+     "pass": 1,
      "v": "54.59",
      "u": "us",
      "n": "5",
@@ -4998,8 +5055,8 @@
     "nb.DMA_rtg.2048.35": {
      "id": "nb.DMA_rtg.2048.35",
      "status": "PASS",
-     "line": 563,
-     "pass": 3,
+     "line": 531,
+     "pass": 1,
      "v": "2412.37",
      "u": "us",
      "n": "5",
@@ -5012,8 +5069,8 @@
     "nb.DMA_rtg.2048.28": {
      "id": "nb.DMA_rtg.2048.28",
      "status": "PASS",
-     "line": 564,
-     "pass": 3,
+     "line": 532,
+     "pass": 1,
      "v": "374.39",
      "u": "us",
      "n": "5",
@@ -5026,9 +5083,9 @@
     "nb.DMA_rrun.256.35": {
      "id": "nb.DMA_rrun.256.35",
      "status": "PASS",
-     "line": 565,
-     "pass": 3,
-     "v": "315.65",
+     "line": 533,
+     "pass": 1,
+     "v": "315.92",
      "u": "us",
      "n": "5",
      "min": "315.38",
@@ -5040,8 +5097,8 @@
     "nb.DMA_rrun.256.28": {
      "id": "nb.DMA_rrun.256.28",
      "status": "PASS",
-     "line": 566,
-     "pass": 3,
+     "line": 534,
+     "pass": 1,
      "v": "48.67",
      "u": "us",
      "n": "5",
@@ -5054,9 +5111,9 @@
     "nb.DMA_cont.1.35": {
      "id": "nb.DMA_cont.1.35",
      "status": "INFO",
-     "line": 567,
-     "pass": 3,
-     "v": "18.83",
+     "line": 535,
+     "pass": 1,
+     "v": "18.85",
      "u": "us",
      "n": "5",
      "min": "18.76",
@@ -5068,8 +5125,8 @@
     "nb.DMA_cont.1.28": {
      "id": "nb.DMA_cont.1.28",
      "status": "INFO",
-     "line": 568,
-     "pass": 3,
+     "line": 536,
+     "pass": 1,
      "v": "2.36",
      "u": "us",
      "n": "5",
@@ -5082,8 +5139,8 @@
     "nb.DMA_arm.256.35": {
      "id": "nb.DMA_arm.256.35",
      "status": "PASS",
-     "line": 569,
-     "pass": 3,
+     "line": 537,
+     "pass": 1,
      "v": "327.68",
      "u": "us",
      "n": "5",
@@ -5096,8 +5153,8 @@
     "nb.DMA_arm.256.28": {
      "id": "nb.DMA_arm.256.28",
      "status": "PASS",
-     "line": 570,
-     "pass": 3,
+     "line": 538,
+     "pass": 1,
      "v": "50.16",
      "u": "us",
      "n": "5",
@@ -5110,8 +5167,8 @@
     "nb.DMA_brst.256.35": {
      "id": "nb.DMA_brst.256.35",
      "status": "PASS",
-     "line": 571,
-     "pass": 3,
+     "line": 539,
+     "pass": 1,
      "v": "393.92",
      "u": "us",
      "n": "5",
@@ -5124,22 +5181,22 @@
     "nb.DMA_brst.256.28": {
      "id": "nb.DMA_brst.256.28",
      "status": "PASS",
-     "line": 572,
-     "pass": 3,
-     "v": "58.31",
+     "line": 540,
+     "pass": 1,
+     "v": "58.45",
      "u": "us",
      "n": "5",
-     "min": "58.31",
-     "max": "58.31",
+     "min": "58.38",
+     "max": "58.5",
      "extra": {
-      "R": "139"
+      "R": "138"
      }
     },
     "nb.DMA_brst.2048.35": {
      "id": "nb.DMA_brst.2048.35",
      "status": "PASS",
-     "line": 573,
-     "pass": 3,
+     "line": 541,
+     "pass": 1,
      "v": "2441.68",
      "u": "us",
      "n": "5",
@@ -5152,8 +5209,8 @@
     "nb.DMA_brst.2048.28": {
      "id": "nb.DMA_brst.2048.28",
      "status": "PASS",
-     "line": 574,
-     "pass": 3,
+     "line": 542,
+     "pass": 1,
      "v": "377.93",
      "u": "us",
      "n": "5",
@@ -5166,8 +5223,8 @@
     "nb.LDIRX.256.35": {
      "id": "nb.LDIRX.256.35",
      "status": "PASS",
-     "line": 575,
-     "pass": 3,
+     "line": 543,
+     "pass": 1,
      "v": "1544.44",
      "u": "us",
      "n": "5",
@@ -5180,8 +5237,8 @@
     "nb.LDIRX.256.28": {
      "id": "nb.LDIRX.256.28",
      "status": "PASS",
-     "line": 576,
-     "pass": 3,
+     "line": 544,
+     "pass": 1,
      "v": "193.16",
      "u": "us",
      "n": "5",
@@ -5194,12 +5251,12 @@
     "nb.FILL_LDR.16.35": {
      "id": "nb.FILL_LDR.16.35",
      "status": "PASS",
-     "line": 577,
-     "pass": 3,
-     "v": "100.1",
+     "line": 545,
+     "pass": 1,
+     "v": "100.04",
      "u": "us",
      "n": "5",
-     "min": "100.1",
+     "min": "99.83",
      "max": "100.1",
      "extra": {
       "R": "60"
@@ -5208,8 +5265,8 @@
     "nb.FILL_LDR.16.28": {
      "id": "nb.FILL_LDR.16.28",
      "status": "PASS",
-     "line": 578,
-     "pass": 3,
+     "line": 546,
+     "pass": 1,
      "v": "12.45",
      "u": "us",
      "n": "5",
@@ -5222,8 +5279,8 @@
     "nb.FILL_LDR.256.35": {
      "id": "nb.FILL_LDR.256.35",
      "status": "PASS",
-     "line": 579,
-     "pass": 3,
+     "line": 547,
+     "pass": 1,
      "v": "1539.88",
      "u": "us",
      "n": "5",
@@ -5236,8 +5293,8 @@
     "nb.FILL_LDR.256.28": {
      "id": "nb.FILL_LDR.256.28",
      "status": "PASS",
-     "line": 580,
-     "pass": 3,
+     "line": 548,
+     "pass": 1,
      "v": "192.44",
      "u": "us",
      "n": "5",
@@ -5250,9 +5307,9 @@
     "nb.FILL_LDR.2048.35": {
      "id": "nb.FILL_LDR.2048.35",
      "status": "PASS",
-     "line": 581,
-     "pass": 3,
-     "v": "12280.03",
+     "line": 549,
+     "pass": 1,
+     "v": "12276.78",
      "u": "us",
      "n": "5",
      "min": "12273.53",
@@ -5264,8 +5321,8 @@
     "nb.FILL_LDR.2048.28": {
      "id": "nb.FILL_LDR.2048.28",
      "status": "PASS",
-     "line": 582,
-     "pass": 3,
+     "line": 550,
+     "pass": 1,
      "v": "1536.63",
      "u": "us",
      "n": "5",
@@ -5278,8 +5335,8 @@
     "nb.FILL_PSH.16.35": {
      "id": "nb.FILL_PSH.16.35",
      "status": "PASS",
-     "line": 583,
-     "pass": 3,
+     "line": 551,
+     "pass": 1,
      "v": "51.31",
      "u": "us",
      "n": "5",
@@ -5292,9 +5349,9 @@
     "nb.FILL_PSH.16.28": {
      "id": "nb.FILL_PSH.16.28",
      "status": "PASS",
-     "line": 584,
-     "pass": 3,
-     "v": "6.41",
+     "line": 552,
+     "pass": 1,
+     "v": "6.4",
      "u": "us",
      "n": "5",
      "min": "6.38",
@@ -5306,8 +5363,8 @@
     "nb.FILL_PSH.256.35": {
      "id": "nb.FILL_PSH.256.35",
      "status": "PASS",
-     "line": 585,
-     "pass": 3,
+     "line": 553,
+     "pass": 1,
      "v": "428.28",
      "u": "us",
      "n": "5",
@@ -5320,22 +5377,22 @@
     "nb.FILL_PSH.256.28": {
      "id": "nb.FILL_PSH.256.28",
      "status": "PASS",
-     "line": 586,
-     "pass": 3,
-     "v": "53.48",
+     "line": 554,
+     "pass": 1,
+     "v": "53.5",
      "u": "us",
      "n": "5",
-     "min": "53.42",
-     "max": "53.53",
+     "min": "53.5",
+     "max": "53.5",
      "extra": {
-      "R": "149"
+      "R": "150"
      }
     },
     "nb.FILL_PSH.2048.35": {
      "id": "nb.FILL_PSH.2048.35",
      "status": "PASS",
-     "line": 587,
-     "pass": 3,
+     "line": 555,
+     "pass": 1,
      "v": "3345.1",
      "u": "us",
      "n": "5",
@@ -5348,8 +5405,8 @@
     "nb.FILL_PSH.2048.28": {
      "id": "nb.FILL_PSH.2048.28",
      "status": "PASS",
-     "line": 588,
-     "pass": 3,
+     "line": 556,
+     "pass": 1,
      "v": "417.79",
      "u": "us",
      "n": "5",
@@ -5362,12 +5419,12 @@
     "nb.FILL_DMA.16.35": {
      "id": "nb.FILL_DMA.16.35",
      "status": "PASS",
-     "line": 589,
-     "pass": 3,
-     "v": "120.01",
+     "line": 557,
+     "pass": 1,
+     "v": "119.95",
      "u": "us",
      "n": "5",
-     "min": "119.89",
+     "min": "119.57",
      "max": "120.2",
      "extra": {
       "R": "52"
@@ -5376,8 +5433,8 @@
     "nb.FILL_DMA.16.28": {
      "id": "nb.FILL_DMA.16.28",
      "status": "PASS",
-     "line": 590,
-     "pass": 3,
+     "line": 558,
+     "pass": 1,
      "v": "15.57",
      "u": "us",
      "n": "5",
@@ -5390,8 +5447,8 @@
     "nb.FILL_DMA.256.35": {
      "id": "nb.FILL_DMA.256.35",
      "status": "PASS",
-     "line": 591,
-     "pass": 3,
+     "line": 559,
+     "pass": 1,
      "v": "393.92",
      "u": "us",
      "n": "5",
@@ -5404,8 +5461,8 @@
     "nb.FILL_DMA.256.28": {
      "id": "nb.FILL_DMA.256.28",
      "status": "PASS",
-     "line": 592,
-     "pass": 3,
+     "line": 560,
+     "pass": 1,
      "v": "58.45",
      "u": "us",
      "n": "5",
@@ -5418,8 +5475,8 @@
     "nb.FILL_DMA.2048.35": {
      "id": "nb.FILL_DMA.2048.35",
      "status": "PASS",
-     "line": 593,
-     "pass": 3,
+     "line": 561,
+     "pass": 1,
      "v": "2441.68",
      "u": "us",
      "n": "5",
@@ -5432,8 +5489,8 @@
     "nb.FILL_DMA.2048.28": {
      "id": "nb.FILL_DMA.2048.28",
      "status": "PASS",
-     "line": 594,
-     "pass": 3,
+     "line": 562,
+     "pass": 1,
      "v": "377.93",
      "u": "us",
      "n": "5",
@@ -5446,12 +5503,12 @@
     "nb.PAT_OTIR.64.35": {
      "id": "nb.PAT_OTIR.64.35",
      "status": "INFO",
-     "line": 595,
-     "pass": 3,
-     "v": "395.55",
+     "line": 563,
+     "pass": 1,
+     "v": "395.38",
      "u": "us",
      "n": "5",
-     "min": "395.55",
+     "min": "394.73",
      "max": "395.55",
      "extra": {
       "R": "20"
@@ -5460,8 +5517,8 @@
     "nb.PAT_OTIR.64.28": {
      "id": "nb.PAT_OTIR.64.28",
      "status": "INFO",
-     "line": 596,
-     "pass": 3,
+     "line": 564,
+     "pass": 1,
      "v": "49.44",
      "u": "us",
      "n": "5",
@@ -5474,8 +5531,8 @@
     "nb.PAT_OTIR.128.35": {
      "id": "nb.PAT_OTIR.128.35",
      "status": "INFO",
-     "line": 597,
-     "pass": 3,
+     "line": 565,
+     "pass": 1,
      "v": "779.71",
      "u": "us",
      "n": "5",
@@ -5488,8 +5545,8 @@
     "nb.PAT_OTIR.128.28": {
      "id": "nb.PAT_OTIR.128.28",
      "status": "INFO",
-     "line": 598,
-     "pass": 3,
+     "line": 566,
+     "pass": 1,
      "v": "97.48",
      "u": "us",
      "n": "5",
@@ -5502,13 +5559,13 @@
     "nb.PAT_OTIR.256.35": {
      "id": "nb.PAT_OTIR.256.35",
      "status": "INFO",
-     "line": 599,
-     "pass": 3,
-     "v": "1547.69",
+     "line": 567,
+     "pass": 1,
+     "v": "1545.74",
      "u": "us",
      "n": "5",
-     "min": "1546.39",
-     "max": "1549.65",
+     "min": "1543.14",
+     "max": "1546.39",
      "extra": {
       "R": "5"
      }
@@ -5516,8 +5573,8 @@
     "nb.PAT_OTIR.256.28": {
      "id": "nb.PAT_OTIR.256.28",
      "status": "INFO",
-     "line": 600,
-     "pass": 3,
+     "line": 568,
+     "pass": 1,
      "v": "193.52",
      "u": "us",
      "n": "5",
@@ -5530,8 +5587,8 @@
     "nb.PAT_OTIR.2048.35": {
      "id": "nb.PAT_OTIR.2048.35",
      "status": "INFO",
-     "line": 601,
-     "pass": 3,
+     "line": 569,
+     "pass": 1,
      "v": "12325.61",
      "u": "us",
      "n": "5",
@@ -5544,8 +5601,8 @@
     "nb.PAT_OTIR.2048.28": {
      "id": "nb.PAT_OTIR.2048.28",
      "status": "INFO",
-     "line": 602,
-     "pass": 3,
+     "line": 570,
+     "pass": 1,
      "v": "1543.14",
      "u": "us",
      "n": "5",
@@ -5558,9 +5615,9 @@
     "nb.PAT_OUTI.64.35": {
      "id": "nb.PAT_OUTI.64.35",
      "status": "INFO",
-     "line": 603,
-     "pass": 3,
-     "v": "307.58",
+     "line": 571,
+     "pass": 1,
+     "v": "307.84",
      "u": "us",
      "n": "5",
      "min": "307.32",
@@ -5572,8 +5629,8 @@
     "nb.PAT_OUTI.64.28": {
      "id": "nb.PAT_OUTI.64.28",
      "status": "INFO",
-     "line": 604,
-     "pass": 3,
+     "line": 572,
+     "pass": 1,
      "v": "38.49",
      "u": "us",
      "n": "5",
@@ -5586,8 +5643,8 @@
     "nb.PAT_OUTI.128.35": {
      "id": "nb.PAT_OUTI.128.35",
      "status": "INFO",
-     "line": 605,
-     "pass": 3,
+     "line": 573,
+     "pass": 1,
      "v": "599.77",
      "u": "us",
      "n": "5",
@@ -5600,8 +5657,8 @@
     "nb.PAT_OUTI.128.28": {
      "id": "nb.PAT_OUTI.128.28",
      "status": "INFO",
-     "line": 606,
-     "pass": 3,
+     "line": 574,
+     "pass": 1,
      "v": "75.02",
      "u": "us",
      "n": "5",
@@ -5614,8 +5671,8 @@
     "nb.PAT_OUTI.256.35": {
      "id": "nb.PAT_OUTI.256.35",
      "status": "INFO",
-     "line": 607,
-     "pass": 3,
+     "line": 575,
+     "pass": 1,
      "v": "1185.96",
      "u": "us",
      "n": "5",
@@ -5628,8 +5685,8 @@
     "nb.PAT_OUTI.256.28": {
      "id": "nb.PAT_OUTI.256.28",
      "status": "INFO",
-     "line": 608,
-     "pass": 3,
+     "line": 576,
+     "pass": 1,
      "v": "147.9",
      "u": "us",
      "n": "5",
@@ -5642,8 +5699,8 @@
     "nb.PAT_OUTI.2048.35": {
      "id": "nb.PAT_OUTI.2048.35",
      "status": "INFO",
-     "line": 609,
-     "pass": 3,
+     "line": 577,
+     "pass": 1,
      "v": "9470.47",
      "u": "us",
      "n": "5",
@@ -5656,8 +5713,8 @@
     "nb.PAT_OUTI.2048.28": {
      "id": "nb.PAT_OUTI.2048.28",
      "status": "INFO",
-     "line": 610,
-     "pass": 3,
+     "line": 578,
+     "pass": 1,
      "v": "1183.63",
      "u": "us",
      "n": "5",
@@ -5670,8 +5727,8 @@
     "nb.PAT_DMA.64.35": {
      "id": "nb.PAT_DMA.64.35",
      "status": "INFO",
-     "line": 611,
-     "pass": 3,
+     "line": 579,
+     "pass": 1,
      "v": "182.22",
      "u": "us",
      "n": "5",
@@ -5684,8 +5741,8 @@
     "nb.PAT_DMA.64.28": {
      "id": "nb.PAT_DMA.64.28",
      "status": "INFO",
-     "line": 612,
-     "pass": 3,
+     "line": 580,
+     "pass": 1,
      "v": "25.02",
      "u": "us",
      "n": "5",
@@ -5698,8 +5755,8 @@
     "nb.PAT_DMA.128.35": {
      "id": "nb.PAT_DMA.128.35",
      "status": "INFO",
-     "line": 613,
-     "pass": 3,
+     "line": 581,
+     "pass": 1,
      "v": "255.27",
      "u": "us",
      "n": "5",
@@ -5712,8 +5769,8 @@
     "nb.PAT_DMA.128.28": {
      "id": "nb.PAT_DMA.128.28",
      "status": "INFO",
-     "line": 614,
-     "pass": 3,
+     "line": 582,
+     "pass": 1,
      "v": "36.45",
      "u": "us",
      "n": "5",
@@ -5726,8 +5783,8 @@
     "nb.PAT_DMA.256.35": {
      "id": "nb.PAT_DMA.256.35",
      "status": "INFO",
-     "line": 615,
-     "pass": 3,
+     "line": 583,
+     "pass": 1,
      "v": "401.25",
      "u": "us",
      "n": "5",
@@ -5740,8 +5797,8 @@
     "nb.PAT_DMA.256.28": {
      "id": "nb.PAT_DMA.256.28",
      "status": "INFO",
-     "line": 616,
-     "pass": 3,
+     "line": 584,
+     "pass": 1,
      "v": "59.28",
      "u": "us",
      "n": "5",
@@ -5754,8 +5811,8 @@
     "nb.PAT_DMA.2048.35": {
      "id": "nb.PAT_DMA.2048.35",
      "status": "INFO",
-     "line": 617,
-     "pass": 3,
+     "line": 585,
+     "pass": 1,
      "v": "2452.53",
      "u": "us",
      "n": "5",
@@ -5768,8 +5825,8 @@
     "nb.PAT_DMA.2048.28": {
      "id": "nb.PAT_DMA.2048.28",
      "status": "INFO",
-     "line": 618,
-     "pass": 3,
+     "line": 586,
+     "pass": 1,
      "v": "378.63",
      "u": "us",
      "n": "5",
@@ -5782,22 +5839,22 @@
     "nb.ATR_57.1.35": {
      "id": "nb.ATR_57.1.35",
      "status": "INFO",
-     "line": 619,
-     "pass": 3,
-     "v": "30.56",
+     "line": 587,
+     "pass": 1,
+     "v": "30.52",
      "u": "us",
      "n": "5",
-     "min": "30.53",
-     "max": "30.68",
+     "min": "30.52",
+     "max": "30.52",
      "extra": {
-      "R": "113"
+      "R": "112"
      }
     },
     "nb.ATR_57.1.28": {
      "id": "nb.ATR_57.1.28",
      "status": "INFO",
-     "line": 620,
-     "pass": 3,
+     "line": 588,
+     "pass": 1,
      "v": "3.83",
      "u": "us",
      "n": "5",
@@ -5810,8 +5867,8 @@
     "nb.ATR_57.32.35": {
      "id": "nb.ATR_57.32.35",
      "status": "INFO",
-     "line": 621,
-     "pass": 3,
+     "line": 589,
+     "pass": 1,
      "v": "779.71",
      "u": "us",
      "n": "5",
@@ -5824,8 +5881,8 @@
     "nb.ATR_57.32.28": {
      "id": "nb.ATR_57.32.28",
      "status": "INFO",
-     "line": 622,
-     "pass": 3,
+     "line": 590,
+     "pass": 1,
      "v": "97.48",
      "u": "us",
      "n": "5",
@@ -5838,8 +5895,8 @@
     "nb.ATR_NR.1.35": {
      "id": "nb.ATR_NR.1.35",
      "status": "INFO",
-     "line": 623,
-     "pass": 3,
+     "line": 591,
+     "pass": 1,
      "v": "42.85",
      "u": "us",
      "n": "5",
@@ -5852,8 +5909,8 @@
     "nb.ATR_NR.1.28": {
      "id": "nb.ATR_NR.1.28",
      "status": "INFO",
-     "line": 624,
-     "pass": 3,
+     "line": 592,
+     "pass": 1,
      "v": "5.36",
      "u": "us",
      "n": "5",
@@ -5866,8 +5923,8 @@
     "nb.ATR_NR.32.35": {
      "id": "nb.ATR_NR.32.35",
      "status": "INFO",
-     "line": 625,
-     "pass": 3,
+     "line": 593,
+     "pass": 1,
      "v": "1539.88",
      "u": "us",
      "n": "5",
@@ -5880,8 +5937,8 @@
     "nb.ATR_NR.32.28": {
      "id": "nb.ATR_NR.32.28",
      "status": "INFO",
-     "line": 626,
-     "pass": 3,
+     "line": 594,
+     "pass": 1,
      "v": "192.07",
      "u": "us",
      "n": "5",
@@ -5894,8 +5951,8 @@
     "nb.HIDE_NR.128.35": {
      "id": "nb.HIDE_NR.128.35",
      "status": "INFO",
-     "line": 627,
-     "pass": 3,
+     "line": 595,
+     "pass": 1,
      "v": "1212.7",
      "u": "us",
      "n": "5",
@@ -5908,8 +5965,8 @@
     "nb.HIDE_NR.128.28": {
      "id": "nb.HIDE_NR.128.28",
      "status": "INFO",
-     "line": 628,
-     "pass": 3,
+     "line": 596,
+     "pass": 1,
      "v": "151.64",
      "u": "us",
      "n": "5",
@@ -5922,8 +5979,8 @@
     "nb.HIDE_57.128.35": {
      "id": "nb.HIDE_57.128.35",
      "status": "INFO",
-     "line": 629,
-     "pass": 3,
+     "line": 597,
+     "pass": 1,
      "v": "3084.66",
      "u": "us",
      "n": "5",
@@ -5936,8 +5993,8 @@
     "nb.HIDE_57.128.28": {
      "id": "nb.HIDE_57.128.28",
      "status": "INFO",
-     "line": 630,
-     "pass": 3,
+     "line": 598,
+     "pass": 1,
      "v": "385",
      "u": "us",
      "n": "5",
@@ -5950,13 +6007,13 @@
     "nb.SPR_OFF.0.35": {
      "id": "nb.SPR_OFF.0.35",
      "status": "INFO",
-     "line": 631,
-     "pass": 3,
-     "v": "5.64",
+     "line": 599,
+     "pass": 1,
+     "v": "5.62",
      "u": "us",
      "n": "5",
      "min": "5.62",
-     "max": "5.72",
+     "max": "5.62",
      "extra": {
       "R": "162"
      }
@@ -5964,8 +6021,8 @@
     "nb.SPR_OFF.0.28": {
      "id": "nb.SPR_OFF.0.28",
      "status": "INFO",
-     "line": 632,
-     "pass": 3,
+     "line": 600,
+     "pass": 1,
      "v": "0.7",
      "u": "us",
      "n": "5",
@@ -5978,8 +6035,8 @@
     "nb.NR_v.0.35": {
      "id": "nb.NR_v.0.35",
      "status": "INFO",
-     "line": 633,
-     "pass": 3,
+     "line": 601,
+     "pass": 1,
      "v": "5.62",
      "u": "us",
      "n": "5",
@@ -5992,8 +6049,8 @@
     "nb.NR_v.0.28": {
      "id": "nb.NR_v.0.28",
      "status": "INFO",
-     "line": 634,
-     "pass": 3,
+     "line": 602,
+     "pass": 1,
      "v": "0.7",
      "u": "us",
      "n": "5",
@@ -6006,8 +6063,8 @@
     "nb.NR_a.0.35": {
      "id": "nb.NR_a.0.35",
      "status": "INFO",
-     "line": 635,
-     "pass": 3,
+     "line": 603,
+     "pass": 1,
      "v": "6.81",
      "u": "us",
      "n": "5",
@@ -6020,8 +6077,8 @@
     "nb.NR_a.0.28": {
      "id": "nb.NR_a.0.28",
      "status": "INFO",
-     "line": 636,
-     "pass": 3,
+     "line": 604,
+     "pass": 1,
      "v": "0.82",
      "u": "us",
      "n": "5",
@@ -6034,13 +6091,13 @@
     "nb.PORTPAIR.0.35": {
      "id": "nb.PORTPAIR.0.35",
      "status": "INFO",
-     "line": 637,
-     "pass": 3,
-     "v": "14.78",
+     "line": 605,
+     "pass": 1,
+     "v": "14.76",
      "u": "us",
      "n": "5",
      "min": "14.76",
-     "max": "14.88",
+     "max": "14.76",
      "extra": {
       "R": "140"
      }
@@ -6048,8 +6105,8 @@
     "nb.PORTPAIR.0.28": {
      "id": "nb.PORTPAIR.0.28",
      "status": "INFO",
-     "line": 638,
-     "pass": 3,
+     "line": 606,
+     "pass": 1,
      "v": "1.85",
      "u": "us",
      "n": "5",
@@ -6062,9 +6119,9 @@
     "nb.NR_READ.0.35": {
      "id": "nb.NR_READ.0.35",
      "status": "INFO",
-     "line": 639,
-     "pass": 3,
-     "v": "12.83",
+     "line": 607,
+     "pass": 1,
+     "v": "12.85",
      "u": "us",
      "n": "5",
      "min": "12.77",
@@ -6076,8 +6133,8 @@
     "nb.NR_READ.0.28": {
      "id": "nb.NR_READ.0.28",
      "status": "INFO",
-     "line": 640,
-     "pass": 3,
+     "line": 608,
+     "pass": 1,
      "v": "1.59",
      "u": "us",
      "n": "5",
@@ -6090,8 +6147,8 @@
     "nb.MMU.1.35": {
      "id": "nb.MMU.1.35",
      "status": "INFO",
-     "line": 641,
-     "pass": 3,
+     "line": 609,
+     "pass": 1,
      "v": "5.64",
      "u": "us",
      "n": "5",
@@ -6104,8 +6161,8 @@
     "nb.MMU.1.28": {
      "id": "nb.MMU.1.28",
      "status": "INFO",
-     "line": 642,
-     "pass": 3,
+     "line": 610,
+     "pass": 1,
      "v": "0.7",
      "u": "us",
      "n": "5",
@@ -6118,8 +6175,8 @@
     "nb.MMU.4.35": {
      "id": "nb.MMU.4.35",
      "status": "INFO",
-     "line": 643,
-     "pass": 3,
+     "line": 611,
+     "pass": 1,
      "v": "22.84",
      "u": "us",
      "n": "5",
@@ -6132,8 +6189,8 @@
     "nb.MMU.4.28": {
      "id": "nb.MMU.4.28",
      "status": "INFO",
-     "line": 644,
-     "pass": 3,
+     "line": 612,
+     "pass": 1,
      "v": "2.87",
      "u": "us",
      "n": "5",
@@ -6146,8 +6203,8 @@
     "nb.7FFD.0.35": {
      "id": "nb.7FFD.0.35",
      "status": "INFO",
-     "line": 645,
-     "pass": 3,
+     "line": 613,
+     "pass": 1,
      "v": "8.29",
      "u": "us",
      "n": "5",
@@ -6160,8 +6217,8 @@
     "nb.7FFD.0.28": {
      "id": "nb.7FFD.0.28",
      "status": "INFO",
-     "line": 646,
-     "pass": 3,
+     "line": 614,
+     "pass": 1,
      "v": "1.02",
      "u": "us",
      "n": "5",
@@ -6174,9 +6231,9 @@
     "nb.ULA_CHAR.0.35": {
      "id": "nb.ULA_CHAR.0.35",
      "status": "INFO",
-     "line": 647,
-     "pass": 3,
-     "v": "61.57",
+     "line": 615,
+     "pass": 1,
+     "v": "61.61",
      "u": "us",
      "n": "5",
      "min": "61.49",
@@ -6188,8 +6245,8 @@
     "nb.ULA_CHAR.0.28": {
      "id": "nb.ULA_CHAR.0.28",
      "status": "INFO",
-     "line": 648,
-     "pass": 3,
+     "line": 616,
+     "pass": 1,
      "v": "7.72",
      "u": "us",
      "n": "5",
@@ -6202,8 +6259,8 @@
     "nb.TILE_ENT.0.35": {
      "id": "nb.TILE_ENT.0.35",
      "status": "INFO",
-     "line": 649,
-     "pass": 3,
+     "line": 617,
+     "pass": 1,
      "v": "7.41",
      "u": "us",
      "n": "5",
@@ -6216,8 +6273,8 @@
     "nb.TILE_ENT.0.28": {
      "id": "nb.TILE_ENT.0.28",
      "status": "INFO",
-     "line": 650,
-     "pass": 3,
+     "line": 618,
+     "pass": 1,
      "v": "0.89",
      "u": "us",
      "n": "5",
@@ -6230,13 +6287,13 @@
     "nb.L2_CELL.0.35": {
      "id": "nb.L2_CELL.0.35",
      "status": "INFO",
-     "line": 651,
-     "pass": 3,
-     "v": "360.43",
+     "line": 619,
+     "pass": 1,
+     "v": "360.58",
      "u": "us",
      "n": "5",
      "min": "360.43",
-     "max": "360.43",
+     "max": "361.21",
      "extra": {
       "R": "21"
      }
@@ -6244,8 +6301,8 @@
     "nb.L2_CELL.0.28": {
      "id": "nb.L2_CELL.0.28",
      "status": "INFO",
-     "line": 652,
-     "pass": 3,
+     "line": 620,
+     "pass": 1,
      "v": "44.99",
      "u": "us",
      "n": "5",
@@ -6258,13 +6315,13 @@
     "nb.TM_SWAP.0.35": {
      "id": "nb.TM_SWAP.0.35",
      "status": "INFO",
-     "line": 653,
-     "pass": 3,
-     "v": "5.64",
+     "line": 621,
+     "pass": 1,
+     "v": "5.62",
      "u": "us",
      "n": "5",
      "min": "5.62",
-     "max": "5.72",
+     "max": "5.62",
      "extra": {
       "R": "162"
      }
@@ -6272,8 +6329,8 @@
     "nb.TM_SWAP.0.28": {
      "id": "nb.TM_SWAP.0.28",
      "status": "INFO",
-     "line": 654,
-     "pass": 3,
+     "line": 622,
+     "pass": 1,
      "v": "0.7",
      "u": "us",
      "n": "5",
@@ -6286,13 +6343,13 @@
     "nb.L2_FLIP.0.35": {
      "id": "nb.L2_FLIP.0.35",
      "status": "INFO",
-     "line": 655,
-     "pass": 3,
-     "v": "5.62",
+     "line": 623,
+     "pass": 1,
+     "v": "5.64",
      "u": "us",
      "n": "5",
      "min": "5.62",
-     "max": "5.62",
+     "max": "5.72",
      "extra": {
       "R": "162"
      }
@@ -6300,8 +6357,8 @@
     "nb.L2_FLIP.0.28": {
      "id": "nb.L2_FLIP.0.28",
      "status": "INFO",
-     "line": 656,
-     "pass": 3,
+     "line": 624,
+     "pass": 1,
      "v": "0.7",
      "u": "us",
      "n": "5",
@@ -6314,12 +6371,12 @@
     "nb.SHADOW2.0.35": {
      "id": "nb.SHADOW2.0.35",
      "status": "INFO",
-     "line": 657,
-     "pass": 3,
-     "v": "13.72",
+     "line": 625,
+     "pass": 1,
+     "v": "13.75",
      "u": "us",
      "n": "5",
-     "min": "13.64",
+     "min": "13.75",
      "max": "13.75",
      "extra": {
       "R": "142"
@@ -6328,8 +6385,8 @@
     "nb.SHADOW2.0.28": {
      "id": "nb.SHADOW2.0.28",
      "status": "INFO",
-     "line": 658,
-     "pass": 3,
+     "line": 626,
+     "pass": 1,
      "v": "1.72",
      "u": "us",
      "n": "5",
@@ -6342,8 +6399,8 @@
     "nb.TM_SCRL.0.35": {
      "id": "nb.TM_SCRL.0.35",
      "status": "INFO",
-     "line": 659,
-     "pass": 3,
+     "line": 627,
+     "pass": 1,
      "v": "11.43",
      "u": "us",
      "n": "5",
@@ -6356,8 +6413,8 @@
     "nb.TM_SCRL.0.28": {
      "id": "nb.TM_SCRL.0.28",
      "status": "INFO",
-     "line": 660,
-     "pass": 3,
+     "line": 628,
+     "pass": 1,
      "v": "1.4",
      "u": "us",
      "n": "5",
@@ -6370,12 +6427,12 @@
     "nb.L2_SCRL.0.35": {
      "id": "nb.L2_SCRL.0.35",
      "status": "INFO",
-     "line": 661,
-     "pass": 3,
-     "v": "11.4",
+     "line": 629,
+     "pass": 1,
+     "v": "11.43",
      "u": "us",
      "n": "5",
-     "min": "11.32",
+     "min": "11.43",
      "max": "11.43",
      "extra": {
       "R": "148"
@@ -6384,8 +6441,8 @@
     "nb.L2_SCRL.0.28": {
      "id": "nb.L2_SCRL.0.28",
      "status": "INFO",
-     "line": 662,
-     "pass": 3,
+     "line": 630,
+     "pass": 1,
      "v": "1.4",
      "u": "us",
      "n": "5",
@@ -6398,8 +6455,8 @@
     "nb.PAL8.1.35": {
      "id": "nb.PAL8.1.35",
      "status": "INFO",
-     "line": 663,
-     "pass": 3,
+     "line": 631,
+     "pass": 1,
      "v": "17.12",
      "u": "us",
      "n": "5",
@@ -6412,8 +6469,8 @@
     "nb.PAL8.1.28": {
      "id": "nb.PAL8.1.28",
      "status": "INFO",
-     "line": 664,
-     "pass": 3,
+     "line": 632,
+     "pass": 1,
      "v": "2.1",
      "u": "us",
      "n": "5",
@@ -6426,8 +6483,8 @@
     "nb.PAL8.16.35": {
      "id": "nb.PAL8.16.35",
      "status": "INFO",
-     "line": 665,
-     "pass": 3,
+     "line": 633,
+     "pass": 1,
      "v": "211.51",
      "u": "us",
      "n": "5",
@@ -6440,8 +6497,8 @@
     "nb.PAL8.16.28": {
      "id": "nb.PAL8.16.28",
      "status": "INFO",
-     "line": 666,
-     "pass": 3,
+     "line": 634,
+     "pass": 1,
      "v": "26.36",
      "u": "us",
      "n": "5",
@@ -6454,8 +6511,8 @@
     "nb.PAL9.1.35": {
      "id": "nb.PAL9.1.35",
      "status": "INFO",
-     "line": 667,
-     "pass": 3,
+     "line": 635,
+     "pass": 1,
      "v": "22.84",
      "u": "us",
      "n": "5",
@@ -6468,8 +6525,8 @@
     "nb.PAL9.1.28": {
      "id": "nb.PAL9.1.28",
      "status": "INFO",
-     "line": 668,
-     "pass": 3,
+     "line": 636,
+     "pass": 1,
      "v": "2.87",
      "u": "us",
      "n": "5",
@@ -6482,8 +6539,8 @@
     "nb.PAL_SEL.0.35": {
      "id": "nb.PAL_SEL.0.35",
      "status": "INFO",
-     "line": 669,
-     "pass": 3,
+     "line": 637,
+     "pass": 1,
      "v": "5.64",
      "u": "us",
      "n": "5",
@@ -6496,8 +6553,8 @@
     "nb.PAL_SEL.0.28": {
      "id": "nb.PAL_SEL.0.28",
      "status": "INFO",
-     "line": 670,
-     "pass": 3,
+     "line": 638,
+     "pass": 1,
      "v": "0.7",
      "u": "us",
      "n": "5",
@@ -6510,13 +6567,13 @@
     "nb.COP_NR.8.35": {
      "id": "nb.COP_NR.8.35",
      "status": "INFO",
-     "line": 671,
-     "pass": 3,
+     "line": 639,
+     "pass": 1,
      "v": "271.37",
      "u": "us",
      "n": "5",
      "min": "270.91",
-     "max": "271.49",
+     "max": "272.07",
      "extra": {
       "R": "28"
      }
@@ -6524,8 +6581,8 @@
     "nb.COP_NR.8.28": {
      "id": "nb.COP_NR.8.28",
      "status": "INFO",
-     "line": 672,
-     "pass": 3,
+     "line": 640,
+     "pass": 1,
      "v": "33.87",
      "u": "us",
      "n": "5",
@@ -6538,8 +6595,8 @@
     "nb.COP_NR.32.35": {
      "id": "nb.COP_NR.32.35",
      "status": "INFO",
-     "line": 673,
-     "pass": 3,
+     "line": 641,
+     "pass": 1,
      "v": "1039.75",
      "u": "us",
      "n": "5",
@@ -6552,8 +6609,8 @@
     "nb.COP_NR.32.28": {
      "id": "nb.COP_NR.32.28",
      "status": "INFO",
-     "line": 674,
-     "pass": 3,
+     "line": 642,
+     "pass": 1,
      "v": "129.82",
      "u": "us",
      "n": "5",
@@ -6566,8 +6623,8 @@
     "nb.COP_NR.256.35": {
      "id": "nb.COP_NR.256.35",
      "status": "INFO",
-     "line": 675,
-     "pass": 3,
+     "line": 643,
+     "pass": 1,
      "v": "8197.53",
      "u": "us",
      "n": "5",
@@ -6580,8 +6637,8 @@
     "nb.COP_NR.256.28": {
      "id": "nb.COP_NR.256.28",
      "status": "INFO",
-     "line": 676,
-     "pass": 3,
+     "line": 644,
+     "pass": 1,
      "v": "1025.5",
      "u": "us",
      "n": "5",
@@ -6594,12 +6651,12 @@
     "nb.COP_IO.8.35": {
      "id": "nb.COP_IO.8.35",
      "status": "INFO",
-     "line": 677,
-     "pass": 3,
-     "v": "258.19",
+     "line": 645,
+     "pass": 1,
+     "v": "258.31",
      "u": "us",
      "n": "5",
-     "min": "257.63",
+     "min": "258.2",
      "max": "258.76",
      "extra": {
       "R": "29"
@@ -6608,8 +6665,8 @@
     "nb.COP_IO.8.28": {
      "id": "nb.COP_IO.8.28",
      "status": "INFO",
-     "line": 678,
-     "pass": 3,
+     "line": 646,
+     "pass": 1,
      "v": "32.27",
      "u": "us",
      "n": "5",
@@ -6622,8 +6679,8 @@
     "nb.COP_IO.32.35": {
      "id": "nb.COP_IO.32.35",
      "status": "INFO",
-     "line": 679,
-     "pass": 3,
+     "line": 647,
+     "pass": 1,
      "v": "958.36",
      "u": "us",
      "n": "5",
@@ -6636,8 +6693,8 @@
     "nb.COP_IO.32.28": {
      "id": "nb.COP_IO.32.28",
      "status": "INFO",
-     "line": 680,
-     "pass": 3,
+     "line": 648,
+     "pass": 1,
      "v": "119.44",
      "u": "us",
      "n": "5",
@@ -6650,9 +6707,9 @@
     "nb.COP_IO.256.35": {
      "id": "nb.COP_IO.256.35",
      "status": "INFO",
-     "line": 681,
-     "pass": 3,
-     "v": "7481.31",
+     "line": 649,
+     "pass": 1,
+     "v": "7484.57",
      "u": "us",
      "n": "5",
      "min": "7471.55",
@@ -6664,8 +6721,8 @@
     "nb.COP_IO.256.28": {
      "id": "nb.COP_IO.256.28",
      "status": "INFO",
-     "line": 682,
-     "pass": 3,
+     "line": 650,
+     "pass": 1,
      "v": "935.07",
      "u": "us",
      "n": "5",
@@ -6678,8 +6735,8 @@
     "nb.COPGO+ST.0.35": {
      "id": "nb.COPGO+ST.0.35",
      "status": "INFO",
-     "line": 683,
-     "pass": 3,
+     "line": 651,
+     "pass": 1,
      "v": "11.43",
      "u": "us",
      "n": "5",
@@ -6692,8 +6749,8 @@
     "nb.COPGO+ST.0.28": {
      "id": "nb.COPGO+ST.0.28",
      "status": "INFO",
-     "line": 684,
-     "pass": 3,
+     "line": 652,
+     "pass": 1,
      "v": "1.4",
      "u": "us",
      "n": "5",
@@ -6706,12 +6763,12 @@
     "nb.LDIR+COP.256.35": {
      "id": "nb.LDIR+COP.256.35",
      "status": "PASS",
-     "line": 685,
-     "pass": 3,
-     "v": "1542.48",
+     "line": 653,
+     "pass": 1,
+     "v": "1543.14",
      "u": "us",
      "n": "5",
-     "min": "1539.88",
+     "min": "1543.14",
      "max": "1543.14",
      "extra": {
       "R": "5"
@@ -6720,8 +6777,8 @@
     "nb.LDIR+COP.256.28": {
      "id": "nb.LDIR+COP.256.28",
      "status": "PASS",
-     "line": 686,
-     "pass": 3,
+     "line": 654,
+     "pass": 1,
      "v": "192.8",
      "u": "us",
      "n": "5",
@@ -6734,8 +6791,8 @@
     "nb.CP_WAIT.120.35": {
      "id": "nb.CP_WAIT.120.35",
      "status": "INFO",
-     "line": 687,
-     "pass": 3,
+     "line": 655,
+     "pass": 1,
      "v": "120",
      "u": "count",
      "n": "5",
@@ -6749,8 +6806,8 @@
     "nb.CP_WAIT.120.28": {
      "id": "nb.CP_WAIT.120.28",
      "status": "INFO",
-     "line": 688,
-     "pass": 3,
+     "line": 656,
+     "pass": 1,
      "v": "120",
      "u": "count",
      "n": "5",
@@ -6764,8 +6821,8 @@
     "nb.CP_APART.256.35": {
      "id": "nb.CP_APART.256.35",
      "status": "INFO",
-     "line": 689,
-     "pass": 3,
+     "line": 657,
+     "pass": 1,
      "v": "0",
      "u": "count",
      "n": "5",
@@ -6779,8 +6836,8 @@
     "nb.CP_APART.256.28": {
      "id": "nb.CP_APART.256.28",
      "status": "INFO",
-     "line": 690,
-     "pass": 3,
+     "line": 658,
+     "pass": 1,
      "v": "0",
      "u": "count",
      "n": "5",
@@ -6794,8 +6851,8 @@
     "nb.CP_SHARE.256.35": {
      "id": "nb.CP_SHARE.256.35",
      "status": "INFO",
-     "line": 691,
-     "pass": 3,
+     "line": 659,
+     "pass": 1,
      "v": "255",
      "u": "count",
      "n": "5",
@@ -6809,8 +6866,8 @@
     "nb.CP_SHARE.256.28": {
      "id": "nb.CP_SHARE.256.28",
      "status": "INFO",
-     "line": 692,
-     "pass": 3,
+     "line": 660,
+     "pass": 1,
      "v": "255",
      "u": "count",
      "n": "5",
@@ -6828,24 +6885,6 @@
    {
     "index": 1,
     "from_line": 2,
-    "how": "marker",
-    "mode": "GROUP:V",
-    "groups": [
-     "V"
-    ]
-   },
-   {
-    "index": 2,
-    "from_line": 285,
-    "how": "marker",
-    "mode": "GROUP:G0",
-    "groups": [
-     "G0"
-    ]
-   },
-   {
-    "index": 3,
-    "from_line": 296,
     "how": "marker",
     "mode": "ALL",
     "groups": [
@@ -6866,8 +6905,17 @@
     ]
    },
    {
-    "index": 4,
-    "from_line": 754,
+    "index": 2,
+    "from_line": 722,
+    "how": "marker",
+    "mode": "GROUP:V",
+    "groups": [
+     "V"
+    ]
+   },
+   {
+    "index": 3,
+    "from_line": 744,
     "how": "marker",
     "mode": "GROUP:XT",
     "groups": [
@@ -6875,8 +6923,17 @@
     ]
    },
    {
+    "index": 4,
+    "from_line": 753,
+    "how": "marker",
+    "mode": "GROUP:XD",
+    "groups": [
+     "XD"
+    ]
+   },
+   {
     "index": 5,
-    "from_line": 763,
+    "from_line": 759,
     "how": "marker",
     "mode": "GROUP:XH",
     "groups": [
@@ -6885,7 +6942,23 @@
    },
    {
     "index": 6,
-    "from_line": 768,
+    "from_line": 764,
+    "how": "marker",
+    "mode": "GROUP:XH",
+    "groups": [
+     "XH"
+    ]
+   },
+   {
+    "index": 7,
+    "from_line": 769,
+    "how": "marker",
+    "mode": "GROUP:XH",
+    "groups": []
+   },
+   {
+    "index": 8,
+    "from_line": 777,
     "how": "marker",
     "mode": "GROUP:XD",
     "groups": [
@@ -6893,11 +6966,22 @@
     ]
    },
    {
-    "index": 7,
-    "from_line": 774,
+    "index": 9,
+    "from_line": 783,
     "how": "marker",
     "mode": "GROUP:XH",
-    "groups": []
+    "groups": [
+     "XH"
+    ]
+   },
+   {
+    "index": 10,
+    "from_line": 794,
+    "how": "marker",
+    "mode": "GROUP:XT",
+    "groups": [
+     "XT"
+    ]
    }
   ],
   "parts": [
@@ -7040,19 +7124,17 @@
    "notes": []
   },
   "sys-video-timing-frame-rate": {
-   "verdict": "operator",
+   "verdict": "pending-operator",
    "tests": [
     "V19"
    ],
-   "value": 49.35,
-   "spread": 0.0,
+   "value": null,
+   "spread": null,
    "unit": "Hz",
-   "choice": "V19:49.35",
-   "why": null,
+   "choice": null,
+   "why": "V19:pending-operator",
    "result_type": "number",
-   "notes": [
-    "V19: board: 35535 frames in 720.0 s = 49.35 Hz (cable hdmi); tenths typed: +-0.3 s (reading and reaction), so 49.33-49.37 Hz. 50.00 Hz lies outside that range: time it again with tenths to be sure. Same interval by the CTC (28 MHz clock / 256, book ch 6): 78739761 ticks = 719.91 s, so 49.361 Hz; the watch said 720.0 s (+0.09 s). The watch and the machine agree: the rate by the watch is the machine's."
-   ]
+   "notes": []
   },
   "sys-rom3-bytes-386e": {
    "verdict": "measured",
@@ -7243,7 +7325,7 @@
    "tests": [
     "C10"
    ],
-   "value": 11.0,
+   "value": 10.99,
    "spread": 0.02,
    "unit": "T",
    "choice": null,
@@ -7742,7 +7824,7 @@
    "tests": [
     "I13"
    ],
-   "value": 16138.0,
+   "value": 16136.0,
    "spread": 0.0,
    "unit": "count",
    "choice": null,
@@ -7768,7 +7850,7 @@
    "tests": [
     "I13"
    ],
-   "value": 16138.0,
+   "value": 16136.0,
    "spread": 0.0,
    "unit": "count",
    "choice": "16xtc",
@@ -7807,7 +7889,7 @@
    "tests": [
     "I24"
    ],
-   "value": 1214.0,
+   "value": 1211.0,
    "spread": 0.0,
    "unit": "bytes",
    "choice": null,
@@ -7904,11 +7986,11 @@
    "value": null,
    "spread": null,
    "unit": "lines",
-   "choice": "V18:part-left-part-right",
+   "choice": "V18:part-left-part-left",
    "why": null,
    "result_type": "visual",
    "notes": [
-    "V18: operator: $64 = 33 -> part-left, $64 = 32 -> part-right (two = row 0 lit by the copper at its line 0 plus the reference; part-left / part-right = row 0 white on that part only): not one setting alone (row 0 lit with: neither); a part-lit row 0 (with $64 = 33 and 32) means the colour change came part-way along that row: the copper line starts (part-right) or ends (part-left) inside the Layer 2 row, not at its left edge."
+    "V18: operator: $64 = 33 -> part-left, $64 = 32 -> part-left (two = row 0 lit by the copper at its line 0 plus the reference; part-left / part-right = row 0 white on that part only): not one setting alone (row 0 lit with: neither); a part-lit row 0 (with $64 = 33 and 32) means the colour change came part-way along that row: the copper line starts (part-right) or ends (part-left) inside the Layer 2 row, not at its left edge."
    ]
   },
   "frame-timing-change-frame-end": {
@@ -8628,17 +8710,19 @@
    "notes": []
   },
   "lay-l2-640-whole-pixels": {
-   "verdict": "left-out",
+   "verdict": "confirmed",
    "tests": [
     "V08"
    ],
    "value": null,
    "spread": null,
    "unit": "-",
-   "choice": null,
-   "why": "V08",
+   "choice": "none",
+   "why": null,
    "result_type": "visual",
-   "notes": []
+   "notes": [
+    "V08: operator: 640 x 256 Layer 2 blocks over red / blue tiles - no scroll: none; Layer 2 and tilemap both scrolled one step: none (none = no red at any block edge; left / right = a one-dot red line on that edge). The layers line up and a 640 scroll step moved Layer 2 by 2 dots, like the tilemap: the claim."
+   ]
   },
   "lay-l2-scroll-ranges": {
    "verdict": "confirmed",

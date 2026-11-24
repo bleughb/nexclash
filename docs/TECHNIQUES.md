@@ -642,7 +642,7 @@ Ped7g's test suite) where a technique there is mostly about one Next feature.
   is then 50.00, 51.02, 52.61, 53.57, 55.36, 57.14, 58.93 Hz (HDMI 50.00), a "60 Hz" one 60.00 ...
   70.71 (HDMI 60.00). So everything paced by the frame interrupt - every game we convert - runs up
   to ~18 % fast on a VGA 1-6 setting, and CTC / DMA-prescaler rates scale with clk28 too. At 128K
-  timing VGA 0 is 28e6 / (311 x 1824) = 49.36 Hz, measured (N-Go 3.03.00, nxsuite V19). The setting
+  timing VGA 0 is 28e6 / (311 x 1824) = 49.36 Hz, measured (N-Go 3.03.00, nxsuite F01 / F02). The setting
   is the user's (BRIEFING A1, Video).
 - For us: C2 #37 (beeper replay) has two candidate players: copper-driven (no CPU per sample, one
   frame of latency) or a CTC interrupt (~10 % CPU at 16 kHz; needs hardware IM2 mode, C2 #34).
