@@ -8,6 +8,11 @@
    "text": "Junk-filling a buffer before a re-render is a strong test only if the renderer fully rebuilds it; when it reads-modify-writes, use the buffer as it was before the game's own render.",
    "quote": "before a re-render is a strong test only if the renderer fully rebuilds it; when it reads-modify-writes, use",
    "shown_on": "unknown"
+  },
+  {
+   "game": "sessions",
+   "text": "Castle Master: re-rendering the live state in a sandbox matched exactly in 5,202 of 5,214 redraws; the 12 that differed all took interrupts, pointing at an interrupt routine changing state mid-render.",
+   "shown_on": "simulator"
   }
  ],
  "level": "observed",

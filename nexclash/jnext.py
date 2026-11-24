@@ -22,6 +22,8 @@ enter sym+X caps+X left right up down; Kempston as K:LEFT K:RIGHT K:UP K:DOWN K:
   restart, restart_every  [[key, frames], ...] pressed every N frames (game over -> new game; 600)
   probe                   address executed once per game update (pace, flicker), e.g. "0xA8ED"
   state                   addresses logged at every update (pace: lockstep check), e.g. ["0x6CB6"]
+  reach                   some of the state addresses (position, score) the input must change, or pace says
+                          "keys did not reach play"
   waits                   PC spans that are known waits ("0x8DD4-0x8DE0"; soak)
 """
 import hashlib
@@ -495,7 +497,8 @@ def selfcheck():
         bad.append(('keys', down(['q', 'K:FIRE', 'K:UP'])))
     return [('play checks: jnext runner (32-bit cycle unwrap, repeatable input, keys)', bad),
             ('soak: still-picture and tight-loop detectors (synthetic)', soak.selfcheck()),
-            ('pace: penalty by update windows, quiet / busy thirds, lockstep (synthetic)', pace.selfcheck()),
+            ('pace: penalty by update windows, quiet / busy thirds, lockstep, keys that never change a "reach" byte, '
+             'a duplicate probe hit around an interrupt (synthetic)', pace.selfcheck()),
             ('flicker: out of step, vanished figure, one-frame attribute change (synthetic)', flicker.selfcheck()),
             ('looksheet: straight cut, drawn line, vanishing colour, white rim (synthetic)', looksheet.selfcheck())]
 

@@ -40,7 +40,8 @@ captured states: the bytes that still differ). Thresholds compare rates. Interru
 1. Capture the state at every update entry + its port reads; N = 1 replay = the recording.
 2. Scale one accumulation at a time in Python (8-bit fraction a variable, a shadow of the value the hook
    wrote); stop when only step-size error and earlier reactions differ at N = 2 / 4.
-3. Once-an-update events: one-byte gates the driver writes per sub-step (open on the first or last).
+3. Once-an-update events: one-byte gates the driver writes per sub-step (open on the first or last), key-stepped
+   states too (gears: hold the key synthetically).
 4. Exact integer rules (a Spec) first; then the hooks = the Spec byte for byte.
 
 ## Contract
@@ -63,6 +64,8 @@ MMU slot 1 for the whole driver; the alt ROM's trampolines; NR 0x07.
 | the car stays inside an object | push-out scaled 1 / N | synthetic collision | whole push-out | - |
 | a render overwrites state | new camera positions | runs of K updates | guards | - |
 | a mutant passes | a later clamp resets its effect | the hook alone | a case where it acts last | - |
+| a held key acts N x faster | read every sub-step | held key | gate (first) | - |
+| view turns in byte steps | render ignores the fraction | - | blend its matrix, restore after | - |
 
 ## Verification
 Per recorded update the build (host model) vs the Spec from the same warm state: all RAM, registers but

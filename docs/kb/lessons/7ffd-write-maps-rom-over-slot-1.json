@@ -10,6 +10,13 @@
    "shown_on": "jnext"
   },
   {
+   "game": "hardware",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
+   "test": "M01",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite M01): an unlocked 7FFD write set MMU 0 / 1 = $FF (ROM) and MMU 6 / 7 to the bank's pages; slots 2-5 kept.",
+   "shown_on": "hardware"
+  },
+  {
    "game": "games/hard_drivin.md",
    "text": "Not only an ISR: the game's own update writes 7FFD (0x9E7C / 0x9E86) with interrupts off, and the route 2a sub-step hooks after it ran ROM bytes on JNext until a site (0x9E88) mapped the hook page again; the steps host model resets slots 0-1 on every 7FFD write.",
    "quote": "a write to 7FFD sets MMU slots 0-1 back to ROM",

@@ -2,7 +2,7 @@
  "id": "lesson.zxn-dma-blitter-commands",
  "kind": "fact",
  "claim": "On core 3.03.00 the zxnDMA blitter commands after LOAD and before ENABLE are DF mode, F3 transparent colour, F7 fill value, E3 length.",
- "limit": "Only an Issue 2 board tested; on port 0x0B the DF modes were inconsistent.",
+ "limit": "Only the N-Go board (Issue 2-compatible clone) tested; on port 0x0B the DF modes were inconsistent.",
  "evidence": [
   {
    "game": "notes",

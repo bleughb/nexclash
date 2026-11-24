@@ -7,6 +7,12 @@
    "game": "notes",
    "text": "Maintainers' note: the check first showed 17 'ROM differs' bytes in that block.",
    "shown_on": "unknown"
+  },
+  {
+   "game": "docs/LEARNINGS.md",
+   "text": "The expected ROM view must include the register block the stub writes at boot (it first showed 17 \"ROM differs\" bytes there); a deliberately broken stub (no 1FFD write, no unlock, hooks not copied) must fail the boot check.",
+   "quote": "must include the register block the stub writes at boot",
+   "shown_on": "analysis"
   }
  ],
  "level": "observed",
@@ -18,6 +24,6 @@
   "broken stub",
   "negative"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

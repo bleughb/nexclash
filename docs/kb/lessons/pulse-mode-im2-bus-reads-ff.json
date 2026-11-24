@@ -2,13 +2,20 @@
  "id": "lesson.pulse-mode-im2-bus-reads-ff",
  "kind": "fact",
  "claim": "In pulse interrupt mode the acknowledge cycle reads FF from the bus, so IM 2 takes its handler address from I x 256 + FF and IM 0 behaves as IM 1; a device on an enabled expansion bus can put its own byte there.",
- "limit": "From the book for core 3.03.03, not measured here on every core; docs/BRIEFING.md lists it as relied on but unconfirmed.",
+ "limit": "Measured on the N-Go board (Issue 2-compatible clone, core 3.03.00, nxsuite I01), no expansion-bus device; other cores not measured. docs/BRIEFING.md lists it as relied on.",
  "evidence": [
   {
    "game": "reference",
    "source": "I. Novak, Unraveling the ZX Spectrum Next, Vol 1 (2026; core 3.03.03), chapter 4",
    "text": "The FPGA drives FF itself in pulse mode. In hardware IM2 mode (NextREG 0xC0 bit 0) the vector is 0xC0 bits 7-5, then a 4-bit source number, then 0: line 0, CTC 0-3 are 3-6, ULA 11.",
    "shown_on": "documentation"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
+   "test": "I01",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite I01): in pulse mode IM 2 took its handler address from I x 256 + $FF.",
+   "shown_on": "hardware"
   }
  ],
  "level": "inferred",

@@ -2,13 +2,20 @@
  "id": "lesson.blitter-hardware-benchmark",
  "kind": "fact",
  "claim": "Measured on a 192x64 block, DDMA constant fill (0.07 us a byte) beat CPU PUSH fill (0.20); dithered fills cannot use it, a pattern-row copy is no faster than PUSH, and per-row jobs lose.",
- "limit": "Hardware is assumed equal to CSpect in the notes; JNext 1.3.0 has no DDMA.",
+ "limit": "The notes' figures came from CSpect. On the N-Go board (Issue 2-compatible clone, core 3.03.00, nxsuite D13) a constant fill took 2.88 clocks of 28 MHz a byte (about 0.10 us) and a copy 5.92. JNext 1.3.0 has no DDMA.",
  "evidence": [
   {
    "game": "games/castle_master.md",
    "text": "CSpect 4.5.9, 192 x 64 block, us a byte: LDIR 0.76, zxnDMA 0.18-0.21, DDMA 2D copy 0.18, PUSH fill 0.20, DDMA constant fill 0.07; dither rules the constant fill out; pattern-row copy = PUSH's speed, per-row jobs lose; only the view copy gains.",
    "quote": "0.18-0.21, DDMA 2D copy 0.18, PUSH fill 0.20, DDMA constant fill 0.07.",
    "shown_on": "cspect"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
+   "test": "D13",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite D13): blitter constant fill 2.88 clocks of 28 MHz a byte; the other blitter operations measured 5.92; 0 bytes wrong.",
+   "shown_on": "hardware"
   }
  ],
  "level": "demonstrated",

@@ -12,6 +12,13 @@
    "game": "games/head_over_heels.md",
    "text": "The actual IM2 route is FFFF to FFF4 to 7376.",
    "shown_on": "unknown"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
+   "test": "M06",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite M06): an instruction fetched across $FFFF continued at $0000 in slot 0.",
+   "shown_on": "hardware"
   }
  ],
  "level": "observed",
