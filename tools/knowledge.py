@@ -52,7 +52,8 @@ extracted (written from the notes, unchecked) < source-checked (each evidence ga
 every address / number in it is in those notes: `gate` checks that part; an evidence `quote`, the
 notes' own words, is checked to be in the file) < reviewed (a maintainer agrees).
 A lesson that stops being true is not deleted: status "retired" with superseded_by or retired_why.
-Evidence `game` is a games/<game>.md file, or notes / sessions (no file to check), or reference: published
+Evidence `game` is a games/<game>.md file, or a docs/<file>.md that states it (with a `quote`, checked like a
+game's), or notes / sessions (no file to check), or reference: published
 documentation, with `source` (its URL or title); a lesson with only reference evidence is level inferred
 until a game shows it on a machine. Or hardware: a board record of the hardware test suite, with `record`
 (docs/kb/hardware/<board>-<core>.json, written by tools/hwtests/intake.py) and `test` (a test id in it),
@@ -216,7 +217,7 @@ def met(x, tags):
 
 def add_evidence(x, game, quote, text=None, shown='unknown', read=None):
     """Add games/<game>.md to a lesson's evidence -> (changed, message). The quote must be in that file."""
-    rel = game if game.startswith('games/') else 'games/%s.md' % game
+    rel = game if game.startswith(('games/', 'docs/')) else 'games/%s.md' % game
     q = ' '.join((quote or '').split())
     try:
         notes = ' '.join((read or _read)(rel).split())
@@ -225,7 +226,7 @@ def add_evidence(x, game, quote, text=None, shown='unknown', read=None):
     if len(q) < 20 or q not in notes:
         return False, 'the quote must be 20+ characters copied exactly from %s' % rel
     tag = 'tag the lesson in %s: [kb %s: what this game adds]' % (rel, x['id'])
-    if rel in _games(x):
+    if rel in [e.get('game') for e in x.get('evidence', [])]:
         return False, '%s is already in the evidence of %s' % (rel, x['id'])
     if len(x.get('evidence', [])) >= EVIDENCE_ITEMS:
         return False, '%s holds %d evidence items and takes no more; %s - the tag counts the game' % (x['id'], EVIDENCE_ITEMS, tag)
@@ -638,8 +639,11 @@ def check_lessons(cs, preds):
             bad('needs 1 to %d evidence items' % EVIDENCE_ITEMS)
         for e in ev:
             g = e.get('game') or ''
-            if g not in ORIGINS and not (re.fullmatch(r'games/[\w.-]+\.md', g) and os.path.exists(os.path.join(ROOT, g))):
-                bad('evidence game %r: a games/<game>.md file, or %s' % (g, ' | '.join(ORIGINS)))
+            doc = bool(re.fullmatch(r'docs/[\w./-]+\.md', g)) and '..' not in g and os.path.exists(os.path.join(ROOT, g))
+            if doc and not e.get('quote'):
+                bad('evidence %s: a docs file needs a quote' % g)
+            if g not in ORIGINS and not doc and not (re.fullmatch(r'games/[\w.-]+\.md', g) and os.path.exists(os.path.join(ROOT, g))):
+                bad('evidence game %r: a games/<game>.md file, a docs/<file>.md with a quote, or %s' % (g, ' | '.join(ORIGINS)))
             if g == 'hardware' or e.get('record') or e.get('test'):
                 why = hw_evidence_problem(e) if g == 'hardware' else 'record / test belong to hardware evidence only'
                 if why:

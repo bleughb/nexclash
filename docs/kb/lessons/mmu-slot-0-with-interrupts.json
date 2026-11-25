@@ -7,6 +7,12 @@
    "game": "notes",
    "text": "Maintainers' note on slot 0 paging; not checked against a source file.",
    "shown_on": "unknown"
+  },
+  {
+   "game": "docs/LEARNINGS.md",
+   "text": "Pages mapped into slot 0 while interrupts are on are a crash risk (IM1 vector at 0x38); DI around hook paging. Code running in slot 0 cannot unmap slot 0: map and unmap from alt ROM stubs.",
+   "quote": "Pages mapped into slot 0 while interrupts are on = crash risk",
+   "shown_on": "analysis"
   }
  ],
  "level": "inferred",
@@ -22,6 +28,6 @@
   "unmap",
   "MMU"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

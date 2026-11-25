@@ -8,6 +8,11 @@
    "text": "Dropped updates rose from 12.3% to 14.9% as a layer was added, with runs of misses up to 14 updates.",
    "quote": "Gate 0 failures, 0 misses; 14.9 % dropped (12.3 % before), runs to 14. NEX m3d.",
    "shown_on": "unknown"
+  },
+  {
+   "game": "sessions",
+   "text": "Inferno: after a further layer was added, dropped updates rose to 18.5%, with runs of up to 32 misses in a row.",
+   "shown_on": "unknown"
   }
  ],
  "level": "observed",

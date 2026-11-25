@@ -22,6 +22,12 @@
    "test": "XT4",
    "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite XT4): at 48K machine timing a 7FFD write still paged MMU 6 / 7 ($06 / $07).",
    "shown_on": "hardware"
+  },
+  {
+   "game": "games/prince_of_the_yolkfolk.md",
+   "text": "The tail relies on locked 7FFD writes not remapping the MMU (from the VHDL); hardware still to confirm with this build.",
+   "quote": "Relies on locked 7FFD writes not remapping MMU",
+   "shown_on": "analysis"
   }
  ],
  "level": "inferred",

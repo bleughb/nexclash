@@ -194,6 +194,29 @@ checks belong to the eventual sprite build; no hardware result is claimed.
   CPU loops; run 28MHz only during play.
 - [card patch.hybrid-display-replacement §Use / do not use] Replacing the picture (scroll on Layer 2, sprites keyed by the
   plotter call) cost less than recognising the original's cells every update, and gave hardware scroll.
+- [local: 60 Hz report] Observed: the owner's "plays fast" report was 60 Hz toggled by mistake on the Next, not a
+  pace fault in the build.
+- [kb lesson.cpu-speed-state-in-setup-phases: R-Type level start] Observed: level start (start key to play) fell
+  from 348 to 112 frames; 41 frames of cell drawing remain. The interrupt sets NextReg 7 from run_fast, so code
+  that wants 28MHz across interrupts must set run_fast, not only NextReg 7.
+- [local: exact per-cell hiding] Observed: masked pattern copies per update were exact but cost 15 ms an update
+  in the level 2 scene (recording frame 20000, 19 partial plots, about 96 sprites), giving 15 slow updates in 300; removed.
+- [local: Layer 2 figure overflow] Inferred: moving the level 3 battleship (about 184 bytes x 104 rows, roughly
+  19 KB) by redrawing it on both half-pixel screens is about 77 KB per move, about one frame; a tilemap costs a few registers.
+- [local: level 3 battleship tilemap] Observed: the ship is 46x13 cells, 333 non-empty, 326 distinct (326 x 32 bytes
+  = 10.4 KB at 4 bits, 326 x 8 bytes = 2.6 KB at 1 bit). Drawn on the tilemap, ULA fallbacks went from 387 to 8
+  (all at the start of a life), drops from 51 to 0, peak sprites from 119 to 69.
+- [local: pattern cache slots] Observed: reserving only non-empty tiles (not a run sized for the whole outline) took
+  big-graphic failures from 51 to 0; least-recently-used eviction took level 1 fallbacks from 294 to 0.
+- [kb lesson.nex-header-loading-screen: R-Type] Observed: with a loading screen added, CSpect loaded every part of the
+  program 512 bytes out of place and crashed, because sjasmplus does not mark a ULA screen as having no palette; the
+  build's joining step now sets that flag in the header.
+- [kb lesson.main-loop-28mhz-isr-3mhz: R-Type turbo timing] Observed: the same run took 10.516 s original,
+  11.665 s with cached IDs (+10.93%) and 9.679 s turbo (-7.96%), faster than the original.
+- [local: optional intro memory] Observed: an optional intro must fit in the same build as the game in 2 MB: room for
+  about 98 of the intro's 8K pages, while the release candidate's intro uses 196 (50 for the three turning ships, 146 for the stick-turned ship).
+- [local: loading screen not in the snapshot] Observed: Rtype.z80 holds no loading screen (0 of 107 64-byte pieces);
+  the tape's screen (offset 247) is a separate input.
 
 ## Friction
 - reuse: [none: existing survey, scan, preview and census tools provided the investigation paths]
