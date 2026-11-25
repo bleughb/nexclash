@@ -215,13 +215,16 @@ not fit bank 0 runs from a slot-7 overlay page (40-43, 60, 61, 63; a group may h
 in the test table, and a test any other page of the generator's `xpage` list, flags bits 5-7: the V tests in
 `gv3.asm`-`gv6.asm`).
 
-Which machine the board results come from (corrected 2026-11-24): every board run so far was on an N-Go,
-the open-source clone of the Issue 2 Next, not an official Kickstarter board. It reads machine id $0A and
-board id $00, exactly like an official Issue 2, so the registers cannot tell them apart. No official Next
-board (KS1, KS2 or KS3) has run the suite yet. Which core build the N-Go loads (the official Issue 2
-bitstream or its own) is not stated in any source the repository holds: unverified. Every "board" fact here
-and in the records is "N-Go board (Issue 2-compatible clone), core 3.03.00"; by the owner's word the earlier
-board runs in this file (im2hold, z80ntest, nextbench) came from the same N-Go.
+Which machines the board results come from: two so far. The first (corrected 2026-11-24) is an N-Go, the
+open-source clone of the Issue 2 Next, not an official Kickstarter board. It reads machine id $0A and board
+id $00, exactly like an official Issue 2, so the registers cannot tell them apart. Which core build the N-Go
+loads (the official Issue 2 bitstream or its own) is not stated in any source the repository holds:
+unverified. Its facts are labelled "N-Go board (Issue 2-compatible clone), core 3.03.00"; by the owner's
+word the earlier board runs in this file (im2hold, z80ntest, nextbench) came from the same N-Go. The second
+(2026-11-25) is an official Kickstarter 3 board, board id $03, core 3.03.03, record `next-ks3-3.03.03.json`:
+one run of build 1f10237, every group. It gave the N-Go's verdict on every claim except two visual answers
+(V10, V18) that are not repeatable; `docs/kb/hardware/board-vs-board.md` lists what differs. No KS1 or KS2
+board has run the suite.
 
 ### Owner checklist (one board, one core)
 

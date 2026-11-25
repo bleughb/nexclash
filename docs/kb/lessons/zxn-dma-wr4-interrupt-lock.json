@@ -2,7 +2,7 @@
  "id": "lesson.zxn-dma-wr4-interrupt-lock",
  "kind": "pitfall",
  "claim": "Writing a Z80 DMA WR4 byte with 'interrupt control follows' ($91) locks the Next DMA until the machine is reset (power-off, or an F4 soft reset on core 3.03.00); do not port such code onto the zxnDMA.",
- "limit": "Only byte $91 tested, on the N-Go board (Issue 2-compatible clone) with core 3.03.00; DMA resets ($C3 x6, $A3, $AF, $8B) do not free it.",
+ "limit": "Only byte $91 tested, on the N-Go board (Issue 2-compatible clone, core 3.03.00) and a Kickstarter 3 board (core 3.03.03); DMA resets ($C3 x6, $A3, $AF, $8B) do not free it.",
  "evidence": [
   {
    "game": "notes",
