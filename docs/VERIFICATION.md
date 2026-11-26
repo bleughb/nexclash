@@ -141,7 +141,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Elite (elite): `elite.nex` e611573d6c45159be56936fc09dfd84d, `elite_sprites.nex` 93c35409631f7682e8e505dcd0284139; verified never
 - Hard Drivin' (hard_drivin): `hard_drivin.nex` d74f75e6995eb0f54eaec2122a5164d0, `hard_drivin_smooth.nex` 9fb23f8e64fa8187ba304c34af9a6016, `hard_drivin_steps.nex` 9cc6f829055ca1f17c491609de22b016, `hard_drivin_steps_loading.nex` 9d1a130d7e723c9395cca8266181da4b, `hard_drivin_smooth_loading.nex` f789a1c70aaa5f889f64c128a67527a0; verified 2026-11-24
 - Elite (standard Firebird release) (elite_std): `elite_std.nex` 4e176c9cf03bb207782221ac05396899; verified 2026-11-24
-- The Great Escape (great_escape): `great_escape.nex` 326a79986f348693816f6a7d6b6bf535, `great_escape_enhanced.nex` a6595a5d5a6c97da4cdfcb8ec502af0d, `great_escape_enhanced_loading.nex` 0478d68577acccd28ca2e0bb53341ed8, `great_escape_sprites.nex` 9d2f3cfbab260c95e086648caca829c6, `great_escape_sprites_loading.nex` 77b5d9b5016acf2be86bf112f7b4fabc; verified 2026-11-26
+- The Great Escape (great_escape): `great_escape.nex` 326a79986f348693816f6a7d6b6bf535, `great_escape_enhanced.nex` 9ee299086d271de1610b83296507b224, `great_escape_enhanced_loading.nex` a8c912b5a473bdfd5ab95bb1804b7090, `great_escape_sprites.nex` 3f769bab2e87e4ac9f8bf1a6de583381, `great_escape_sprites_loading.nex` a8eb9164d283155885a25e53064db1c2; verified 2026-11-26
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13

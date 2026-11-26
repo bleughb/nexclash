@@ -172,7 +172,9 @@ class EnhancedPatch(OriginalPatch):
         for key,at in (('code',0),('library',0x1800),('extra',0x1A00)):
             blob=bytes.fromhex(self.hooks[key]);private[at:at+len(blob)]=blob
         private[0x1DC0:0x1E00]=bytes(n//3 for n in range(64))
-        private[self.syms['hlib_dma_policy']]=2 if dma else 0
+        # Ordinary DMA on every core (policy 1): the core 3.03 blitter path (policy 2) froze the game in OverSpec
+        # (core 3.03.03) right after the key choice and was never run on hardware; it stays in the code, unused.
+        private[self.syms['hlib_dma_policy']]=1 if dma else 0
         self.extra_banks[13]=bytes(private)
         self.colours=colours;self.palette=palette;self.world=world
         for bank in range(14,17):self.extra_banks[bank]=bytes([255])*16384
@@ -274,7 +276,9 @@ class DrawingMemory:
         for bank,data in patch.extra_banks.items():
             for half in (0,1):self.pages[bank*2+half]=list(data[half*8192:(half+1)*8192])
         if policy is not None:self.pages[26][patch.syms["hlib_dma_policy"]]=policy
-        self.dma_allowed=bool(self.pages[26][patch.syms["hlib_dma_policy"]]) and not hwim2
+        pol=self.pages[26][patch.syms["hlib_dma_policy"]]
+        self.dma_allowed=bool(pol) and not hwim2
+        self.blitter_allowed=core>=0x33 and pol==2         # DDMA only when the build's policy asks for it
         blob=bytes.fromhex(patch.hooks['resident']);self.data[0x3A80:0x3A80+len(blob)]=blob
         self.data[0x3E00:0x4000]=list(patch.page[0x1E00:0x2000])
         canvas=[7 if memory[a]&(128>>x) else 0 for a in range(0xF290,0xFF51) for x in range(8)]+[0]*6648
@@ -285,7 +289,7 @@ class DrawingMemory:
             def __len__(s):return 1024*1024
             def __getitem__(s,a):return self.pages[a>>13][a&8191]
             def __setitem__(s,a,v):self.guard(a>>13,a&8191);self.pages[a>>13][a&8191]=v
-        self.dma=DMA(self.__getitem__,self.__setitem__,self.dma_io,blitter=core>=0x33,physical=Physical(),stall=self.dma_stall)
+        self.dma=DMA(self.__getitem__,self.__setitem__,self.dma_io,blitter=self.blitter_allowed,physical=Physical(),stall=self.dma_stall)
     def guard(self,page,offset):
         if page in IMMUTABLE_PAGES or (page==24 and offset<0x1A80):self.violations.append(('page',page,f'{offset:04X}'))
     def dma_io(self,p,v):raise AssertionError(('Unexpected DMA I/O',p,v))

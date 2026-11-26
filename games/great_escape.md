@@ -76,7 +76,9 @@ once and update bright/dark pixels together. Unchanged lighting and dirty spans 
 The native searchlight painter has an independently measured 4096-state timing table; its
 movement, detection and penalties are outside the accelerated region.
 
-DDMA is core-gated at 3.03.00. Older cores use ordinary DMA and short CPU copies; hardware IM2
+Release: ordinary DMA on every core (policy 1). The core 3.03 blitter path (policy 2) froze the game in OverSpec
+(core 3.03.03) right after the key choice (2026-11-26, Jon's review; CPU in the ROM tape loader); it was only ever
+model-tested, never run on hardware, so it stays in the code unused. Ordinary DMA and short CPU copies; hardware IM2
 and explicit diagnostic builds use CPU fallback. Long CPU copies tick the limiter
 between chunks. JNext 1.1.104 reports core0x32, so its measurements exercise the older-core path.
 Model core0x33 and hardware-IM2 cases are tests, not physical hardware evidence.
@@ -158,6 +160,9 @@ checked alternate archive snapshots; they are not shipped as separate working ch
 - [tool nexclash/great_escape.py] A model that always grants the blitter cannot test its fallbacks: grant DDMA by the modelled core and refuse any DMA port write in the CPU fallbacks.
 - [tool nexclash/great_escape.py] Comparing the 64K view misses writes to physical pages (a ROM page restored to its slot afterwards): guard the immutable pages at the write.
 - [tool nexclash/great_escape.py] A negative control counts only by its own failure; a mutation must change one thing (the R control once also changed A and F).
+- [local: DDMA unproven] A DMA path the recordings' machine never takes (JNext reported core 0x32) is only model
+  evidence: the 3.03 blitter path froze the game in OverSpec. Ship the path an emulator or board has run; run each
+  core gate's path once before a release.
 
 ## Technique use
 

@@ -116,19 +116,19 @@
   },
   "enhanced": {
    "file": "great_escape_enhanced.nex",
-   "md5": "a6595a5d5a6c97da4cdfcb8ec502af0d"
+   "md5": "9ee299086d271de1610b83296507b224"
   },
   "enhanced_loading": {
    "file": "great_escape_enhanced_loading.nex",
-   "md5": "0478d68577acccd28ca2e0bb53341ed8"
+   "md5": "a8c912b5a473bdfd5ab95bb1804b7090"
   },
   "sprites": {
    "file": "great_escape_sprites.nex",
-   "md5": "9d2f3cfbab260c95e086648caca829c6"
+   "md5": "3f769bab2e87e4ac9f8bf1a6de583381"
   },
   "sprites_loading": {
    "file": "great_escape_sprites_loading.nex",
-   "md5": "77b5d9b5016acf2be86bf112f7b4fabc"
+   "md5": "a8eb9164d283155885a25e53064db1c2"
   }
  },
  "repro": [],
@@ -201,7 +201,7 @@
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
    "nexclash/engines.py": "ce158a77f3104b5b",
-   "nexclash/great_escape.py": "dbefddef2eed01a4",
+   "nexclash/great_escape.py": "7200a8d93a7a3894",
    "nexclash/hooklib.py": "d5cfe5321e8ff038",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/identify.py": "578e73ef2ca90c6a",
@@ -224,7 +224,7 @@
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "daa2da8481505a21",
+   "recipe": "a434ec9b2ce403d5",
    "rom": "e50ee485fb4a21d2"
   },
   "date": "2026-11-26"
@@ -247,7 +247,7 @@
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
    "nexclash/engines.py": "ce158a77f3104b5b",
-   "nexclash/great_escape.py": "dbefddef2eed01a4",
+   "nexclash/great_escape.py": "7200a8d93a7a3894",
    "nexclash/hooklib.py": "d5cfe5321e8ff038",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/identify.py": "578e73ef2ca90c6a",
@@ -270,7 +270,7 @@
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "daa2da8481505a21",
+   "recipe": "a434ec9b2ce403d5",
    "rom": "e50ee485fb4a21d2"
   },
   "date": "2026-11-26"
