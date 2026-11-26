@@ -54,8 +54,10 @@ What it says:
   rules and traps in docs/DDMA.md. Classic DMA and the re-arm costs above still fit contiguous copies
   and port uploads; prefer zxnDDMA for a rectangle, fill, transparent blit or Layer 2 write. Gate on
   core version first: older cores read the extended parameter bytes as DMA writes.
-- 28 MHz is ~6.3-7x 3.5 MHz, not 8x: each memory read adds a wait state, so (T + reads) / 8
-  (LEARNINGS 2.1f): LDIR 21 T + 3 reads -> 3.0 T a byte at 3.5 MHz terms = 0.857 us (measured 0.861).
+- 28 MHz on core 3.02 is ~6.3-7x 3.5 MHz, not 8x: each memory read adds a wait state, so (T + reads) / 8
+  (LEARNINGS 2.1f; none on 3.03.00: N-Go board, nxsuite C01): LDIR 21 T + 3 reads -> 3.0 T a byte at 3.5 MHz terms = 0.857 us (measured 0.861).
+  Builds target core 3.03 (2026-11-24): budget a 28 MHz renderer from simulator T x 1. The x 1.4 rule was
+  for 3.02 and JNext 1.3.0 (which models 3.02: Castle Master's Z80N renderer ran at 1.34-1.42x its T).
 - Sprite pattern upload: DMA is ~3x OUTI for a 256-byte pattern and ~1.8x for a 64-byte one
   (14.5 + 64 x 0.18 = 26 us vs 47 us). OUTINB = OUTI. Sprite attributes: port and NEXTREG the
   same here only because v1's NEXTREG side wrote constants (`NEXTREG $35,32`); with values loaded
@@ -206,13 +208,12 @@ What v2 adds:
     then per line MOVE $44 x2 (9-bit colour) recolours that one entry down the screen - copper bars
     behind a Layer 2 cleared to that index. The changed entry stops matching $14 (a COLOUR
     compare), so 'transparent' pixels become visible: a game layer whose entry the copper rewrites
-    loses its see-through pixels. Same demos: $64 = 33 aligns copper line 0 with the 320x256 Layer 2
-    top (the register text says 32: "Raster numbering" below).
+    loses its see-through pixels. Same demos: $64 = 33 for the 320x256 Layer 2 top (no exact
+    fit on an N-Go: "Raster numbering" below).
   * DMA fill by overlap: memory -> memory with destination = source + 1 (the LDIR fill idiom)
     fills a block, e.g. a 257-byte IM2 vector table; alternative to fixed-port-A fill.
-  * UNVERIFIED claim in its Copper.asm: copper MOVEs to NextReg $15 "reset clipping values", so the
-    demo uses a second list without $15 while clip windows animate. Not in the core spec; test
-    before driving $15 from a copper list that coexists with $19/$1A/$1B clips.
+  * Its Copper.asm says copper MOVEs to NextReg $15 "reset clipping values" (so a second list
+    without $15 while clips animate): NOT so on an N-Go (3.03.00, nxsuite V17), clips stay.
 - NextReg $34 and port 0x303B are SEPARATE sprite indices unless NextReg $09 bit 4 (lockstep) is
   set. Never mix $34/$35-$39 writes and 0x57 writes on one assumption of "the current sprite";
   hooks that only use NEXTREG keep working whatever 0x57 did, and the reverse.
@@ -227,7 +228,8 @@ What v2 adds:
   and right quads" logic (BRIEFING A1) must go, and the pixel check must cover it.
 - zxnDMA (port 0x6B since core 3.01.02; 0x0B = Zilog-compatible DMA): memory -> memory, memory ->
   fixed port (0x5B patterns, 0x57 attributes, 0x253B with a NextReg selected on 0x243B). With
-  port cycle length 2 a byte costs ~4 cycles vs LDIR 21 / OTIR 21 T - but only with the timing
+  port cycle length 2 a byte costs 4 T at 3.5 MHz, 4.96 clocks at 28 MHz (reset timing 6 T / 5.92;
+  N-Go 3.03.00, nxsuite D02) vs LDIR 21 / OTIR 21 T - but only with the timing
   byte sent for BOTH ports (WR1/WR2 bit 6 + byte %00000010); without it the DMA uses standard Z80
   cycle timing. Program upload (~15-25 bytes by OTIR) costs ~400 T, so it pays from ~30 bytes;
   registers persist between transfers, so a repeat with a new address needs only WR0 (+ WR4) +
@@ -252,7 +254,8 @@ What v2 adds:
   interrupt near line 248) or in pieces shorter than the gap. Pieces are cheap: WR6 $D3
   (Continue) resets the byte counter and keeps the pointers, so after the first program each
   further chunk is `$D3, $87` (2 OUTs) continuing where the last ended. Burst mode + prescaler
-  (WR2 timing byte bit 5 + prescaler byte; rate = 875 kHz / prescaler, scaled by video timing $11)
+  (WR2 timing byte bit 5 + prescaler byte; rate = 875 kHz / prescaler, scaled by video timing $11;
+  N-Go 3.03.00, nxsuite D04: 32P clocks a byte at 28 MHz, 4P+3 T + 2-7 T at 3.5 MHz)
   hands the bus back to the CPU between bytes, so the pulse interrupt is seen - slow, but safe for
   background copies (specnext.com/the-zxndma; hardware to confirm). Hardware IM2 mode ($C0 bit 0 +
   $CC-$CE) can let interrupts break into a DMA, but we run pulse mode and the game's own IM/ISR.
@@ -277,9 +280,9 @@ What v2 adds:
 - Raster numbering: Active Video Line ($1E/$1F), line interrupt ($22/$23) and copper WAIT all
   count from ULA pixel row 0 UNLESS NextReg $64 (core 3.01.05+) is non-zero: it offsets all three
   (changelog 3.01.05). Frame length differs by timing: 48K 312 lines, 128K 311, Pentagon 320 on
-  VGA; HDMI 312 whatever the machine timing; 60 Hz 262 (48K, HDMI) / 261 (128K VGA). Line length:
+  VGA; HDMI 312 whatever the machine timing; 60 Hz 264 (N-Go 3.03.00 128K VGA, F03). Line length:
   896 clocks (48K, Pentagon), 912 (128K), 864 (HDMI 50 Hz), 858 (HDMI 60 Hz). The ULA interrupt
-  comes at line 248 (48K / 128K VGA 50 Hz), 239 (Pentagon), 256 (HDMI 50 Hz). Display rows 0-191,
+  comes at line 248 (48K / 128K VGA 50 Hz), 239 (Pentagon), 256 (HDMI 50 Hz), 224 at 60 Hz (F06). Display rows 0-191,
   then border + blanking (all from varmfskii zx_next_notes copper tables). A raster wait that
   assumes 312 lines or offset 0 is a hardware-only fault (BRIEFING C2 #26).
   The freeze trap (a Next developer's note, 2026-10-22; matches Gen4's patch_copper_y): with $64 = 0
@@ -291,8 +294,7 @@ What v2 adds:
   The register text agrees (varmfskii zx_next_notes, $64): with offset 32, line 32 = ULA row 0 and
   line 0 = the first pixel row of the tilemap and sprites; a new offset takes effect when the ULA
   reaches row 0, so up to a frame late. The copper demos above use $64 = 33 for the 320x256 Layer 2
-  top - perhaps to make up for a copper change showing one line late (Sprites/ScanlineDelay below);
-  a board test (BRIEFING C2 #28) settles which a list needs. Our code assumes $64 = 0 (and a frame
+  top; on an N-Go (3.03.00, nxsuite V18) 33 and 32 both change part-way along row 0. Our code assumes $64 = 0 (and a frame
   of at least 258 lines: nextbench frame_sync, Rainbow rsafe), so the stub must reset $64 (C2 #26),
   and the F3 key (50 / 60 Hz) changes the frame length under a running game.
 - Tilemap attribute byte (2-byte entries): bits 7:4 palette offset (used), bit 3 X mirror, bit 2 Y
@@ -325,7 +327,7 @@ What v2 adds:
     mode bits does not disturb a running list (already in the Copper bullet above; the test proves
     it on hardware).
   * Sprites (Sprites/ScanlineDelay, core 3.00.07+): the sprite engine swaps its line buffer at sprite
-    X = -1, so an attribute change shows ONE scanline later; to change a sprite from line N on,
+    X = -1, so an attribute change shows one scanline later (an N-Go, 3.03.00: TWO; nxsuite V01); to change a sprite from line N on,
     write it before copper WAIT(line N-2, h ~50). A commit racing the beam tears by whole lines.
   * Raster line read (Timing/ScanlineReadingAndInterrupt): a board with core 3.01.00 at 3.5 MHz
     sometimes READ A WRONG VALUE from $1F (a wait for line 224 fired near 192). $1E and $1F are
@@ -373,12 +375,11 @@ What v2 adds:
   the copper or a $1E/$1F poll.
 
 ### 1.9 Owning the display over an unchanged engine (R-Type, 2026-11-17; cards in docs/techniques)
-Smooth scroll: `patch.layer2-half-pixel-scroll` (640x256 x two screens, half a pixel each 2 frames).
-Scenery in front, cut by its own pixels: `patch.scenery-edge-masks` (whole-level sky flood, masks per
-cell content). Coarse figure steps: `patch.figure-glide` (also Quazatron; port 303B is shared with
-pattern uploads). Flash colours: `optimise.flash-palette-offset`. Stills above 16 colours at 640:
-`patch.copper-palette-bands`; a 320x256 picture of up to 256 colours needs no Copper. Pace: hold a
-fixed number of frames per update (measure the original's histogram from its recording first).
+Scroll: `patch.layer2-half-pixel-scroll` (640x256, two screens half a pixel apart). Scenery in front,
+cut by its own pixels: `patch.scenery-edge-masks`; what the original hid: `detect.behind-scenery`.
+Coarse steps: `patch.figure-glide` (port 303B shared with uploads). Flash: `optimise.flash-palette-offset`.
+Stills: `patch.copper-palette-bands` (a 320x256 x 256 picture needs no Copper), entered by
+`patch.mosaic-transition`. Pace: fixed frames per update from the original's histogram.
 
 ## 2. Techniques from other projects (by topic)
 
@@ -633,15 +634,16 @@ Ped7g's test suite) where a technique there is mostly about one Next feature.
 - The same demo's CTC alternative: a timer interrupt (IM2, vector table of $81 bytes, handler at
   $8181) that sends one byte per interrupt; CTC channel 0, prescaler 16, time constant 219 = 7,991
   Hz. CTC rate = clk28 / (prescaler x time constant), prescaler 16 or 256 (control word bit 5),
-  time constant 0 = 256 (RustyPixelsUK zxnext ctc.h). Next Point's comment writes "(1 + time
-  constant)"; the two differ by ~1 % - not checked.
+  time constant 0 = 256 (RustyPixelsUK zxnext ctc.h). Next Point's "(1 + time constant)" is
+  wrong: N-Go 3.03.00, nxsuite I13.
 - The Next's clock and frame rate follow the VIDEO TIMING mode (NextReg $11 bits 2:0, writable in
   config mode only; RustyPixelsUK zxnext ctc.c tables, clk28 as varmfskii's $11 page): clk28 =
   28.0, 28.57, 29.46, 30, 31, 32, 33 MHz for VGA timings 0-6 and 27 MHz for HDMI; a "50 Hz" frame
   is then 50.00, 51.02, 52.61, 53.57, 55.36, 57.14, 58.93 Hz (HDMI 50.00), a "60 Hz" one 60.00 ...
   70.71 (HDMI 60.00). So everything paced by the frame interrupt - every game we convert - runs up
-  to ~18 % fast on a VGA 1-6 setting, and CTC / DMA-prescaler rates scale with clk28 too. The
-  setting is the user's machine configuration (BRIEFING A1, Video).
+  to ~18 % fast on a VGA 1-6 setting, and CTC / DMA-prescaler rates scale with clk28 too. At 128K
+  timing VGA 0 is 28e6 / (311 x 1824) = 49.36 Hz, measured (N-Go 3.03.00, F01/F02). The setting
+  is the user's (BRIEFING A1, Video).
 - For us: C2 #37 (beeper replay) has two candidate players: copper-driven (no CPU per sample, one
   frame of latency) or a CTC interrupt (~10 % CPU at 16 kHz; needs hardware IM2 mode, C2 #34).
 - Sprite multiplexing by chained line interrupts: 2.4.

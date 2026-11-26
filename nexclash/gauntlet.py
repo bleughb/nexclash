@@ -7,6 +7,7 @@ the 32 x 20 play window up by its 8 bytes and its attribute and shows a painted 
 (asm/gauntlet_hooks.asm); the copies run at 28 MHz and their own time is waited out. "Steady speed" (an option of the
 build) runs the game at 28 MHz and shows every update a fixed number of frames after the last.
 """
+from . import l2pal
 import collections
 import hashlib
 import json
@@ -225,6 +226,7 @@ def colour_tables(cmap, syms):
     if panel:
         pages[DPAGE + ndp] = bytes(panel).ljust(8192, b'\0')
     pal2 = [0x1C7] + [rgb9(c) for c in cmap['colours']]          # colour 0: the transparent magenta (0xE3)
+    pal2 = l2pal.fix(pal2, '9bit', keep=(0,))                 # opaque 0xE3 -> 0xE7 (a Next shows it see-through)
     return bytes(heads), pages, pal, want, pal2 + [0] * (256 - len(pal2))
 
 
@@ -437,7 +439,7 @@ def _rw():
     return _rw_simulator()
 
 
-def run_hook(patch, st, rom, mem, regs, site, stop, sp_stop, limit=6000000, on_halt=None, plain=False):
+def run_hook(patch, st, rom, mem, regs, site, stop, sp_stop, limit=6000000, on_halt=None, plain=False, speed=None):
     """Run the patched code from `site` on a copy of the game's memory until PC = stop with SP = sp_stop and the ROM back
     at slot 0. on_halt(memory): called at every HALT the hook runs (a unit case's interrupt). -> (registers, copy, model)."""
     from . import simpool
@@ -446,7 +448,7 @@ def run_hook(patch, st, rom, mem, regs, site, stop, sp_stop, limit=6000000, on_h
         m2[a:a + len(new)] = new
     v = View(m2, rom, st, patch.planes)
     s = simpool.machine(_rw(), v, list(regs), 'gauntlet-hook')
-    model = Model(s, st, speed=3 if patch.steady else 0)
+    model = Model(s, st, speed=(3 if patch.steady else 0) if speed is None else speed)   # speed: the caller's NR 7
     v.model = model
     R = s.registers
     R[PC_] = site
@@ -790,6 +792,13 @@ def unit_tests(patch, states, neg=None):
         Rp, mp, model = run_hook(patch, st, rom, mem, regs, C1, C1 + 3, sp)
         return _differs(Ro, mo, Rp, mp, sp) == ([], [])
 
+    if not patch.steady:                        # the clear entered at each faster speed gives the caller's speed back
+        for mem, regs in by[CL][-2:]:
+            sp = regs[SP_]
+            Ro, mo = run_orig(rom, mem, regs, CL + 3, sp)
+            for speed in (1, 2, 3):
+                Rp, mp, model = run_hook(patch, State(patch), rom, mem, regs, CL, CL + 3, sp, plain=True, speed=speed)
+                ok('the clear keeps the caller\'s speed', _differs(Ro, mo, Rp, mp, sp) == ([], []) and model.nr[7] & 3 == speed)
     for mem, regs in by[C1][-3:]:
         want = want_of(mem)
         # the first pass on a page full of what the 128K left: cleared, then the painted cells
@@ -912,7 +921,8 @@ def negative_patches(patch):
             ('a hidden panel cell is shown', _code_patch(patch, 'tilepass.n_vis', b'\xF6\x01')),
             ('the window\'s time is not read during the pass', _code_patch(patch, 'tilepass.n_tick', b'\x00\x00\x00')),
             ('the first copy\'s time is not waited out', _code_patch(patch, 'c1_end.w', b'\x00' * 8)),
-            ('R one more after the wait before the copies', _code_patch(patch, 'e_pre.n_r', bytes((0xC6, (r + 1) & 255))))] + (
+            ('R one more after the wait before the copies', _code_patch(patch, 'e_pre.n_r', bytes((0xC6, (r + 1) & 255)))),
+            ('the clear leaves 28 MHz', _code_patch(patch, 'e_cl.n_spd', b'\x00\x00\x00'))] + (
         [('a level block is not copied', _code_patch(patch, 'e_load.n_cp', b'\x00\x00'))] if patch.blocks else [])
 
 
@@ -954,7 +964,7 @@ def auto(a, z80, name, out, say):
         'tile layer: %d painted cells, %d palette lines, %d pages)' % (len(patch.want), len(lines), len(patch.planes)))
     ok = True
     plain = os.path.join(out, name + '.nex')
-    zt.convert(str(z80), plain, TAIL_ADDR, quiet=True)
+    zt.convert(str(z80), plain, TAIL_ADDR, quiet=True, keep_printer_buffer=True)   # stack in 0x5B00-0x5BFF (tape start)
     bad = boot_check(plain, z80, None)
     ok = ok and not bad
     say('Plain     : %s  %s  boot %s' % (os.path.basename(plain), md5(plain), 'OK' if not bad else 'MISMATCH %s' % str(bad[:3])[:200]))

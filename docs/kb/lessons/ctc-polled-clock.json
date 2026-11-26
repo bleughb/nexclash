@@ -1,0 +1,32 @@
+{
+ "id": "lesson.ctc-polled-clock",
+ "kind": "method",
+ "claim": "CTC channel 3 polled with 32 T ticks can serve as a clock that places OUTs near their original T (model error about -24..+56 T).",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "CTC ch 3 polled with 32 T ticks places OUTs at the original T and 9907 at the original time; model OUT -24..+56 T, 9907 -25..+43 T.",
+   "quote": "(CTC ch 3 polled, 32 T ticks), 9907 at the original time; model OUT -24..+56 T, 9907 -25..+43 T.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
+   "test": "I12",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite I12): the CTC counted the same over a fixed interval at 7, 14 and 28 MHz (2216 ticks): its rate does not follow the CPU speed.",
+   "shown_on": "hardware"
+  }
+ ],
+ "level": "observed",
+ "area": "platform",
+ "words": [
+  "CTC",
+  "channel 3",
+  "polled clock",
+  "T-states",
+  "timer",
+  "32 T tick"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

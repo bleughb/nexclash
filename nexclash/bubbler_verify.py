@@ -148,7 +148,7 @@ class Oracle:
             if self.calls and r[2]==112:self.committed=True
             data=expand(self.planes);offset=(r[12]-0xE5BB)*8
             assert 0<=offset and offset+r[2]*192<=24576
-            for y in range(r[2]):self.front[(8+y)*256+48:(8+y)*256+224]=data[offset+y*192:offset+y*192+176]
+            for y in range(r[2]):self.front[(8+y)*256+48:(8+y)*256+208]=data[offset+y*192:offset+y*192+160]
 
 def verify(patch,path,stop=None,collect=0,progress=None):
     counts=Counter();examples={};states=[];mem=None;oracle=None;serial=None

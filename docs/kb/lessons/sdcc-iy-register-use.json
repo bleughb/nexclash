@@ -1,0 +1,25 @@
+{
+ "id": "lesson.sdcc-iy-register-use",
+ "kind": "fact",
+ "claim": "With sdcc_iy, asm may clobber AF, BC, DE, HL and IY but must keep IX; the ROM IM1 handler expects IY = 0x5C3A.",
+ "limit": "The IY rule was read from the config and not tested.",
+ "evidence": [
+  {
+   "game": "notes",
+   "text": "The IY part was read from the config, not tested.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "inferred",
+ "area": "toolkit",
+ "words": [
+  "sdcc_iy",
+  "IY",
+  "IX",
+  "IM1",
+  "clobber",
+  "z88dk"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

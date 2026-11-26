@@ -208,13 +208,13 @@ state in lockstep): whole +7.09..+7.77%, quiet +7.03..+7.70, busy +5.99..+8.10, 
   .nex start stub). So no hook can change a value the game reads.
 
 ## Lessons
-- [local: Smash TV's start state] The published build's start state (a 48K view of the clean release, no front end)
+- [kb lesson.published-build-steps-in-engine: Smash TV's start state] The published build's start state (a 48K view of the clean release, no front end)
   and its loading screen were steps outside the engine; to48, has_trainer_prompt and loading_nex now run in auto.
 - [local: this engine] The bodies the hooks run "at the original cost" ran at a fixed 3.5 MHz, which is the original
   cost only for a 3.5 MHz caller: they run at the latched speed now.
 - [local: this engine] The audit's control fix decided it: the "not measurable" note was the plain control resetting to the menu, not the game. With a control from
   the patch's own start state, the state is in lockstep at all 600 updates on every seed, so the window was tuned on real numbers in two builds.
-- [local: this engine] A game that reads the alt ROM as data pays for every byte of library there; page 26 had a hole. The library assembles anywhere
+- [kb lesson.alt-rom-spare-area-read: this engine] A game that reads the alt ROM as data pays for every byte of library there; page 26 had a hole. The library assembles anywhere
   a hook has mapped, so the hole costs nothing. The verifier's "game code wrote the hook state" check must then treat that span as hook code.
 
 ## Technique use

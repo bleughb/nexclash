@@ -1,0 +1,28 @@
+{
+ "id": "lesson.grid-blocks-no-plot-hooks",
+ "kind": "method",
+ "claim": "A game that draws only grid-aligned blocks needs no plot hooks: look the picture up from the finished hidden screen; things drawn at pixel positions do not fit a finite set of cells.",
+ "evidence": [
+  {
+   "game": "games/gauntlet.md",
+   "text": "The picture is looked up from the finished hidden screen, so nothing of the game is touched and scrolling needs no tracking; shots are drawn at pixel positions and their cells are not a finite set.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "facts": {
+  "draw": "back-buffer"
+ },
+ "words": [
+  "grid",
+  "blocks",
+  "no hooks",
+  "hidden screen",
+  "lookup",
+  "scrolling",
+  "shots"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,26 @@
+{
+ "id": "lesson.flash-colour-via-palette-offset",
+ "kind": "method",
+ "claim": "Convert a flashing figure once and flash it with the sprite palette offset instead of converting every flash colour.",
+ "evidence": [
+  {
+   "game": "games/r_type.md",
+   "text": "Four flash colours x three graphics filled the cache; its restarts drew figures natively in 8x8. One conversion + palette offset per graphic fixed it.",
+   "quote": "restarts drew figures natively in 8x8. One conversion + palette offset per graphic fixed it.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "card": "optimise.flash-palette-offset",
+ "words": [
+  "flash",
+  "palette offset",
+  "sprite palette",
+  "pattern cache",
+  "attribute flash",
+  "conversion"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

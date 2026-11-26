@@ -1,0 +1,30 @@
+{
+ "id": "lesson.blitter-sram-aperture-offset",
+ "kind": "fact",
+ "claim": "Physical SRAM addresses used by the blitter include a 040000 aperture offset.",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "Physical SRAM includes the 040000 aperture offset; high staging is 216-223.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
+   "test": "D10",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite D10): a blitter copy by physical address (RAM page n at $40000 + n x $2000) landed with 0 bytes wrong.",
+   "shown_on": "hardware"
+  }
+ ],
+ "level": "observed",
+ "area": "platform",
+ "words": [
+  "blitter",
+  "SRAM",
+  "040000",
+  "aperture",
+  "physical address"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

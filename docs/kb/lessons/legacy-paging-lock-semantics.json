@@ -1,0 +1,48 @@
+{
+ "id": "lesson.legacy-paging-lock-semantics",
+ "kind": "open",
+ "claim": "Reading of the VHDL (3.01.09): locked 7FFD writes are ignored without remapping, NextReg $08 bit 7 can only unlock, and 48K timing (NextReg $03) does not stop 7FFD/1FFD decoding.",
+ "limit": "Confirmed on the N-Go board (Issue 2-compatible clone, core 3.03.00): locked writes ignored, NextReg $08 bit 7 only unlocks (nxsuite M02); 7FFD still pages at 48K timing (XT4). 1FFD at 48K timing not measured (the +3 ports were trapped).",
+ "evidence": [
+  {
+   "game": "notes",
+   "text": "VHDL reading for core 3.01.09, not confirmed on hardware.",
+   "shown_on": "analysis"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
+   "test": "M02",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite M02): a 7FFD write while locked changed no MMU slot; $08 bit 7 = 0 kept the lock, 1 unlocked it.",
+   "shown_on": "hardware"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
+   "test": "XT4",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite XT4): at 48K machine timing a 7FFD write still paged MMU 6 / 7 ($06 / $07).",
+   "shown_on": "hardware"
+  },
+  {
+   "game": "games/prince_of_the_yolkfolk.md",
+   "text": "The tail relies on locked 7FFD writes not remapping the MMU (from the VHDL); hardware still to confirm with this build.",
+   "quote": "Relies on locked 7FFD writes not remapping MMU",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "inferred",
+ "area": "platform",
+ "facts": {
+  "machine": "128K"
+ },
+ "words": [
+  "7FFD lock",
+  "NextReg 08",
+  "48K timing",
+  "VHDL",
+  "port decoding",
+  "1FFD"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

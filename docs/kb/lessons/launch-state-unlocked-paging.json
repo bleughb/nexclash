@@ -1,0 +1,32 @@
+{
+ "id": "lesson.launch-state-unlocked-paging",
+ "kind": "fact",
+ "claim": "At NEX launch paging is unlocked, so a boot model that assumed 7FFD locked rejected every hardware-proven build.",
+ "evidence": [
+  {
+   "game": "notes",
+   "text": "Maintainers' note: hardware-proven builds were rejected by a model assuming 7FFD locked at launch.",
+   "shown_on": "hardware"
+  },
+  {
+   "game": "docs/LEARNINGS.md",
+   "text": "A \"7FFD locked at launch\" model rejected every hardware-proven build; docs/BRIEFING.md adds that all hardware-tested builds page with legacy writes without unlocking.",
+   "quote": "Model the NEX launch state from hardware evidence",
+   "shown_on": "hardware"
+  }
+ ],
+ "level": "observed",
+ "area": "platform",
+ "facts": {
+  "machine": "128K"
+ },
+ "words": [
+  "NEX launch",
+  "7FFD",
+  "paging unlocked",
+  "boot model",
+  "hardware"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,35 @@
+{
+ "id": "lesson.auto-snapshot-class-detector",
+ "kind": "pitfall",
+ "claim": "Engine detectors must read the snapshot class that auto passes: detect on .memory, and a 128K engine's is_ must also read skoolkit's memory.banks.",
+ "evidence": [
+  {
+   "game": "games/army_moves.md",
+   "text": "Detector read .banks, which only the converter's snapshot class has, so auto's skoolkit snapshot never matched; detect on .memory.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/game_over.md",
+   "text": "Same first-draft detector fault: .banks never matched auto's skoolkit snapshot.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/atom_ant.md",
+   "text": "A 128K engine's is_ must also read skoolkit's memory.banks; checking only banks and is128 left auto on the generic path.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "is_",
+  "detector",
+  "auto",
+  "snapshot",
+  "banks",
+  "memory",
+  "skoolkit"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,33 @@
+{
+ "id": "lesson.sprite-pattern-and-attribute-facts",
+ "kind": "fact",
+ "claim": "4-bit sprite setup: anchor attr4 0x80/0xC0 picks pattern bytes 0-127/128-255, upload via 0x303B then 0x5B, attributes via NextReg $34-$39, $4B=0, palette via $43/$40/$41, clip via $1C/$19.",
+ "evidence": [
+  {
+   "game": "games/rainbow_islands.md",
+   "text": "Next sprites: 4-bit anchors, attr4 0x80/0xC0 = slot half 0-127/128-255; 0x303B + port 0x5B pattern upload; $34-$39 attributes; $4B=0; palette via $43/$40/$41; clip via $1C/$19.",
+   "quote": "pattern upload; $34-$39 attributes; $4B=0; palette via $43/$40/$41; clip via $1C/$19.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
+   "test": "SP06",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite SP06): a 4-bit anchor with attr4 $80 showed bytes 0-127 of the slot and $C0 bytes 128-255.",
+   "shown_on": "hardware"
+  }
+ ],
+ "level": "observed",
+ "area": "platform",
+ "words": [
+  "sprite",
+  "4-bit",
+  "pattern slot",
+  "0x303B",
+  "NextReg 0x4B",
+  "palette",
+  "clip"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

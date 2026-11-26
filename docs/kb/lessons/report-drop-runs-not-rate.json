@@ -1,0 +1,24 @@
+{
+ "id": "lesson.report-drop-runs-not-rate",
+ "kind": "method",
+ "claim": "When deferred work can be dropped, report the longest run of dropped updates as well as the rate, because every added coroutine stage raises the drop rate.",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "Every added coroutine stage raises the drop rate: report drops and runs. Busy windows are nearly full, so per-chunk cost, not cold frames, sets the run length.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "drop rate",
+  "stale run",
+  "coroutine",
+  "longest run",
+  "deferred work",
+  "drops"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

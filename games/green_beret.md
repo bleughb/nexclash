@@ -76,7 +76,7 @@ Readers of the screen, `scan --writers`: the plotters' own AND, the scroll, a wi
 The original plot code still runs, with its screen writes redirected: each plot site maps Next page 26 at slot 2, so 0x4000-0x57FF land in a scratch screen; the plot's end unmaps. So a plot leaves every register as the original and takes the original's time; only hook time adds. The one exception: the mine plotter leaves its last screen read in AF', proven dead on every event by running on for 12,000 instructions with both values (verify's dead_af).
 Sites: top of asm/green_beret_hooks.asm, SITES_ORIG in the module. Code 772 bytes in alt ROM image 1 at 0x386E, 492 in page 26. State in page 26 at 0x5800-0x5FFF: cache keys, stamps, class table, BUF; ISR touches none of it. Interrupts are off in 0xA5FE.
 Sprites: 4-bit 16x16, up to 2 x 2 per figure. Cache 32 entries of 4 patterns, keyed gfx, mask low, lines; the entry idle longest goes, never one on show (age < 2). Frame end hides the slots not plotted; the two screen wipes (0x64F4, 0x64E6) hide all. Clip x 16-239 (margin columns are black on black).
-Tail: 54 / 80 bytes at 0x8342: scenery buffer, written before read; running the game with FF there changes only the 6 untouched margin bytes in it (work/tailtest.py). First choice 0x9400 was graphics of stage 4: the stage-4 recording's scan caught it.
+Tail: 54 bytes at 0x8342 in both builds, put back before the game starts (restore_tail, Alien 8's method): the tail jumps to the alt ROM image's free span after the register block (0x38B8 plain, 0x3BCF sprites), which copies a backup over it and runs the tail's register restore again. That scenery-buffer row is NOT written before read: the screen copier (0xA9C7) shows it before the first draw at the start of play, so the old builds showed the tail's bytes for 0 to 26 frames (median 11, gb_nocheat; the snapshot holds zero there). rom_paths' tail proof (2026-11-04) caught it on 2026-11-23; work/tailtest.py compared RAM at checkpoints and missed it. No span is write-first in all four recordings. The plain build carries an alt ROM (Sinclair's) for this. Booted to the game PC 0x8273: plain RAM equals the snapshot, the sprite build differs only at the hook sites. First choice 0x9400 was graphics of stage 4: the stage-4 recording's scan caught it.
 Colour route: docs/COLOURS.md. Palette 1 white, 2 black, 3-15 Spectrum colours. Keys: graphics byte. Sheets: `sheets/`. Plane per painted image: per line 16 colour + 16 keep bytes in pages 28-51; index in page 27. Applied on upload.
 
 ## Defaults taken (a human would have decided these)
@@ -84,41 +84,44 @@ Colour route: docs/COLOURS.md. Palette 1 white, 2 black, 3-15 Spectrum colours. 
 ALWAYS-ASK, decided here: solid: follows the mask everywhere, so in the sky (y < 82), where the original has no mask, bodies are opaque white rather than see-through. Bullets and mines: mines as sprites with body; bullets dark only. The weapon shot (0xAB60) stays on the ULA: behind figures here, in front in the original; its body is the cell's paper. CLOSE CALL for a human.
 
 ## Lessons
-- [deferred Open: reconsider when a second game's survey misses a plotter that a pixel-vs-sprite check finds] The survey's routine table missed the mine plotter and the small plotter's order; a comparison of original pixels and sprites found both, by frame.
-- [local: a plot that keeps running into a scratch page] Redirecting slot 2 keeps every register and the timing with almost no hook code: no padding, no register model. Works where the game does not read the screen for logic and the ISR stays out of slot 2.
-- [local: a scan on one stage is not enough for a tail] 0x9400 looked untouched until the fourth stage's recording.
+- [deferred Open: reconsider when a second game's survey misses a plotter that a pixel-vs-sprite check finds] [kb lesson.survey-misses-plotters] The survey's routine table missed the mine plotter and the small plotter's order; a comparison of original pixels and sprites found both, by frame.
+- [kb lesson.redirect-slot-2-scratch-screen: a plot that keeps running into a scratch page] Redirecting slot 2 keeps every register and the timing with almost no hook code: no padding, no register model. Works where the game does not read the screen for logic and the ISR stays out of slot 2.
+- [kb lesson.prove-free-memory-by-access-scan: a scan on one stage is not enough for a tail] 0x9400 looked untouched until the fourth stage's recording.
+- [doc LEARNINGS 2.2 Memory proofs] The scenery buffer looked written-before-read by a RAM-at-checkpoints test, but the copier puts it on screen before its first draw. The import carried a stamp from before the tail proof, so the 11-04 census never saw this game.
 - [local: my error, nothing general to change] `dec l` between CP and JR NZ made every cache lookup hit: use `dec hl`, which keeps the flags.
-- [local: stage poke] 0xFFDF poked just after the start reaches a later stage; the display's STAGE shows 01.
+- [kb lesson.reach-states-by-poke: stage poke] 0xFFDF poked just after the start reaches a later stage; the display's STAGE shows 01.
 
 ## Friction
 - reuse: [none: the engine came in whole from the pilot clone]
 - retries: [none: the rebuild gave the published d982d5ae first time]
 - environment: [none: the record's sprite MD5 still named the build before the edge trim; corrected on import]
 - hand-rolled: [none: nothing written by hand in the import]
-- scratch: [none: no scratch scripts added]
+- scratch: [local: dropped] 2026-11-23: gb_tailspace.py (bytes no recording reads before writing; the tool gap is BRIEFING C2 #46) and gb_tailglitch.py (frames from the tail's first read to its first write; result in Build design).
 
 ## Technique use
 - detect.gameplay-screen-readers: helped. detect.tracked-unit: helped. patch.runtime-colour-map: helped, simplified to a keep plane.
 
 ## Stage log
 - 2026-11-03 stages 0-3 in one session (pilot, unattended), about 1 h, ~55 tool calls, 0 user rounds.
+- 2026-11-23 maintenance: the full re-verify for the Codex review PR failed the tail proof; restore_tail in both builds, record MD5s, re-stamped.
 
-## Results (stamped 2026-11-03, `selftest.py --game green_beret --verify --stamp`, NEXCLASH_MAINTAINER=1; simulation only)
-Builds: green_beret_sprites.nex 462c599ceff785748e568a2ce5a47e9f, green_beret.nex f4d4e3d43e47102af66fb3a7e6e022ab; boot OK. A first stamp failed on 4 pixels (margin wrap, frame 19032 of gb_stage4); the verifier now counts wrapped bytes; the build did not change.
+## Results (stamped 2026-11-23, `selftest.py --game green_beret --verify --stamp`, NEXCLASH_MAINTAINER=1; simulation only)
+Builds (restore_tail, automap off): green_beret_sprites.nex bdfaa782be7651d631fb1eabd2b51598, green_beret.nex 0679156534b3372bfb2280262b39bcb1; boot OK. ROM paths COMPLETE, pass: both builds, every recording, every ROM byte the game runs as recorded, tail put back before the game starts. First stamp 2026-11-03 (462c599c, before the edge trim and the tail proof); a first try then failed on 4 pixels (margin wrap, frame 19032 of gb_stage4), and the verifier counts wrapped bytes since.
 | Recording | Frames | draw | plot | plot2 | mine | small (outside draw) | wipe | Picture pixels | Verify |
 |---|---|---|---|---|---|---|---|---|---|
-| gb_nocheat | 16,779 | 991 | 3,061 | 41 | 59 | 312 (32) | 14 | 1,358,024 | IDENTICAL |
-| gb_cheat | 26,019 | 8,065 | 34,185 | 1,196 | 4,059 | 1,917 (20) | 14 | 14,663,688 | IDENTICAL |
-| gb_weap | 12,013 | 3,575 | 13,850 | 310 | 1,368 | 358 (8) | 10 | 4,942,552 | IDENTICAL |
-| gb_stage4 | 30,003 | 9,890 | 40,316 | 1,169 | 4,385 | 1,532 (4) | 2 | 14,549,184 | IDENTICAL |
+| gb_nocheat | 16,779 | 991 | 3,061 | 41 | 59 | 312 (32) | 14 | 1,346,040 | IDENTICAL |
+| gb_cheat | 26,019 | 8,065 | 34,185 | 1,196 | 4,059 | 1,917 (20) | 14 | 14,539,816 | IDENTICAL |
+| gb_weap | 12,013 | 3,575 | 13,850 | 310 | 1,368 | 358 (8) | 10 | 4,883,792 | IDENTICAL |
+| gb_stage4 | 30,003 | 9,890 | 40,316 | 1,169 | 4,385 | 1,532 (4) | 2 | 14,386,232 | IDENTICAL |
 Every hook ran. Allowed differences are counted in the report, not failed: sky pixels above line 104, holes the small plotter erases, margin-wrap bytes. So "IDENTICAL" covers registers and memory but the screen and AF' after a mine plot, and the picture below line 104 apart from those two named exceptions.
-Unit PASS (geometry at the edges for all four plotters, cache, hide, slot guard, colours). Negatives 16 of 16 DETECTED: 15 on gb_weap to frame 6000, "wipe keeps sprites" on gb_cheat to frame 14000, since gb_weap has no wipe with sprites up in that span (it was MISSED there). Two ("plots reach the ULA", "plot end leaves slot 2 mapped") were detected by the replay crashing on a bad opcode, not by a comparison. Negatives ran on the same hook code as the stamp; only verifier reporting changed after.
+Unit PASS (geometry at the edges for all four plotters, cache, hide, slot guard, colours). Negatives (2026-11-03) 16 of 16 DETECTED: 15 on gb_weap to frame 6000, "wipe keeps sprites" on gb_cheat to frame 14000, since gb_weap has no wipe with sprites up in that span (it was MISSED there). Two ("plots reach the ULA", "plot end leaves slot 2 mapped") were detected by the replay crashing on a bad opcode, not by a comparison. Negatives ran on the same hook code as the stamp; only verifier reporting changed after.
 JNext 1.1.104 headless: both builds reach play, and stage 2 with trainers 1 and 7 (png/green_beret_jnext.png). Sprite-only layer: jn/s3000lay.png. Same schedule: game counter 53 in 400 frames in both builds, cold cache; same scroll at frame 14000. One sample, not a timing proof. Hook cost, modelled: about 47K T at 28 MHz per draw on gb_stage4.
 Colour route: recolour on a throwaway painting 1.3 s; JNext showed it (jn/painted.png). Not the default.
 
 ## Hardware checklist (nothing here has run on hardware)
-1. Boot: control menu; 1, six keys, Y, stab. 2. Figures stay white and black across cyan, white, red scenery; no attribute squares on them. 3. Sky: bodies white above the scenery. 4. Weapon shots behind figures. 5. Stage screens, game over, restart: no stray sprites. 6. Speed against the plain .nex.
+1. Boot: control menu; 1, six keys, Y, stab. 2. Figures stay white and black across cyan, white, red scenery; no attribute squares on them. 3. Sky: bodies white above the scenery. 4. Weapon shots behind figures. 5. Stage screens, game over, restart: no stray sprites. 6. Speed against the plain .nex. 7. The first frames of play: no stray pixels in the scenery (the old tail showed there).
 
 ## Open
 - Never run on hardware. Stage 3's end (helicopters) was reached by cheat, not finished by the bot; the true end of the game unreached. Boss paths of stage 4 not reached.
 - A human's answers to "Defaults taken". The owner's painting.
+- The published .nxc (v1.0) has the tail glitch: republish from the restore_tail builds after the owner's test.

@@ -1,0 +1,43 @@
+{
+ "id": "lesson.xor-overlay-needs-no-state",
+ "kind": "method",
+ "claim": "For a game that XORs figures, toggling the overlay on every plot keeps it exact through erase, draw and redraw with no place list.",
+ "evidence": [
+  {
+   "game": "games/page_pharaoh.md",
+   "text": "Each plot is repeated on the Layer 2 overlay by toggling (255 <-> 7), so the overlay is the XOR of what the game has plotted, without storing any figure's place; a game that XORs figures needs no place list.",
+   "quote": "A game that XORs figures needs no place list: toggling on the overlay keeps it exact through every erase, draw and redraw.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/spellbound_magic_knight.md",
+   "text": "Balls take a sprite per call where the call says; erasing calls name the place they already are; follow every call with the sprite.",
+   "quote": "Balls: slots 118-121, patterns 124-127, a sprite per call where the call says; erasing calls name the place it already is.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/dizzy_ultimate_cartoon_adventure.md",
+   "text": "Converted writes go to a 1-bit shadow screen, so ULA XOR shadow == the original screen at every moment (XOR is linear); on one shared XOR layer Dizzy and the grease gun cancelled each other's pixels (hardware test).",
+   "quote": "so ULA XOR shadow == the original screen at every moment (XOR is",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "facts": {
+  "draw": "direct"
+ },
+ "when": [
+  "render.composition.xor"
+ ],
+ "words": [
+  "XOR",
+  "overlay",
+  "place list",
+  "toggle",
+  "erase",
+  "layer 2"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

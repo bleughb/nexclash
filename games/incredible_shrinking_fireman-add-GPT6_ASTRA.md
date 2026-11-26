@@ -15,7 +15,7 @@ Reference: `specnext/reference/incredible_shrinking_fireman-add-GPT6_ASTRA/`.
 Module: `nexclash/incredible_shrinking_fireman_add_GPT6_ASTRA.py`.
 
 ## Provenance and approved design
-Capture adapts the existing add-OPUS phase-A module; runtime/verifier adapt fireman.py. This is
+Capture adapts the existing add-OPUS phase-A module; runtime/verifier adapt fireman.py (removed 2026-11-22: `git show b522f34:nexclash/fireman.py`). This is
 not an independent from-scratch benchmark. GPT6_ASTRA is the requested label, not model identity
 certification. Existing Fireman output is unchanged: dispatch selects this engine only for
 snapshot filenames ending `-add-GPT6_ASTRA.z80`.
@@ -100,6 +100,7 @@ workflow; no release or merge is part of this run.
   both builds (1ea61f0b and a6586b5e), original 15,000; no freeze.
 
 ## Lessons
+- [none: a provenance pointer only: nexclash/fireman.py, unreachable since ASTRA / OPUS, was removed (Codex X1)]
 - [tool hooklib.iff_audit] The one `LD A,I` (e_isr) was trusted after a single read; the shared audit now
   fails any such read in asm/ (demonstrated: it flagged this file, selftest --tools).
 - [local: verifier detail] Removed bitmap differences must be tracked at each actual store, including diamond

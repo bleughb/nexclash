@@ -1052,7 +1052,7 @@ boot_resume:
         ld de,0x5B00
         ld bc,256
         ldir
-        nextreg 7,0
+        nextreg 7,0        ; speed: start-up (once, before the game)
         ld a,-23
         call hlib_r_set
         HLIB_R_OUT

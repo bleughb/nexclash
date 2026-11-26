@@ -1,0 +1,34 @@
+{
+ "id": "lesson.layer2-wide-mode-clip-and-shadow-defaults",
+ "kind": "pitfall",
+ "claim": "In 320x256 or 640x256 Layer 2 the reset clip window (0-255, 0-191) hides the bottom 64 lines until 0-159, 0-255 is written to NextREG 0x18, and the 5-bank picture from bank 8 runs into the default shadow at bank 11.",
+ "limit": "The clip part seen on the N-Go board (Issue 2-compatible clone, core 3.03.00, nxsuite V07); the shadow-bank part is from the book. For double buffering in a wide mode set NextREG 0x13 to bank 13 or higher.",
+ "evidence": [
+  {
+   "game": "reference",
+   "source": "I. Novak, Unraveling the ZX Spectrum Next, Vol 1 (2026; core 3.03.03), chapter 14",
+   "text": "Wide-mode clip X is in units of two dots (four in 640x256), so 0-159 spans the width; 256x192 takes 3 banks, the wide modes 5; reset values are active bank 8 and shadow bank 11.",
+   "shown_on": "documentation"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
+   "test": "V07",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite V07): with clip 0-255 / 0-191 only the top of a 320x256 Layer 2 showed; with 0-159 / 0-255 the bottom rows too (operator).",
+   "shown_on": "hardware"
+  }
+ ],
+ "level": "inferred",
+ "area": "platform",
+ "words": [
+  "Layer2",
+  "clip",
+  "320x256",
+  "640x256",
+  "shadow",
+  "bank",
+  "reset"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

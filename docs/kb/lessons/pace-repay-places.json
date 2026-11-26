@@ -1,0 +1,51 @@
+{
+ "id": "lesson.pace-repay-places",
+ "kind": "fact",
+ "claim": "Added hook time can be repaid only where the original wastes some: a delay the game pads with, a fixed-length uncontended copy, the game's own long routine at 28 MHz, or a plot after the game's sync.",
+ "evidence": [
+  {
+   "game": "games/solomons_key.md",
+   "text": "The game pads each pass to ten figures' time with its own delay, so every hook's time can be repaid there to the T-state: +0.1 % in JNext against +2.1 % in the approved build.",
+   "quote": "the game pads each pass to ten figures' time with its own delay, so every hook's time can be repaid there to the T-state;",
+   "shown_on": "jnext"
+  },
+  {
+   "game": "games/quazatron.md",
+   "text": "The update delay scales with the droid count (DD80) and with 6 or more blocks there is none, so hook time is not absorbed by a frame lock and must be repaid.",
+   "quote": "the update delay scales with the droid count (DD80), so hook time is not absorbed by a frame lock; it must be repaid.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/scooby_doo.md",
+   "text": "Pace was won by running the game's own 21 ms scroll at 28 MHz (21 ms down to 4), not by polishing the colour work.",
+   "quote": "Pace was won by running the game's own 21 ms scroll at 28 MHz, not by polishing the colour work.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/starquake.md",
+   "text": "When every plot follows the game's own sync and takes a fixed time, a part of it at 28 MHz pays for hooks that vary, with no wait.",
+   "quote": "When every plot follows the game's own sync and takes a fixed time, a part of it at 28 MHz pays for hooks that vary, with no wait;",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/page_pharaoh.md",
+   "text": "A game that waits for FRAMES needs no limiter round its plots: the wait takes up the time.",
+   "quote": "A game that waits for FRAMES needs no limiter round its plots: the wait takes up the time.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "card": "patch.pace-limiter",
+ "words": [
+  "pace",
+  "repay",
+  "delay",
+  "debt",
+  "28 MHz",
+  "scroll",
+  "limiter"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

@@ -159,13 +159,13 @@ lode_runner` rebuilds both his and this rework = recorded.
 - Hardware: none.
 
 ## Lessons
-- [local: a game may call inside a routine: the gold's XOR enters 0x984A, not 0x983E; the tile model in v3's verify found it at the first gold]
-- [local: an IM 2 handler that writes 7FFD resets MMU 0, 1, 6 and 7: a hook's window into another bank must use another slot]
+- [kb lesson.displaced-loop-entries: a game may call inside a routine: the gold's XOR enters 0x984A, not 0x983E; the tile model in v3's verify found it at the first gold] 
+- [kb lesson.paging-write-hides-hook-code: an IM 2 handler that writes 7FFD resets MMU 0, 1, 6 and 7: a hook's window into another bank must use another slot] 
 - [local: removing a paint can change logic far away: the editor reads figure attributes on exit; only a recording of the editor showed it]
 - [deferred Open: reconsider when a third engine needs a 128K game's whole alt ROM image in ROM 1: a shared helper
   (copied in loderunner_v2 and tid128)] The 128K release's ROM 1 differs from the 48K ROM in its keypad code; the fade reads every ROM byte, so the
   image is ROM 1 as nextboot.rom_paths models it, not Sinclair's 48K ROM (observed: 29 MISMATCH reads with the 48K ROM).
-- [local: Dean's verify replays an RZX only to FREE_FRAMES (6,000): the rework replays each recording whole]
+- [kb lesson.recording-length-and-play-style: Dean's verify replays an RZX only to FREE_FRAMES (6,000): the rework replays each recording whole] 
 
 ## Technique use
 - patch.whole-altrom-image: used (a RAM-hook engine given a whole image only so the fade reads the original's ROM)
@@ -174,7 +174,7 @@ lode_runner` rebuilds both his and this rework = recorded.
 ## Friction
 - reuse: [tool nextboot.rom_paths] the ROM path and tail checks are the shared ones; the boot check follows rainbow_z80n's
 - retries: [local: three verify runs: the 128K raw-memory view (recursion), the RZX length cap, the clock matrix added]
-- environment: [local: setsid nohup jobs died with the tool call; the harness's own background mode worked]
+- environment: [kb lesson.long-job-background-no-limit: setsid nohup jobs died with the tool call; the harness's own background mode worked] 
 - hand-rolled: [local: bot recorder on SkoolKit's C simulator (pilot platoon m128.py), pace trials from Cobra's script]
 - scratch: [none: bot, cheat and trial scripts stay in the pilot run folder runs/dean_lode_runner/work]
 

@@ -76,7 +76,7 @@ rebuilds them and this rework = recorded.
 
 ## Friction
 - reuse: [tool nextboot.rom_paths] the ROM path, tail and printer buffer checks found the NEXLOAD fault
-- retries: [local: the stack low water (the eraser uses SP as a pointer), apply() run twice by the boot check]
+- retries: [kb lesson.sp-as-data-pointer: the stack low water (the eraser uses SP as a pointer), apply() run twice by the boot check] 
 - environment: [none: headless JNext with HOME in the run folder, the read-only card]
 - hand-rolled: [local: bot recorder on SkoolKit's C simulator; pace trials from Treasure Island Dizzy's script]
 - scratch: [none: scripts stay in the pilot run folder runs/dean_magicland_dizzy/work]

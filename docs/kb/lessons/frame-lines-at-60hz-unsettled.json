@@ -1,0 +1,42 @@
+{
+ "id": "lesson.frame-lines-at-60hz-unsettled",
+ "kind": "open",
+ "claim": "A 60 Hz frame has 264 lines on the N-Go board (Issue 2-compatible clone, core 3.03.00, 128K timing, $11 = 0), as the book says, not the 262 / 261 docs/TECHNIQUES.md gave. Where the mode is unknown, wait only for lines below 261.",
+ "limit": "Measured at one setting of one board ($11 = 0, 128K timing, HDMI cable; nxsuite F03, F06); 48K timing, the other VGA timings and HDMI modes not measured.",
+ "evidence": [
+  {
+   "game": "reference",
+   "source": "I. Novak, Unraveling the ZX Spectrum Next, Vol 1 (2026; core 3.03.03), chapter 10",
+   "text": "60 Hz (NextREG 0x05 bit 2, not Pentagon): 264 lines instead of 311 / 312, display area from line 40, no border above or below the wide area; 58.15 Hz at 128K timing, 59.19 Hz at 48K.",
+   "shown_on": "documentation"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
+   "test": "F03",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite F03): after $05 bit 2 was set the frames were 264 lines (311 at 50 Hz), 228.02 T a line at both rates.",
+   "shown_on": "hardware"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
+   "test": "F06",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite F06): at 60 Hz the ULA interrupt came at line 224 of 264, 40 lines before the display (line 0); at 50 Hz at line 248 of 311.",
+   "shown_on": "hardware"
+  }
+ ],
+ "level": "inferred",
+ "area": "platform",
+ "words": [
+  "60Hz",
+  "frame",
+  "lines",
+  "raster",
+  "copper",
+  "wait",
+  "VGA",
+  "HDMI"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

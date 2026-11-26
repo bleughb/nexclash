@@ -1,0 +1,31 @@
+{
+ "id": "lesson.cspect-jnext-roles",
+ "kind": "owner-rule",
+ "claim": "Use CSpect first and JNext otherwise; use JNext headless for scripted runs before hardware rounds.",
+ "evidence": [
+  {
+   "game": "games/r_type.md",
+   "text": "Emulator order CSpect then JNext.",
+   "quote": "emulator order CSpect then JNext;",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/inferno.md",
+   "text": "JNext headless before hardware rounds.",
+   "quote": "JNext headless before hardware rounds.",
+   "shown_on": "jnext"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "words": [
+  "CSpect",
+  "JNext",
+  "emulator order",
+  "headless",
+  "scripted",
+  "hardware rounds"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

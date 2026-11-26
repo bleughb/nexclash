@@ -6,6 +6,7 @@ So the default is the game itself. The only things a plain conversion gets wrong
 SP is in the top 16K (no automatic tail) and the game keeps code at 5B00, where NEXLOAD writes.
 """
 from pathlib import Path
+from . import l2pal
 import json, pickle
 from . import z80tonex as zt
 ROOT = Path(__file__).resolve().parents[1]
@@ -141,7 +142,7 @@ class Enhanced(Patch):
         snap.banks = type(snap.banks)((i, bytes(banks[i])) for i in range(8))
         setup = bytearray(self.setup)
         at = S['l2_pal'] - 0xD000
-        setup[at:at + 256] = self.blob['pal']
+        setup[at:at + 256] = l2pal.fix(bytes(self.blob['pal']), 'pairs', keep=(0,))     # opaque 0xE3 -> 0xE7 (nxc 1.2)
         at = S['spr_pat'] - 0xD000
         setup[at:at + 256] = self.blob['icon']
         printer = bytes(snap.read(0x5B00 + i) for i in range(256))
@@ -222,7 +223,7 @@ class Model(hooklib.NextModel):
         self.spr = []
 
     def read_port(self, regs, port):
-        if port == 0x253B:
+        if port in (0x243B, 0x253B):            # 0x243B reads the selection back (the handler keeps it: Codex C7)
             return super().read_port(regs, port)
         self.ins.append(port)
         return 0xFF
@@ -262,12 +263,14 @@ class State:
         self.icons = []
 
 
-def run_hook(patch, st, mem, regs, stop, limit=8000000, speed=None):
+def run_hook(patch, st, mem, regs, stop, limit=8000000, speed=None, sel=None):
     Sim = _rw()
     v = View(mem, patch, st)
     s = simpool.machine(Sim, v, list(regs), 'silk-hook')
     m = Model(s, st.speed if speed is None else speed, st.line)
     m.nr.update(st.nr)
+    if sel is not None:
+        m.sel = sel                             # the NextReg selection the interrupted code had
     v.model = m
     n = 0
     R = s.registers
@@ -577,7 +580,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
         back0 = st.page[S['V_BACK'] - 0x2000]
         speed0 = st.speed
         v9c = lambda a: mem[a] | mem[a + 1] << 8
-        got, v, model = run_hook(patch, st, patched, regs, stopf)
+        sel_in = (0x1F, 0x07, 0x1E, 0x08, 0x53)[c['hooks h_isr'] % 5] if sym == 'h_isr' else None   # mid line / clock read
+        got, v, model = run_hook(patch, st, patched, regs, stopf, sel=sel_in)
         for i in CMP:
             if (bool(R[i]) != bool(got[i])) if i == 26 else R[i] != got[i]:
                 fail('registers differ', {'pc': hex(pc), 'reg': i, 'orig': R[i], 'got': got[i], 'sym': sym})
@@ -608,8 +612,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
             fail('game ports differ', {'pc': hex(pc), 'sym': sym, 'orig': ports.io[:4], 'got': model.io[:4]})
         if model.ins != ports.ins:
             fail('game reads differ', {'pc': hex(pc), 'sym': sym})
-        if sym == 'h_isr' and model.sel != 7:
-            fail('interrupt leaves another register selected', {'pc': hex(pc), 'sel': model.sel})
+        if sym == 'h_isr' and model.sel != sel_in:
+            fail('interrupt leaves another register selected', {'pc': hex(pc), 'sel': model.sel, 'found': sel_in})
         c['hooks'] += 1
         c['hooks ' + sym] += 1
         c['48K bytes compared'] += 49152
@@ -764,7 +768,7 @@ def negative_patches(patch):
     mutate('MMU slot 6 left mapped', 'ED915600ED915505', '00000000ED915505')
     mutate('old boxes never wiped', 'E5E5E5E5', '00000000')
     mutate('silhouette not white', '3E01', '3E00', S['h_w'])
-    mutate('interrupt leaves another register selected', '013B243E07ED79', '00000000000000', S['h_isr'] + 30)
+    mutate('interrupt leaves another register selected', '013B24F1ED79', '013B24F10000', S['h_isr'] + 30)
     mutate('characters not on Layer 2', 'CD' + v('buf_char'), '000000')
     mutate('picture never flipped', '3E01', '3E00', S['h_blit'])
     mutate('lives icons do not follow the screen', 'FE7F', 'FE00')

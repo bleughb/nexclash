@@ -1,0 +1,51 @@
+{
+ "id": "lesson.compare-final-frame-with-original",
+ "kind": "method",
+ "claim": "Verify against the game's own screen or buffer as well as your own model: a second independent comparison catches faults that hooks and the first model share.",
+ "evidence": [
+  {
+   "game": "games/altered_beast.md",
+   "text": "Level-end curtain found by the attribute model at frame 16,420, not by looking.",
+   "quote": "Curtain: found by the attribute model at frame 16,420, not by looking.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/page_pharaoh.md",
+   "text": "LDI's DE carries out of column 255 into the next row; the whole-picture replay model caught it, hook registers and RAM alone did not.",
+   "quote": "The whole-picture replay model caught it; hook registers and RAM alone did not.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/solomons_key.md",
+   "text": "Both one-pass effects came from the composite check, not from reading the code.",
+   "quote": "Both one-pass effects above came from the check, not from reading the code.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/mad_mix_2.md",
+   "text": "An MMU line lost in a refactor showed at once as a picture against the model, where the eye would have taken a while.",
+   "quote": "An MMU line lost in a refactor showed at once as a picture against the model, where the eye would have taken a while.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/herbert.md",
+   "text": "Native pictures caught the selector-model mistake; the all-room pace survey caught sparse-room speedup and crowded-room slowdown.",
+   "quote": "Native pictures caught the selector-model mistake;",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "verify",
+  "model",
+  "original frame",
+  "buffer",
+  "compare",
+  "composite",
+  "screen compare"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7",
+ "card": "verify.model-reconstruction"
+}

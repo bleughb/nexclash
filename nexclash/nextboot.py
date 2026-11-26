@@ -414,6 +414,9 @@ def rom_paths(nexes, rzxs, stop=None, sysrom=None, z80=None, known=(), start_pc=
 # What NEXLOAD leaves in the 48K printer buffer before the stub runs (NextZXOS paging routines and
 # system variables live at 0x5B00-0x5BFF; hardware 2026-10-20, Match Day): modelled as a pattern no
 # game data matches, so a check with nexload=True shows every byte the stub does not put back.
+# A worst case, kept on purpose: on a Tang board with NextZXOS 2.10 (2026-11-22) NEXLOAD wrote only its 53-byte start
+# routine, at 0x5B00 (Jet Set Willy) or 0x5B31 (Robin of the Wood), and both games' stacks above 0x5B66 survived;
+# but Match Day's plain build lost its team names at 0x5B90-0x5BFF on hardware (2026-10-20).
 NEXLOAD_PRINTER = bytes((0xA5 ^ k) for k in range(256))
 
 
@@ -459,7 +462,10 @@ def boot(nex, pc_stop, limit=5_000_000, nexload=False, sysrom=None, nr=None, min
           'alt': [bytearray(16384), bytearray(16384)], 'bad': [], 'sel': 0, 'ports': {}, 'nrlog': []}
 
     def page(n):
-        return pages.setdefault(n, bytearray(8192))
+        pg = pages.get(n)                  # not setdefault: it built an 8K default on every access (Codex P2)
+        if pg is None:
+            pg = pages[n] = bytearray(8192)
+        return pg
 
     def romn():
         return ((st['p1ffd'] >> 2) & 1) << 1 | ((st['p7ffd'] >> 4) & 1)
@@ -509,22 +515,7 @@ def boot(nex, pc_stop, limit=5_000_000, nexload=False, sysrom=None, nr=None, min
         R[15] = R2[R[15]]; R[24] = (p + 3) % 65536
     ed[0x91], ed[0x92] = nn, na
 
-    class Tr:
-        def read_port(s, regs, port):
-            if port == 0x253B and st['sel'] in (0x1E, 0x1F):
-                return raster(st, st['sel'])
-            return st['nr'].get(st['sel'], 0) if port == 0x253B else 0xFF
-
-        def write_port(s, regs, port, value, *x):
-            st['ports'][port] = value          # last value written to each port (e.g. 0x123B)
-            if port == 0x243B:
-                st['sel'] = value
-            elif port in (0x7FFD, 0x1FFD) and not st['p7ffd'] & 0x20:
-                st['p7ffd' if port == 0x7FFD else 'p1ffd'] = value
-                b = st['p7ffd'] & 7
-                st['mmu'][0:2] = [0xFF, 0xFF]
-                st['mmu'][6:8] = [2 * b, 2 * b + 1]
-    sim.set_tracer(Tr())
+    sim.set_tracer(NextPorts(st, nextreg))
     ops, mem, n = sim.opcodes, sim.memory, 0
     while R[24] != pc_stop or n < min_steps:
         ops[mem[R[24]]]()
@@ -548,7 +539,101 @@ def regblock_overlap(patch, regs):
             page[slot1[1] + i - 0x2000] not in (rom[slot1[1] + i], 0, 0xFF, v)]
 
 
+class NextPorts:
+    """boot()'s I/O ports: 0x243B selects a NextReg and reads the selection back, 0x253B reads or writes the selected
+    register (a write is the NEXTREG instruction's, MMU registers read the live mapping), 7FFD / 1FFD page.
+    st: boot()'s machine state; nextreg(reg, val): its NEXTREG write."""
+
+    def __init__(self, st, nextreg):
+        self.st, self.nextreg = st, nextreg
+
+    def read_port(self, regs, port):
+        st = self.st
+        if port == 0x243B:
+            return st['sel']
+        if port != 0x253B:
+            return 0xFF
+        if st['sel'] in (0x1E, 0x1F):
+            return raster(st, st['sel'])
+        if 0x50 <= st['sel'] <= 0x57:
+            return st['mmu'][st['sel'] - 0x50]
+        return st['nr'].get(st['sel'], 0)
+
+    def write_port(self, regs, port, value, *x):
+        st = self.st
+        st['ports'][port] = value              # last value written to each port (e.g. 0x123B)
+        if port == 0x243B:
+            st['sel'] = value
+        elif port == 0x253B:
+            self.nextreg(st['sel'], value)
+        elif port in (0x7FFD, 0x1FFD) and not st['p7ffd'] & 0x20:
+            st['p7ffd' if port == 0x7FFD else 'p1ffd'] = value
+            b = st['p7ffd'] & 7
+            st['mmu'][0:2] = [0xFF, 0xFF]
+            st['mmu'][6:8] = [2 * b, 2 * b + 1]
+
+
+def ports_selfcheck():
+    """NextPorts on synthetic operations (Codex review C3): the selection reads back, MMU registers read the live
+    mapping (after a 7FFD page too), a 0x253B write is a NEXTREG. -> failures"""
+    st = {'mmu': [0xFF, 0xFF, 10, 11, 4, 5, 0, 1], 'nr': {}, 'p7ffd': 0, 'p1ffd': 0, 'sel': 0, 'ports': {}}
+
+    def nextreg(reg, val):
+        st['nr'][reg] = val
+        if 0x50 <= reg <= 0x57:
+            st['mmu'][reg - 0x50] = val
+    io, bad = NextPorts(st, nextreg), []
+
+    def sel(r):
+        io.write_port(None, 0x243B, r)
+    sel(0x08)
+    if io.read_port(None, 0x243B) != 0x08:
+        bad.append('0x243B reads %r after selecting NR 8' % io.read_port(None, 0x243B))
+    sel(0x53)
+    if io.read_port(None, 0x253B) != 11:
+        bad.append('MMU3 reads %r, mapped 11' % io.read_port(None, 0x253B))
+    io.write_port(None, 0x7FFD, 3)
+    sel(0x57)
+    if io.read_port(None, 0x253B) != 7:
+        bad.append('MMU7 reads %r after 7FFD = 3 (pages 6-7)' % io.read_port(None, 0x253B))
+    sel(0x7F)
+    io.write_port(None, 0x253B, 0x5A)
+    if io.read_port(None, 0x253B) != 0x5A or st['nr'].get(0x7F) != 0x5A:
+        bad.append('NR 0x7F written 0x5A through 0x253B reads %r' % io.read_port(None, 0x253B))
+    sel(0x54)
+    io.write_port(None, 0x253B, 30)
+    if st['mmu'][4] != 30:
+        bad.append('MMU4 written 30 through 0x253B maps %r' % st['mmu'][4])
+    return bad
+
+
 NEXTZXOS_NR0A = 0x11        # NextReg $0A as NextZXOS v2.10 leaves it for a .nex: DivMMC automap on (Tang board, 2026-11-20)
+
+
+def nexload_check(nex, z80):
+    """The build booted to the snapshot's PC twice, with the printer buffer as NEXLOAD leaves it and without:
+    -> (failures, warnings). A failure: the snapshot's stack is in 0x5B00-0x5BFF and its top 16 bytes (or up to
+    0x5C00) do not survive the worst-case NEXLOAD (the first RET would leave the game; Jet Set Willy and Robin of
+    the Wood started anyway on NextZXOS 2.10, see NEXLOAD_PRINTER). A warning:
+    other snapshot bytes there lost to NEXLOAD (harmless only if the game writes them before reading them), or a
+    stack there with a start the boot model does not follow. keep_printer_buffer (z80tonex) puts them back."""
+    s = zt.Z80Snapshot(z80)
+    want = bytes(s.read(a) for a in range(0x5B00, 0x5C00))
+    stack = 0x5B00 <= s.sp < 0x5C00
+    try:
+        m0, m1 = boot(nex, s.pc)['mem'], boot(nex, s.pc, nexload=True)['mem']
+        plain, nl = bytes(m0[a] for a in range(0x5B00, 0x5C00)), bytes(m1[a] for a in range(0x5B00, 0x5C00))
+    except (ValueError, RuntimeError, KeyError) as e:
+        return [], (['stack at 0x%04X in the printer buffer and the start not followed (%s): prove NEXLOAD keeps it'
+                     % (s.sp, str(e)[:60])] if stack else [])
+    lost = [i for i in range(256) if nl[i] != want[i] and plain[i] == want[i]]
+    top = range(s.sp - 0x5B00, min(256, s.sp - 0x5B00 + 16)) if stack else range(0)
+    hit = [i for i in lost if i in top]
+    fails = ['the stack at 0x%04X is in the printer buffer and NEXLOAD overwrites %d of its top bytes: '
+             'keep_printer_buffer' % (s.sp, len(hit))] if hit else []
+    warns = ['%d snapshot bytes in 0x5B00-0x5BFF lost to NEXLOAD (fine only if the game writes them first)'
+             % len(lost)] if lost and not hit else []
+    return fails, warns
 
 
 def automap_check(nex):

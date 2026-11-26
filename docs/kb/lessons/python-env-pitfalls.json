@@ -1,0 +1,29 @@
+{
+ "id": "lesson.python-env-pitfalls",
+ "kind": "pitfall",
+ "claim": "Python 3.14's forkserver needs a main guard and dead-register subprocesses an explicit fork context, and a virtual environment must be called by absolute path or a relative run path can make JNext miss the card copy.",
+ "evidence": [
+  {
+   "game": "games/underwurlde.md",
+   "text": "Python 3.14 forkserver needs a main guard; dead-register subprocesses use an explicit fork context.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/silkworm.md",
+   "text": "A venv must be called by absolute path or Python warns about sys.prefix; a relative run path made JNext miss the card copy (byte_exact False showed it).",
+   "shown_on": "jnext"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "python 3.14",
+  "forkserver",
+  "venv",
+  "absolute path",
+  "JNext",
+  "fork context"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

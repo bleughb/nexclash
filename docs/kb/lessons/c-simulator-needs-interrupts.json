@@ -1,0 +1,25 @@
+{
+ "id": "lesson.c-simulator-needs-interrupts",
+ "kind": "pitfall",
+ "claim": "A C-simulator run without interrupts never returns from a wait loop.",
+ "evidence": [
+  {
+   "game": "games/castle_master.md",
+   "text": "A C-simulator run without interrupts never returns from a wait loop.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "emulator",
+ "facts": {
+  "interrupts": "on"
+ },
+ "words": [
+  "C simulator",
+  "interrupts",
+  "wait loop",
+  "hang"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

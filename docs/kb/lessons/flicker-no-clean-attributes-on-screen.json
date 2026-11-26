@@ -1,0 +1,27 @@
+{
+ "id": "lesson.flicker-no-clean-attributes-on-screen",
+ "kind": "pitfall",
+ "claim": "Do not write clean attributes to the visible screen after the game's copy; a beam wait does not make it safe, so keep them off the screen.",
+ "evidence": [
+  {
+   "game": "games/comando_quatro.md",
+   "text": "Writing clean attributes after the game's copy looked safe with the beam wait, but memory at a frame boundary and the unsynchronised wipe copies still showed painted cells; never putting them on the screen is simpler.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "when": [
+  "render.paints_figure_attributes"
+ ],
+ "words": [
+  "flicker",
+  "clean attributes",
+  "painted cells",
+  "beam wait",
+  "copy",
+  "frame boundary"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

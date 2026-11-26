@@ -1,0 +1,28 @@
+{
+ "id": "lesson.other-screen-writers-hide-figures",
+ "kind": "pitfall",
+ "claim": "A routine other than the game's clear routine can overwrite the play area, so find every screen writer per frame and hide sprites there.",
+ "evidence": [
+  {
+   "game": "games/lunar_jetman.md",
+   "text": "A message screen printed over the play area wipes figures without the clear routine: find every routine that overwrites the play area (screen writers per frame) and hide sprites there.",
+   "quote": "A message screen printed over the play area wipes figures without the clear routine: find every",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "when": [
+  "screen.other_writers_change_figure_bits"
+ ],
+ "card": "detect.gameplay-screen-readers",
+ "words": [
+  "screen writer",
+  "message screen",
+  "hide sprites",
+  "clear routine",
+  "play area"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

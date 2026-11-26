@@ -1,0 +1,35 @@
+{
+ "id": "lesson.frame-locked-pace",
+ "kind": "pitfall",
+ "claim": "In a frame-locked game a small lateness costs a whole frame, so judge lateness per update and bias long windows fast.",
+ "evidence": [
+  {
+   "game": "games/gunrunner.md",
+   "text": "A few ms at the start of a run moved the slowest 20 updates from +2.6% to +20.9% with no slower code.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/flying_shark.md",
+   "text": "When the handler overruns two frames the update takes three, so a few hundred T moves whole updates.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/ghosts_n_goblins.md",
+   "text": "Cut only until the late tail fits: hook time fell 12% and lost frames went 38 to 8.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "words": [
+  "frame lock",
+  "HALT",
+  "lateness",
+  "lost frames",
+  "pace",
+  "window",
+  "update"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

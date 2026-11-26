@@ -188,7 +188,7 @@ figures behind the foreground pieces as in the original, sparks on the ULA. Enha
   game's random bytes need the buffer and the bitmap as the original has them. To tell the owner with the build.
 
 ## Lessons
-- [local: this game's design] A game that draws random numbers from a byte at an address made of R can read any byte of
+- [kb lesson.r-address-random-reads-all-memory: this game's design] A game that draws random numbers from a byte at an address made of R can read any byte of
   memory: taking figures out of a buffer or off the screen changes the game. The first design passed every picture check
   and failed only the whole-state comparison, 906 steps in. Reason: the per-hook checks cannot see a reader elsewhere.
 - [local: this game's hooks] A hook that wraps one of the game's own routines must hand it the original's R, not only
@@ -198,19 +198,19 @@ figures behind the foreground pieces as in the original, sparks on the ULA. Enha
   ink limit takes a shorter path for a cell without its paint, so R needs a correction per cell.
 - [local: this game's verifier] The game keeps its random routine's XOR operand in the routine's own code (0xBBF7): a
   hook that copies the listing's constant is wrong from the second call.
-- [deferred Open: reconsider when the shared sprite model is next touched] hooklib.NextModel lets NextReg 0x34 set the
+- [deferred Open: reconsider when the shared sprite model is next touched] [kb lesson.sprite-selector-aliasing] hooklib.NextModel lets NextReg 0x34 set the
   attribute port's sprite, which the machine does only with lockstep on: a build that relied on it passed every check and
   showed echoes in the owner's first minute. Reason: shared verifier code needs the canary; this engine's own model
   now refuses it and a broken build proves the check.
 - [local: this game's hooks] A site's own bytes are data to a game that reads random bytes from all of memory: no
   changed byte may sit at an address of the form A * 257 (the patch class refuses one).
-- [local: this game's colours] A record's frame number is not what is in a shared shift buffer at the plot: key colours
+- [kb lesson.shared-graphics-colour-identity: this game's colours] A record's frame number is not what is in a shared shift buffer at the plot: key colours
   to the bytes drawn. The owner's recording passed with the record's fields; five scripted ones did not.
 - [local: this game's colours] A sheet filled from a graphics table shows figures the game never draws (an astronaut):
   mark each figure by whether a recording plots it, and name characters from which record plots them, not from looks.
-- [local: this game's intake] The snapshot is the tape's BASIC start and the game moves itself down by 0x6AC before it
+- [kb lesson.snapshot-taken-in-loader: this game's intake] The snapshot is the tape's BASIC start and the game moves itself down by 0x6AC before it
   runs: every site is patched at its snapshot address and verified at its address in play.
-- [local: this game's intake] The owner's four minutes of play gave 2,485 game steps and the bolt; six scripted
+- [kb lesson.recording-length-and-play-style: this game's intake] The owner's four minutes of play gave 2,485 game steps and the bolt; six scripted
   recordings gave about 550 steps each and no bolt.
 - [deferred Open: reconsider when the engine is designed] The coverage gate passes on a game that composes its
   figures in a back buffer, because none of their plotters is a screen writer. Reason: it only follows screen writes.

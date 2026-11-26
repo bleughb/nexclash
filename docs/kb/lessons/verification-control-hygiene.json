@@ -1,0 +1,25 @@
+{
+ "id": "lesson.verification-control-hygiene",
+ "kind": "method",
+ "claim": "Keep random sweeps inside the inputs' domain, replace mutants that turn out equivalent, and give a control on a rare path its own direct check; a control that saves, clobbers, then restores is no control.",
+ "evidence": [
+  {
+   "game": "games/castle_master.md",
+   "text": "Sweeps beyond the domain (camera words above about 16,000, pitch outside 0-71) fail falsely; a mutant can be equivalent; a control on the stale-pixel copy path (30 of 5,233 views) needs its own check.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "negative control",
+  "mutant",
+  "equivalent mutant",
+  "random sweep",
+  "domain",
+  "rare path",
+  "check the checker"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

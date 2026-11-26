@@ -1,0 +1,43 @@
+{
+ "id": "lesson.im2-ffff-vector",
+ "kind": "fact",
+ "claim": "Trace the IM 2 route through the vector at FFFF: its JR reads its offset from address 0000, so the slot-0 page owns the interrupt, and the original's no-op ISR must be counted rather than lost under DI.",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "The IM2 JR at FFFF reads its offset from 0000: the slot-0 page owns the IRQ; count the original's no-op ISR (T, M1) rather than lose it under DI.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/head_over_heels.md",
+   "text": "The actual IM2 route is FFFF to FFF4 to 7376.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
+   "test": "M06",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite M06): an instruction fetched across $FFFF continued at $0000 in slot 0.",
+   "shown_on": "hardware"
+  }
+ ],
+ "level": "observed",
+ "area": "platform",
+ "facts": {
+  "interrupts": "on"
+ },
+ "when": [
+  "exec.isr_calls_routine"
+ ],
+ "words": [
+  "IM2",
+  "FFFF",
+  "interrupt vector",
+  "slot 0",
+  "ISR",
+  "injection",
+  "route"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

@@ -36,19 +36,19 @@ Nothing has run on a Next. To check: slot 1 after the ISR's 7FFD (does the core 
 
 ## Lessons
 - [local: registration] `art()` needed the set even for the default, whose patterns come only from the game's masks; with no set it now returns the default's patterns alone, so `auto` builds the published default without private inputs, same bytes.
-- [local: 7FFD and slot 1] An ISR that writes port 7FFD puts the ROM back in slot 1 (JNext): a hook there and a hook stack there both die. Found by the Enhanced build hanging in the backdrop copy: the replay, which runs no interrupt inside a hook, passed.
+- [kb lesson.7ffd-write-maps-rom-over-slot-1: 7FFD and slot 1] An ISR that writes port 7FFD puts the ROM back in slot 1 (JNext): a hook there and a hook stack there both die. Found by the Enhanced build hanging in the backdrop copy: the replay, which runs no interrupt inside a hook, passed.
 - [tool nexclash/z80tonex.py] (printer buffer) A 128K game that reads BANKM (5B5C) needs the printer buffer back after NEXLOAD, and z80tonex refuses keep_printer_buffer for 128K: setup restores it here.
 - [tool nextboot.rom_paths] (ROM calls) This game's ROM calls run the calculator at 2Dxx, where the usual hook area sits: nextboot.rom_paths found it, and the entries moved to the free space at 3880 (rom2 block).
-- [local: ROM-read RNG] A random source that reads ROM bytes separates a game on the 128K ROM from the build on Sinclair's: lockstep ended at a spawn although frames were equal. Constant in the fixture.
+- [kb lesson.pace-lockstep-fixture: ROM-read RNG] A random source that reads ROM bytes separates a game on the 128K ROM from the build on Sinclair's: lockstep ended at a spawn although frames were equal. Constant in the fixture.
 - [local: backdrop count] The .256's BGX1 holds 4 backdrops and the source 7: read the source's CFG, not the block.
 
-- [local: entries move] Keying a sprite to a figure entry's address fails when the game swaps its entries to sort them: one figure vanished and another doubled for a frame, a few times in 300 frames. The flicker tool found it; the replay's sprite check did not, as it only looked at the record plotted.
+- [kb lesson.graphic-keys-collide-or-move: entries move] Keying a sprite to a figure entry's address fails when the game swaps its entries to sort them: one figure vanished and another doubled for a frame, a few times in 300 frames. The flicker tool found it; the replay's sprite check did not, as it only looked at the record plotted.
 - [tool nextboot.check] (pattern pages) 34 patterns are 8,704 bytes: the upload ran off an 8K page and the last two objects were noise, in both modes. Every test had passed, since the sprite checks compare x, y and pattern number, not the pattern; the side-by-side with the set found it. The upload now has its own check against the art. nextboot.check had in fact listed reads of ROM at 2000 on, in a long message read past: read that list when it is non-empty. What it still reports, alt image 0 differing, is only the register block at 3CE0-3CF4 inside the 2800-3D00 range it compares.
-- [local: colours by shift] A set can paint a frame's pre-shifts differently: the jellyfish's tentacles are yellow at even shifts, red at odd. Count colours per shift, not rows that differ.
+- [kb lesson.shifted-copies-differ: colours by shift] A set can paint a frame's pre-shifts differently: the jellyfish's tentacles are yellow at even shifts, red at odd. Count colours per shift, not rows that differ.
 
 ## Friction
 - reuse: [none: Page Pharaoh's engine shape carried over]
-- retries: [local: hook site addresses] The AGD build's addresses differ between games: found by the routine's bytes.
+- retries: [kb lesson.sites-found-by-bytes: hook site addresses] The AGD build's addresses differ between games: found by the routine's bytes.
 - environment: [none: the pilot venv and references were enough]
 - hand-rolled: [local: review scripts] Pace, soak and loader runs were driven by scripts in the review run.
 - scratch: [local: review run] Its work folder stays in private evidence.

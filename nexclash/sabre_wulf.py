@@ -363,7 +363,7 @@ class NextState:
         self.state = bytearray(patch.state)
         self.events = []
         self.cache = {}
-        self.sel = 7                # port 0x243B's register (a hook selects 7 itself)
+        self.sel = 8                # port 0x243B's register (a hook selects 7 itself; the stub leaves NR 8: Codex C8)
         self.speed_in = 0           # the clock a hook is entered at (verify clock=, the every-site matrix)
         self.written = set()        # pattern units written in this event
 
@@ -630,9 +630,10 @@ def event(patch, kind, get, R, ns, alt, psite, Sim):
     if ns.nr[0x56] != 0 or ns.nr[0x57] != 1 or ns.nr[0x07] != ns.speed_in:
         f.append(('slots or the incoming speed not restored', ns.nr[0x56], ns.nr[0x57], ns.nr[0x07], ns.speed_in))
         ns.nr[0x56], ns.nr[0x57], ns.nr[0x07] = 0, 1, ns.speed_in
-    if ns.sel != 7:
+    if ns.sel not in (7, getattr(ns, 'sel_in', 8)):  # a hook leaves NR 7 selected, or the selection as it found it
         f.append(('port 0x243B left on another register', ns.sel))
-        ns.sel = 7
+    ns.n_sel = getattr(ns, 'n_sel', 0) + 1          # the next hook finds 0x243B on NR 8, 0x53 or 7 in turn: a read selects 7
+    ns.sel = ns.sel_in = (0x08, 0x53, 0x07)[ns.n_sel % 3]
     shown = {u for s_ in range(128) if (i is None or s_ not in obj_sprites(i)) for u in [ns.units(s_)] if u is not None}
     hit = shown & ns.written
     if hit:
@@ -1711,9 +1712,11 @@ def verify_floor(rzx_path, code=None, stop=None):
         if sp0 - low[0] > 40:
             fail('hook stack too deep', sp0 - low[0])
         c['deepest stack'] = max(c['deepest stack'], sp0 - low[0])
-        if ns.nr[0x56] != 0 or ns.nr[0x57] != 1 or ns.nr[0x07] != ns.speed_in or ns.sel != 7:
+        if ns.nr[0x56] != 0 or ns.nr[0x57] != 1 or ns.nr[0x07] != ns.speed_in or ns.sel not in (7, getattr(ns, 'sel_in', 8)):
             fail('slots, clock or 0x243B not put back', (ns.nr[0x56], ns.nr[0x57], ns.nr[0x07], ns.sel))
-            ns.nr[0x56], ns.nr[0x57], ns.nr[0x07], ns.sel = 0, 1, ns.speed_in, 7
+            ns.nr[0x56], ns.nr[0x57], ns.nr[0x07] = 0, 1, ns.speed_in
+        ns.n_sel = getattr(ns, 'n_sel', 0) + 1      # the next hook finds 0x243B on NR 8, 0x53 or 7 in turn (Codex C8)
+        ns.sel = ns.sel_in = (0x08, 0x53, 0x07)[ns.n_sel % 3]
         if any(e[0] in ('in', 'out') for e in ns.events):
             fail('port other than the sprite ports and 0x123B', [e for e in ns.events if e[0] in ('in', 'out')][:3])
         if any(e[0] == 'nr' and e[1] not in FLOOR_NR for e in ns.events):

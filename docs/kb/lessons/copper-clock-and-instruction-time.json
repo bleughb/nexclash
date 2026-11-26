@@ -1,0 +1,28 @@
+{
+ "id": "lesson.copper-clock-and-instruction-time",
+ "kind": "fact",
+ "claim": "The Copper runs at 28 MHz on core 3.0 (14 MHz on core 2.0); a MOVE takes 2 Copper clocks and a WAIT 1, and the register holds the new value 2 clocks after the MOVE.",
+ "limit": "Documentation only: the wiki says the precise core 3.0 timing is not documented yet, and it does not say how a WAIT compares; measure before relying on a per-pixel position.",
+ "evidence": [
+  {
+   "game": "reference",
+   "source": "https://wiki.specnext.dev/Copper",
+   "text": "Copper page, read 2026-11-23: executed at 28 MHz on core 3.0 and 14 MHz on core 2.0; WAIT duration 1 clock, MOVE duration 2 clocks.",
+   "quote": "(core 3.0) the copper code is executed at 28MHz, the precise timing is not documented yet",
+   "shown_on": "documentation"
+  }
+ ],
+ "level": "inferred",
+ "area": "platform",
+ "words": [
+  "copper",
+  "timing",
+  "clock",
+  "MOVE",
+  "WAIT",
+  "raster",
+  "core"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

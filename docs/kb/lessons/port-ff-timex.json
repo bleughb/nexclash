@@ -1,0 +1,27 @@
+{
+ "id": "lesson.port-ff-timex",
+ "kind": "pitfall",
+ "claim": "A 128K game can write port 0xFF for no reason a 128K sees, which on a Next selects Timex hi-colour and scrambles the picture; grep OUT (0xFF) in a plain conversion before designing.",
+ "evidence": [
+  {
+   "game": "games/mad_mix_2.md",
+   "text": "The copy writes 2 then 3 to port 0xFF (ABEF, AC43); in a Next .nex this is Timex hi-colour and a scrambled picture, seen in JNext.",
+   "shown_on": "jnext"
+  }
+ ],
+ "level": "observed",
+ "area": "platform",
+ "facts": {
+  "machine": "128K"
+ },
+ "words": [
+  "port 0xFF",
+  "Timex",
+  "hi-colour",
+  "OUT",
+  "128K",
+  "plain conversion"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

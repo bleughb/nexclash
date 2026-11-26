@@ -1,0 +1,24 @@
+{
+ "id": "lesson.confirm-cause-with-trace",
+ "kind": "method",
+ "claim": "Confirm a cause with a trace (PC and MMU at the failure) before recording it as a rule.",
+ "evidence": [
+  {
+   "game": "games/r_type.md",
+   "text": "A reset after patching C027 was first put down to a 'game load check' and noted as 'never patch bank 0'; the real cause was a 7FFD remap.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "words": [
+  "reset",
+  "trace",
+  "cause",
+  "MMU",
+  "7FFD",
+  "diagnosis"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

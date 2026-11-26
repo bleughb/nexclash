@@ -1,0 +1,25 @@
+{
+ "id": "lesson.windows-crlf-doc-budget",
+ "kind": "pitfall",
+ "claim": "On Windows, the doc check counts CRLF bytes unless core.autocrlf is false, so doc size budgets can report false overruns.",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "doccheck counts CRLF bytes unless core.autocrlf is false.",
+   "quote": "counts CRLF bytes unless core.autocrlf is false.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "words": [
+  "doccheck",
+  "CRLF",
+  "autocrlf",
+  "size budget",
+  "Windows",
+  "line endings"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

@@ -183,20 +183,20 @@ nexclash/nodes_of_yesod.py and its .asm with Arc's addresses, seven sites to loc
 7. Speed and music against the original 128K game.
 
 ## Lessons
-- [local: this game's hooks] A second colour path beside the paint: a human recording released the sphere within
+- [kb lesson.scripted-recordings-miss-key-paths: this game's hooks] A second colour path beside the paint: a human recording released the sphere within
   three minutes and showed a figure in the wrong colour; ten scripted recordings never did. Reason: the searches
   rewarded rooms and code, not the game's keys beyond movement.
-- [deferred Open: reconsider when a second 128K game needs a scripted recording] `nexclash.py record` drives a 48K
+- [deferred Open: reconsider when a second 128K game needs a scripted recording] [kb lesson.recorder-128k-not-in-toolkit] `nexclash.py record` drives a 48K
   machine only; the 128K recordings here were made with the pilot's m128.py. Reason: paging is not in machine.py.
-- [local: this game's intake] A new-code count misses a move into a place that runs the same code: the descent search
+- [kb lesson.new-code-count-misses-reused-code: this game's intake] A new-code count misses a move into a place that runs the same code: the descent search
   reported nothing because the caverns reuse the surface's routines. Watch a game variable (here the room number).
-- [local: this game's port] A port of an engine by matching bytes finds the sites but not their spans: the copy hook's
+- [kb lesson.port-by-bytes-spans-and-readers: this game's port] A port of an engine by matching bytes finds the sites but not their spans: the copy hook's
   exit was one instruction short (the loop's own JP), seen only as R one out. Compare each site's whole original span.
-- [local: this game's port] Reads of the screen that the first game never made: once a paint stops writing, every reader
+- [kb lesson.paint-stop-find-readers: this game's port] Reads of the screen that the first game never made: once a paint stops writing, every reader
   of what it wrote has to be found (scan the screen's readers), not only the ones the model engine hooks.
-- [local: this game's port] A graphic the game rewrites in place cannot have a pre-built pattern: scan the graphics for
+- [kb lesson.rewritten-graphics-no-prebuilt-patterns: this game's port] A graphic the game rewrites in place cannot have a pre-built pattern: scan the graphics for
   writers before trusting a catalogue of patterns.
-- [deferred Open: reconsider when the selftest's check is next touched] nextboot.rom_paths treats a recording that starts
+- [deferred Open: reconsider when the selftest's check is next touched] [kb lesson.recording-start-state-vs-tail-check] nextboot.rom_paths treats a recording that starts
   at another state as starting at the build's snapshot: a tail in write-first memory is then reported as read. Reason:
   it has no notion of a recording's own start state; here the tails went to never-touched bytes.
 

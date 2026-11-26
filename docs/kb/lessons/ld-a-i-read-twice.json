@@ -1,0 +1,32 @@
+{
+ "id": "lesson.ld-a-i-read-twice",
+ "kind": "pitfall",
+ "claim": "Read the interrupt flag with LD A,I twice (ld a,i / jp pe,ok / ld a,i), because a single read can be wrong on NMOS Z80s; the toolkit's IFF audit rejects a single read.",
+ "evidence": [
+  {
+   "game": "games/3d_stock_car_championship.md",
+   "text": "'show' first trusted one LD A,I; review caught it, hooklib.iff_audit now says twice.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/chase_hq.md",
+   "text": "Two single LD A,I reads in 1.2 failed the IFF audit; 1.3 calls iff_off at both, which reads twice.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "enforced_by": [
+  "nexclash.hooklib.iff_audit"
+ ],
+ "words": [
+  "LD A,I",
+  "interrupt flag",
+  "iff_audit",
+  "NMOS",
+  "double read",
+  "IFF"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

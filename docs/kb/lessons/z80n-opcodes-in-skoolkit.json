@@ -1,0 +1,25 @@
+{
+ "id": "lesson.z80n-opcodes-in-skoolkit",
+ "kind": "pitfall",
+ "claim": "Z80N opcodes the simulator lacks (e.g. SWAPNIB, ED 23) must be simulated and self-tested exhaustively, with a control that runs the hooks with the opcode as a NOP.",
+ "evidence": [
+  {
+   "game": "games/rainbow_islands.md",
+   "text": "Z80N SWAPNIB (ED 23), the nibble swap in the pixel converter, is simulated by rainbow._swapnib with an exhaustive self-test; a SWAPNIB-as-NOP control exists.",
+   "shown_on": "simulator",
+   "quote": "Z80N SWAPNIB (ED 23) | nibble swap in the pixel converter (simulated by rainbow._swapnib; exhaustive self-test)"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "emulator",
+ "words": [
+  "Z80N",
+  "SWAPNIB",
+  "SkoolKit",
+  "silent NOP",
+  "simulator",
+  "opcode"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

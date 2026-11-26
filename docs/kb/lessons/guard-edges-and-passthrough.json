@@ -1,0 +1,31 @@
+{
+ "id": "lesson.guard-edges-and-passthrough",
+ "kind": "method",
+ "claim": "Unit-test every guard edge: a hook that leaves the original ULA drawing (index outside the table, overflow, table full) needs tests that cover the guarded cases, with a negative control that must be caught.",
+ "evidence": [
+  {
+   "game": "games/chuckie_egg.md",
+   "text": "Hen index >= 5 (no table entry) gives no sprite (guard); unit tests include hen guard 1,008.",
+   "quote": "Hen index >= 5 (no table entry): no sprite (guard).",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/everyones_a_wally.md",
+   "text": "Unit tests: 2,664 plot cases, 3 commit cases; negative control detected 12/12.",
+   "quote": "3 commit cases, negative control detected 12/12.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "guard",
+  "passthrough",
+  "unit test",
+  "edge case",
+  "negative control",
+  "table full"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

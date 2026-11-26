@@ -301,7 +301,7 @@ colour_prepare:
         ld (M_SRC),hl
         ld hl,(B_DST)
         ld (M_DST),hl
-        ld hl,176
+        ld hl,160
         ld (M_LEN),hl
         call colour_row_move
         ld hl,(B_SRC)
@@ -335,7 +335,7 @@ colour_prepare:
         ld (M_SRC),hl
         ld hl,(B_DST)
         ld (M_DST),hl
-        ld hl,176
+        ld hl,160
         ld (M_LEN),hl
         call colour_row_move
         ld hl,(B_SRC)
@@ -378,7 +378,7 @@ colour_shiftbyte:
         ld (M_LEN),hl
         jp colour_move
 
-; Fixed 176-byte disjoint rows. Ordinary DMA address rearm retains the
+; Fixed 160-byte disjoint rows: the original shows 20 bytes of each 24 (POP copy at E52B), never the last 16 pixels. Ordinary DMA address rearm retains the
 ; fully programmed mode/length only within this synchronous call. Boundary
 ; splits use the general copier and force a complete reprogram next row.
 colour_prepare_dma_rows:
@@ -396,7 +396,7 @@ colour_prepare_dma_rows:
         cp 0x1F
         jr nz,.inside
         ld a,l
-        cp 0x51
+        cp 0x61
         jr nc,.split
 .inside:
         ld a,h
@@ -419,7 +419,7 @@ colour_prepare_dma_rows:
         ld (P_DMA_READY),a
         ld a,0x14
         ld (colour_dma_mode),a
-        ld bc,176
+        ld bc,160
         ld (colour_dma_len),bc
         call colour_dma_job
         jr .advance
@@ -435,7 +435,7 @@ colour_prepare_dma_rows:
         ld (M_SRC),hl
         ld hl,(B_DST)
         ld (M_DST),hl
-        ld hl,176
+        ld hl,160
         ld (M_LEN),hl
         call colour_row_move
         xor a

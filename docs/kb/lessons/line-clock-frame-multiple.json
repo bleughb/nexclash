@@ -1,0 +1,31 @@
+{
+ "id": "lesson.line-clock-frame-multiple",
+ "kind": "fact",
+ "claim": "The interrupt lands on the same video line each frame, so line-clock readings a frame apart differ by 0 or 311; add a frame when the lines since the last read are under half of one.",
+ "evidence": [
+  {
+   "game": "games/cisco_heat.md",
+   "text": "The interrupt lands on the same video line, so lines since the last read are 0 mod 311 at each interrupt.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/castle_master.md",
+   "text": "Two line readings a frame apart differ by 0 or 311 (jitter).",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "platform",
+ "facts": {
+  "interrupts": "on"
+ },
+ "words": [
+  "line clock",
+  "311 lines",
+  "frame",
+  "interrupt line",
+  "jitter"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

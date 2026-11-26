@@ -6,6 +6,25 @@
   python tools/knowledge.py eligible GAME        cards eligible / excluded / deferred (STANDARD 5)
   python tools/knowledge.py precedent GAME [-n N]  games whose predicate values agree most
   python tools/knowledge.py risks GAME           hardware-risk items that apply (docs/risks.json)
+  python tools/knowledge.py lessons WORD ...     shared lessons (docs/kb/lessons/) holding every word, one line
+                                                 each, and the games' own lessons; -n N caps each list (12)
+  python tools/knowledge.py lessons --show ID    one shared lesson in full (claim, limit, evidence)
+  python tools/knowledge.py lessons --facts GAME the shared lessons to read before designing GAME: those whose
+                                                 `facts` fit docs/kb/games/GAME.json (or a FILE: survey.json), most specific
+                                                 and best supported first; -n N (25)
+  python tools/knowledge.py lessons --game GAME  shared lessons whose `when` predicates do not rule GAME out
+  python tools/knowledge.py near WORD ...        before adding a lesson: the shared lessons most like the text
+  python tools/knowledge.py evidence ID --game GAME --quote "WORDS FROM ITS NOTES" [--text T] [--shown WHERE]
+                                                 add GAME to a shared lesson's evidence (the quote is checked);
+                                                 a lesson with 6 items takes no more: the [kb ID] tag counts the game
+  python tools/knowledge.py duplicates [-n PCT]  maintainers: pairs of shared lessons that share PCT% (60) of
+                                                 the smaller one's words - merge, or retire one
+  python tools/knowledge.py recurring [-n N]     maintainers: terms the [local] lessons of N+ games share
+                                                 (default 3) and no shared lesson names - sweep candidates
+  python tools/knowledge.py gate                 maintainers: lessons whose numbers are not in their sources
+  python tools/knowledge.py promote [-n N]       maintainers: lessons N+ games met (5) with no card and no
+                                                 enforced_by - make them a check
+  python tools/knowledge.py stale                maintainers: toolkit lessons written for an older VERSION
   python tools/knowledge.py eval                 leave-one-out: do precedents predict the cards used?
   python tools/knowledge.py check                structure only (also run by tools/doccheck.py)
 
@@ -18,7 +37,7 @@ nexclash.records hashes dependencies); the first row carries the commit. Any ind
 can be rebuilt from any commit: the files stay the source, nothing here is edited by hand.
 
 Row types: export, game, card, predicate, application, result, predicate_value, predicate_implied,
-lesson, technique_use, friction, learning, backlog, risk.
+lesson, shared_lesson, technique_use, friction, learning, backlog, risk.
 
 Predicate values. A record may state them (STANDARD 5, tools/templates/predicates.json):
   "predicates": [{"predicate": id, "value": true|false|unknown|conflicted, "scope": ..., "basis": ...,
@@ -26,6 +45,25 @@ Predicate values. A record may state them (STANDARD 5, tools/templates/predicate
 `predicate_implied` rows are NOT statements: an applied card implies someone judged its `requires`
 true and its `rejects` false. They help retrieval and are never used by `eval` (the cards would
 predict themselves). Lookups name which kind each value is.
+
+Shared lessons: docs/kb/lessons/<name>.json, one lesson per file (tools/templates/lesson.json), id
+lesson.<name>. One claim each, and the evidence per game that met it. `review` says how far to trust it:
+extracted (written from the notes, unchecked) < source-checked (each evidence game's notes were read, and
+every address / number in it is in those notes: `gate` checks that part; an evidence `quote`, the
+notes' own words, is checked to be in the file) < reviewed (a maintainer agrees).
+A lesson that stops being true is not deleted: status "retired" with superseded_by or retired_why.
+Evidence `game` is a games/<game>.md file, or a docs/<file>.md that states it (with a `quote`, checked like a
+game's), or notes / sessions (no file to check), or reference: published
+documentation, with `source` (its URL or title); a lesson with only reference evidence is level inferred
+until a game shows it on a machine. Or hardware: a board record of the hardware test suite, with `record`
+(docs/kb/hardware/<board>-<core>.json, written by tools/hwtests/intake.py) and `test` (a test id in it),
+shown_on hardware; the text names the board and core, since a result holds for that board and core. A lesson holds at most 6 evidence items; the games that met it are those
+plus every games/<game>.md that tags it [kb lesson.<name>] (counted, never stored: `promote`, `--facts`).
+`enforced_by` names the shared code that now checks the lesson (nexclash.<module>.<function>, or a file):
+such a lesson is kept for its evidence, and `promote` lists the well-met lessons that have none yet, each
+with its `next_check`: what a check for it could test (one sentence), or why a machine cannot check it.
+`facts` are measurable properties of a game (machine, interrupts, draw: see FACTS) that a lesson needs;
+`lessons --facts` leaves out a lesson only when the survey measured the opposite.
 
 Checks STRUCTURE, never truth (as techindex / learncheck).
 """
@@ -43,9 +81,48 @@ SCHEMA = 1
 VALUES = ('true', 'false', 'unknown', 'conflicted')
 SOURCES = ('survey', 'scan', 'disassembly', 'verify', 'hardware', 'design')
 LEVELS = ('observed', 'inferred', 'demonstrated')
-TAG = re.compile(r'\[(card|doc|tool|backlog|probe|local|deferred|none)\b:?\s*([^\]]*)\]')
+TAG = re.compile(r'\[(card|doc|tool|backlog|probe|kb|local|deferred|none)\b:?\s*([^\]]*)\]')
 USE = re.compile(r'([\w./-]+):\s*(used|helped|no help|corrected)\b:?\s*(.*)')
 RISKS = 'docs/risks.json'
+LESSONS = 'docs/kb/lessons'          # one file per shared lesson: <name>.json holds id lesson.<name>
+TYPES = ('fact', 'pitfall', 'failed-approach', 'method', 'owner-rule', 'open')
+AREAS = ('platform', 'emulator', 'toolkit', 'method', 'design', 'process')
+SHOWN = ('simulator', 'jnext', 'cspect', 'mame', 'hardware', 'analysis', 'documentation', 'unknown')
+REVIEW = ('extracted', 'source-checked', 'reviewed')
+FACTS = {'machine': ('48K', '128K'), 'interrupts': ('on', 'off'),
+         'draw': ('back-buffer', 'cell-copier', 'one-routine', 'direct')}
+CLAIM_MAX, EVIDENCE_MAX, EVIDENCE_ITEMS = 240, 300, 6
+NUMBER = re.compile(r'(?:0x|\$|#)?\b(?=[0-9A-Fa-f]*[0-9])[0-9A-Fa-f]{4}\b|\b\d{1,3}(?:,\d{3})+\b|\b\d{3,}\b')
+STOP = set('the a an of to in is and or for it on at by be as that this with not from are was its can must before '
+           'after when which one two only than then into does do no any each all so if but has have had will would '
+           'where what how why game games'.split())
+ORIGINS = ('notes', 'sessions', 'reference', 'hardware')   # no games/<game>.md holds it: maintainers' notes /
+#   working sessions / published documentation (the item names its `source`) / a board record (`record`, `test`)
+HWREC = re.compile(r'docs/kb/hardware/[\w.-]+\.json')
+
+
+def hw_evidence_problem(e, load=None):
+    """A `hardware` evidence item -> what is wrong with it, or None: its `record` is a board record that exists
+    and holds `test`, and shown_on is hardware. load(rel) -> the record's JSON or None (default: the file)."""
+    rec, test = e.get('record') or '', e.get('test') or ''
+    if not HWREC.fullmatch(rec):
+        return 'hardware evidence: record %r is not docs/kb/hardware/<name>.json' % rec
+    if load is None:
+        def load(rel):
+            try:
+                return json.loads(_read(rel))
+            except (OSError, ValueError):
+                return None
+    doc = load(rec)
+    if not isinstance(doc, dict):
+        return 'hardware evidence: record %s not found' % rec
+    if test not in (doc.get('run') or {}).get('tests', {}):
+        return 'hardware evidence: test %r is not in %s' % (test, rec)
+    if e.get('shown_on') != 'hardware':
+        return 'hardware evidence: shown_on must be hardware'
+    return None
+KBTAG = re.compile(r'\[kb (lesson\.[a-z0-9-]+)')
+TERM = re.compile(r'\b(?:0x[0-9A-Fa-f]{4}|(?=[0-9]*[A-F])[0-9A-F]{4}|[A-Za-z]+_[A-Za-z_]+|[A-Z][A-Z0-9]{3,}|[A-Z][a-z]+[A-Z]\w*)\b')
 
 
 def _read(rel):
@@ -112,6 +189,205 @@ def predicates():
 
 def risks():
     return json.loads(_read(RISKS))['risks'] if os.path.exists(os.path.join(ROOT, RISKS)) else []
+
+
+def shared(retired=False):
+    """The shared lessons, by id; retired ones only on request."""
+    out = [json.loads(_read(rel)) for rel in _rels(LESSONS + '/*.json')]
+    return [x for x in out if retired or x.get('status') != 'retired']
+
+
+def _games(x):
+    return [e['game'] for e in x.get('evidence', []) if e.get('game', '').startswith('games/')]
+
+
+def tagged(read=None):
+    """{lesson id: the games/<game>.md files that tag it [kb lesson.<name>]}."""
+    out = collections.defaultdict(set)
+    for rel in _rels('games/*.md'):
+        for i in KBTAG.findall((read or _read)(rel)):
+            out[i].add(rel)
+    return out
+
+
+def met(x, tags):
+    """The games that met a lesson: its evidence games and the notes that tag it."""
+    return set(_games(x)) | set(tags.get(x.get('id'), ()))
+
+
+def add_evidence(x, game, quote, text=None, shown='unknown', read=None):
+    """Add games/<game>.md to a lesson's evidence -> (changed, message). The quote must be in that file."""
+    rel = game if game.startswith(('games/', 'docs/')) else 'games/%s.md' % game
+    q = ' '.join((quote or '').split())
+    try:
+        notes = ' '.join((read or _read)(rel).split())
+    except (IOError, OSError):
+        return False, 'no %s' % rel
+    if len(q) < 20 or q not in notes:
+        return False, 'the quote must be 20+ characters copied exactly from %s' % rel
+    tag = 'tag the lesson in %s: [kb %s: what this game adds]' % (rel, x['id'])
+    if rel in [e.get('game') for e in x.get('evidence', [])]:
+        return False, '%s is already in the evidence of %s' % (rel, x['id'])
+    if len(x.get('evidence', [])) >= EVIDENCE_ITEMS:
+        return False, '%s holds %d evidence items and takes no more; %s - the tag counts the game' % (x['id'], EVIDENCE_ITEMS, tag)
+    if shown not in SHOWN:
+        return False, '--shown: one of %s' % ', '.join(SHOWN)
+    x.setdefault('evidence', []).append(dict(game=rel, text=(text or q)[:EVIDENCE_MAX], quote=q, shown_on=shown))
+    return True, 'added; ' + tag
+
+
+def duplicates(shared_rows, floor=0.6):
+    """Pairs of lessons that hold `floor` of the smaller one's words (claim and search words) -> [(share, a, b)]."""
+    toks = [(x, _tokens(x.get('claim', '') + ' ' + ' '.join(x.get('words', [])))) for x in shared_rows]
+    where = collections.defaultdict(list)
+    for i, (_, tk) in enumerate(toks):
+        for w in tk:
+            where[w].append(i)
+    both = collections.Counter()
+    for ids in where.values():
+        if len(ids) <= 200:                                 # a word 200 lessons share tells no two of them apart
+            for a in range(len(ids)):
+                for b in range(a + 1, len(ids)):
+                    both[ids[a], ids[b]] += 1
+    out = []
+    for (a, b), n in both.items():
+        small = min(len(toks[a][1]), len(toks[b][1]))
+        if small >= 4 and len(toks[a][1] & toks[b][1]) / float(small) >= floor:
+            out.append((len(toks[a][1] & toks[b][1]) / float(small), toks[a][0], toks[b][0]))
+    return sorted(out, key=lambda s: (-s[0], s[1]['id'], s[2]['id']))
+
+
+def _hay(x):
+    return ' '.join([x.get('id', ''), x.get('claim', ''), x.get('limit', ''), x.get('card') or ''] + x.get('words', [])
+                    + [e.get('text', '') for e in x.get('evidence', [])]).lower()
+
+
+def _line(x):
+    return '%-44s %s: %s' % (x['id'], x.get('kind'), x.get('claim'))
+
+
+def find(words, shared_rows, game_rows):
+    """-> (shared lessons, games' lesson rows) that hold every word (case ignored)."""
+    ws = [w.lower() for w in words]
+    return ([x for x in shared_rows if all(w in _hay(x) for w in ws)],
+            [r for r in game_rows if all(w in r['text'].lower() for w in ws)])
+
+
+def covered(text, x):
+    """Share of a lesson's own words (claim and search words) that the text holds: 0..1."""
+    have = _tokens(x.get('claim', '') + ' ' + ' '.join(x.get('words', [])))
+    return len(_tokens(text) & have) / float(len(have) or 1)
+
+
+def resolves(ref):
+    """An enforced_by reference: a file in the repository, or nexclash.<module>.<function> / tools.<module>.<function>
+    whose module file defines that name."""
+    if os.path.exists(os.path.join(ROOT, ref)):
+        return True
+    m = re.fullmatch(r'(nexclash|tools)\.(\w+)\.(\w+)', ref or '')
+    rel = m and '%s/%s.py' % (m.group(1), m.group(2))
+    return bool(m and os.path.exists(os.path.join(ROOT, rel))
+                and re.search(r'^(def|class) %s\b|^%s\s*=' % (m.group(3), m.group(3)), _read(rel), re.M))
+
+
+def _tokens(text):
+    return {w for w in re.findall(r'[a-z0-9_]{3,}', text.lower()) if w not in STOP}
+
+
+def alike(text, shared_rows, top=5):
+    """-> [(share of words in common, lesson)]: the lessons most like the text. Before adding one, read these."""
+    want = _tokens(text)
+    out = []
+    for x in shared_rows:
+        have = _tokens(x.get('claim', '') + ' ' + ' '.join(x.get('words', [])))
+        if want & have:
+            out.append((len(want & have) / float(len(want | have)), x))
+    return sorted(out, key=lambda s: (-s[0], s[1]['id']))[:top]
+
+
+def game_facts(entry):
+    """docs/kb/games/<game>.json or a survey.json -> {fact: value} in the FACTS vocabulary; a fact not measured is left out."""
+    found = entry.get('findings') or {}                     # a survey.json keeps model and pacing under findings
+    f, model, pacing = {}, (entry.get('model') or found.get('model') or '').lower(), entry.get('pacing') or found.get('pacing') or ''
+    if entry.get('machine') in FACTS['machine']:
+        f['machine'] = entry['machine']
+    if 'interrupts' in pacing:
+        f['interrupts'] = 'off' if pacing.startswith('no ') else 'on'
+    for word, v in (('back buffer', 'back-buffer'), ('double-buffered', 'back-buffer'), ('cell copier', 'cell-copier'),
+                    ('one routine', 'one-routine'), ('directly', 'direct')):
+        if word in model:
+            f['draw'] = v
+            break
+    return f
+
+
+def fits(lesson, facts):
+    """A lesson fits unless the survey measured the opposite of one of its `facts` (not measured is not absent)."""
+    return not any(k in facts and facts[k] != v for k, v in (lesson.get('facts') or {}).items())
+
+
+def briefing(facts, shared_rows, top=25, tags=None):
+    """The lessons to read first for a game with these facts: most of its facts named, then best shown, then
+    most games (evidence, and notes that tag it). -> (the first `top`, how many fit)."""
+    ok = [x for x in shared_rows if fits(x, facts)]
+    tags = tagged() if tags is None else tags
+    ok.sort(key=lambda x: (-sum(facts.get(k) == v for k, v in (x.get('facts') or {}).items()),
+                           -LEVELS.index(x.get('level')) if x.get('level') in LEVELS else 0,
+                           -len(met(x, tags)), x['id']))
+    return ok[:top], len(ok)
+
+
+def _norm(tok):
+    tok = tok.lower().replace(',', '').lstrip('$#')
+    return tok[2:] if tok.startswith('0x') else tok
+
+
+def gate(x, read=None):
+    """Addresses and numbers (4 hex digits, or 3+ decimal digits) in a lesson that its sources do not hold ->
+    [(where, token)]. An evidence text is held to its own game's notes; the claim and limit to any of them and
+    to the evidence. Notes / sessions evidence has no file to check. Mechanical: it cannot tell a wrong meaning."""
+    read = read or _read
+    notes, bad = {}, []
+    for g in set(_games(x)):
+        try:
+            notes[g] = {_norm(m) for m in NUMBER.findall(read(g))}
+        except (IOError, OSError):
+            notes[g] = set()
+    every = set().union(*notes.values()) if notes else set()
+    for e in x.get('evidence', []):
+        toks = {_norm(m) for m in NUMBER.findall(e.get('text', ''))}
+        every |= toks
+        if e.get('game') in notes:
+            bad.extend((e['game'], tok) for tok in sorted(toks - notes[e['game']]))
+    if notes:
+        for k in ('claim', 'limit'):
+            bad.extend((k, tok) for tok in sorted({_norm(m) for m in NUMBER.findall(x.get(k) or '')} - every))
+    return bad
+
+
+def trigger_recall(shared_rows, kb):
+    """Do `facts` find the lessons again for the games that taught them? kb = {games/<g>.md: facts}.
+    -> (pairs of lesson and evidence game that has measured facts, pairs where the lesson fits)."""
+    n = hit = 0
+    for x in shared_rows:
+        if x.get('facts'):
+            for g in set(_games(x)):
+                if g in kb:
+                    n, hit = n + 1, hit + fits(x, kb[g])
+    return n, hit
+
+
+def recurring(game_rows, shared_rows, floor=3):
+    """Terms (addresses, identifiers, names) in the [local] lessons of `floor`+ game files that no shared lesson
+    holds -> [(term, [docs])], most games first. A sweep list for a reader: a term is a lead, not a finding."""
+    known = ' '.join(_hay(x) for x in shared_rows)
+    where = collections.defaultdict(set)
+    for r in game_rows:
+        if any(t['kind'] == 'local' for t in r['tags']):
+            for term in set(TERM.findall(re.sub(r'^\[[^\]]*\]', '', r['text']))):
+                where[term].add(r['doc'])
+    return sorted(((t, sorted(d)) for t, d in where.items() if len(d) >= floor and t.lower() not in known),
+                  key=lambda x: (-len(x[1]), x[0]))
 
 
 def stated(rec):
@@ -223,6 +499,8 @@ def rows():
         src = dict(path=RISKS, sha=_sha(RISKS))
         for x in risks():
             yield dict(type='risk', src=src, **x)
+    for rel in _rels(LESSONS + '/*.json'):
+        yield dict(type='shared_lesson', src=dict(path=rel, sha=_sha(rel)), **json.loads(_read(rel)))
 
 
 def export():
@@ -323,6 +601,7 @@ def check():
             fail.append('%s: source file %s not found' % (where, doc))
         elif phrase and phrase not in _read(doc):
             fail.append('%s: source text %r not in %s' % (where, phrase, doc))
+    fail.extend(check_lessons(cs, preds))
     try:
         text = export()
         seen = collections.Counter((json.loads(l)['type'], json.loads(l)['id']) for l in text.splitlines())
@@ -332,6 +611,82 @@ def check():
     except Exception as e:                                  # a malformed source file: say which stage
         fail.append('export failed: %s: %s' % (type(e).__name__, e))
     fail.extend(selfcheck())
+    return fail
+
+
+def check_lessons(cs, preds):
+    fail, everyone = [], {}
+    for rel in _rels(LESSONS + '/*.json'):
+        try:
+            everyone[rel] = json.loads(_read(rel))
+        except ValueError as e:
+            fail.append('%s: not JSON (%s)' % (rel, e))
+    ids = {x.get('id') for x in everyone.values()}
+    for rel, x in sorted(everyone.items()):
+        def bad(msg):
+            fail.append('%s: %s' % (rel, msg))
+        if x.get('id') != 'lesson.' + os.path.basename(rel)[:-5] or not re.fullmatch(r'lesson\.[a-z0-9-]+', x.get('id') or ''):
+            bad('id must be lesson.<file name>, lower case, digits and hyphens')
+        for k, allowed in (('kind', TYPES), ('level', LEVELS), ('area', AREAS), ('review', REVIEW)):
+            if x.get(k) not in allowed:
+                bad('%s %r (one of %s)' % (k, x.get(k), ', '.join(allowed)))
+        if not x.get('claim') or len(x['claim']) > CLAIM_MAX or len(x.get('limit') or '') > CLAIM_MAX:
+            bad('needs claim; claim and limit at most %d characters each (one claim: split, or move detail to evidence)' % CLAIM_MAX)
+        if not x.get('words') or not x.get('as_of'):
+            bad('needs words and as_of (the VERSION it was written for)')
+        ev = x.get('evidence') or []
+        if not ev or len(ev) > EVIDENCE_ITEMS:
+            bad('needs 1 to %d evidence items' % EVIDENCE_ITEMS)
+        for e in ev:
+            g = e.get('game') or ''
+            doc = bool(re.fullmatch(r'docs/[\w./-]+\.md', g)) and '..' not in g and os.path.exists(os.path.join(ROOT, g))
+            if doc and not e.get('quote'):
+                bad('evidence %s: a docs file needs a quote' % g)
+            if g not in ORIGINS and not doc and not (re.fullmatch(r'games/[\w.-]+\.md', g) and os.path.exists(os.path.join(ROOT, g))):
+                bad('evidence game %r: a games/<game>.md file, a docs/<file>.md with a quote, or %s' % (g, ' | '.join(ORIGINS)))
+            if g == 'hardware' or e.get('record') or e.get('test'):
+                why = hw_evidence_problem(e) if g == 'hardware' else 'record / test belong to hardware evidence only'
+                if why:
+                    bad(why)
+            if (g == 'reference') != bool(e.get('source')) or (g == 'reference' and len(e['source']) < 10):
+                bad('evidence %r: reference evidence names its `source` (URL or title); other evidence has none' % g)
+            if not e.get('text') or len(e['text']) > EVIDENCE_MAX:
+                bad('evidence for %s needs text of at most %d characters' % (g, EVIDENCE_MAX))
+            if e.get('quote') is not None:
+                q = ' '.join(e['quote'].split())
+                if g == 'reference':
+                    if len(q) < 20:
+                        bad('evidence for reference: quote must be 20+ characters of the source')
+                elif len(q) < 20 or not os.path.exists(os.path.join(ROOT, g)) or q not in ' '.join(_read(g).split()):
+                    bad('evidence for %s: quote must be 20+ characters copied exactly from that file: %r' % (g, q[:60]))
+            if e.get('shown_on') not in SHOWN:
+                bad('evidence for %s: shown_on %r (one of %s)' % (g, e.get('shown_on'), ', '.join(SHOWN)))
+        if ev and all(e.get('game') == 'reference' for e in ev) and (x.get('level') != 'inferred' or x.get('review') == 'source-checked'):
+            bad('only reference evidence: level inferred, review extracted or reviewed, until a game shows it')
+        for k, v in (x.get('facts') or {}).items():
+            if v not in FACTS.get(k, ()):
+                bad('facts %s=%r (%s)' % (k, v, '; '.join('%s: %s' % (a, ' | '.join(b)) for a, b in sorted(FACTS.items()))))
+        for q in x.get('when', []):
+            if q not in preds:
+                bad('when %r not in predicates.json' % q)
+        if len(x.get('next_check') or '') > CLAIM_MAX:
+            bad('next_check at most %d characters' % CLAIM_MAX)
+        if x.get('card') and x['card'] not in cs:
+            bad('no card %s' % x['card'])
+        for ref in x.get('enforced_by', []):
+            if not resolves(ref):
+                bad('enforced_by %r: not a file, nor nexclash.<module>.<function> that exists' % ref)
+        if x.get('status', 'active') not in ('active', 'retired'):
+            bad('status %r (active | retired)' % x.get('status'))
+        if x.get('superseded_by') and x['superseded_by'] not in ids:
+            bad('superseded_by %s: no such lesson' % x['superseded_by'])
+        if x.get('status') == 'retired' and not (x.get('superseded_by') or x.get('retired_why')):
+            bad('a retired lesson needs superseded_by or retired_why')
+        if x.get('review') in REVIEW[1:]:
+            miss = gate(x)
+            if miss:
+                bad('review %s, but not in its sources: %s (correct it, or review "extracted")' % (
+                    x['review'], ', '.join('%s in %s' % (tok, w) for w, tok in miss[:6])))
     return fail
 
 
@@ -353,6 +708,53 @@ def selfcheck():
         bad.append('selfcheck stated')
     if applies({'when': ['p.x']}, {'p.x': 'false'}) or not applies({'when': ['p.x']}, {}):
         bad.append('selfcheck applies')
+    rec = {'docs/kb/hardware/b-1.json': {'run': {'tests': {'T1': {}}}}}
+    hw = dict(game='hardware', record='docs/kb/hardware/b-1.json', test='T1', text='x', shown_on='hardware')
+    if hw_evidence_problem(hw, rec.get) or not hw_evidence_problem(dict(hw, test='T2'), rec.get)             or not hw_evidence_problem(dict(hw, record='games/b.md'), rec.get)             or not hw_evidence_problem(dict(hw, shown_on='jnext'), rec.get)             or not hw_evidence_problem(dict(hw, record='docs/kb/hardware/none.json'), rec.get):
+        bad.append('selfcheck hw_evidence_problem')
+    sh = [dict(id='lesson.a', claim='NEXLOAD overwrites 5B00', words=['boot'], level='observed', facts={'machine': '128K'},
+               evidence=[dict(game='games/g1.md', text='tail at 0x5B00, 1,234 bytes and 999 more'), dict(game='notes', text='7777')]),
+          dict(id='lesson.b', claim='Pace windows hold the hook time', words=['pace'], level='demonstrated',
+               evidence=[dict(game='games/g1.md', text='x'), dict(game='games/g2.md', text='y')])]
+    gl = [dict(doc='games/g%d.md' % i, text='[local: here] NEXLOAD and frame_serial at 0xBD40', tags=[dict(kind='local')])
+          for i in range(3)] + [dict(doc='games/g9.md', text='[card c] NEXLOAD frame_serial', tags=[dict(kind='card')])]
+    a, b = find(['nexload', 'BOOT'], sh, gl)
+    if [x['id'] for x in a] != ['lesson.a'] or b or len(find(['nexload'], sh, gl)[1]) != 4:
+        bad.append('selfcheck find')
+    if [x['id'] for _, x in alike('the pace window and the hook', sh)] != ['lesson.b']:
+        bad.append('selfcheck near')
+    kf = game_facts(dict(machine='48K', pacing='no interrupts', model='Back buffer, block copy to the screen'))
+    if kf != {'machine': '48K', 'interrupts': 'off', 'draw': 'back-buffer'} or game_facts({}) != {} or game_facts(
+            dict(machine='128K', findings=dict(pacing='interrupts on', model='several routines draw to the screen directly'))) != {
+            'machine': '128K', 'interrupts': 'on', 'draw': 'direct'}:
+        bad.append('selfcheck game_facts: %s' % kf)
+    if fits(sh[0], kf) or not fits(sh[0], {}) or [x['id'] for x in briefing({'machine': '128K'}, sh)[0]] != ['lesson.a', 'lesson.b'] \
+            or briefing(kf, sh) != ([sh[1]], 1):
+        bad.append('selfcheck fits / briefing')
+    if gate(sh[0], lambda g: 'the tail is at $5b00; 1234 bytes') != [('games/g1.md', '999')] or \
+            gate(dict(sh[0], claim='at 6000'), lambda g: '5B00 1234 999') != [('claim', '6000')]:
+        bad.append('selfcheck gate: %s' % gate(sh[0], lambda g: 'the tail is at $5b00; 1234 bytes'))
+    if covered('NEXLOAD overwrites the boot at 5B00, they say', sh[0]) != 1.0 or covered('nothing alike', sh[0]) != 0 \
+            or not resolves('tools.knowledge.resolves') or resolves('tools.knowledge.no_such') or resolves('nexclash.nope.x'):
+        bad.append('selfcheck covered / resolves')
+    tg = tagged(lambda rel: '- [kb lesson.b: here too] x') if _rels('games/*.md') else {'lesson.b': {'games/g3.md'}}
+    notes = lambda rel: 'the tail  is at $5B00 and the loader moved it'
+    if not met(sh[1], {'lesson.b': {'games/g3.md', 'games/g1.md'}}) == {'games/g1.md', 'games/g2.md', 'games/g3.md'} \
+            or 'lesson.b' not in tg or 'lesson.a' in tg:
+        bad.append('selfcheck tagged / met')
+    one = json.loads(json.dumps(sh[0]))
+    if add_evidence(one, 'g7', 'tail is at $5B00 and the loader', read=notes)[0] is not True or one['evidence'][-1]['game'] != 'games/g7.md' \
+            or add_evidence(one, 'g7', 'tail is at $5B00 and the loader', read=notes)[0] \
+            or add_evidence(one, 'g8', 'not in the notes at all, no', read=notes)[0] \
+            or add_evidence(dict(one, evidence=[{}] * EVIDENCE_ITEMS), 'g8', 'tail is at $5B00 and the loader', read=notes)[0]:
+        bad.append('selfcheck add_evidence')
+    dup = duplicates(sh + [dict(id='lesson.c', claim='NEXLOAD overwrites 5B00 at boot', words=['printer'])])
+    if [(a['id'], b['id']) for _, a, b in dup] != [('lesson.a', 'lesson.c')]:
+        bad.append('selfcheck duplicates: %s' % [(a['id'], b['id']) for _, a, b in dup])
+    if trigger_recall(sh, {'games/g1.md': {'machine': '128K'}}) != (1, 1) or trigger_recall(sh, {'games/g1.md': kf}) != (1, 0):
+        bad.append('selfcheck trigger_recall')
+    if [t for t, _ in recurring(gl, sh)] != ['0xBD40', 'frame_serial'] or recurring(gl, sh, 4):
+        bad.append('selfcheck recurring: %s' % recurring(gl, sh))
     recs = [('', dict(name=n, predicates=[dict(predicate='p.x', value=v)], techniques=[dict(id=c)]))
             for n, v, c in (('a', True, 'patch.a'), ('b', True, 'patch.a'), ('c', False, 'patch.b'))]
     if evaluate(recs, cs, 1) != (3, 2, 3):
@@ -400,6 +802,12 @@ def main(argv):
         print('predicates %d: %s' % (len(preds), ', '.join('%s %d' % kv for kv in sorted(
             collections.Counter(p['evaluation'] for p in preds.values()).items()))))
         print('rows: ' + ', '.join('%s %d' % kv for kv in sorted(kinds.items())))
+        sh, tags = shared(), tagged()
+        print('shared lessons %d: %s; review: %s; met by 1 game %d, 2-4 %d, 5+ %d' % (
+            len(sh), ', '.join('%s %d' % kv for kv in sorted(collections.Counter(x.get('area') for x in sh).items())),
+            ', '.join('%s %d' % kv for kv in sorted(collections.Counter(x.get('review') for x in sh).items())),
+            sum(len(met(x, tags)) <= 1 for x in sh), sum(2 <= len(met(x, tags)) <= 4 for x in sh),
+            sum(len(met(x, tags)) >= 5 for x in sh)))
         twice = sorted(r['number'] for r in rows() if r['type'] == 'backlog' and '~' in r['id'])
         if twice:
             print('WARN BRIEFING C2 numbers given twice (a [backlog C2 #N] tag cannot tell them apart): %s' % twice)
@@ -411,8 +819,117 @@ def main(argv):
         else:
             print('eval: %d games, %d of %d patch cards found among the 3 nearest precedents (%.0f%%)' % (
                 n, hit, want, 100.0 * hit / want))
+        kb = {}
+        for rel in _rels('docs/kb/games/*.json'):
+            kb['games/%s.md' % os.path.basename(rel)[:-5]] = game_facts(json.loads(_read(rel)))
+        n, hit = trigger_recall(shared(), kb)
+        sizes = sorted(briefing(f, shared(), 10 ** 6)[1] for f in kb.values())
+        print('lessons: %d shared; %d lesson/game pairs with `facts` and a survey, %d found again by --facts; '
+              'lessons that fit a surveyed game: %s to %s' % (len(shared()), n, hit, sizes[0] if sizes else 0, sizes[-1] if sizes else 0))
         return 0
-    if cmd in ('eligible', 'precedent', 'risks'):
+    if cmd in ('lessons', 'near', 'gate', 'promote', 'stale', 'evidence', 'duplicates'):
+        sys.stdout.reconfigure(encoding='utf-8')
+    top = int(rest[rest.index('-n') + 1]) if '-n' in rest else None
+    words = [w for i, w in enumerate(rest) if w != '-n' and (i == 0 or rest[i - 1] != '-n')]
+    if cmd == 'lessons' and words[:1] == ['--show']:
+        x = dict((x['id'], x) for x in shared(True)).get(words[1] if len(words) > 1 else '')
+        if x is None:
+            sys.exit('no shared lesson %r in %s' % (' '.join(words[1:]), LESSONS))
+        if x.get('status') == 'retired':
+            print('RETIRED: %s' % (x.get('superseded_by') or x.get('retired_why')))
+        print('%s  [%s; %s; %s; %s; as of %s]\n  %s' % (x['id'], x['kind'], x['level'], x['area'], x['review'], x['as_of'], x['claim']))
+        if x.get('limit'):
+            print('  limit: %s' % x['limit'])
+        for k in ('facts', 'when', 'enforced_by', 'card', 'next_check'):
+            if x.get(k):
+                print('  %s: %s' % (k, json.dumps(x[k]) if k not in ('card', 'next_check') else x[k]))
+        for e in x['evidence']:
+            print('  - %s (%s): %s%s' % (os.path.basename(e['game']).replace('.md', ''), e['shown_on'], e['text'],
+                                         ' [%s]' % e['source'] if e.get('source') else ''))
+        also = sorted(tagged().get(x['id'], set()) - set(_games(x)))
+        if also:
+            print('  also tagged in %d notes: %s' % (len(also), ' '.join(os.path.basename(g)[:-3] for g in also[:12])
+                                                  + (' ...' if len(also) > 12 else '')))
+        return 0
+    if cmd == 'evidence':
+        opt = {rest[i]: rest[i + 1] for i in range(1, len(rest) - 1) if rest[i] in ('--game', '--quote', '--text', '--shown')}
+        x = dict((x['id'], x) for x in shared(True)).get(rest[0] if rest else '')
+        if x is None or '--game' not in opt or '--quote' not in opt:
+            sys.exit('evidence ID --game GAME --quote "WORDS FROM ITS NOTES" [--text T] [--shown %s]' % ' | '.join(SHOWN))
+        ok, msg = add_evidence(x, opt['--game'], opt['--quote'], opt.get('--text'), opt.get('--shown', 'unknown'))
+        if ok:
+            with open(os.path.join(ROOT, LESSONS, x['id'][7:] + '.json'), 'w', encoding='utf-8', newline='\n') as f:
+                f.write(json.dumps(x, indent=1, ensure_ascii=False) + '\n')
+        print(msg)
+        return 0 if ok or 'takes no more' in msg else 1
+    if cmd == 'duplicates':
+        sh = shared()
+        got = duplicates(sh, (top or 60) / 100.0)
+        for score, a, b in got:
+            print('%3.0f%%  %s\n      %s' % (100 * score, _line(a), _line(b)))
+        print('%d pairs among %d lessons' % (len(got), len(sh)))
+        return 0
+    if cmd == 'lessons' and words[:1] == ['--facts']:
+        name = words[1] if len(words) > 1 else ''
+        path = name if os.path.exists(name) else os.path.join(ROOT, 'docs', 'kb', 'games', name + '.json')
+        if not os.path.exists(path):
+            sys.exit('lessons --facts GAME: no docs/kb/games/%s.json, and no such file' % name)
+        f = game_facts(json.load(open(path, encoding='utf-8')))
+        got, n = briefing(f, shared(), top or 25)
+        print('%s: %s' % (name, ', '.join('%s %s' % kv for kv in sorted(f.items())) or 'no facts measured'))
+        for x in got:
+            print(_line(x))
+        print('%d of the %d that fit (-n N for more; lessons --show ID for the evidence)' % (len(got), n))
+        return 0
+    if cmd == 'near':
+        if not words:
+            sys.exit('near WORD ...')
+        for score, x in alike(' '.join(words), shared(), top or 5):
+            print('%.2f  %s' % (score, _line(x)))
+        return 0
+    if cmd == 'gate':
+        n = 0
+        for x in shared():
+            miss = gate(x)
+            if miss:
+                n += 1
+                print('%-44s %-14s %s' % (x['id'], x.get('review'), ', '.join('%s (%s)' % (tok, os.path.basename(w)) for w, tok in miss)))
+        print('%d of %d lessons hold a number their sources do not' % (n, len(shared())))
+        return 0
+    if cmd == 'promote':
+        tags = tagged()
+        for x in sorted(shared(), key=lambda x: (-len(met(x, tags)), x['id'])):
+            if len(met(x, tags)) >= (top or 5) and not x.get('card') and not x.get('enforced_by'):
+                print('%2d games  %s%s' % (len(met(x, tags)), _line(x),
+                                           '\n          next check: ' + x['next_check'] if x.get('next_check') else ''))
+        return 0
+    if cmd == 'stale':
+        now = _read('VERSION').strip()
+        for x in shared():
+            if x.get('area') == 'toolkit' and x.get('as_of') != now:
+                print('as of %-8s %s' % (x.get('as_of'), _line(x)))
+        return 0
+    if cmd == 'lessons' and words[:1] not in (['--game'], ['--values']):
+        top = top or 12
+        if not words:
+            sys.exit('lessons WORD ... | --show ID | --facts GAME | --game GAME | --values FILE')
+        sh, own = find(words, shared(), [r for r in rows() if r['type'] == 'lesson'])
+        for x in sh[:top]:
+            print(_line(x))
+        for r in own[:top]:
+            print('%s  %s' % (r['doc'], r['text'][:300]))
+        more = ' (first %d of each: -n N for more)' % top if max(len(own), len(sh)) > top else ''
+        print("%d shared (lessons --show ID for one), %d in the games' notes%s" % (len(sh), len(own), more))
+        return 0
+    if cmd == 'recurring':
+        floor = int(rest[rest.index('-n') + 1]) if '-n' in rest else 3
+        for term, docs in recurring([r for r in rows() if r['type'] == 'lesson'], shared(), floor):
+            print('%-24s %2d  %s' % (term, len(docs), ' '.join(os.path.basename(d)[:-3] for d in docs)))
+        return 0
+    if cmd == 'lessons':
+        rest = rest[1:] if rest[0] == '--game' else rest
+        cmd = 'lessons-for'
+    if cmd in ('eligible', 'precedent', 'risks', 'lessons-for'):
         top = int(rest[rest.index('-n') + 1]) if '-n' in rest else 5
         name, vals, kind = _vals(rest, cs)
         print('%s: %d predicates known (%d stated, %d implied by applied cards)' % (
@@ -426,6 +943,12 @@ def main(argv):
             used = {r['name']: sorted({a['id'] for a in r.get('techniques', []) if a.get('id')}) for _, r in records()}
             for score, agree, differ, g in precedent(vals, pool, top):
                 print('%+3d  agree %d differ %d  %-28s %s' % (score, agree, differ, g, ', '.join(used[g])))
+        elif cmd == 'lessons-for':
+            sys.stdout.reconfigure(encoding='utf-8')
+            for x in shared():
+                if applies(x, vals):
+                    unknown = [p for p in x.get('when', []) if vals.get(p) != 'true']
+                    print('%s%s' % (_line(x), ' (not ruled out: %s)' % ', '.join(unknown) if unknown else ''))
         else:
             for x in risks():
                 if applies(x, vals):

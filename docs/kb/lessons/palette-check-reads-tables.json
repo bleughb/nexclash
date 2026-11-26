@@ -1,0 +1,31 @@
+{
+ "id": "lesson.palette-check-reads-tables",
+ "kind": "pitfall",
+ "claim": "A palette check that reads tables does not show what is drawn, so check the indices actually drawn, and replay the boot's NEXTREG writes against the painted map rather than comparing fixed colours as symbols.",
+ "evidence": [
+  {
+   "game": "games/alien_8.md",
+   "text": "palette_check flagged 4 off-standard default entries (205/255 shades); the native snapshot showed the build never draws them (figures use entries 64 + ink); check the indices drawn before saying a shade is seen.",
+   "shown_on": "unknown",
+   "quote": "native snapshot showed the build never draws them (figures use entries 64 + ink). Check the indices drawn before"
+  },
+  {
+   "game": "games/cookie.md",
+   "text": "An Enhanced build's fixed colours were compared as symbols only, never with the RGB the set-up uploads; palette_wrong replays the boot's NEXTREG writes against the painted map, the default build as its negative.",
+   "shown_on": "unknown",
+   "quote": "palette_wrong replays the boot's NEXTREG writes against the"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "palette_check",
+  "palette_wrong",
+  "NEXTREG",
+  "drawn indices",
+  "RGB",
+  "palette"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

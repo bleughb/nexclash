@@ -51,7 +51,11 @@
   "docs/profiles/renegade128.json",
   "asm/renegade128_hooks.asm"
  ],
- "shared_data": [],
+ "shared_data": [
+  "asm/lib/hlib_pace.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_speed.asm"
+ ],
  "rebuild": {
   "args": [
    "--no-record"
@@ -82,16 +86,24 @@
    "file": "renegade_sprites.nex",
    "md5": "10070d06abbc98f25160b119e2f9cc80"
   },
+  "sprites_nooutline": {
+   "file": "renegade_sprites_nooutline.nex",
+   "md5": "99f6d3abbb8f34ff8d6c1d28e6497b53"
+  },
+  "sprites_blackoutline": {
+   "file": "renegade_sprites_blackoutline.nex",
+   "md5": "4e9b74e76a5467ce4556bc04cb7366c2"
+  },
   "enhanced": {
    "file": "renegade_enhanced.nex",
-   "md5": "f3e21c37794b7774879ffa191b5f3cc7"
+   "md5": "d032ec5d0286ad68d32fef2f96b4018f"
   }
  },
  "repro": [],
  "status": {
   "title": "Renegade (128K)",
   "engine_col": "renegade128 (renegade.md)",
-  "build": "sprites b4b45210, Enhanced 9ed0c98b (.nxc v1.2: pace windows, R kept; v1.1 was 510cdd29)",
+  "build": "sprites b4b45210, Enhanced f60ec79d (no outline; v1.2 Enhanced with outline was 9ed0c98b); toggles Outline off c8baf422, Black outline 28e56c4f (jattree/nxc#8; not published)",
   "software": "Verify on 4 bot recordings, whole game; unit PASS; negatives detected; reaches gameplay in JNext 1.1.104 (no human recording)",
   "hardware": "untested",
   "next": "hardware test"

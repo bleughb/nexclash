@@ -33,7 +33,7 @@ the paths to equal M1s and lower its delta (GnG).
 
 **Assumptions.** An interrupt accepted at the end of LD A,I / LD A,R leaves P/V = 0 (NMOS Z80; JNext
 does it, SkoolKit's simulator too; the Next's core untested - the double read is right either way). The
-/INT lasts 32 T at 3.5 MHz on a Spectrum; at 28 MHz JNext loses interrupts in DI windows of a few hundred T (Quazatron).
+/INT lasts 32 T at 3.5 MHz on a Spectrum; at 28 MHz JNext loses interrupts in DI windows of a few hundred T (Quazatron; Cisco Heat's line clock read under DI lost every one in its busy waits: read it lock-free, again if the ISR's count changed).
 
 **Validation gap.** Library unit tests on the simulator with the interrupt injected; JNext interrupt counts
 on the games that changed. No board run.
@@ -41,7 +41,8 @@ on the games that changed. No board run.
 ## Recognise
 `LD A,I` then DI, PUSH AF ... POP AF, JP PO / RET PO with no second read (`hooklib.iff_audit()`: 'once'), or
 two reads back to back with the second trusted ('pair': an interrupt at the end of the second still reads
-as off). A game whose interrupt count in JNext falls below the original's (soak / pace "interrupts per s").
+as off). Not faults: LD A,R whose flags are overwritten before any P/V test ('value', even two close together);
+one LD A,I marked `; IFF once: <reason>` where interrupts are always off ('exempt'). A game whose interrupt count in JNext falls below the original's (soak / pace "interrupts per s").
 
 ## Probe and stop
 `python -m nexclash.hooklib` (iff_audit over asm/), then the soak or pace tool's interrupts per second,
@@ -65,7 +66,7 @@ None beyond the caller's stack word.
 ## Verification
 `hooklib._t_iff`: entered with interrupts on / off, with and without an interrupt at the first read: the
 caller's IFF back. Negative control: one read (`NEG_IFF1`) must leave interrupts off. `iff_audit` in
-selftest --tools fails on any 'once' or 'pair' in asm/.
+selftest --tools fails on any 'once' or 'pair' in asm/, and on any of its made-up cases misjudged.
 
 ## Evidence
 - `grep -n 'MACRO HLIB_IFF' asm/lib/hlib_iff.asm`; `grep -n 'def _t_iff\|def iff_audit' nexclash/hooklib.py`.

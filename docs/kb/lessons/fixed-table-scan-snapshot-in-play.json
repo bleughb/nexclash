@@ -1,0 +1,23 @@
+{
+ "id": "lesson.fixed-table-scan-snapshot-in-play",
+ "kind": "pitfall",
+ "claim": "A table read with a fixed length can misparse when the snapshot was taken in play; stop where the first real entry begins.",
+ "evidence": [
+  {
+   "game": "games/alien_8.md",
+   "text": "Reading 256 words of the graphic table on a snapshot taken in play gave strays pointing at the stack and work RAM; the table ends where the first graphic (7931) begins.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "table scan",
+  "graphic table",
+  "snapshot in play",
+  "stray pointers",
+  "intake"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

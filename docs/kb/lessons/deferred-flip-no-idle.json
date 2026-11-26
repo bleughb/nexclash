@@ -1,0 +1,27 @@
+{
+ "id": "lesson.deferred-flip-no-idle",
+ "kind": "method",
+ "claim": "Do not idle for the raster before each in-between flip: defer it into the next view's object loop and flip from a check inside it.",
+ "evidence": [
+  {
+   "game": "games/castle_master.md",
+   "text": "Speed pass: in-between flips deferred into the next view's object loop (flipchk), not idling before them; views a redraw 6.67 -> 7.46, pace median +0.69; m3_sim also checks the flip's line.",
+   "quote": "in-between flips deferred into the next view's object loop (flipchk).",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "card": "patch.inbetween-views",
+ "words": [
+  "flip",
+  "raster wait",
+  "double buffer",
+  "in-between views",
+  "idle",
+  "Layer 2",
+  "flipchk"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

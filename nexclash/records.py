@@ -59,7 +59,10 @@ import glob
 import hashlib
 import json
 import os
+import posixpath
+import re
 import sys
+import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RECORDS = os.path.join(ROOT, 'docs', 'records')
@@ -280,6 +283,26 @@ def plan(recs=None, full=False):
             if sh:
                 item[1], item[2] = 'reverify', 'representative of engine %s; shared files changed: %s' % (
                     r['engine'], ', '.join(sh[:4]))
+    # every shared file changed since a member's verification is replayed by a member that READS it: a library only
+    # one member uses would otherwise ride on a representative that does not depend on it (Codex review T3)
+    def shared_changed(r):
+        return {p for p in changed(r.get('verified', {}).get('deps'), now_all[r['name']])
+                if p not in own(r) and p not in REBUILD_ONLY}
+    def verified_now(r):                        # shared files this member verified at their current hash
+        v = r.get('verified', {}).get('deps') or {}
+        n = now_all[r['name']]
+        return {p for p, h in v.items() if n.get(p) == h and p not in own(r) and p not in REBUILD_ONLY}
+    for eng, files in shared_hit.items():
+        items = [i for i in out if i[0]['engine'] == eng]
+        covered = set().union(set(), *(shared_changed(i[0]) for i in items if i[1] == 'reverify'),
+                              *(verified_now(i[0]) for i in items if i[0].get('verify')))
+        for f in sorted(files - covered):
+            cand = sorted((i for i in items if i[1] in ('rebuild', 'skip') and i[0].get('verify')
+                           and f in shared_changed(i[0])), key=lambda i: not i[0].get('representative'))
+            if cand:
+                i = cand[0]
+                i[1], i[2] = 'reverify', 'engine %s: replays shared %s (no member re-verifying reads it)' % (eng, f)
+                covered |= shared_changed(i[0])
     return [tuple(x) for x in out], now_all
 
 
@@ -292,6 +315,43 @@ def evidence(rec):
     it (every legacy record) reads 'not assessed', never a failure."""
     given = rec.get('status', {}).get('evidence', {})
     return {c: dict(given.get(c) or {'level': 'not assessed', 'scope': ''}) for c in EVIDENCE}
+
+
+_INCLUDE_RE = re.compile(r'^[ \t]*INCLUDE[ \t]+"?([^"\s;]+)"?', re.I | re.M)
+
+
+def asm_includes(path, seen=None, root=ROOT):
+    """Repository-relative paths an assembly source INCLUDEs, recursively, resolved from its folder as sjasmplus
+    does (asm/x.asm: INCLUDE "lib/hlib_speed.asm" -> asm/lib/hlib_speed.asm). Generated files that do not exist
+    in the tree are left out."""
+    seen = set() if seen is None else seen
+    try:
+        text = open(os.path.join(root, path), errors='replace').read()
+    except OSError:
+        return seen
+    for m in _INCLUDE_RE.finditer(text):
+        inc = posixpath.normpath(posixpath.join(posixpath.dirname(path), m.group(1).replace('\\', '/')))   # '/' on Windows too
+        if inc not in seen and os.path.exists(os.path.join(root, inc)):
+            seen.add(inc)
+            asm_includes(inc, seen, root)
+    return seen
+
+
+def include_problems(rec):
+    """Assembly the record's declared sources INCLUDE but the record does not list: deps() follows Python imports,
+    not INCLUDEs, so a library edit would not plan this game. Libraries (asm/lib/) belong in shared_data, the
+    game's own includes in data. -> list"""
+    data, shared = set(rec.get('data', [])), set(rec.get('shared_data', []))
+    bad = []
+    for src in sorted(p for p in data if p.endswith(('.asm', '.inc'))):
+        for inc in sorted(asm_includes(src)):
+            lib = inc.startswith('asm/lib/')
+            if lib and inc not in shared:
+                bad.append('%s: %s (INCLUDEd by %s) %s' % (rec['name'], inc, src,
+                           'is in data: a library belongs in shared_data' if inc in data else 'not in shared_data'))
+            elif not lib and inc not in data | shared:
+                bad.append('%s: %s (INCLUDEd by %s) not in data' % (rec['name'], inc, src))
+    return bad
 
 
 def evidence_problems(rec):
@@ -350,6 +410,37 @@ def selfcheck():
         want = 'reverify' if r.get('representative') and r.get('verify') else 'skip'
         if p[r['name']] != want:
             bad.append('due re-verification after a rebuild stamp: %s %s, want %s' % (r['name'], p[r['name']], want))
+    # the representative verified the shared file at its hash now and the others have rebuild stamps only: nothing is
+    # due (a member's older verification is covered by a current one of the same file)
+    rs = copy.deepcopy(recs)
+    for r in rs:
+        c = dict(base[r['name']])
+        v = dict(c)
+        if not (r.get('representative') and r.get('verify')) and 'nexclash/z80tonex.py' in v:
+            v['nexclash/z80tonex.py'] = 'old'
+        r['checked'], r['verified'] = {'deps': c}, {'deps': v}
+    p = {r['name']: act for r, act, _ in plan(rs)[0]}
+    if any(a != 'skip' for a in p.values()):
+        bad.append('shared file the representative verified now: %s, want skip' % {n: a for n, a in p.items() if a != 'skip'})
+    # coverage: an engine whose only verified member is not marked representative still replays a shared change
+    lone = copy.deepcopy([r for r in recs if r['name'] == 'stormbringer'])
+    for r in lone:
+        r['representative'] = False
+        c = dict(base[r['name']])
+        c['nexclash/z80tonex.py'] = 'old'
+        r['checked'], r['verified'] = {'deps': c}, {'deps': dict(c)}
+    acts = [a for r, a, _ in plan(lone)[0]]
+    if acts != ['reverify']:
+        bad.append('shared change with no representative member reading it: %s, want reverify' % acts)
+    # INCLUDE keys are repository paths with '/' whatever the platform writes (a Windows source's "lib\\x.asm")
+    with tempfile.TemporaryDirectory() as d:
+        os.makedirs(os.path.join(d, 'asm', 'lib'))
+        open(os.path.join(d, 'asm', 'g.asm'), 'w').write('        INCLUDE "lib\\y.asm"\n')
+        open(os.path.join(d, 'asm', 'lib', 'y.asm'), 'w').write('        INCLUDE "z.inc"\n')
+        open(os.path.join(d, 'asm', 'lib', 'z.inc'), 'w').write('')
+        got = asm_includes('asm/g.asm', root=d)
+        if got != {'asm/lib/y.asm', 'asm/lib/z.inc'}:
+            bad.append('asm_includes: %s, want asm/lib/y.asm and asm/lib/z.inc' % sorted(got))
     # exclusion: a record marked "excluded" stays 'none' even when its own and shared files changed
     ex = copy.deepcopy(recs[0])
     ex['excluded'] = 'selfcheck'
@@ -494,16 +585,101 @@ def view_checksums(recs):
     return GEN_BEGIN + '\n' + '\n'.join(lines) + '\n' + GEN_END
 
 
+def _proof(r):
+    """How a record's outputs are proven: differential (replayed against a recording), not differential, or rebuild only."""
+    v = r.get('verify')
+    if not v:
+        return 'rebuild only'
+    return 'not differential' if v.get('differential') is False else 'differential'
+
+
+def _releases(r):
+    """(snapshot MD5, release) for a record and each of its reworks of the same snapshot (Jetpac v1.1, Atic Atac v1.3 /
+    v1.4). A rework of another snapshot (a 128K release) is left out: listing it would make `patch` refuse that
+    snapshot's default build where the rework needs options (Cauldron v1.1: --altrom-fill whole)."""
+    snap = r['inputs']['snapshot']['md5']
+    game = r['verified_json_game'] if r.get('verified_json_game') else r['game']
+    yield snap, {'record': r['name'], 'game': game, 'doc': r['doc'],
+                 'args': [x for x in r['rebuild'].get('args', []) if x != '--no-record'], 'proof': _proof(r),
+                 'nex': {k: v['md5'] for k, v in r['outputs'].items()}}
+    for x in r.get('rework', []):
+        if x.get('snapshot') and next((i['md5'] for i in x.get('inputs', []) if i.get('name') == x['snapshot']), None) != snap:
+            continue
+        if not x.get('outputs'):
+            continue
+        v = {'record': '%s rework %s' % (r['name'], x['name']), 'game': game, 'doc': r['doc'],
+             'args': [a for a in x.get('args', []) if a != '--no-record'], 'proof': _proof(x),
+             'nex': {k: o['md5'] for k, o in x['outputs'].items()}, 'rework': True}
+        if x.get('env'):
+            v['env'] = dict(x['env'])
+        yield snap, v
+
+
 def view_verified(recs):
-    snaps = {}
+    """One entry per snapshot MD5 (the release `patch` builds by default, for its title) with every release of that
+    snapshot under 'variants', reworks included: a frozen or alternate release shares the snapshot, and a single
+    entry let it overwrite the default (Everyone's a Wally, Fireman OPUS / ASTRA, Rainbow / Rainbow Z80N). The
+    default is a record's own build where there is one, a rework's only for a snapshot no record builds."""
+    by = {}
     for r in recs:
         if r.get('verified_json', True) and r['inputs']['snapshot']['md5']:
-            snaps[r['inputs']['snapshot']['md5']] = {
-                'game': r['verified_json_game'] if r.get('verified_json_game') else r['game'], 'doc': r['doc'],
-                'nex': {k: v['md5'] for k, v in r['outputs'].items()}}
+            for m, v in _releases(r):
+                by.setdefault(m, []).append(v)
+    snaps = {}
+    for m, vs in by.items():
+        variants = sorted(vs, key=lambda v: v['record'])
+        d = min(variants, key=lambda v: (bool(v.get('rework')), bool(v.get('env')), '--engine' in v['args'],
+                                         len(v['game']), v['record']))
+        snaps[m] = dict({k: d[k] for k in ('game', 'doc', 'nex', 'proof')}, variants=variants)
     return {'_note': 'GENERATED from docs/records by `python -m nexclash.records views` - do not edit. '
-                     'Snapshots whose sprite build was differentially verified against a recording. nex = MD5s '
-                     '`nexclash.py patch` reproduces.', 'snapshots': snaps}
+                     'Snapshots with a recorded build: nex = the MD5s `nexclash.py patch` reproduces for the default '
+                     'release; variants = every release of that snapshot (args: how it is selected; proof: '
+                     'differential = replayed against a recording, otherwise not).', 'snapshots': snaps}
+
+
+def verified_selfcheck():
+    """verified.json for the snapshots two releases share: both kept, the default the one built without --engine,
+    and userflow.match_release taking each release's own outputs and refusing a sprite build neither made. -> failures"""
+    from . import userflow
+    snaps = view_verified(all_records())['snapshots']
+    bad = []
+    for default, other in (('everyones_a_wally_updated', 'wally'), ('rainbow_z80n', 'rainbow'),
+                           ('incredible_shrinking_fireman-add-OPUS', 'incredible_shrinking_fireman-add-GPT6_ASTRA')):
+        e = next((e for e in snaps.values() if {default, other} <= {v['record'] for v in e.get('variants', [])}), None)
+        if e is None:
+            bad.append('verified.json: %s and %s not under one snapshot' % (default, other))
+            continue
+        rel = {v['record']: v for v in e['variants']}
+        if e['nex'] != rel[default]['nex']:
+            bad.append('verified.json: the default of %s / %s is not %s' % (default, other, default))
+        for name in (default, other):
+            got = {k: rel[name]['nex'].get(k) for k in ('plain', 'sprites')}
+            hit = userflow.match_release(e, got)
+            if not hit or hit['record'] != name:
+                bad.append('match_release: %s outputs matched %s' % (name, hit and hit['record']))
+        if userflow.match_release(e, {'plain': rel[default]['nex'].get('plain'), 'sprites': 'f' * 32}):
+            bad.append('match_release: a sprite build no release made was accepted (%s)' % default)
+    by_name = {r['name']: r for r in all_records()}
+    for name, rw in (('jetpac', 'v11'), ('atic_atac', 'v13'), ('atic_atac', 'v14')):    # reworks of the same snapshot
+        r = by_name.get(name)
+        if not r:
+            continue
+        x = next(x for x in r['rework'] if x['name'] == rw)
+        got = {'plain': (x['outputs'].get('plain') or r['outputs'].get('plain') or {}).get('md5'),   # v1.3 / v1.4 pin no
+               'sprites': x['outputs']['sprites']['md5']}                                           # plain build
+        hit = userflow.match_release(snaps[r['inputs']['snapshot']['md5']], got)
+        if not hit or hit['record'] != '%s rework %s' % (name, rw):
+            bad.append('match_release: %s %s outputs matched %s' % (name, rw, hit and hit['record']))
+    with tempfile.TemporaryDirectory() as d:                                # userflow.output_paths: declared names
+        if userflow.output_paths(d, 'g') != (os.path.join(d, 'g.nex'), os.path.join(d, 'g_sprites.nex')):
+            bad.append('output_paths: NAME.nex / NAME_sprites.nex not the default')
+        json.dump({'plain': 'g_plain-x.nex', 'default': 'g_sprites-x.nex'}, open(os.path.join(d, 'g_outputs.json'), 'w'))
+        if userflow.output_paths(d, 'g') != (os.path.join(d, 'g_plain-x.nex'), os.path.join(d, 'g_sprites-x.nex')):
+            bad.append('output_paths: NAME_outputs.json names not used (Fireman ASTRA)')
+        os.utime(os.path.join(d, 'g_outputs.json'), (1, 1))                  # an earlier build's declaration
+        if userflow.output_paths(d, 'g', since=2) != (os.path.join(d, 'g.nex'), os.path.join(d, 'g_sprites.nex')):
+            bad.append('output_paths: an earlier build\'s NAME_outputs.json was trusted')
+    return bad
 
 
 def views(check=False):

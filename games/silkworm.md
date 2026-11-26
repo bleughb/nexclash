@@ -49,22 +49,22 @@ Nothing has run on a Next. To check: the code at 5B00 after a real NEXLOAD (firs
 
 ## Lessons
 - [local: no clash by construction] Decoding the blit's row table showed the back buffer ends above the ground rows, which proves there is no clash; attribute counts alone only suggested it.
-- [local: tail region] A zero run can still take writes: 0x9000-0x901F looked free in wave 1 and took writes past the back buffer in other waves. Scan every wave before choosing a tail.
-- [local: printer buffer on 128K] `keep_printer_buffer` refuses a 128K snapshot, yet this 128K game has code at 5B00; a setup call in the stub bank does the same job. Worth a note in BRIEFING C2 #36 when this goes upstream.
+- [kb lesson.prove-free-memory-by-access-scan: tail region] A zero run can still take writes: 0x9000-0x901F looked free in wave 1 and took writes past the back buffer in other waves. Scan every wave before choosing a tail.
+- [kb lesson.nexload-printer-buffer: printer buffer on 128K] `keep_printer_buffer` refuses a 128K snapshot, yet this 128K game has code at 5B00; a setup call in the stub bank does the same job. Worth a note in BRIEFING C2 #36 when this goes upstream.
 
-- [local: which interrupt touches which slot] This game's interrupt runs through slot 7: read `isr`'s Slots line before choosing an overlay slot. Slot 5 was free.
-- [local: K can't fix a fixed cost] With K alone, updates with many figures ran +10% while quiet ones ran -3%: a window scales the logic, not a per-figure cost. Measured per figure, then a fixed debt per figure and a higher K, and the table went flat, whole runs within 2% and the slowest stretch under 2%.
+- [kb lesson.mmu-slot-by-what-isr-touches: which interrupt touches which slot] This game's interrupt runs through slot 7: read `isr`'s Slots line before choosing an overlay slot. Slot 5 was free.
+- [kb lesson.pace-windows-by-displaced-work: K can't fix a fixed cost] With K alone, updates with many figures ran +10% while quiet ones ran -3%: a window scales the logic, not a per-figure cost. Measured per figure, then a fixed debt per figure and a higher K, and the table went flat, whole runs within 2% and the slowest stretch under 2%.
 - [local: rows spent on checks] Clip checks per span cost more than the pixels: a path for whole figures, and a stack wipe for boxes, freed about 13% of an update.
-- [local: interrupts count too] The stack wipe under DI lost 6% of the interrupts, so the game's clock and music would have run slow with the update pace in range. The update isn't the only pace: read `interrupts taken` too. Interrupts on between the wipe's rows, and shorter plots, brought them back.
+- [kb lesson.interrupts-taken-is-a-pace: interrupts count too] The stack wipe under DI lost 6% of the interrupts, so the game's clock and music would have run slow with the update pace in range. The update isn't the only pace: read `interrupts taken` too. Interrupts on between the wipe's rows, and shorter plots, brought them back.
 - [local: a stray colour in a white game] Comparing the panel with the set found only the jeep's lives differ, one attribute for both vehicles' icons. Sprites read off the screen, not off the counter, can't go wrong when the game prints something else.
-- [local: a selected register is shared state] An interrupt between a hook's `out (0x243B)` and its `in (0x253B)` leaves another register selected. `HLIB_SPEED_IN` then latched a line number as the clock. Here it showed as a lone 175 ms update once in about 1,500. The wrapper now holds the pace in every interrupt and selects NR 7 again before it returns, and the replay checks that. Worth a look upstream, in any engine whose wrapper reads lines.
-- [local: a latch that latches itself] The game can leave its logic without passing the hook that ends it (game over). The next update's clock latch then read our own 28 MHz as the game's clock, for good: interrupts 35 a second, AY writes doubled, updates 60% short. Only a soak and a seed that reached game over showed it. A flag now says whose clock it is, and the replay checks the latched clock.
+- [kb lesson.nextreg-select-shared-state: a selected register is shared state] An interrupt between a hook's `out (0x243B)` and its `in (0x253B)` leaves another register selected. `HLIB_SPEED_IN` then latched a line number as the clock. Here it showed as a lone 175 ms update once in about 1,500. The wrapper now holds the pace in every interrupt and selects NR 7 again before it returns, and the replay checks that. Worth a look upstream, in any engine whose wrapper reads lines.
+- [kb lesson.speed-latch-whose-clock: a latch that latches itself] The game can leave its logic without passing the hook that ends it (game over). The next update's clock latch then read our own 28 MHz as the game's clock, for good: interrupts 35 a second, AY writes doubled, updates 60% short. Only a soak and a seed that reached game over showed it. A flag now says whose clock it is, and the replay checks the latched clock.
 - [local: compare with the game's own buffer] GAME OVER was missing from Layer 2 and every check passed, because hooks and model shared the same blind spot. Comparing the model with the game's own buffer bit by bit closes that, and it found the text writer (5BEF) and nothing else.
 
 ## Friction
 - reuse: [none: nexclash.scan, pace, soak, flicker and rom_paths were enough]
-- retries: [local: real loader] A relative run path made JNext miss the card copy; byte_exact False showed it at once.
-- environment: [local: pilot venv] The venv must be called by its absolute path, or Python warns about sys.prefix.
+- retries: [kb lesson.python-env-pitfalls: real loader] A relative run path made JNext miss the card copy; byte_exact False showed it at once.
+- environment: [kb lesson.python-env-pitfalls: pilot venv] The venv must be called by its absolute path, or Python warns about sys.prefix.
 - hand-rolled: [local: review scripts] Fixtures for each wave, boot negatives and loader runs live in the review run.
 - scratch: [local: review run] Its work folder stays in private evidence.
 

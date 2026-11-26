@@ -1,0 +1,26 @@
+{
+ "id": "lesson.sprite-clip-window-units-follow-over-border",
+ "kind": "pitfall",
+ "claim": "The sprite clip window (NextREG 0x19) is in display-area pixels only while sprites are not over the border; with 0x15 bit 1 set it is ignored unless bit 5 is set too, and then X counts in units of two dots across the wide area.",
+ "limit": "From the book, not measured here. The reset window is X 0-255, Y 0-191.",
+ "evidence": [
+  {
+   "game": "reference",
+   "source": "I. Novak, Unraveling the ZX Spectrum Next, Vol 1 (2026; core 3.03.03), chapter 16",
+   "text": "Over border off: dots 32 + X1 to 32 + X2 and lines 32 + Y1 to 32 + Y2. Over border on, clip bit off: the whole wide area shows. Both on: dots 2 x X1 to 2 x X2 + 1, lines Y1 to Y2. The clip is applied as the line buffer is read out.",
+   "shown_on": "documentation"
+  }
+ ],
+ "level": "inferred",
+ "area": "platform",
+ "words": [
+  "sprite",
+  "clip",
+  "window",
+  "border",
+  "over-border",
+  "units"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

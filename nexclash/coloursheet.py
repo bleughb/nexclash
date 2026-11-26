@@ -529,12 +529,15 @@ def merge(base, chg, meta, current):
     return out, conflicts
 
 
-def redraw(layout_path, cmap, png_out, layout_out):
+def redraw(layout_path, cmap, png_out, layout_out, rgb16=None):
     """Redraw a sheet from its own layout with another colour map: same size, same figures at the
     same places, same paintable pixels; the new layout records cmap as the map it shows (the next
-    painting is read against it). No capture, no emulation."""
+    painting is read against it). rgb16: the palette the build shows (an engine whose maps carry
+    one), recorded in the new layout; default the layout's own. No capture, no emulation."""
     from PIL import Image
     lay = load_layout(layout_path)
+    if rgb16 is not None:
+        lay['palette'] = [list(c) for c in rgb16]
     rgb16 = [tuple(c) for c in lay['palette']]
     img = Image.new('RGB', tuple(lay['size']), BG_RGB)
     for x, y, i in lay['swatches']:

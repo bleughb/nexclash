@@ -1,0 +1,48 @@
+{
+ "id": "lesson.fast-draw-must-pad-to-original-time",
+ "kind": "pitfall",
+ "claim": "A routine made faster must be padded back to the original duration or the saving credited, or the game speeds up and pace moves with the work done.",
+ "evidence": [
+  {
+   "game": "games/cisco_heat.md",
+   "text": "The first sprite fast path made the game run 14% fast in the simulator (7.41 frames an update against 8.59); its saving is added back to the wait (spr_credit), giving 8.47.",
+   "shown_on": "simulator",
+   "quote": "The sprite fast path's saving is added back to D (spr_credit) so the pace stays the original's: without it the simulator's pace ran 14% fast (7.41 frames an update against 8.59)."
+  },
+  {
+   "game": "games/everyones_a_wally_updated.md",
+   "text": "Hooks that replace a plot rather than add to it need the plot's original time back in the wait, or pace still moves with the plot count.",
+   "shown_on": "unknown",
+   "quote": "Hooks that replace a plot rather than add to it need the plot's original time back in the wait (V_CR), or the pace still moves with the plot count."
+  },
+  {
+   "game": "games/booty.md",
+   "text": "A room at 28 MHz needs its original time back: a fit over all rooms, then a wait at the game's clock.",
+   "shown_on": "unknown",
+   "quote": "A room at 28 MHz needs its original time back: a fit over all rooms, then a wait at the game's clock"
+  },
+  {
+   "game": "games/winter_sports.md",
+   "text": "The cheapest honest pace fix is a wrapper: halt to the frame interrupt, then draw at 28 MHz (NextReg 0x07 = 3) inside the frame.",
+   "shown_on": "unknown",
+   "quote": "the cheapest honest pace fix is the wrapper `pace_wrapper(call)`: halt to the frame interrupt, draw at 28 MHz (NextReg 0x07 = 3) inside the vertical"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "when": [
+  "hook.faster_than_original"
+ ],
+ "words": [
+  "pad",
+  "original duration",
+  "pace",
+  "28 MHz",
+  "pace credit",
+  "faster than original",
+  "halt",
+  "timing"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

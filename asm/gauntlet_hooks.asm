@@ -149,9 +149,26 @@ D_COPY  EQU 98                  ; calibrated so an update takes the original's t
 ; Interrupts are on here and the game's handler reads the ROM, so nothing is mapped and nothing waits: the clear
 ; runs at 28 MHz and the time it saves is waited out at the next update's first copy (its target includes it).
 ; The original's pace only: the steady-speed build leaves this CALL as it is.
-e_cl:   nextreg 0x07,3
-        call CLEAR
-        nextreg 0x07,0
+e_cl:   push af                 ; the caller's A goes through the clear unchanged: kept (the clear sets F, B, C)
+        ld bc,0x243B            ; the caller's speed (NR 7 bits 1:0) ...
+        ld a,7
+        out (c),a
+        inc b
+        in a,(c)
+        and 3
+        ld b,a
+        pop af                  ; ... A back ...
+        push bc                 ; ... and the speed on the stack (in its high byte: 4 bytes below SP at most here)
+        nextreg 0x07,3
+        call CLEAR              ; the 28 MHz clear's saved time pays for the tile pass (games/gauntlet.md)
+        ex (sp),hl              ; H = the saved speed, the caller's HL in its slot (6 bytes below SP at most:
+        push af                 ; STACK, with this hook's own return address); the clear's AF kept
+        ld a,h
+.n_spd: nextreg 0x07,a          ; the caller's speed back (it was a fixed 3.5 MHz: F8 lost)
+        pop af
+        ex (sp),hl              ; HL back
+        inc sp                  ; the speed word dropped, no flag touched
+        inc sp
         ld (SPSAVE),sp          ; what the clear's own entry stores in the original
         push af
         push bc
@@ -165,7 +182,7 @@ e_cl:   nextreg 0x07,3
         pop bc
         pop af
         ret
-R_CL    EQU 114                 ; -14
+R_CL    EQU 95                  ; -33 (the speed kept and given back: 19 more R steps)
 
 ; ---------------------------------------------------------------- the level blocks from memory (a build with the tape)
 ; The tape's second side is 31 headerless blocks of levels. The game asks for flag 0x80 at the start of a game (the
@@ -735,7 +752,7 @@ setup:  ld hl,pbuf              ; the printer buffer as the snapshot has it (the
         nextreg 0x12,9          ; Layer 2 in bank 9
         nextreg 0x14,0xE3       ; the transparent colour
         nextreg 0x15,0x00       ; S L U: Layer 2 over the ULA and the tile layer (shown by the first tile pass)
-speed:  nextreg 0x07,0          ; (the steady-speed build: 3 = 28 MHz)
+speed:  nextreg 0x07,0        ; speed: start-up (once, before the game) - (the steady-speed build: 3 = 28 MHz)
         ret
 pal9:   DS 512
 pal2:   DS 512

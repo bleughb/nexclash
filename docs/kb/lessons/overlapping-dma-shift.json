@@ -1,0 +1,31 @@
+{
+ "id": "lesson.overlapping-dma-shift",
+ "kind": "pitfall",
+ "claim": "Ordinary forward DMA cannot implement an overlapping right shift; copy backward chunks through a scratch page or use a verified LDDR fallback.",
+ "evidence": [
+  {
+   "game": "games/bubbler.md",
+   "text": "Backward overlap uses a private scratch page; no DDMA extension is emitted; the verified LDDR fallback is the alternative.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
+   "test": "D08",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite D08): a forward memory-to-memory DMA with destination = source + 1 filled the block with the first byte (0 bytes wrong): forward overlap smears, it does not shift.",
+   "shown_on": "hardware"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "platform",
+ "words": [
+  "DMA",
+  "overlap",
+  "right shift",
+  "LDDR",
+  "scratch page",
+  "backward copy"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

@@ -259,5 +259,5 @@ and shadow at the map edges and with a cell hidden; negative control (ink / mask
 - hand-rolled: [local: a Kempston pace profile (4, 6) written for the measurement]
 - scratch: [none: no scratch scripts]
 - reuse: [tool asm/lib/hlib_pace.asm] the pace pass (2026-11-07), measured with nexclash.pace and nexclash.flicker
-- retries: [local: a debt tick missing] the first pace build ticked its debt once in a 35 ms hook (+8.8%)
+- retries: [kb lesson.pace-window-needs-tick: a debt tick missing] the first pace build ticked its debt once in a 35 ms hook (+8.8%)
 - hand-rolled: [local: a JNext probe of routine cycles] pace state for Cyclone: 0x7507, 0x750D, 0xF74E, 0xF7F0, 0xF8A0

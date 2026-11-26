@@ -16,7 +16,7 @@ Figures (games/incredible_shrinking_fireman-add-GPT6_ASTRA.md):
 Colour-map keys: G + graphics-byte address + source ink; D + address for diamonds; default colour = the ink the game gives the figure
 (fireman: white; enemies: their room's bright ink).
 """
-# Capture adapted from add-OPUS; runtime/verifier adapted from fireman.py.
+# Capture adapted from add-OPUS; runtime/verifier adapted from fireman.py (removed 2026-11-22, unreachable: git show b522f34:nexclash/fireman.py).
 import collections
 import json
 import os
@@ -1617,6 +1617,8 @@ def auto(a, z80, name, out, say):
     say('Sprites   : %s  %s  boot %s' % (os.path.basename(spr), md5(spr),
                                           'OK' if not bad2 else 'MISMATCH %s' % str(bad2[:3])[:200]))
     ok = not bad and not bad2
+    with open(os.path.join(out, name + '_outputs.json'), 'w') as f:   # its own names (nxcout.manifest, userflow.cmd_patch)
+        json.dump({'plain': os.path.basename(plain), 'default': os.path.basename(spr)}, f, indent=1)
     states = []
     for r in list(a.rzx or []):
         c, ex, st = verify(patch, r, stop=getattr(a, 'quick', None), collect=3, progress=lambda n,c: say('Progress  : frame %d' % n))

@@ -116,16 +116,16 @@ runs/pace-audit-20261108). Every plot follows the game's own sync (0xD9C8 starts
 - Before / after: run folder NOTES.md. Same frames per update as the original on all 6 seeds but the odd update where the original lags 2 and this takes 1.
 
 ## Lessons
-- [local: the plot's fixed time is the credit] When every plot follows the game's own sync and takes a fixed time, a part of it at 28 MHz pays for hooks that vary, with no wait; size the part by what the tone or other sync-side work must keep.
+- [kb lesson.pace-repay-places: the plot's fixed time is the credit] When every plot follows the game's own sync and takes a fixed time, a part of it at 28 MHz pays for hooks that vary, with no wait; size the part by what the tone or other sync-side work must keep.
 - [local: a pattern in the lost frames has a cause] The audit's 44 frames against 6 was the same sequence with a little slack per iteration: count frames per iteration before calling it seed-dependent.
 - [doc BRIEFING C2 #5] NextZXOS ROM3 is not free at 0x386E: Its IM 1 handler CALLs 0x386E and its UDG print JPs 0x387E. Hooks written
   there over a ROM3-filled alt image run on every interrupt; write the whole image (altrom_low) and verify against ROM3.
-- [local: a build step outside the engine] The approved .nex came from a script after the engine (mkload.py); importing it
+- [kb lesson.published-build-steps-in-engine: a build step outside the engine] The approved .nex came from a script after the engine (mkload.py); importing it
   meant moving that step into build(), with its stub in the engine's .asm and the game's picture taken at build time.
 - [local: loading screen as an input] The tape screen the build needs rides in the record's recordings list (md5-checked, staged beside the snapshot).
-- [local: pre-shifted copies can be different frames] Starquake's four shifts of an image are four animation frames; model the image
+- [kb lesson.shifted-copies-differ: pre-shifted copies can be different frames] Starquake's four shifts of an image are four animation frames; model the image
   the plot drew, not the base plus a shift.
-- [local: NOPing a painter can drop a write the game reads] The paint ran past the attribute area into 0x5B00, read by collision:
+- [kb lesson.nop-stores-keep-timing: NOPing a painter can drop a write the game reads] The paint ran past the attribute area into 0x5B00, read by collision:
   save and restore the attributes round the painter instead of removing its stores. A full-memory lockstep found it (b1 frame 5398).
 - [local: a reference with the paint undone] Compare the patched attributes against the original run with each frame's paint undone
   by the verifier, so a lost game store in the attribute area is caught.

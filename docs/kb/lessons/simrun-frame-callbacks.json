@@ -1,0 +1,24 @@
+{
+ "id": "lesson.simrun-frame-callbacks",
+ "kind": "fact",
+ "claim": "nexclash.simrun's opt-in C frame callbacks avoid tracing, making profiling far faster with identical results.",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "A 300-frame preview stayed identical while profiling dropped from 19.238 s to 0.724 s; autosave/buffer parity tested.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "toolkit",
+ "words": [
+  "simrun",
+  "frame callback",
+  "preview",
+  "speed",
+  "C simulator",
+  "tracing"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,28 @@
+{
+ "id": "lesson.cache-spare-slots",
+ "kind": "method",
+ "claim": "Keep spare pattern slots so every part of a figure can be prepared before one attribute burst.",
+ "evidence": [
+  {
+   "game": "games/bruce_lee.md",
+   "text": "Retain 12 spare slots so any active part can change safely.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/exolon.md",
+   "text": "Six spare patterns let all four large-figure parts upload before one attribute burst.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "spare slots",
+  "pattern cache",
+  "upload",
+  "attribute burst",
+  "parts"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

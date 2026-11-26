@@ -1,0 +1,25 @@
+{
+ "id": "lesson.z88dk-nex-sections",
+ "kind": "fact",
+ "claim": "For a .nex, appmake needs __register_sp and an entry symbol unless --nex-norun is used; BANK_n sections go in their bank, BANK_5, BANK_2 and BANK_0 merge into main memory, and overlapping sections abort the build.",
+ "evidence": [
+  {
+   "game": "notes",
+   "text": "appmake and section placement facts from a z88dk build; a global initialised to 0 still goes to data_compiler.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "words": [
+  "z88dk",
+  "appmake",
+  "nex",
+  "BANK_5",
+  "section",
+  "data_compiler",
+  "register_sp"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,61 @@
+{
+ "id": "lesson.nexload-printer-buffer",
+ "kind": "pitfall",
+ "claim": "NEXLOAD overwrites 0x5B00-0x5BFF before the game starts, so a snapshot that keeps code, stack or data there starts wrong unless the build restores the whole 256 bytes.",
+ "limit": "A read of 5B5C alone did not matter in Atom Ant or Ruff and Reddy (real loader showed 0x10 there in every mode); check what the game does with the byte.",
+ "evidence": [
+  {
+   "game": "games/head_over_heels.md",
+   "text": "Temporary NEXLOAD5B00-5BFF workspace restored completely, not only the start-up tail.",
+   "quote": "Temporary NEXLOAD5B00-5BFF workspace is restored completely.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/silkworm.md",
+   "text": "Code lives at 5B00-5BEE (entry 5B00); NEXLOAD writes that buffer, so a set-up call in the stub bank copies 5B00-5BFF back.",
+   "quote": "The game keeps code at 5B00-5BEE (entry at 5B00). NEXLOAD writes that buffer, so it must come back.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/robin_of_the_wood.md",
+   "text": "Stack at 0x5B76, inside the buffer NEXLOAD overwrites, returning into ROM paging code at 0x5BB0; found by scanning every published patch with nexload=True.",
+   "quote": "the snapshot's stack is at 0x5B76, in the printer buffer NEXLOAD overwrites, and its top",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/highway_encounter.md",
+   "text": "NEXLOAD overwrites the printer buffer before entry; 5B00..5CFF restored.",
+   "quote": "NEXLOAD overwrites the printer buffer before entry. Restore 5B00..5CFF, including",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/that_sinking_feeling.md",
+   "text": "The game reads 5B5C (its 7FFD copy) and NEXLOAD overwrites the printer buffer; keep_printer_buffer is 48K only, so setup restores it.",
+   "quote": "NEXLOAD overwrites the printer buffer and the game reads 5B5C (its 7FFD copy).",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/auf_wiedersehen_monty.md",
+   "text": "The game reads 0x5B00 before writing it and NEXLOAD overwrote it, so the snapshot's printer buffer is put back.",
+   "quote": "snapshot's printer buffer put back (the game reads 0x5B00 before writing it; NEXLOAD overwrote it).",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "enforced_by": [
+  "nexclash.nextboot.nexload_check"
+ ],
+ "words": [
+  "NEXLOAD",
+  "printer buffer",
+  "5B00",
+  "5B5C",
+  "BANKM",
+  "keep_printer_buffer",
+  "128K",
+  "stack"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

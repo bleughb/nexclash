@@ -1,0 +1,24 @@
+{
+ "id": "lesson.replay-lost-sync-must-fail",
+ "kind": "pitfall",
+ "claim": "Verification must fail when a replay loses sync, not count it as a pass.",
+ "evidence": [
+  {
+   "game": "games/cisco_heat.md",
+   "text": "Main merge 2026-11-23: boot restores the caller's speed (patch.restore-speed); a desync fails the replay.",
+   "quote": "boot restores the caller's speed (patch.restore-speed); desync fails replay.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "card": "verify.scripted-event-reach",
+ "words": [
+  "replay desync",
+  "verifier",
+  "false pass",
+  "engine rules"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

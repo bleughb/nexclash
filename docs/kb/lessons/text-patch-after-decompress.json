@@ -1,0 +1,25 @@
+{
+ "id": "lesson.text-patch-after-decompress",
+ "kind": "method",
+ "claim": "Patch compressed game text in RAM after each block unpacks instead of recompressing, which avoids recompressing and tape checksums.",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "English option (--cw-english) exists; an English reference build Inferno_english_masked.nex is an input.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "inferred",
+ "area": "method",
+ "words": [
+  "translation",
+  "text patch",
+  "decompressed",
+  "RAM overwrite",
+  "compressed text"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7",
+ "status": "retired",
+ "retired_why": "no source in the game notes"
+}

@@ -1,0 +1,32 @@
+{
+ "id": "lesson.back-buffer-128k-multiload-nex",
+ "kind": "method",
+ "claim": "A 128K tape multiload game can be built into one .nex holding every stage if all stages share the same engine code; check the interrupt handler, copy routine and back buffer per stage.",
+ "evidence": [
+  {
+   "game": "games/cisco_heat.md",
+   "text": "Six recordings surveyed, same engine in every stage, multiload; the 128K IM 2 handler pages with 7FFD and flips the screen; the race loop renders into the linear back buffer 0x6000-0x7AFF; stage blocks come from the tape with --tape-bank 8,9,11.",
+   "quote": "Stage 0: six recordings surveyed; same engine in every stage, multiload.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "facts": {
+  "draw": "back-buffer",
+  "machine": "128K"
+ },
+ "when": [
+  "render.target.back_buffer"
+ ],
+ "words": [
+  "multiload",
+  "128K",
+  "stage",
+  "back buffer",
+  "tape",
+  "per-stage data"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

@@ -1,0 +1,31 @@
+{
+ "id": "lesson.jnext-screen-shows-what-verifier-misses",
+ "kind": "pitfall",
+ "claim": "A simulator or verifier can disagree with what the Next shows: SkoolKit's simulator shows the plain palette, and a verifier that checks its own idea of a column can miss an overlay one column off.",
+ "evidence": [
+  {
+   "game": "games/page_pharaoh.md",
+   "text": "The game writes the ULA+ palette; on a Next and in JNext the walls are pink, the jungle lime, the fire orange; SkoolKit's simulator shows the plain palette.",
+   "quote": "on a Next and in JNext the walls are pink, the jungle lime, the fire orange.",
+   "shown_on": "jnext"
+  },
+  {
+   "game": "games/phantis.md",
+   "text": "The copy pops a table of screen addresses and adds 1 before use, so work column 0 is screen column 3; the verifier checked its own idea of the column and only the JNext screen showed the overlay one column left.",
+   "quote": "Part 1's copy pops a table of screen addresses and adds 1 before use, so work column 0 is screen column 3.",
+   "shown_on": "jnext"
+  }
+ ],
+ "level": "observed",
+ "area": "emulator",
+ "words": [
+  "JNext",
+  "screen",
+  "palette",
+  "verifier",
+  "overlay column",
+  "ULA+"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

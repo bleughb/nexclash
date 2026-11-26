@@ -129,11 +129,11 @@ verify installed bytes after room entry, run play, and separately exercise all t
 - [tool nexclash/movie.py] A painted static hole is an explicit pixel addition, not native mask corruption; keep its ownership in metadata so export and the independent oracle agree.
 - [tool nexclash/movie.py] Painted paper/erasures need exact colour composition from native chunk and copy parameters; binary ink equivalence would reject valid artwork.
 - [local: shared walking masks] D3F4..D403 have fixed bitmap bytes but variable masks. Record intentional erasures separately from cached transparency belonging to another mask.
-- [local: snapshot boundary] A mid-blit snapshot with SP as a graphics pointer requires a bounded native prelude.
+- [kb lesson.sp-as-data-pointer: snapshot boundary] A mid-blit snapshot with SP as a graphics pointer requires a bounded native prelude.
 - [local: reset coverage] Dirty rectangles miss the full-screen erase; the late replay reset exposed stale Layer 2 pixels.
 - [local: mutable graphics] A shared opacity mask crosses D3FF; a page-boundary cutoff loses D401/D403 pixels.
-- [local: nested state] Inner drawing overwrites its IFF latch, so the outer wrapper requires its own saved IFF.
-- [local: coverage] A recording ending at 16% is not a completion even when every drawing entry type is reached.
+- [kb lesson.iff-nested-save: nested state] Inner drawing overwrites its IFF latch, so the outer wrapper requires its own saved IFF.
+- [kb lesson.recording-length-and-play-style: coverage] A recording ending at 16% is not a completion even when every drawing entry type is reached.
 - [tool nexclash/movie.py] Transparency negatives need nonempty overlap and the broken patch's own code/tables.
 - [tool nexclash/movie.py] Audit ROM paths from the independently proven normalized PC, not the source's mid-blit PC.
 - [local: trainers] Final-item cheats needed startup/condition translation and accurate labels, not blind POK copying.

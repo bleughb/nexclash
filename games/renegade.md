@@ -56,6 +56,7 @@ Patterns from every level's data, by running the game's own 0 key in a simulator
 Why slot 2: the first version kept the state at slot 3 with interrupts off in the whole hook. In JNext its game timer ran 36 % fast: 19 seconds in 14 of emulated time, against 14 in the plain build. Moved to slot 2, with interrupts on, it is 14. The cause of the extra interrupts was not found; I do not know whether a real Next would do the same.
 Outline: one pixel round each figure, nibble 3, in margins of the patterns, never over the figure: white, black on the second level where the body is white. Not on what is too small: W <= 2 and R <= 16. Verify and unit tests see through it. A figure is two parts, each outlined alone, so a join would show as a line: the owner saw one down the middle of the riderless bike, and it was also at the waist of figures. The build takes each frame's two parts from the frame table, as 37682 places them, and drops outline pixels that lie on the other part or in the seam beside it (join_drops: 3,749 pixels in 260 graphics; a graphic used in several frames loses a pixel if any frame needs it). Unit check: join_faults, 0 left.
 Start: PC at a stub in the alt ROM, screen up: a key, or about 5 seconds, then JP 31814. No game memory touched. The screen is the snapshot's own, so nothing is added to the .nex's screen area. The plain .nex has no hold and starts at the menu.
+Outline options (2026-11-22, jattree/nxc#8, the owner: off with painted sprites; on, built in, with the standard ones, with a way to turn it off or black): the sprite build is unchanged. `auto` also writes _sprites_nooutline.nex (no outline pixels: `--toggle "Outline off"`) and _sprites_blackoutline.nex (palette bytes only (`outline_colour_nex(nex, RGB332)`, black = 0): entry 3 in the setup palette and each level's outline byte in floors; `--toggle "Black outline"`). Enhanced leaves the outline out (f60ec79d, was 9ed0c98b), so the .nxc keeps it apart from both: `--excludes "Enhanced colours=Outline off" --excludes "Enhanced colours=Black outline"`. Round trips of the .nxc match; JNext level 1 seen for all four; not replay-verified (no recordings here), not published, hardware untested.
 Colour: entry 1 black; entry 2 the body, the level's floor paper; entry 3 the outline. Entries 10-15 per level, for Enhanced.
 
 ## Results
@@ -154,10 +155,10 @@ it waits on the real beam (0x98ED, floating bus), with the game's tone in the lo
 - [local: the same .256 serves another release by matching graphics by bytes, then position]
 - [local: the approved Enhanced came from a run-folder script] observed (import, 2026-11-04): the clone's record held
   only the default; work/paint.py's last step (recolour, palette, floors) moved into auto, the map kept private.
-- [local: K window readings] A K window's reading holds the hook's own time, which K would scale: on a short window that is most of the error (0.5 ms for each). Put it in
+- [kb lesson.pace-window-overhead: K window readings] A K window's reading holds the hook's own time, which K would scale: on a short window that is most of the error (0.5 ms for each). Put it in
   the debt as hook time x K, and keep one window going across hook sites rather than opening one per site.
 - [local: Renegade's time-slicer: an overrun here plays differently, not just slower] Count the game's own skips against the original's as well as the percentage; they are what parted lockstep.
-- [local: interrupts on through an upload] A pattern page at the slot of the state page, which the handler never reads, needs no DI; at slot 0 an interrupt went astray in JNext (cause not established).
+- [kb lesson.mmu-slot-by-what-isr-touches: interrupts on through an upload] A pattern page at the slot of the state page, which the handler never reads, needs no DI; at slot 0 an interrupt went astray in JNext (cause not established).
 - [local: a third-party colour map marked local only] observed (import, 2026-11-04): the Enhanced map stays out of
   the public repo as a staged record input; the profile holds only the 44 palette and floors bytes.
 

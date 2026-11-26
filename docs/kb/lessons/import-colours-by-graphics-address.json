@@ -1,0 +1,25 @@
+{
+ "id": "lesson.import-colours-by-graphics-address",
+ "kind": "method",
+ "claim": "When importing an external colour conversion, import colour data keyed by graphics address and never copy its executable snapshot.",
+ "evidence": [
+  {
+   "game": "games/dizzy_ultimate_cartoon_adventure.md",
+   "text": "The colour conversion's graphics match all 78 player frames and 256 plotter-2 images, but its snapshot differs in state, title data and the lives instruction; colours imported by graphics address, no executable bytes copied.",
+   "shown_on": "unknown",
+   "quote": "but its snapshot differs in state, title data and the lives instruction. Import colours by graphics address;"
+  }
+ ],
+ "level": "observed",
+ "area": "process",
+ "words": [
+  "colour conversion",
+  "import",
+  "graphics address",
+  "snapshot",
+  "Enhanced",
+  "intake"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

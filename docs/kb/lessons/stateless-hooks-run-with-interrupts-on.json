@@ -1,0 +1,27 @@
+{
+ "id": "lesson.stateless-hooks-run-with-interrupts-on",
+ "kind": "method",
+ "claim": "Hooks that keep no state can live in the alt ROM with no RAM page and run with interrupts on.",
+ "limit": "Not confirmed on hardware.",
+ "evidence": [
+  {
+   "game": "games/chuckie_egg.md",
+   "text": "Alt ROM only (hooks 0x386E-0x39A9, 316 bytes): no RAM page, no state, interrupts on; hook timing not measured.",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "inferred",
+ "area": "design",
+ "when": [
+  "exec.interrupts_on_at_sites"
+ ],
+ "words": [
+  "stateless hook",
+  "alt ROM",
+  "interrupts on",
+  "no RAM page",
+  "NEXTREG"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

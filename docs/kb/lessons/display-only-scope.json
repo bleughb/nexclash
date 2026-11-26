@@ -1,0 +1,32 @@
+{
+ "id": "lesson.display-only-scope",
+ "kind": "pitfall",
+ "claim": "A test that skips a routine proves it display-only only on the paths the recording takes; branches never taken and code the stage patches elsewhere stay unchecked, so read the disassembly too.",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "Skipping the copier kept game RAM equal (L1-4, L6) once LD A,R values were fed: exact R/IRQ/copier-RAM preservation was unneeded; disassembly found gameplay logic (9804) inside the copier.",
+   "quote": "LD A,R values were fed: exact R/IRQ/copier-RAM preservation was unneeded; disassembly found 9804 logic.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/castle_master.md",
+   "text": "Raster stage alone, all frames, 5,281 calls: the only raster-written bytes read outside it are the view buffer, by display code, and the filler itself: display-only (observed).",
+   "quote": "Raster stage alone (skip_*.log, taint_8599_full.json; all frames, 5,281 calls)",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "display only",
+  "skip routine",
+  "recording coverage",
+  "unchecked branches",
+  "disassembly",
+  "replay coverage",
+  "game logic"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

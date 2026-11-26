@@ -1,0 +1,24 @@
+{
+ "id": "lesson.tape-block-loader-rewind-and-list",
+ "kind": "pitfall",
+ "claim": "A bank loader standing in for tape must retain each block's name, flag, checksum, order and actual transfer length, and be tested against the original tape's continuation.",
+ "evidence": [
+  {
+   "game": "games/inferno.md",
+   "text": "Multiload front end: the TZX has 190,814 bytes of standard header/data blocks (24 packed 8K pages); retain block names, flags, checksums, order and actual transfer lengths; stage 2 needs original-tape versus bank-loader continuation tests.",
+   "shown_on": "analysis",
+   "quote": "names, flags, checksums, order and actual transfer lengths; startup must reproduce BASIC setup."
+  }
+ ],
+ "level": "inferred",
+ "area": "toolkit",
+ "words": [
+  "bank loader",
+  "tape block list",
+  "rewind",
+  "restart",
+  "multiload"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

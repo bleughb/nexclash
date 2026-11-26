@@ -1,0 +1,27 @@
+{
+ "id": "lesson.delay-loop-screens-at-28mhz",
+ "kind": "pitfall",
+ "claim": "Screens that time themselves with CPU delay loops (title, attract, name entry) run far too fast at 28 MHz; speed up only during play and check every non-play screen for software timing.",
+ "evidence": [
+  {
+   "game": "games/r_type.md",
+   "text": "28MHz only from the level draw to the next Layer 2 off; title, scores, name entry and continue run at 3.5MHz (busy-loop timing). At 28MHz every update took 3 frames (45% fast; recording averages 4.35, title alternates 2 and 3); title to scores 621 vs original 597 frames.",
+   "quote": "28MHz only from the level draw to the next Layer 2 off (title, scores, name entry and",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "platform",
+ "words": [
+  "title",
+  "attract",
+  "name entry",
+  "delay loop",
+  "28 MHz",
+  "pace",
+  "speed switch",
+  "turbo"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

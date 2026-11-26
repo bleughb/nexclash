@@ -120,48 +120,48 @@ and the full hidden-ROM startup on the actual target. No board result is recorde
 
 ## Lessons
 
-- [local: Head Over Heels entry] PC0051 is a captured interrupt, not sufficient evidence of a
+- [kb lesson.snapshot-taken-in-loader: Head Over Heels entry] PC0051 is a captured interrupt, not sufficient evidence of a
   loader. Original simulator execution reaches the menu and rooms; retain the exact archive source.
 - [local: Head Over Heels colour source] Its colour reference really is128K and every ninth
   monochrome byte matches its snapshot. All70 figure families match after four horizontal flips; the archive executable is retained.
-- [local: Head Over Heels masks] Colour masks are not binary transparency. Ignoring their painted
+- [kb lesson.mask-ink-composition: Head Over Heels masks] Colour masks are not binary transparency. Ignoring their painted
   bits made the first offline colour image hollow; preserve the original AND/OR composition per plane.
-- [local: Head Over Heels boot] Restore the entire256-byte NEXLOAD printer buffer, not only the
+- [kb lesson.nexload-printer-buffer: Head Over Heels boot] Restore the entire256-byte NEXLOAD printer buffer, not only the
   shorter startup tail. Exact eight-bank comparison passed with the temporary workspace erased.
 - [local: Head Over Heels trainers] Runtime data pokes can be valid yet disappear at new-game reset.
   Translate them to the original nine-byte template and test the complete menu-to-play path.
 - [local: Head Over Heels dynamic art] A static sprite match does not cover animation XORs or
   constructed doors. The independent monochrome companion exposed both; model their original
   writes before judging a colour picture complete.
-- [local: Head Over Heels render budget] A renderer can fit normal update intervals and still
+- [kb lesson.native-not-simulator-timing: Head Over Heels render budget] A renderer can fit normal update intervals and still
   slow room changes substantially. Include full-room work periods, and label estimates separately
   from native pace measurements. Direct expanded copies avoid the costly bit-plane transpose.
-- [local: Head Over Heels IRQ stack] Original7FFD writes replace MMU1, so a forwarded music ISR
+- [kb lesson.paging-write-hides-hook-code: Head Over Heels IRQ stack] Original7FFD writes replace MMU1, so a forwarded music ISR
   cannot retain a private stack at3Exx. A separate stack in spare page25/MMU2 survives those writes;
   the original ISR's observed memory footprint excludes MMU2. Cover the entry stack switch too,
   before the safe IFF read, and bypass the normal bridge when a private bridge calls the original.
-- [local: Head Over Heels interrupt evidence] Injection checks alone missed the native stack race.
+- [kb lesson.interrupt-equivalence-needs-timing: Head Over Heels interrupt evidence] Injection checks alone missed the native stack race.
   Run the known failing later-room input again; count original handler entries as well as hardware
   acknowledgements when a pending latch can forward a missed pulse. Equal counts do not prove
   equal timing: the25.132ms gap required a separate per-row poll.
-- [local: Head Over Heels refresh vector] The actual IM2 route is FFFF to FFF4 to7376. Start the
+- [kb lesson.im2-ffff-vector: Head Over Heels refresh vector] The actual IM2 route is FFFF to FFF4 to7376. Start the
   reference at interrupt acknowledgement rather than assuming a refresh count at the ISR entry.
-- [local: Head Over Heels sound scope] AY channelsA/B match while asynchronous channelC effects
+- [kb lesson.ay-async-channel-differs: Head Over Heels sound scope] AY channelsA/B match while asynchronous channelC effects
   differ in native traces. Report that distinction; equal write rates alone are not sound proof.
-- [local: Head Over Heels NextREG reads] An ISR can change the shared register-select port between
+- [kb lesson.nextreg-select-shared-state: Head Over Heels NextREG reads] An ISR can change the shared register-select port between
   OUT243B and IN253B. The mutation selector is now latched during the existing entry DI window;
   boundary injection caught the old version even though register/R and game RAM still matched.
-- [local: Head Over Heels pulse phase] Added drawing changes can place a ULA pulse inside the
+- [kb lesson.interrupt-pulse-in-original-di-window: Head Over Heels pulse phase] Added drawing changes can place a ULA pulse inside the
   original967B sound-bank DI window. Trace the actual interrupted PC, then recover the pending
   pulse between companion drawing spans; do not change the sound routine or dismiss a real40ms handler gap.
 - [local: Head Over Heels shift cost] Polling every row adds cost when the row never disables
   interrupts. The shift kernel keeps hardware IRQs enabled and polls pending status every four rows;
   use native handler deadlines and pace to check this separately from pixel equivalence.
 
-- [local: Head Over Heels loop entries] Entry-only ABI checks missed loops branching into
+- [kb lesson.displaced-loop-entries: Head Over Heels loop entries] Entry-only ABI checks missed loops branching into
   displaced bytes. Keep small whole loops in immutable trampolines, or move the patch ahead of
   every back edge; check original and patched routines through return and run the native room.
-- [local: Head Over Heels palette transparency] Index255 is painted white, not free transparency.
+- [kb lesson.reserved-transparent-palette-index: Head Over Heels palette transparency] Index255 is painted white, not free transparency.
   Reserve exact duplicate71 and remap painted71 to63 only at final copy; keep source mask values
   untouched. Changing global transparency also requires resetting ULA bright-black entry24.
 - [local: Head Over Heels nested clock] Accelerated original drawing nests colour hooks. Track
@@ -173,10 +173,10 @@ and the full hidden-ROM startup on the actual target. No board result is recorde
 - [local: Head Over Heels menu glyphs] The fixed one-byte/eight-row menu font uses source
   addresses that overlap companion scenery. Keep these UI rectangles transparent to the original
   ULA, as with the game-built B66D glyphs. Native menu inspection caught a mistake shared by the model.
-- [local: Head Over Heels startup automation] A loading screen changes input timing. Anchor
+- [kb lesson.title-key-sequences: Head Over Heels startup automation] A loading screen changes input timing. Anchor
   startup keys to the restored0051/SPFFDA entry, and assert actual player updates before accepting
   a long soak; screenshots of a live menu alone do not prove play.
-- [local: Head Over Heels event traces] An execute breakpoint can fire twice around an interrupt
+- [kb lesson.jnext-execute-probe-fires-twice: Head Over Heels event traces] An execute breakpoint can fire twice around an interrupt
   before its instruction actually runs. Count effects at967C, after the original DI, with the
   argument already in D; do not interpret an entry duplicate as another effect request.
 

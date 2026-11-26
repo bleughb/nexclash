@@ -109,6 +109,8 @@ h_isr:
         push hl
         ld l,a
         ld bc,0x243B
+        in a,(c)                ; the selection the interrupted code had (a line or clock read may be half done)
+        push af
         ld a,0x51
         out (c),a
         inc b
@@ -139,9 +141,9 @@ h_isr:
         sub (hl)
         ld (V_IR1),a
         call hlib_pace_resume   ; held always, so that a line read it broke is read again (hlib_now)
-        ld bc,0x243B            ; and NR 7 selected, so that a clock read it broke reads the clock
-        ld a,7
-        out (c),a
+        ld bc,0x243B            ; and the selection the interrupted code had back: a line read (NR $1E / $1F) or a
+        pop af                  ; clock read (NR 7) it broke reads its own register again; forcing NR 7 broke a line
+        out (c),a               ; read shorter than a raster line, which hlib_now cannot see (Codex review C7)
         ld a,(V_I7)
         nextreg 0x07,a
         ld a,(V_IR1)
@@ -811,6 +813,16 @@ setup:
         otir
         dec d
         jr nz,.spr
+        ld bc,0x303B            ; sprites 60-127 hidden: another program may have left any of them visible
+        ld a,60
+        out (c),a
+        xor a
+        ld b,128-60
+.hid:   out (0x57),a
+        out (0x57),a
+        out (0x57),a
+        out (0x57),a
+        djnz .hid
         nextreg 0x54,4
         nextreg 0x55,5
         nextreg 0x15,0x01

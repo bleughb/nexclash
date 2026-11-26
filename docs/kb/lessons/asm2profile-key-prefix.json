@@ -1,0 +1,26 @@
+{
+ "id": "lesson.asm2profile-key-prefix",
+ "kind": "pitfall",
+ "claim": "asm2profile names a profile key from the SAVEBIN file name after its first underscore, so a name like hard_drivin_page.bin gives the key drivin_page; name SAVEBINs <short>_page.bin.",
+ "evidence": [
+  {
+   "game": "games/hard_drivin.md",
+   "text": "hard_drivin_page.bin gave the key drivin_page; renamed hdrivin_page.bin / hdrivin_rom.bin",
+   "quote": "asm2profile takes the key from the SAVEBIN name",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "next_check": "asm2profile could warn when the key differs from page / rom.",
+ "words": [
+  "asm2profile",
+  "savebin",
+  "profile",
+  "key",
+  "underscore",
+  "name"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

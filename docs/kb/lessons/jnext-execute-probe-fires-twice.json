@@ -1,0 +1,49 @@
+{
+ "id": "lesson.jnext-execute-probe-fires-twice",
+ "kind": "pitfall",
+ "claim": "In JNext a probe, rule or breakpoint at an address that runs with interrupts on can fire twice when an interrupt lands on it; guard against the duplicate and count completed updates only.",
+ "evidence": [
+  {
+   "game": "games/booty.md",
+   "text": "A probe at a loop head gave one extra update and read as a run shifted by one; the pace script now ignores a second firing within 20,000 T.",
+   "shown_on": "jnext"
+  },
+  {
+   "game": "games/new_zealand_story.md",
+   "text": "Probe at 0xA385 with interrupts on: an execute rule fires twice when an interrupt lands on it, a false update parts lockstep; guarded in the pace profile.",
+   "shown_on": "jnext"
+  },
+  {
+   "game": "games/dizzy_ultimate_cartoon_adventure.md",
+   "text": "An execute event can occur both before and after an accepted interrupt at the same CALL.",
+   "shown_on": "jnext"
+  },
+  {
+   "game": "games/r_type.md",
+   "text": "JNext can report an execute address again after an IRQ; one-shot phase flags and nested-ledger negatives prevent double accounting.",
+   "shown_on": "jnext"
+  },
+  {
+   "game": "games/head_over_heels.md",
+   "text": "An execute breakpoint can fire twice around an interrupt; do not read an entry duplicate as another effect request.",
+   "shown_on": "jnext"
+  }
+ ],
+ "level": "observed",
+ "area": "emulator",
+ "facts": {
+  "interrupts": "on"
+ },
+ "words": [
+  "JNext",
+  "execute probe",
+  "breakpoint",
+  "fires twice",
+  "interrupt",
+  "duplicate",
+  "pace script"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7",
+ "next_check": "In the pace script log the cycle count with each probe hit and warn on a second hit within a few T of the first."
+}

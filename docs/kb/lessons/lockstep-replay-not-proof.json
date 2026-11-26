@@ -1,0 +1,30 @@
+{
+ "id": "lesson.lockstep-replay-not-proof",
+ "kind": "method",
+ "claim": "Once hooks change cycle counts, lockstep replay diverges and proves nothing; instead copy the state at each patched routine, run both to the return and compare registers (except R, T, MEMPTR) and memory.",
+ "evidence": [
+  {
+   "game": "notes",
+   "text": "Maintainers' note: this method worked on every game; registers that differ at return are acceptable only if they converge or are overwritten before use.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/arkanoid.md",
+   "text": "Verify is done per site: original and patched run from one state to the common resume point, comparing all registers but R/T/MEMPTR and all memory but dead stack.",
+   "quote": "original and patched from one state to the common resume point, all registers but R/T/MEMPTR",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "lockstep",
+  "replay",
+  "hook compare",
+  "registers",
+  "MEMPTR",
+  "routine return"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

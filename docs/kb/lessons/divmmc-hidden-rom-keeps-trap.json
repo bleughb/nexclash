@@ -1,0 +1,31 @@
+{
+ "id": "lesson.divmmc-hidden-rom-keeps-trap",
+ "kind": "fact",
+ "claim": "A whole hidden ROM does not remove a delayed DivMMC RST 38 trap; clear only its enabling bit and keep the other DivMMC controls.",
+ "evidence": [
+  {
+   "game": "games/underwurlde.md",
+   "text": "A whole hidden ROM does not remove a delayed DivMMC RST 38 trap; clear only its enabling bit and keep the other controls.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
+   "test": "XD3",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite XD3): with an alt ROM image replacing the ROM, a delayed RST $38 trap still mapped DivMMC.",
+   "shown_on": "hardware"
+  }
+ ],
+ "level": "inferred",
+ "area": "platform",
+ "words": [
+  "DivMMC",
+  "RST 38",
+  "hidden ROM",
+  "trap",
+  "NextZXOS",
+  "enabling bit"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

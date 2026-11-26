@@ -88,11 +88,11 @@ BRIEFING - with its reason.
   ROM3 has $8C trampolines (ED 91 8C), inert in a copy (Cyclone hung at BEEP): the 'rom3' stub
   restores v2.09 (z80tonex.ROM3_V210_FIXUPS).
 - A legacy 1FFD/7FFD write from the stub remaps slots 6/7, where the stub runs: page the stub into
-  slot 4 as an alias and run the paging + copy there (no stack), restore 6/7, jump back.
-- UNLOCKED legacy paging writes (7FFD/1FFD) remap MMU slots (most recent change wins); map
-  slot-1 RAM AFTER the tail's own paging writes. LOCKED (7FFD bit 5 = 1) writes to 7FFD/1FFD/DFFD
-  are ignored with no MMU remap (VHDL 3.01.09), so a RAM slot-1 page survives them; NextReg $08
-  bit 7 can only UNLOCK (write 1), never lock. Hardware confirmation pending (Dizzy 6 build).
+  slot 4 as an alias and run the paging + copy there (no stack), restore 6/7, jump back. The NEX
+  start-up stack is in slot 6 too (R-Type DFEE): use slots 3 / 7.
+- UNLOCKED 7FFD/1FFD writes remap MMU slots 0/1 and 6/7 (latest wins; locked ones do not,
+  BRIEFING A1): map slot-1 RAM AFTER the tail's paging writes and any hooked routine that pages
+  (R-Type 8F40 hid the hook page, next IRQ reset: remap before EI; trace PC + MMU).
 - Pages mapped into slot 0 while interrupts are on = crash risk (IM1 vector at 0x38). DI around
   hook paging; hook pages must be read-only (TID bug: hook wrote into its own paged-in page).
 - Code running in slot 0 cannot unmap slot 0: map/unmap from alt ROM stubs.
@@ -150,9 +150,8 @@ BRIEFING - with its reason.
 - NextReg $43=0x20 = edit sprite palette 0 with auto-increment; $40 index, $41 RRRGGGBB.
 - NextReg $19 clip: reset the index with $1C bit 1, then write X1,X2,Y1,Y2; ULA-relative when
   sprites are not over the border.
-- Per-scanline sprite limit: at least 100 unscaled 16x16 sprites per line are guaranteed (fewer when
-  magnified); overflow sets port 0x303B read bit 1 (specnext.com/sprites, ports.txt). We use <= ~12
-  per line: no risk. Layer order is global (NextReg $15 bits 4:2, SLU default): sprites cannot sit
+- Per-scanline sprite limit: 105 unscaled 16x16 sprites a line (52 / 26 / 13 at 2x / 4x / 8x; N-Go
+  3.03.00, nxsuite SP10); overflow sets port 0x303B read bit 1 (ports.txt). We use <= ~12 a line. Layer order is global (NextReg $15 bits 4:2, SLU default): sprites cannot sit
   behind some ULA objects and in front of others (Wally limit stands).
 - Sprite-to-sprite order: NextReg $15 bit 6 = 0 (reset) draws the HIGHER sprite number on top;
   1 flips it (guide r3 p.89; documented, Rainbow items rely on it - hardware to confirm). To put
@@ -606,18 +605,18 @@ Grouped by question; add a new lesson to its group.
 - Prove free memory with an access scan over the recording, not by zero-check.
   Also require zero content for persistent code (untouched may just mean
   "room not visited"), or explain the non-zero bytes. Commando's hook RAM 0x5E20-0x60FF holds
-  non-zero bytes: BASIC workspace below RAMTOP (CLEAR 25087), below the game's own stack; no game
-  code references it; untouched in area 1 + start-up - later areas not yet scanned (commando.md).
-- The printer buffer is not always free: Dizzy 1 keeps its stack above it,
-  Dizzy 4 keeps a bit-reverse table there, Rainbow Islands keeps code there,
-  Everyone's a Wally uses it (0x5B00-0x7AFF write-first).
-- Default "below SP" tail placement can hit data (Dizzy 1: font at 0xFF9E) or
-  code (Dizzy 4: code directly below the stack). Always check the printed tail.
-- Below SP is NOT free by default (Match Day's trophy data, 2026-11-04): prove a tail write-first.
+  non-zero bytes: BASIC workspace below RAMTOP (CLEAR 25087), below the game's stack; no code
+  references it; untouched in area 1 + start-up, later areas unscanned (commando.md).
+- The printer buffer is not always free: Dizzy 1's stack above it; Dizzy 4's bit-reverse table,
+  Rainbow Islands' code, Everyone's a Wally's data (0x5B00-0x7AFF write-first) in it.
+- "Below SP" is not free (Dizzy 1: font 0xFF9E; Dizzy 4: code; Match Day: trophy data, 2026-11-04);
+  check the printed tail.
 - A game reading the ROM font needs a slot-1 page that is a copy of ROM 0x2000-0x3FFF, with
   hooks only where the game never reads (prefer `altrom`: the alt ROM is that copy, read-only).
 - An undo buffer (or back buffer) written before read in every RZX is a stronger tail site than
   dead stack and rescues slot1 when dead stack < 54 (Dizzy 6: 48 bytes; Rainbow: back buffer).
+  Prove a tail by rom_paths' proof, not RAM checkpoints (Green Beret's scenery buffer is shown
+  before its first draw); none write-first: restore it (Alien 8, Green Beret).
 
 - A screen effect that uses MEMORY AS MASKS reads all of it (Lode Runner's fade: screen AND bytes
   0x0000-0x6BFF, 4 passes): the alt ROM hook area and the printer buffer then change what the effect
@@ -646,7 +645,8 @@ Grouped by question; add a new lesson to its group.
 - Z80N instructions in hooks: always allowed in .nex builds (maintainers, 2026-10-21). SkoolKit's
   simulator does not know them (an unknown ED opcode runs as a silent 2-byte NOP), so a verifier
   calls `z80n.install(sim, nextreg)` after simpool.machine(): all 29, NEXTREG through the engine's
-  own model, other ED NOPs and ED B6 raise Z80NError (strict=False for game code that runs ED NOPs).
+  own model, other ED NOPs and ED B6 (LDIRX on N-Go 3.03.00, nxsuite Z04) raise Z80NError
+  (strict=False: game code running ED NOPs).
   Handlers follow core 3.02.05's VHDL where the guide disagrees (z80n docstring: LDIX-family flags
   like LDI, ADD rr,A clears CF, LDWS 14 T). Engines written before it (cyclone._machine ED 31 / ED 30,
   rainbow SWAPNIB, the NEXTREG copies) keep their own handlers until moved - moving them changes a
@@ -953,8 +953,9 @@ Grouped by question; add a new lesson to its group.
   LOG` with the call's timeout raised to 10 minutes (default 2 kills it mid-sleep; lower caps: sleep just
   under). Every call resends the whole conversation: ten 1-minute polls cost ten times one 9-minute
   poll and tell nothing more (Chuckie Egg release run ~15 min). Never `cat` a log; `tail -3` or `grep -c '!'`.
-- Run a stamping selftest in a separate git worktree (`git worktree add ../nexclash-verify BRANCH`)
-  so its record stamps do not collide with edits in the main checkout; commit them from there.
+- Run a stamping selftest, or any long run rebuilding from files, in a separate git worktree
+  (`git worktree add ../nexclash-verify BRANCH`), apart from edits (R-Type: half-edited input read as
+  a slowdown); commit from there.
 - `cd X; cmd` runs cmd in the OLD directory when X does not exist - use `cd X && cmd` (a selftest
   with --stamp started in the wrong checkout).
 - GitHub from a cloud session: the git proxy pushes only to repositories attached to the session

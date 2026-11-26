@@ -18,6 +18,7 @@ patch.xor-overlay-keep-ula - the game draws its cars as before; the six colour w
 (no clash) and one sprite per car, set when the draw routine has settled each car's move, covers the car's ink
 in the car's colour. Options, each its own build (auto): painted cars, engine sound, painted circuits (2MB).
 """
+from . import l2pal
 import collections
 import json
 import os
@@ -106,11 +107,18 @@ def patterns(peek):
 
 
 # ---------------------------------------------------------------------------------------------
-# Painted cars and the backdrop (assets/3d_stock_car_championship: original art, no game data)
+# Painted cars and the backdrop (specnext reference/3d_stock_car_championship/assets)
 # ---------------------------------------------------------------------------------------------
 
 def _asset(name):
-    return os.path.join(_HERE, '..', 'assets', '3d_stock_car_championship', name)
+    """The painted art lives in the maintainers' reference repo (reference/3d_stock_car_championship/assets), not here:
+    $NEXCLASH_REFERENCE, ./reference, ../specnext/reference."""
+    for d in (os.environ.get('NEXCLASH_REFERENCE'), os.path.join(_HERE, '..', 'reference'),
+              os.path.join(_HERE, '..', '..', 'specnext', 'reference')):
+        p = os.path.join(d, '3d_stock_car_championship', 'assets', name) if d else None
+        if p and os.path.exists(p):
+            return p
+    raise FileNotFoundError('3D Stock Car art %s: set NEXCLASH_REFERENCE to specnext/reference' % name)
 
 
 def nine_bit(rgb):
@@ -218,6 +226,7 @@ def circuit_picture(path, cover_path):
     data = bytes(where[(x, y)] if (x, y) in where else index[px[x, y]] for x in range(320) for y in range(256))
     pal = b''.join(nine_bit(c) for c in base)
     pal += b''.join(bytes([nine_bit(c)[0], nine_bit(c)[1] | 0x80]) for c in top)      # bit 15: over every other layer
+    pal = l2pal.fix(pal, 'pairs')                             # the game sets NR $14 = $E3: opaque 0xE3 -> 0xE7
     return data, pal + bytes(512 - len(pal))
 
 

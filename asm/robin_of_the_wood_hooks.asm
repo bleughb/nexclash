@@ -4,7 +4,6 @@
         DEVICE ZXSPECTRUMNEXT
         ORG 0x386E
 e_gfx:
-        nextreg 7,3
         push af
         push bc
         push de
@@ -12,7 +11,9 @@ e_gfx:
         push ix
         push iy
         nextreg 0x53,26
+        call spdin
         call capture
+        call spdout
         nextreg 0x54,4
         nextreg 0x53,11
         pop iy
@@ -21,10 +22,8 @@ e_gfx:
         pop de
         pop bc
         pop af
-        nextreg 7,0
         jp 0xC67E
 e_commit:
-        nextreg 7,3
         push af
         push bc
         push de
@@ -32,7 +31,9 @@ e_commit:
         push ix
         push iy
         nextreg 0x53,26
+        call spdin
         call commit
+        call spdout
         nextreg 0x54,4
         nextreg 0x53,11
         pop iy
@@ -41,10 +42,8 @@ e_commit:
         pop de
         pop bc
         pop af
-        nextreg 7,0
         jp 0xC955
 e_room:
-        nextreg 7,3
         push af
         push bc
         push de
@@ -52,7 +51,9 @@ e_room:
         push ix
         push iy
         nextreg 0x53,26
+        call spdin
         call clear
+        call spdout
         nextreg 0x54,4
         nextreg 0x53,11
         pop iy
@@ -61,11 +62,9 @@ e_room:
         pop de
         pop bc
         pop af
-        nextreg 7,0
         ld hl,0x7C02
         ret
 e_menu:
-        nextreg 7,3
         push af
         push bc
         push de
@@ -73,7 +72,9 @@ e_menu:
         push ix
         push iy
         nextreg 0x53,26
+        call spdin
         call clear
+        call spdout
         nextreg 0x54,4
         nextreg 0x53,11
         pop iy
@@ -82,10 +83,8 @@ e_menu:
         pop de
         pop bc
         pop af
-        nextreg 7,0
         jp 0xCE73
 e_start:
-        nextreg 7,3
         push af
         push bc
         push de
@@ -93,7 +92,9 @@ e_start:
         push ix
         push iy
         nextreg 0x53,26
+        call spdin
         call clear
+        call spdout
         nextreg 0x54,4
         nextreg 0x53,11
         pop iy
@@ -102,10 +103,8 @@ e_start:
         pop de
         pop bc
         pop af
-        nextreg 7,0
         jp 0xCE67
 e_arrow_erase:
-        nextreg 7,3
         push af
         push bc
         push de
@@ -113,7 +112,9 @@ e_arrow_erase:
         push ix
         push iy
         nextreg 0x53,26
+        call spdin
         call arrow_erase
+        call spdout
         nextreg 0x54,4
         nextreg 0x53,11
         pop iy
@@ -122,10 +123,8 @@ e_arrow_erase:
         pop de
         pop bc
         pop af
-        nextreg 7,0
         jp 0xBBEC
 e_arrow_draw:
-        nextreg 7,3
         push af
         push bc
         push de
@@ -133,7 +132,9 @@ e_arrow_draw:
         push ix
         push iy
         nextreg 0x53,26
+        call spdin
         call arrow_draw
+        call spdout
         nextreg 0x54,4
         nextreg 0x53,11
         pop iy
@@ -142,10 +143,8 @@ e_arrow_draw:
         pop de
         pop bc
         pop af
-        nextreg 7,0
         jp 0xBBEC
 e_item:
-        nextreg 7,3
         push af
         push bc
         push de
@@ -153,7 +152,9 @@ e_item:
         push ix
         push iy
         nextreg 0x53,26
+        call spdin
         call item
+        call spdout
         nextreg 0x54,4
         nextreg 0x53,11
         pop iy
@@ -162,7 +163,6 @@ e_item:
         pop de
         pop bc
         pop af
-        nextreg 7,0
         ld (0xD8C2),a
         ret
 e_hud: push af
@@ -617,6 +617,25 @@ slotbase: db 0
 firstslot: db 0
 end_slot: db 0
 remaining: db 0
+; spdin: the caller's CPU speed (F8) latched, then 28 MHz; every register kept (the game never uses 0x243B / 0x253B).
+; spdout: back to it; A, F lost.
+spdin:  push af
+        push bc
+        ld bc,0x243B
+        ld a,7
+        out (c),a
+        inc b
+        in a,(c)
+        and 3
+        ld (v_spd),a
+        nextreg 7,3
+        pop bc
+        pop af
+        ret
+spdout: ld a,(v_spd)
+        nextreg 7,a
+        ret
+v_spd:  db 0
 rows_left: db 0
 tile_y: db 0
 last_used: db 0

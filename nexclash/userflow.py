@@ -61,6 +61,30 @@ def artifact_state(path):
         return None
 
 
+def output_paths(out, name, since=None):
+    """(plain, sprite build) of a build in `out`: NAME.nex and NAME_sprites.nex, or the names its engine declared in
+    NAME_outputs.json (docs/ENGINE_CONTRACT.md "Outputs"; Fireman ASTRA). since: a declaration written before it is
+    an earlier build's, not this one's (nxcout.manifest's rule), and is ignored."""
+    plain, spr = name + '.nex', name + '_sprites.nex'
+    decl = os.path.join(out, name + '_outputs.json')
+    if os.path.exists(decl) and (since is None or os.path.getmtime(decl) >= since):
+        d = json.load(open(decl))
+        plain, spr = d.get('plain') or plain, d.get('default') or spr
+    return os.path.join(out, plain), os.path.join(out, spr)
+
+
+def match_release(known, got):
+    """The release of this snapshot whose outputs `got` ({kind: md5}) reproduces, or None. Every release counts: a
+    frozen or alternate release shares the snapshot (Everyone's a Wally, Fireman OPUS / ASTRA, Rainbow)."""
+    variants = known.get('variants') or [dict(known, record=known.get('doc'), args=[])]
+
+    def same(v):                                # its sprite build, and every other build it pins (a rework may pin no
+        n = v['nex']                            # plain one: Atic Atac v1.3 / v1.4)
+        return n.get('sprites') is not None and n['sprites'] == got.get('sprites') and \
+            all(n[k] == got[k] for k in got if k != 'sprites' and k in n)
+    return next((v for v in variants if same(v)), None)
+
+
 def cmd_patch(a, cmd_auto):
     """Build for the user's own snapshot; then say how much of it is proven."""
     z80 = a.z80
@@ -68,8 +92,9 @@ def cmd_patch(a, cmd_auto):
     out = a.out or os.path.join(os.path.dirname(os.path.abspath(z80)), name + '_nexclash')
     h = md5(z80)
     known = verified().get('snapshots', {}).get(h)
-    plain, spr = os.path.join(out, name + '.nex'), os.path.join(out, name + '_sprites.nex')
-    previous = artifact_state(spr)
+    started = time.time() - 1                   # mtime granularity: a file this run writes is newer
+    before = {f: artifact_state(os.path.join(out, f)) for f in (os.listdir(out) if os.path.isdir(out) else ())
+              if f.endswith('.nex')}            # every output's state: the one this run selects is compared with its own
     try:
         if cmd_auto(a) is False:
             print('Sprite build FAILED its checks; previous output files are not a new build.')
@@ -83,7 +108,8 @@ def cmd_patch(a, cmd_auto):
     rep = open(os.path.join(out, name + '_report.txt')).read() if os.path.exists(
         os.path.join(out, name + '_report.txt')) else ''
     print()
-    current = artifact_state(spr)
+    plain, spr = output_paths(out, name, started)   # an engine declares its own names (NAME_outputs.json), this run
+    current, previous = artifact_state(spr), before.get(os.path.basename(spr))
     if current is not None and current == previous:
         print('No sprite build from this run: %s is an earlier output, kept unchanged. Do not use it as this run\'s result.' % spr)
         return 2
@@ -98,12 +124,15 @@ def cmd_patch(a, cmd_auto):
     if known and getattr(a, 'allow_60hz', False):
         print('Recognised snapshot: %s (games/%s); --allow-60hz output has not been compared to the reference.' % (known['game'], known.get('doc', '?')))
     elif known:
-        want = known.get('nex', {})
         got = {'plain': md5(plain) if os.path.exists(plain) else None, 'sprites': md5(spr)}
-        same = all(want.get(k) is not None and want[k] == got[k] for k in got)
+        hit = match_release(known, got)
+        same = hit is not None
+        if same:
+            known = hit
         print('Recognised snapshot: %s (games/%s). Output %s the reference build%s.' % (
             known['game'], known.get('doc', '?'), 'is identical to' if same else 'DIFFERS from',
-            '' if same else ' (report this: %s)' % got))
+            (' (%s)' % ' '.join(hit['args'] + ['%s=%s' % kv for kv in sorted(hit.get('env', {}).items())])
+             if hit.get('args') or hit.get('env') else '') if same else ' (report this: %s)' % got))
     else:
         print('PATCHED: your snapshot is not byte-identical to the one we verified, but every patch site')
         print('held the original bytes, so the same patch applied. To prove it for YOUR snapshot, record')
@@ -290,6 +319,31 @@ def contribution_base(files, base_ref=None):
     return {'kind': 'git', 'commit': base}, originals
 
 
+def new_lessons(files, source):
+    """What a contribution teaches -> [(file, text)]: "## Lessons" bullets of its game notes that the base does not
+    hold (every bullet when there is no Git base to compare), and its shared-lesson files."""
+    import re
+    def bullets(text):
+        m = re.search(r'^## Lessons\s*$(.*?)(?=^## |\Z)', text, re.M | re.S)
+        return [' '.join(x.split()) for x in re.split(r'^- ', m.group(1), flags=re.M)[1:]] if m else []
+    out = []
+    for f in files:
+        if fnmatch.fnmatch(f, 'games/*.md'):
+            old = ''
+            if source.get('kind') == 'git':
+                r = subprocess.run(['git', '-C', ROOT, 'show', '%s:%s' % (source['commit'], f)], capture_output=True)
+                old = r.stdout.decode('utf-8', 'replace') if not r.returncode else ''
+            have = set(bullets(old))
+            out += [(f, x) for x in bullets(open(os.path.join(ROOT, f), encoding='utf-8').read()) if x not in have]
+        elif fnmatch.fnmatch(f, 'docs/kb/lessons/*.json'):
+            try:
+                x = json.load(open(os.path.join(ROOT, f), encoding='utf-8'))
+                out.append((f, '%s: %s' % (x.get('id'), x.get('claim'))))
+            except ValueError:
+                out.append((f, 'not JSON'))
+    return out
+
+
 def cmd_contribute(a):
     files = changed_files(getattr(a, 'base', None))
     excluded = sorted(set(getattr(a, 'exclude', None) or []))
@@ -321,6 +375,8 @@ def cmd_contribute(a):
             'package_version': open(os.path.join(ROOT, 'VERSION')).read().strip()
             if os.path.exists(os.path.join(ROOT, 'VERSION')) else 'git',
             'files': {f: md5(os.path.join(ROOT, f)) for f in keep}, 'reports': [], 'patches': {}}
+    learned = new_lessons(keep, source)
+    meta['lessons'] = [dict(file=f, text=x[:300]) for f, x in learned]
     with zipfile.ZipFile(zname, 'w', zipfile.ZIP_DEFLATED) as z:
         for f in keep:
             z.write(os.path.join(ROOT, f), 'files/' + f)
@@ -340,6 +396,12 @@ def cmd_contribute(a):
                                                if meta['patches'] else ''))
     for f in keep:
         print('  ' + f)
+    print('Lessons added or changed: %d%s' % (len(learned), '' if learned else
+                                              ' (none: say what this game taught in games/<game>.md "## Lessons")'))
+    for f, x in learned[:8]:
+        print('  %s  %s' % (os.path.basename(f), x[:110]))
+    if len(learned) > 8:
+        print('  ... %d more' % (len(learned) - 8))
     print('Upload it: %s' % (c.get('upload_url') or 'see CONTRIBUTING.md'))
     if c.get('pull_requests'):
         print('(GitHub users can open a pull request instead: %s)' % c['pull_requests'])

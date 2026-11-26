@@ -214,7 +214,7 @@ pin rom3) are untouched and stay the default.
 The redraw after a lost life took 124 frames against the original's 58; now 57 to 58. Cell hooks at 28 MHz, the game's cell code at 7 MHz, outside a game frame. Details: games/rainbow_z80n_pace.md.
 
 ## Lessons
-- [local: this engine] The audit's "run the cell hooks at 28 MHz" cut 124 frames to 94, not to the original's 58: a hook called 5,500 times spends most of its time getting there. The PC sample by NR 7 said so straight away.
+- [kb lesson.hook-call-overhead-at-28mhz: this engine] The audit's "run the cell hooks at 28 MHz" cut 124 frames to 94, not to the original's 58: a hook called 5,500 times spends most of its time getting there. The PC sample by NR 7 said so straight away.
 - [local: this engine] Mixing speeds by count is chaotic when the speed also carries past the loop: tune with something uniform per call (RD_DLY).
 - [tool nexclash/rainbow_dma.py] Experimental DMA uses the sky variant and checks the baseline MD5;
   original pinned outputs and prior verification stamps are retained. New replay scope is separate.
@@ -235,7 +235,7 @@ The redraw after a lost life took 124 frames against the original's 58; now 57 t
   AY ticks of interrupts a frame missed are not re-sent at the frame end; the queue's catch-up
   (two per interrupt, flush when full) covers them.
 
-- [local: the player's shifted-in-place frames are stored serpentine] Sheet keys un-shifted every row
+- [kb lesson.serpentine-rows-shift-opposite: the player's shifted-in-place frames are stored serpentine] Sheet keys un-shifted every row
   the same way; odd rows move the other way in memory, so 927 player pixels were ink in one figure and
   clear in another (painting landed elsewhere). shifted_key fixed by row parity (probe: 444,840 rows of
   both RZX, 0 differ); `sheet` now reports such conflicts (0 on the painting sheet; 2 on the reference

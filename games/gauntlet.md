@@ -140,15 +140,19 @@ Not built for hardware yet (the level blocks first).
 - 2026-11-19 (owner): the slowdown "might be an opportunity to fix that in the nxc patch option": the steady build.
 
 ## Lessons
-- [local: this game's design] A game that draws only grid-aligned blocks needs no plot hooks: the picture is looked up
+- [local: a clear's speed-up pays the pace] e_cl must run the clear at 28 MHz (its saved time pays for the tile
+  pass) and give back the caller's speed within STACK (6 bytes): A kept for the clear, the speed below it, EX (SP),HL
+  to restore it without touching the clear's outputs (F = 66, B = 0). The replay alone passed a fix that lost A:
+  it always enters with A = 0 at 3.5 MHz; the unit case at speeds 1-3 caught it.
+- [kb lesson.grid-blocks-no-plot-hooks: this game's design] A game that draws only grid-aligned blocks needs no plot hooks: the picture is looked up
   from the finished hidden screen, so nothing of the game is touched and scrolling needs no tracking.
-- [local: this game's hooks] A pace window longer than a frame loses a frame unless its clock is read inside it: the
+- [kb lesson.pace-window-needs-tick: this game's hooks] A pace window longer than a frame loses a frame unless its clock is read inside it: the
   pass on a full screen took 70,000 T too long until it read the clock every row.
 - [local: this game's hooks] A hook where interrupts are on cannot map the state page when the handler reads the ROM:
   the clear's hook only changes the speed and its saved time is waited out in a hook that runs with interrupts off.
 - [local: this game's verifier] A broken build must be one the data can show: "attribute not compared" cannot fail
   here, because the attribute already picks the chain.
-- [local: this game's intake] The archive's block snapshots are taken at the "rewind tape" prompt; a build that starts
+- [kb lesson.snapshot-intake-state: this game's intake] The archive's block snapshots are taken at the "rewind tape" prompt; a build that starts
   in play needs the recording cut at a frame where the game waits at its HALT.
 
 - [local: this game's tape] A multiload's blocks and a front end's hand-over need no recording across them to prove the

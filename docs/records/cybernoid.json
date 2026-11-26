@@ -1,0 +1,200 @@
+{
+ "name": "cybernoid",
+ "order": 220,
+ "game": "Cybernoid - The Fighting Machine",
+ "doc": "cybernoid.md",
+ "engine": "cybernoid",
+ "representative": true,
+ "reference": "cybernoid",
+ "inputs": {
+  "snapshot": {
+   "name": "cybernoid.z80",
+   "md5": "92ad5a23acfe06f0756ae2d503ab31cc",
+   "path": "cybernoid/release-20261106/files/Cybernoid - The Fighting Machine (1988)(Hewson Consultants)(128K).z80"
+  },
+  "recordings": [
+   {
+    "name": "level0-128.rzx",
+    "md5": "b05a7755c8c4d028a6637f441a345148",
+    "path": "cybernoid/release-20261106/rzx/level0-128.rzx"
+   },
+   {
+    "name": "level1-128.rzx",
+    "md5": "ecf355bb31773207e3a2f2356d0214b0",
+    "path": "cybernoid/release-20261106/rzx/level1-128.rzx"
+   },
+   {
+    "name": "level2-128.rzx",
+    "md5": "7b3b4629b7ccd457566e405d3d985816",
+    "path": "cybernoid/release-20261106/rzx/level2-128.rzx"
+   },
+   {
+    "name": "death-restart-128.rzx",
+    "md5": "656f7319057a13e7e2dc1abfcfc9d81c",
+    "path": "cybernoid/release-20261106/rzx/death-restart-128.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "cybernoid"
+ ],
+ "own_modules": [
+  "cybernoid"
+ ],
+ "data": [
+  "asm/cybernoid_hooks.asm",
+  "docs/profiles/cybernoid.json",
+  "docs/profiles/cybernoid_colours.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_pace.asm",
+  "asm/lib/hlib_pcache.asm",
+  "asm/lib/hlib_commit.asm",
+  "asm/lib/hlib_dma.asm",
+  "asm/lib/hlib_iff.asm"
+ ],
+ "rebuild": {
+  "args": [],
+  "rzx": []
+ },
+ "verify": {
+  "args": [],
+  "rzx": [
+   "level0-128.rzx",
+   "level1-128.rzx",
+   "level2-128.rzx",
+   "death-restart-128.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 30,
+  "note": "Authoritative release proof is the external release-20261106/work suite including all ABI/IRQ/negative fixtures. No generic selftest verification stamp claimed."
+ },
+ "outputs": {
+  "plain": {
+   "file": "cybernoid.nex",
+   "md5": "7c7bd61154709c7c0ac37ef63e59e165"
+  },
+  "sprites": {
+   "file": "cybernoid_sprites.nex",
+   "md5": "c08867f3174b9b8c73cbad5af84d25c7"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Cybernoid - The Fighting Machine",
+  "engine_col": "cybernoid (cybernoid.md)",
+  "build": "v1.1 128K; default clash fix; approved Enhanced optional",
+  "software": "25707 differential frames; all broken controls caught; pace worst 0.693%; actual loader checked separately",
+  "hardware": "untested",
+  "next": "Claude packaging review; owner hardware review"
+ },
+ "checks": [
+  "asm2profile:cybernoid"
+ ],
+ "results": [
+  {
+   "check": "external 128K release suite",
+   "status": "pass",
+   "scope": "Three level-start tours plus a separate one-life death, game-over and restart recording. Tours use labelled level-start and immunity/stock fixtures; they are not natural full-game completion. 192 small, 648 big, 1,020 tile image/position cases; 48 colours; 960 painter edges; table-full, clear and priority cases. All 17 deliberately broken variants detected.",
+   "evidence": "games/cybernoid.md"
+  }
+ ],
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/cybernoid.md#verification"
+   ],
+   "coverage": "The recordings in the record, in the simulator.",
+   "result": "Pace within 0.70 % of the original in every measured scene, default and Enhanced, three trials each (Verification); no real-machine timing."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/cybernoid.md#design-and-boot"
+   ],
+   "coverage": "The three XOR plotters (32957, 41469, 42203) and every recording's reads of figure pixels (Design and boot).",
+   "result": "XOR plots become sprites; scenery, panel and text stay on the ULA; the game still reads its own pixels."
+  },
+  "decision": "Figures as sprites over the XOR pixels, default clash fix; approved Enhanced colours optional.",
+  "next_experiment": "A board run of the automap-off build: heavy debris rooms, no stray sprites, pace within 1 %."
+ },
+ "checked": {
+  "deps": {
+   "asm/cybernoid_hooks.asm": "9841f3e1067c7489",
+   "asm/lib/hlib_commit.asm": "c696d3eee26ec9a4",
+   "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_pcache.asm": "e312737f71ce583c",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
+   "docs/profiles/cybernoid.json": "1fe032453bdb852a",
+   "docs/profiles/cybernoid_colours.json": "3f063e27c1711127",
+   "nexclash.py": "d9b430cef7478a38",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
+   "nexclash/cybernoid.py": "4e9f2a57aa317f11",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "c94090e21d49bd22",
+   "nexclash/hooklib.py": "258714a3676ee71b",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "a48f70d32f869201",
+   "nexclash/recolour.py": "28ecc65866678e42",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "00a819bce901c056",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-22"
+ },
+ "verified": {
+  "deps": {
+   "asm/cybernoid_hooks.asm": "9841f3e1067c7489",
+   "asm/lib/hlib_commit.asm": "c696d3eee26ec9a4",
+   "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_pcache.asm": "e312737f71ce583c",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
+   "docs/profiles/cybernoid.json": "1fe032453bdb852a",
+   "docs/profiles/cybernoid_colours.json": "3f063e27c1711127",
+   "nexclash.py": "d9b430cef7478a38",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
+   "nexclash/cybernoid.py": "4e9f2a57aa317f11",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "c94090e21d49bd22",
+   "nexclash/hooklib.py": "258714a3676ee71b",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/nextboot.py": "a48f70d32f869201",
+   "nexclash/recolour.py": "28ecc65866678e42",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "00a819bce901c056",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-22"
+ }
+}

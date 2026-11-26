@@ -1,0 +1,29 @@
+{
+ "id": "lesson.rzx-fetch-count-frames",
+ "kind": "method",
+ "claim": "Frames counted by RZX fetch count stay aligned when hooks run in ROM and each site keeps its fetch count, and they keep interrupt-driven music in step where T-state frames do not.",
+ "evidence": [
+  {
+   "game": "games/pac_mania.md",
+   "text": "Frames by RZX fetch count stay aligned when hooks run in ROM and each site keeps its fetch count.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/rambo.md",
+   "text": "Fetch counts keep the interrupt-driven music in step where T-state frames do not.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "words": [
+  "fetch count",
+  "RZX",
+  "lockstep",
+  "frames",
+  "interrupt music",
+  "hooks"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

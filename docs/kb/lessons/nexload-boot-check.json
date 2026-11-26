@@ -1,0 +1,32 @@
+{
+ "id": "lesson.nexload-boot-check",
+ "kind": "method",
+ "claim": "Boot every build with nexload=True before calling its start safe; only that boot shows a NEXLOAD-overwritten printer buffer.",
+ "evidence": [
+  {
+   "game": "games/robin_of_the_wood.md",
+   "text": "Boot every build with nexload=True before calling its start safe; a 128K snapshot can keep its stack in the printer buffer too.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/highway_encounter.md",
+   "text": "Plain conversion and both modes preserve exact B0E0 registers, R and RAM on normal and NEXLOAD boot.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "enforced_by": [
+  "nexclash.nextboot.nexload_check"
+ ],
+ "words": [
+  "NEXLOAD",
+  "boot check",
+  "nexload=True",
+  "printer buffer",
+  "start safe",
+  "nextboot"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

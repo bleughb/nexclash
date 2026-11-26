@@ -1,0 +1,33 @@
+{
+ "id": "lesson.mmu-slot-0-with-interrupts",
+ "kind": "pitfall",
+ "claim": "Mapping pages into slot 0 with interrupts on risks a crash (the IM1 vector at 0x38), and code running in slot 0 cannot unmap slot 0.",
+ "evidence": [
+  {
+   "game": "notes",
+   "text": "Maintainers' note on slot 0 paging; not checked against a source file.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "docs/LEARNINGS.md",
+   "text": "Pages mapped into slot 0 while interrupts are on are a crash risk (IM1 vector at 0x38); DI around hook paging. Code running in slot 0 cannot unmap slot 0: map and unmap from alt ROM stubs.",
+   "quote": "Pages mapped into slot 0 while interrupts are on = crash risk",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "inferred",
+ "area": "platform",
+ "facts": {
+  "interrupts": "on"
+ },
+ "words": [
+  "slot 0",
+  "interrupts",
+  "IM1 vector",
+  "0x38",
+  "unmap",
+  "MMU"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

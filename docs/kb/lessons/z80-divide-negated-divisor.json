@@ -1,0 +1,25 @@
+{
+ "id": "lesson.z80-divide-negated-divisor",
+ "kind": "method",
+ "claim": "Speed up a Z80 divide loop by stepping 8 bits at a time with the divisor negated.",
+ "evidence": [
+  {
+   "game": "games/castle_master.md",
+   "text": "div32 and proj1 by 8-bit steps with the divisor negated: 1,967 to 970 T; the PUSH run starts from an end of either parity.",
+   "quote": "div32 and proj1 by 8-bit steps with the divisor negated (1,967 -> 970 T)",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "words": [
+  "divide",
+  "32-bit",
+  "negated divisor",
+  "T-states",
+  "PUSH fill",
+  "Z80"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

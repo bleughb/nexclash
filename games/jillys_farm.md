@@ -38,15 +38,15 @@ Nothing has run on a Next. To check: start-up through the loader, keyboard, the 
 - verify.update-locked-pace: used: lockstep with the input applied after the game's read.
 
 ## Lessons
-- [local: no-hook engine] As Gunrunner: a monochrome game needs no site, and the checks that still mean something are the boot compare with R, rom_paths and the tail.
+- [kb lesson.monochrome-game-no-hook-engine: no-hook engine] As Gunrunner: a monochrome game needs no site, and the checks that still mean something are the boot compare with R, rom_paths and the tail.
 - [local: level codes] A game's own level codes reach every level by keys alone, with no test poke: the recording stays a clean one.
 
 - [local: registers without planes] Compare with the set's own emulator, not just your model of it. My plane model and hook agreed perfectly and both were wrong on the sheep: OR IYh has no planes on Spec256. A frame diff against emuspec256 found it in one look.
 - [local: hook the routine, not its callers] Eight routines' callers were hooked and the replay passed everywhere, and the menu stayed all ULA: 8BE9 falls into the copy at 8BED, past any CALL. The model only knew what the hooks told it. So the model's copied master plane is now compared with the game's real screen at every copy: nothing reaches the screen without passing a hook. Any overlay model should check itself against the real output, not only the hook's.
-- [local: cheaper beats repaid] Tuning how overage was repaid only moved the miss around: +7% slow stretches, -33% bursts. Compiling known sprites to code took the overage away, and the same windows came within a few percent both ways. When a loop's budget is the problem, spend on the loop first.
-- [local: flat-out game] A game with no frame wait needs a K window round all it can, or every hook entry at 3.5 MHz is its own cost. Time saved in the game's own logic pays for Layer 2 work, so a window over logic alone is useful.
-- [local: debt cap] hlib's debt cap is taken inside a window too: capping it low stops a heavy window's nested work counting at all (a +90% stretch). Trim or bank what is left after the wait instead.
-- [local: keys under the frame] When updates are shorter than a frame, keys applied at the frame edge cannot be keyed to updates, so a test fixture plays from inside the game: a small generator in place of the control read gave both arms the same input and lockstep over 3,000 updates.
+- [kb lesson.cheaper-beats-repaid: cheaper beats repaid] Tuning how overage was repaid only moved the miss around: +7% slow stretches, -33% bursts. Compiling known sprites to code took the overage away, and the same windows came within a few percent both ways. When a loop's budget is the problem, spend on the loop first.
+- [kb lesson.pace-need-by-game-structure: flat-out game] A game with no frame wait needs a K window round all it can, or every hook entry at 3.5 MHz is its own cost. Time saved in the game's own logic pays for Layer 2 work, so a window over logic alone is useful.
+- [kb lesson.pace-window-needs-tick: debt cap] hlib's debt cap is taken inside a window too: capping it low stops a heavy window's nested work counting at all (a +90% stretch). Trim or bank what is left after the wait instead.
+- [kb lesson.pace-input-timing: keys under the frame] When updates are shorter than a frame, keys applied at the frame edge cannot be keyed to updates, so a test fixture plays from inside the game: a small generator in place of the control read gave both arms the same input and lockstep over 3,000 updates.
 - [local: set offset by graphic] Set and release can differ by a constant in their graphics while code moves about. Compare the set's master with the release at the candidate offset, byte by byte, and list what doesn't match; two early runs of text-like data matched at false offsets.
 
 ## Friction

@@ -282,7 +282,7 @@ the sync, 6 seeds in lockstep: quiet -1.59..+0.73%, busy -0.70..+0.95%. Details 
 ## Lessons
 - [local: a frame sync hidden in the sound] demonstrated: no HALT, no FRAMES read; check frames per update before writing "no frame sync".
 - [local: pace probe and input] demonstrated: 0x8950 can run twice an update; JNext input arrives at the next frame boundary: probe the screen copy, apply input after the game's read.
-- [local: hlib_pace windows over a frame] demonstrated: a commit over 20 ms lost whole frames until hlib_pace_tick ran per figure.
+- [kb lesson.pace-window-needs-tick: hlib_pace windows over a frame] demonstrated: a commit over 20 ms lost whole frames until hlib_pace_tick ran per figure.
 - [card patch.restore-speed §Use / do not use] The plot-loop exits keep no stack and no flags: they restore the speed
   through a byte of page 26 before unmapping it (`ld (V_A),a / ld a,(V_SPD) / nextreg 7,a / ld a,(V_A)`). Card amended.
 

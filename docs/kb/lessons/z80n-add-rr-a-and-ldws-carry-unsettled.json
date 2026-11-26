@@ -1,0 +1,46 @@
+{
+ "id": "lesson.z80n-add-rr-a-and-ldws-carry-unsettled",
+ "kind": "open",
+ "claim": "Do not test carry after LDWS: boards with core 3.02.00 and 3.03.00 give it ADD D,1's flags (carry set when D was $FF); the book, JNext 1.3.0 and CSpect give INC D's (carry kept). ADD rr,A is settled: it clears carry.",
+ "limit": "LDWS measured on two boards (3.02.00, 2026-10-21; N-Go board (Issue 2-compatible clone), core 3.03.00, nxsuite Z03), not on the book's 3.03.03. The LEARNINGS line on ADD rr,A keeping CF is about CSpect, not a board.",
+ "evidence": [
+  {
+   "game": "reference",
+   "source": "I. Novak, Unraveling the ZX Spectrum Next, Vol 1 (2026; core 3.03.03), chapter 2",
+   "text": "ADD rr,A adds A unsigned, wraps past FFFF and clears carry even on a wrap, other flags kept; ADD rr,nn leaves every flag; LDWS takes the flags of INC D.",
+   "shown_on": "documentation"
+  },
+  {
+   "game": "reference",
+   "source": "docs/NEXT_REGISTERS.md:134 (z80ntest on a 3.02.00 board, 2026-10-21)",
+   "text": "LDWS: flags of ADD D,1 (CF = D was $FF), not INC D's kept carry; ADD rr,A cleared CF (NEXT_REGISTERS.md:117).",
+   "shown_on": "hardware"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
+   "test": "Z03",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite Z03): LDWS with D = $7F and D = $FF left the flags of ADD D,1 ($94, then $51: carry set from $FF), not INC D's.",
+   "shown_on": "hardware"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
+   "test": "Z02",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite Z02): ADD rr,A cleared carry in all nine cases, a wrap past $FFFF included.",
+   "shown_on": "hardware"
+  }
+ ],
+ "level": "inferred",
+ "area": "platform",
+ "words": [
+  "Z80N",
+  "ADD",
+  "LDWS",
+  "carry",
+  "flags",
+  "opcode"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

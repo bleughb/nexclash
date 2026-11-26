@@ -1,0 +1,31 @@
+{
+ "id": "lesson.enhanced-palette-rgb-check",
+ "kind": "pitfall",
+ "claim": "Compare an Enhanced build's fixed colours as the RGB values the set-up uploads, not only as symbols; replay the boot's NEXTREG writes against the painted map, with the default build as the negative control.",
+ "evidence": [
+  {
+   "game": "games/pssst.md",
+   "text": "Fixed colours were compared as symbols only, never with the RGB the set-up uploads; palette_wrong replays the boot's NEXTREG writes against the painted map.",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/tranz_am.md",
+   "text": "Same finding and fix as Pssst, from a review.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "observed",
+ "area": "toolkit",
+ "card": "patch.runtime-colour-map",
+ "words": [
+  "palette",
+  "RGB",
+  "enhanced",
+  "NEXTREG",
+  "fixed colour",
+  "painted map",
+  "review"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

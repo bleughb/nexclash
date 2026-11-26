@@ -1,0 +1,25 @@
+{
+ "id": "lesson.speed-latch-whose-clock",
+ "kind": "pitfall",
+ "claim": "If the game can leave its logic without passing the hook that ends the speed window, the next latch reads the build's own 28 MHz as the game's clock for good; keep a flag saying whose clock it is.",
+ "evidence": [
+  {
+   "game": "games/silkworm.md",
+   "text": "After game over the latch read the build's own 28 MHz as the game's clock: interrupts 35 a second, AY writes doubled, updates 60% short; only a soak with a seed reaching game over showed it.",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "card": "patch.restore-speed",
+ "words": [
+  "speed latch",
+  "game over",
+  "clock",
+  "soak",
+  "28 MHz",
+  "flag"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

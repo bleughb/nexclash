@@ -1,0 +1,25 @@
+{
+ "id": "lesson.pace-frames-per-update-distribution",
+ "kind": "method",
+ "claim": "Measure the original's frames-per-update distribution before choosing a pace; where slowdown is dropped, a steady frame count can be agreed.",
+ "evidence": [
+  {
+   "game": "games/r_type.md",
+   "text": "Recording averages 4.35 frames per update (28% 3, 34% 4, 22% 5); the title alternates 2 and 3; at 28MHz every update took 3 (45% fast): PACE 4, title 4; the owner dropped slowdown.",
+   "quote": "The recording averages 4.35 frames per update (28% 3, 34% 4, 22% 5);",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "words": [
+  "pace",
+  "frames per update",
+  "slowdown",
+  "steady pace",
+  "original speed",
+  "distribution"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

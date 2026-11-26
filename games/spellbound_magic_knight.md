@@ -97,8 +97,8 @@ Hardware, CSpect. Speed on a board. Puzzles, spells that succeed, the ending, ch
   ends the picture hold; t_balls / t_chars / t_rooms (2 / 7 / 57 snapshots) replay per segment (stripped, they
   desynced at frames 227 / 168 / 315); the 128K ROM 1's keypad code is listed, not compared. Demonstrated: 9 of 9 in
   sync, 39,222 frames, no MISMATCH. Pin removed; `auto` runs it.
-- [local: a store can be a NOP] Replacing one store with NOP keeps instruction counts and the lockstep; a watch at the site still checks the store's would-be effect.
-- [local: an XOR plot needs no state] Follow every call with the sprite: an erase names the place it is already.
+- [kb lesson.nop-stores-keep-timing: a store can be a NOP] Replacing one store with NOP keeps instruction counts and the lockstep; a watch at the site still checks the store's would-be effect.
+- [kb lesson.xor-overlay-needs-no-state: an XOR plot needs no state] Follow every call with the sprite: an erase names the place it is already.
 - [local: read the sister engine's options again] Knight Tyme's option is off by default, Spellbound's on; the same flag.
 - [local: negatives by colour] "Characters paint" went undetected where the character's colour equals the room's; a recording with another colour detects it.
 

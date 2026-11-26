@@ -1,0 +1,36 @@
+{
+ "id": "lesson.ink-rectangle-sprites-car-colour",
+ "kind": "method",
+ "claim": "A figure the game colours by writing ink over a rectangle of attribute cells can be drawn as sprites of the game's own pixels, so only those pixels take the colour and the rest of the cells stay black.",
+ "limit": "Not yet run on hardware.",
+ "evidence": [
+  {
+   "game": "games/cisco_heat.md",
+   "text": "The car, which the game colours by OR-ing ink into a cell rectangle, became sprites of the game's own pixels, coloured from the ULA palette, mirrored by the X flag, clipped to that rectangle: no clash, the shadow black as in the original; 43 states, 111 frames exact, plus 103 more car frames.",
+   "shown_on": "simulator",
+   "quote": "A figure the game colours by OR-ing ink into a cell rectangle (the car) became sprites of the game's own pixels"
+  },
+  {
+   "game": "games/elite.md",
+   "text": "Elite's condition light (four attribute writes) drawn as sprite 0 of the game's own light pixels; its scanner-side cells set white so scanner sticks there show white.",
+   "quote": "is drawn as a sprite of the game's own light pixels",
+   "shown_on": "cspect"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "design",
+ "when": [
+  "render.paints_figure_attributes"
+ ],
+ "card": "patch.ink-rectangle-sprites",
+ "words": [
+  "attribute clash",
+  "ink rectangle",
+  "sprite",
+  "car colour",
+  "clip window",
+  "mirror flag"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

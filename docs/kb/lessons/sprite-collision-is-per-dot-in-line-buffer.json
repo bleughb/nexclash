@@ -1,0 +1,34 @@
+{
+ "id": "lesson.sprite-collision-is-per-dot-in-line-buffer",
+ "kind": "fact",
+ "claim": "The sprite collision flag (port 0x303B bit 0) is exact to the dot: an opaque dot written where another sprite already wrote one. Dots outside the clip window, hidden overlaps and sprites switched off by NextREG 0x15 bit 0 still collide.",
+ "limit": "Measured on the N-Go board (Issue 2-compatible clone, core 3.03.00, nxsuite SP01). The flag says only that some collision happened since the last read, not which sprites; a sprite the engine dropped from a line collides with nothing.",
+ "evidence": [
+  {
+   "game": "reference",
+   "source": "I. Novak, Unraveling the ZX Spectrum Next, Vol 1 (2026; core 3.03.03), chapter 16",
+   "text": "The check is made in the sprite line buffer, so it follows the buffer and not the screen: transparent dots are never written and sprites side by side do not collide; reading the port clears the flag.",
+   "shown_on": "documentation"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
+   "test": "SP01",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite SP01): overlapping opaque dots collided, side by side did not; dots outside the clip window and sprites off by $15 bit 0 still collided; a read cleared the flag.",
+   "shown_on": "hardware"
+  }
+ ],
+ "level": "inferred",
+ "area": "platform",
+ "words": [
+  "sprite",
+  "collision",
+  "flag",
+  "303B",
+  "transparent",
+  "clip",
+  "pixel"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

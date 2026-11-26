@@ -1,0 +1,25 @@
+{
+ "id": "lesson.skoolkit-rom-bytes-are-zero",
+ "kind": "pitfall",
+ "claim": "Snapshot.memory[0:0x4000] is all zeros for .z80 files; take ROM bytes from skoolkit.ROM48 and verify any ROM copy against it at every ROM byte the game reads.",
+ "evidence": [
+  {
+   "game": "games/spellbound_dizzy.md",
+   "text": "The first hardware build had blank dialogue text: the slot-1 page was built from Snapshot.memory[0:0x4000], which is zeros for .z80 files; ROM bytes come from skoolkit.ROM48.",
+   "quote": "Snapshot.memory[0:0x4000], which is ZEROS for .z80 files - always take ROM bytes from skoolkit.ROM48.",
+   "shown_on": "hardware"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "toolkit",
+ "words": [
+  "skoolkit",
+  "ROM48",
+  "font",
+  "blank dialogue",
+  "z80 snapshot",
+  "ROM copy"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

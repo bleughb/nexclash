@@ -1,0 +1,26 @@
+{
+ "id": "lesson.layer2-command-replay",
+ "kind": "method",
+ "claim": "Record drawing commands at the producers' entries after the original has computed its parameters, and replay them in order into a hidden Layer 2 buffer; the original drawing keeps running, so RAM and R parity come free.",
+ "evidence": [
+  {
+   "game": "games/gunfright.md",
+   "text": "Five producer hooks record one command each after the original computes its buffer address, data pointer, rows, shift and mirror; the original mono drawing still runs, so game RAM, registers and R stay the original's, and h_out replays the queue.",
+   "quote": "record one command each after the original has computed its buffer address, data pointer, rows, shift and mirror;",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "card": "optimise.layer2-renderer-speed",
+ "words": [
+  "Layer 2",
+  "command replay",
+  "producer hook",
+  "hidden buffer",
+  "R parity",
+  "ordered replay"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

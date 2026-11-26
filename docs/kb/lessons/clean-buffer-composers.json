@@ -1,0 +1,31 @@
+{
+ "id": "lesson.clean-buffer-composers",
+ "kind": "method",
+ "claim": "With a back-buffer composer, redirecting only the blit's source to a clean copy can work when a clean copy exists at blit time and nothing reads the buffer or screen.",
+ "evidence": [
+  {
+   "game": "games/altered_beast.md",
+   "text": "Redirecting only the blit's source to a clean copy gave identical game memory with one small hook (at 0xAE40: pointers := clean copies, blit, pointers put back); needs a clean copy in memory at blit time and a game that reads neither buffer nor screen.",
+   "quote": "Keeping the back buffer intact and redirecting only the blit's source gave identical game memory with one small hook",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "design",
+ "facts": {
+  "draw": "back-buffer"
+ },
+ "when": [
+  "render.target.back_buffer"
+ ],
+ "words": [
+  "clean copy",
+  "back buffer",
+  "blit",
+  "composer",
+  "redirect source",
+  "title"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

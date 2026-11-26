@@ -1,0 +1,42 @@
+{
+ "id": "lesson.7ffd-write-maps-rom-over-slot-1",
+ "kind": "pitfall",
+ "claim": "A 7FFD write in an ISR maps the ROM over slot 1 on the Next, so a hook page or stack in slot 1 vanishes with interrupts on; return through game RAM that maps the hook page back.",
+ "evidence": [
+  {
+   "game": "games/that_sinking_feeling.md",
+   "text": "The ISR pages by port 7FFD; on a Next (JNext at least) that resets slot 1 to the ROM and the ISR calls the ROM's IM 1, so a hook in slot 1 with interrupts on is unsafe unless the ISR puts slot 1 back.",
+   "quote": "On a Next (JNext at least) that resets slot 1 to the ROM, and the ISR calls the ROM's IM 1.",
+   "shown_on": "jnext"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
+   "test": "M01",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite M01): an unlocked 7FFD write set MMU 0 / 1 = $FF (ROM) and MMU 6 / 7 to the bank's pages; slots 2-5 kept.",
+   "shown_on": "hardware"
+  },
+  {
+   "game": "games/hard_drivin.md",
+   "text": "Not only an ISR: the game's own update writes 7FFD (0x9E7C / 0x9E86) with interrupts off, and the route 2a sub-step hooks after it ran ROM bytes on JNext until a site (0x9E88) mapped the hook page again; the steps host model resets slots 0-1 on every 7FFD write.",
+   "quote": "a write to 7FFD sets MMU slots 0-1 back to ROM",
+   "shown_on": "jnext"
+  }
+ ],
+ "level": "observed",
+ "area": "platform",
+ "facts": {
+  "interrupts": "on",
+  "machine": "128K"
+ },
+ "words": [
+  "7FFD",
+  "slot 1",
+  "ROM remap",
+  "ISR",
+  "hook page",
+  "interrupts on"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

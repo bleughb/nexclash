@@ -43,6 +43,7 @@ Push access = `git push --dry-run` to origin succeeds (checked once, ~1-2 s; no 
 the release zip = no push access). Offline maintainers: NEXCLASH_MAINTAINER=1 skips the check.
 """
 import concurrent.futures
+import threading
 import datetime
 import hashlib
 import io
@@ -197,17 +198,32 @@ def _boot_ok(rep, lines, label):
     return bad
 
 
+_ASM = {}                       # profile -> (ok, tail): one asm2profile --check per profile per run (Codex review P4)
+_ASM_LOCKS = {}
+_ASM_LOCK = threading.Lock()
+
+
+def _asm_check(prof):
+    """asm2profile --check PROF once per selftest run, its result given to every record that asks (threads)."""
+    with _ASM_LOCK:
+        lock = _ASM_LOCKS.setdefault(prof, threading.Lock())
+    with lock:
+        if prof not in _ASM:
+            r = subprocess.run([sys.executable, os.path.join(HERE, 'tools', 'asm2profile.py'), '--check', prof],
+                               capture_output=True, text=True)
+            _ASM[prof] = (r.returncode == 0, (r.stdout + r.stderr).strip()[-200:])
+        return _ASM[prof]
+
+
 def checks(rec, lines):
     """Per-game quick checks of the game's own source files (run with every rebuild)."""
     bad = 0
     for c in rec.get('checks', []):
         if c.startswith('asm2profile:'):
             prof = c.split(':', 1)[1]
-            r = subprocess.run([sys.executable, os.path.join(HERE, 'tools', 'asm2profile.py'), '--check', prof],
-                               capture_output=True, text=True)
-            ok = r.returncode == 0
+            ok, tail = _asm_check(prof)
             lines.append('%-4s %s hook profile %s = pinned sjasmplus output of its .asm%s' % (
-                'OK' if ok else 'FAIL', rec['name'], prof, '' if ok else ' (%s)' % (r.stdout + r.stderr).strip()[-200:]))
+                'OK' if ok else 'FAIL', rec['name'], prof, '' if ok else ' (%s)' % tail))
         elif c == 'dizzy5_asm':
             ok, info = dizzy5_asm()
             lines.append('%-4s %s asm/dizzy5_hooks.asm (pinned sjasmplus) = dizzy5.hook_code()%s' % (
@@ -250,6 +266,11 @@ def rebuild(rec, d, lines):
         o = next(iter(rec['outputs'].values()))['file']
         bad += _run([sys.executable, NEXCLASH, 'convert', z80, '-o', os.path.join(out, o)] + rb.get('args', []), env, lines)
         return bad + _check_outputs(rec, out, lines) + _audit_check(rec, alog, lines, 'rebuild')
+    if rec['inputs'].get('tapes') and not _tapes(rec, d):         # the primary tape set unavailable: no rebuild from the
+        ts0 = rec['inputs']['tapes'][0]['set']                      # snapshot alone passed off as the recipe (Codex T5)
+        lines.append('SKIP %s rebuild: tape set %s (a file the record marks missing); its reworks run' % (rec['name'], ts0))
+        rec.setdefault('_incomplete', []).append('primary tape set %s missing' % ts0)
+        return bad + _rebuild_reworks(rec, d, lines, z80, env) + _audit_check(rec, alog, lines, 'rebuild')
     cmd = [sys.executable, NEXCLASH, 'auto', '--no-nxc', z80, '--no-record'] + rb.get('args', []) + _tapes(rec, d)
     cmd = [c for i, c in enumerate(cmd) if c != '--no-record' or i == cmd.index('--no-record')]
     for r in rb.get('rzx', []):
@@ -266,6 +287,7 @@ def rebuild(rec, d, lines):
         targs = _tapes(rec, d, k)
         if not targs:
             lines.append('SKIP %s tape set %s (a file the record marks missing)' % (rec['name'], ts['set']))
+            rec.setdefault('_incomplete', []).append('tape set %s not rebuilt (missing)' % ts['set'])    # no stamp (Codex T5)
             continue
         base = [c for i, c in enumerate(cmd) if c != '--tape' and (i == 0 or cmd[i - 1] != '--tape')]
         to = os.path.join(d, 'rebuild_tapes_' + ts['set'])
@@ -275,6 +297,12 @@ def rebuild(rec, d, lines):
         ro = os.path.join(d, 'rebuild_' + x['strategy'])
         bad += _run(cmd + ['-o', ro, '--strategy', x['strategy']], env, lines)
         bad += _check_outputs(rec, ro, lines, {'repro': x}) + _boot_ok(_report(ro, _snapname(rec)), lines, rec['name'])
+    return bad + _rebuild_reworks(rec, d, lines, z80, env) + _audit_check(rec, alog, lines, 'rebuild')
+
+
+def _rebuild_reworks(rec, d, lines, z80, env):
+    """Each opt-in rework's rebuild (its own args, environment and inputs: never the record's tape sets)."""
+    bad = 0
     for x in rec.get('rework', []):
         if x.get('_missing'):
             lines.append('SKIP %s rework %s (%s)' % (rec['name'], x['name'], x['_missing']))
@@ -283,7 +311,7 @@ def rebuild(rec, d, lines):
         bad += _run(_rework_cmd(z80, x, 'rebuild', d) + ['-o', ro], dict(env, **x.get('env', {})), lines)
         bad += _check_outputs(rec, ro, lines, x['outputs'], 'rebuild rework %s:' % x['name'])
         bad += _boot_ok(_report(ro, _xname(rec, x)), lines, '%s rework %s' % (rec['name'], x['name']))
-    return bad + _audit_check(rec, alog, lines, 'rebuild')
+    return bad
 
 
 def _rework_cmd(z80, x, stage_, d):
@@ -390,6 +418,11 @@ def reverify(rec, d, lines, human=False):
         rec['_vskip'] = gone
         lines.append('SKIP %s verification: %s not in the reference folder (record: "missing"); its reworks run' % (
             rec['name'], ', '.join(gone)))
+        return _reverify_reworks(rec, d, lines, z80, name, env) + _audit_check(rec, alog, lines, 'verify')
+    if rec['inputs'].get('tapes') and not _tapes(rec, d):         # the primary tape set missing (rebuild said so and
+        lines.append('SKIP %s verification: tape set %s (a file the record marks missing); its reworks run' % (
+            rec['name'], rec['inputs']['tapes'][0]['set']))         # marked the run incomplete): no base verification
+        rec.setdefault('_incomplete', []).append('verification without the primary tape set')
         return _reverify_reworks(rec, d, lines, z80, name, env) + _audit_check(rec, alog, lines, 'verify')
     bad = _run(cmd + ['-o', out], env, lines)
     bad += _check_outputs(rec, out, lines, stage_='verify') + _verify_report(_report(out, name), rec['name'], lines, rec)
@@ -500,8 +533,38 @@ def smoke_pacing_census(ez, er, ok):
        and r['outs'].get('0x9CA6', {}).get('count') == 751, r)
 
 
+def smoke_cell_writers(ez, er, ok):
+    import cell_writers                         # probe (tools/probes/README.md): who writes each screen cell
+    attr, pix, frames = cell_writers.census(er, stop=300)
+    multi = sum(1 for c in attr if len({v for v, pc in attr[c]}) > 1)
+    top = max(((pc, n) for p in pix.values() for pc, n in p.items()), key=lambda x: x[1])
+    tot = {}
+    for p in pix.values():
+        for pc, n in p.items():
+            tot[pc] = tot.get(pc, 0) + n
+    ok('probe cell_writers (300 frames): 768 cells, 20 with 2+ attribute values, pixel writer 43909 x141017, '
+       'no clash cells', (len(attr), multi, tot.get(43909), len(cell_writers.clash_cells(attr, pix))) == (768, 20, 141017, 0),
+       (len(attr), multi, tot.get(43909), top))
+
+
+def smoke_sprite_leftovers(ez, er, ok):
+    import sprite_leftovers                     # probe: sprites a build leaves visible (no game data: synthetic logs)
+    four = [w for i in range(4) for w in (('nr', 0x34, i), ('nr', 0x38, 0))]
+    vis, written = sprite_leftovers.replay(four)
+    ok('probe sprite_leftovers: hiding 4 by NEXTREG leaves 4-127', vis == list(range(4, 128)) and written == set(range(4)),
+       (vis[:3], sorted(written)))
+    ports = [('port', 0x303B, 0)] + [('port', 0x0457, 0)] * 512
+    vis, written = sprite_leftovers.replay(ports)
+    ok('probe sprite_leftovers: 128 x 4 attribute bytes on port 0x57 hide all', vis == [] and len(written) == 128, vis[:3])
+    split = [('nr', 0x34, 0), ('port', 0x303B, 127), ('nr', 0x38, 0)] + [w for i in range(1, 127) for w in (('nr', 0x34, i), ('nr', 0x38, 0))]
+    vis, written = sprite_leftovers.replay(split)
+    ok('probe sprite_leftovers: port 0x303B and NEXTREG $34 select separately ($09 bit 4 clear)', vis == [127], vis)
+
+
 PROBE_SMOKE = {'rzx_census.py': smoke_rzx_census, 'attr_census.py': smoke_attr_census,
-               'routine_skip.py': smoke_routine_skip, 'pacing_census.py': smoke_pacing_census}
+               'routine_skip.py': smoke_routine_skip, 'pacing_census.py': smoke_pacing_census,
+               'sprite_leftovers.py': smoke_sprite_leftovers,
+               'cell_writers.py': smoke_cell_writers}
 
 
 def verification_selfcheck():
@@ -620,6 +683,27 @@ def tape_stage_check():
         d, why = stage(r, src, os.path.join(t, 'w4'))
         if d is None or _tapes(r, d, 1) or not _tapes(r, d):
             bad.append('a "missing" tape: %s' % why)
+        # the primary set missing: neither the base rebuild nor the base verification runs (no snapshot-only build
+        # passed off as the recipe), the reworks (their own inputs) still do, and the run is incomplete
+        open(os.path.join(src, 'g', 'a.tzx'), 'wb').write(files['a.tzx'])     # removed above
+        os.remove(os.path.join(src, 'g', 'a.tap'))
+        r = rec()
+        r['inputs']['tapes'][0]['files'][0]['missing'] = 'not in the references'
+        r.update(rebuild={'args': []}, verify={'rzx': []}, outputs={}, rework=[{'name': 'x', 'args': [], 'outputs': {}}])
+        d, why = stage(r, src, os.path.join(t, 'w5'))
+        calls, g = [], globals()
+        real, g['_run'] = g['_run'], lambda cmd, env=None, lines=None: calls.append(cmd[-1]) or 0
+        try:
+            if d is None:
+                bad.append('primary set missing: not staged (%s)' % why)
+            else:
+                rebuild(r, d, [])
+                reverify(r, d, [])
+                runs = sorted(os.path.basename(c) for c in calls)
+                if runs != ['rebuild_rework_x', 'verify_rework_x'] or not r.get('_incomplete'):
+                    bad.append('primary set missing: ran %s, incomplete %s' % (runs, r.get('_incomplete')))
+        finally:
+            g['_run'] = real
     return bad
 
 
@@ -629,8 +713,11 @@ def tools_check(src):
     and adds a check for what it added (one easy game is enough: the commands are game-independent)."""
     from nexclash import snapinfo, memscan, isrinfo, drawcost
     workflow = subprocess.run([sys.executable, os.path.join(HERE, 'tools', 'workflow_check.py')])
-    bad = R.selfcheck() + ([] if workflow.returncode == 0 else ['workflow checks'])
+    from nexclash import nextboot as _nb
+    from nexclash import l2pal as _l2, hooklib as _hl
+    bad = R.selfcheck() + R.verified_selfcheck() + _nb.ports_selfcheck() + _l2.selfcheck() + _hl.drift_selfcheck() + ([] if workflow.returncode == 0 else ['workflow checks'])
     bad += [b for r in R.all_records() for b in R.evidence_problems(r)]
+    bad += [b for r in R.all_records() for b in R.include_problems(r)]
     print('%-4s tools: records plan() on synthetic stamps, recipe digest and ROM identity mutations%s' % (
         'OK' if not bad else 'FAIL', '' if not bad else ' (%s)' % bad[:3]))
     from nexclash import tapeset                # tape-set inputs: reader, set matching, the records' inputs.tapes
@@ -686,6 +773,21 @@ def tools_check(src):
     print('%-4s tools: z80n - every Z80N instruction against worked results (core 3.02.05 / guide r3)%s' % (
         'OK' if not zbad else 'FAIL', '' if not zbad else ' (%s)' % zbad[:3]))
     cbad += len(zbad)
+    import importlib.util                       # nxsuite result intake (tools/hwtests/intake.py): made-up files
+    in_spec = importlib.util.spec_from_file_location('nxsuite_intake', os.path.join(HERE, 'tools', 'hwtests', 'intake.py'))
+    intake = importlib.util.module_from_spec(in_spec)
+    in_spec.loader.exec_module(intake)
+    ibad = intake.selfcheck()
+    print('%-4s tools: nxsuite intake - good file, truncated / no END / unknown test id / unknown status / CR / damaged '
+          'byte refused, a FAIL disproved, one file per board + core, --compare; control: CRC off accepts the damage%s' % (
+              'OK' if not ibad else 'FAIL', '' if not ibad else ' (%s)' % str(ibad)[:200]))
+    cbad += len(ibad)
+    from nexclash import machine as mach         # the 48K-only recorder / analyse / verify (lesson recorder-128k-not-in-toolkit)
+    m128 = mach.selfcheck()
+    print('%-4s tools: 48K-only paths - recorder, analyse and verify refuse a made-up 128K snapshot / recording and '
+          'take the 48K one; the recorder takes a 128K one with an engine\'s own paging model%s' % (
+              'OK' if not m128 else 'FAIL', '' if not m128 else ' (%s)' % str(m128)[:200]))
+    cbad += len(m128)
     from nexclash import jnext                  # play checks: soak / pace / flicker / looksheet (docs/CHECKS.md)
     for name, jbad in jnext.selfcheck():
         print('%-4s tools: %s%s' % ('OK' if not jbad else 'FAIL', name, '' if not jbad else ' (%s)' % str(jbad)[:200]))
@@ -764,8 +866,10 @@ def tools_check(src):
            any('loader snapshot' in w for w in iwarn), iwarn)
         _, r = isrinfo.isr(ez, [er], stop=150)
         ok('isr: handler 40092, no IX/IY reads', 40092 in r['entries'] and not any(r['reads_entry'].values()), r)
-        ok('isr: slots touched 0 r, 3 r, 4 x, 5 r, 7 rw (slot 2 free for a hook page)',
-           r['slots'] == {0: 'r', 3: 'r', 4: 'x', 5: 'r', 7: 'rw'}, r['slots'])
+        # slot 0 'r' was SkoolKit's EI-test read of memory[prev_pc] at each acknowledge (rzxplay passes prev_pc 0:
+        # every slot-0 read was of 0x0000 with the game in RAM); simrun drops that read since 2026-11-22 (#288)
+        ok('isr: slots touched 3 r, 4 x, 5 r, 7 rw (slot 2 free for a hook page)',
+           r['slots'] == {3: 'r', 4: 'x', 5: 'r', 7: 'rw'}, r['slots'])
         tracker = isrinfo.IsrTracker()
         tracker.on_read(0x6000, 0x9000, None)  # outside an interrupt
         tracker.cur = (0x8000, 0xFF00)
@@ -837,8 +941,11 @@ def tools_check(src):
            tracker.calls[0x8200][0x8100] == 1 and tracker.parents[0x8200][0x8100] == 1 and
            tracker.pix[0x8200] == 1 and tracker.pix[0x8100] == 1,
            (dict(tracker.calls[0x8200]), dict(tracker.pix)))
-        _, r = survey.survey(ez, [er], os.path.join(work, 'survey'), stop=600, log=lambda m: None, full=True)
+        smd, r = survey.survey(ez, [er], os.path.join(work, 'survey'), stop=600, log=lambda m: None, full=True)
         rt = {x['routine']: x for x in r['routines']}
+        ok('survey.md lists the shared lessons that fit the measured facts (docs/kb/lessons)',
+           '## Shared lessons that fit (draw one-routine, interrupts on, machine 48K)' in smd and smd.count('- lesson.') == 10,
+           [l for l in smd.splitlines() if 'lesson' in l][:3])
         ok('survey (600 frames): engine chuckie, plain boot OK, 43899 x1059 calls on top, 40000 x814 from 6 callers at 665 T',
            r['engine'] == 'chuckie' and r['plain']['boot'].startswith('OK') and r['routines'][0]['routine'] == 43899 and
            rt[43899]['calls'] == 1059 and rt.get(40000, {}).get('calls') == 814 and

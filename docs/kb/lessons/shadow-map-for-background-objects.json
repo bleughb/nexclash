@@ -1,0 +1,25 @@
+{
+ "id": "lesson.shadow-map-for-background-objects",
+ "kind": "fact",
+ "claim": "Items stored as tile cells in a scrolling background need a shadow map fed by hooks on every routine that writes a cell, since an untracked writer leaves stale records.",
+ "evidence": [
+  {
+   "game": "games/rainbow_islands.md",
+   "text": "The prototype's 58 mismatches (rainbow.rzx 2500 frames) included 16 stale records from a full-tile drawer (60839) it did not track; with it tracked 446 ok / 36 figure / 0 other; hooks at the three cell drawers feed a shadow map built at render start.",
+   "shown_on": "simulator",
+   "quote": "item had been overwritten by the full-tile drawer 60839, which the prototype did not track;"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "design",
+ "words": [
+  "shadow map",
+  "collectables",
+  "tile cell",
+  "stale list",
+  "hooks",
+  "scroll"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

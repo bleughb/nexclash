@@ -1,0 +1,32 @@
+{
+ "id": "lesson.frame-locked-pace-hides-cost",
+ "kind": "pitfall",
+ "claim": "A frame-locked game can read 0.00% pace whatever the update costs inside; also compare cycles from the wait's end to the update's end, and check frames per update before concluding there is no frame sync.",
+ "evidence": [
+  {
+   "game": "games/into_the_eagles_nest.md",
+   "text": "A game that waits on N interrupts per update makes pace read 0.00% whatever the update costs inside; compare cycles from the wait's end to the update's end too.",
+   "quote": "A game that waits on N interrupts per update makes pace read 0.00% whatever the update costs inside",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/cobra.md",
+   "text": "Frame-locked pace hid a slower figure phase: updates equal, but the beeper plays only while waiting for the interrupt, so port FE writes fell 8 % in busy scenes; the limiter and the prepared patterns brought them back (510.4 / 509.6 a second).",
+   "quote": "the beeper plays only while waiting for the interrupt, so port FE writes fell 8 % in busy scenes.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "words": [
+  "pace",
+  "0.00%",
+  "frame sync",
+  "beeper",
+  "HALT",
+  "busy scene",
+  "frame lock"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

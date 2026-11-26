@@ -1,0 +1,34 @@
+{
+ "id": "lesson.pace-lockstep-compares-sound-state",
+ "kind": "pitfall",
+ "claim": "When the ISR plays sound, runs one update apart in sound state differ in time, so the pace lockstep must compare the sound variables and music should be off in both arms.",
+ "evidence": [
+  {
+   "game": "games/quazatron.md",
+   "text": "A sound starting or ending one update apart moves every update's time by about 50k T for its length; the lockstep compares B065 and B060 too.",
+   "quote": "a sound that starts or ends one update apart in two runs moves every update's time by about 50k T for its length, so the pace lockstep compares B065 and B060 too.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/booty.md",
+   "text": "A free-running game with notes played in the ISR compared unlike phases of the tune: arms a note apart read +13% with no real cost; music off in both arms.",
+   "quote": "A free-running game with notes played in the ISR compares unlike phases of the tune: arms a note apart read +13% in a stretch with no real cost. Music off in both arms",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "method",
+ "facts": {
+  "interrupts": "on"
+ },
+ "words": [
+  "pace",
+  "sound state",
+  "lockstep",
+  "ISR",
+  "music off",
+  "lockstep fixture"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

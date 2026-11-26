@@ -1,0 +1,28 @@
+{
+ "id": "lesson.overspec-scripting",
+ "kind": "pitfall",
+ "claim": "OverSpec resumes a game's last session from its data folder, so use a fresh folder per scripted run, and its scripted keys reach it only while its window has focus.",
+ "evidence": [
+  {
+   "game": "games/olli_and_lissa.md",
+   "text": "OverSpec resumes a game's last session from its data folder: a second scripted run never saw the patch menu until a fresh folder was used.",
+   "shown_on": "unknown"
+  },
+  {
+   "game": "games/olli_and_lissa_3.md",
+   "text": "OverSpec's scripted keys reach it only while its window has the focus.",
+   "shown_on": "unknown"
+  }
+ ],
+ "level": "observed",
+ "area": "emulator",
+ "words": [
+  "OverSpec",
+  "fresh folder",
+  "window focus",
+  "scripted keys",
+  "session resume"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

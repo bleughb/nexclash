@@ -1,0 +1,262 @@
+{
+ "name": "bomb_jack",
+ "order": 24,
+ "game": "Bomb Jack",
+ "doc": "bomb_jack.md",
+ "engine": "bomb_jack",
+ "representative": true,
+ "reference": "bomb_jack",
+ "inputs": {
+  "snapshot": {
+   "name": "bomb_jack.z80",
+   "md5": "08e760e82721540898b57b8a1f277659",
+   "path": "bomb_jack/bomb_jack.z80"
+  },
+  "recordings": [
+   {
+    "name": "bj_play.rzx",
+    "md5": "94292dd440ba9177d6447bd0e5f00d4e",
+    "path": "bomb_jack/bj_play.rzx"
+   },
+   {
+    "name": "bj_random.rzx",
+    "md5": "c56ac01ea55a393b3fbc9d621cb10d95",
+    "path": "bomb_jack/bj_random.rzx"
+   },
+   {
+    "name": "bj_pow1.rzx",
+    "md5": "d381e9ced9ec5e3c6138528380f8c186",
+    "path": "bomb_jack/bj_pow1.rzx"
+   },
+   {
+    "name": "bj_pow3.rzx",
+    "md5": "bfe11851d69f027b5c6b84bca7fa68db",
+    "path": "bomb_jack/bj_pow3.rzx"
+   },
+   {
+    "name": "bj_lvl01.rzx",
+    "md5": "1c70aabb91c95d9de95400edd0809188",
+    "path": "bomb_jack/bj_lvl01.rzx"
+   },
+   {
+    "name": "bj_lvl02.rzx",
+    "md5": "e9a3137cb70a52e38668516512c042b9",
+    "path": "bomb_jack/bj_lvl02.rzx"
+   },
+   {
+    "name": "bj_lvl03.rzx",
+    "md5": "b14a78389e3b5c8b3b6a651f0114c2d2",
+    "path": "bomb_jack/bj_lvl03.rzx"
+   },
+   {
+    "name": "bj_lvl04.rzx",
+    "md5": "68586f24df7b911757be5e61f3a36e10",
+    "path": "bomb_jack/bj_lvl04.rzx"
+   },
+   {
+    "name": "bj_lvl05.rzx",
+    "md5": "c8259202a1add6a124e2e4c3d9ca7cd5",
+    "path": "bomb_jack/bj_lvl05.rzx"
+   },
+   {
+    "name": "bj_lvl06.rzx",
+    "md5": "2ca323412665abe86600b9609ec5d0c5",
+    "path": "bomb_jack/bj_lvl06.rzx"
+   },
+   {
+    "name": "bj_lvl07.rzx",
+    "md5": "058fce0c65fd577c6a6c991b5d3462ef",
+    "path": "bomb_jack/bj_lvl07.rzx"
+   },
+   {
+    "name": "bj_lvl08.rzx",
+    "md5": "40f3e7b2908ec705a6ad21cd0a0f9621",
+    "path": "bomb_jack/bj_lvl08.rzx"
+   },
+   {
+    "name": "bj_lvl09.rzx",
+    "md5": "1b2ef227b4aec0be107502b1192bc3a4",
+    "path": "bomb_jack/bj_lvl09.rzx"
+   },
+   {
+    "name": "bj_lvl10.rzx",
+    "md5": "726792a8b9bd8f8d3a28130ee0bbc935",
+    "path": "bomb_jack/bj_lvl10.rzx"
+   },
+   {
+    "name": "bj_lvl11.rzx",
+    "md5": "88d63efc01671d1245e979ae6386fea2",
+    "path": "bomb_jack/bj_lvl11.rzx"
+   },
+   {
+    "name": "bj_lvl12.rzx",
+    "md5": "b52ada8629070d827983a1e9002d16b4",
+    "path": "bomb_jack/bj_lvl12.rzx"
+   }
+  ]
+ },
+ "modules": [
+  "bomb_jack"
+ ],
+ "own_modules": [
+  "bomb_jack"
+ ],
+ "data": [
+  "docs/profiles/bomb_jack.json",
+  "asm/bomb_jack_hooks.asm"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "bj_play.rzx",
+   "bj_random.rzx",
+   "bj_pow1.rzx",
+   "bj_pow3.rzx",
+   "bj_lvl01.rzx",
+   "bj_lvl02.rzx",
+   "bj_lvl03.rzx",
+   "bj_lvl04.rzx",
+   "bj_lvl05.rzx",
+   "bj_lvl06.rzx",
+   "bj_lvl07.rzx",
+   "bj_lvl08.rzx",
+   "bj_lvl09.rzx",
+   "bj_lvl10.rzx",
+   "bj_lvl11.rzx",
+   "bj_lvl12.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 40,
+  "note": "Pilot: recordings from a search bot and random scripts, no human player; bj_lvl*, bj_pow* start from cheat snapshots (data pokes, embedded in the RZX), never built."
+ },
+ "outputs": {
+  "plain": {
+   "file": "bomb_jack.nex",
+   "md5": "55a84a1452b6624d726f682917027d34"
+  },
+  "sprites": {
+   "file": "bomb_jack_sprites.nex",
+   "md5": "3494df60c092860d2c9ad18987d92920"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Bomb Jack",
+  "engine_col": "bomb_jack (bomb_jack.md)",
+  "build": "bomb_jack_sprites.nex 83823fa5",
+  "software": "Verify + lockstep IDENTICAL on 16 script/search recordings; unit PASS; 18 negatives detected; both .nex reach gameplay in JNext 1.1.104 (no human recording)",
+  "hardware": "untested",
+  "next": "hardware test; a person's painting (arcade match painted by script: 2fc51340)"
+ },
+ "checks": [
+  "asm2profile:bomb_jack"
+ ],
+ "techniques": [
+  {
+   "application": "bomb_jack.screen-readers",
+   "id": "detect.gameplay-screen-readers",
+   "revision": 2,
+   "target": "lockstep on 16 recordings: no logic reads figure pixels on the ULA",
+   "phases": []
+  },
+  {
+   "application": "bomb_jack.tracked-unit",
+   "id": "detect.tracked-unit",
+   "revision": 2,
+   "target": "one 0xD9B5 call moves one 96-byte block; 0xE582 one bomb",
+   "phases": []
+  }
+ ],
+ "results": [
+  {
+   "application": "bomb_jack.screen-readers",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "83823fa5",
+   "scope": "16 recordings, 52185 frames, verify and lockstep IDENTICAL (2026-11-02, 83823fa5); 41183 pictures identical, 10754 differ inside figure boxes; no human recording; 13 graphics blocks unit cases only; no hardware",
+   "evidence": "games/bomb_jack.md \"Results\""
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/bomb_jack_hooks.asm": "d9d7cc09683286b2",
+   "docs/profiles/bomb_jack.json": "dcceabd705f716cc",
+   "nexclash.py": "d9b430cef7478a38",
+   "nexclash/bomb_jack.py": "3a6d6a0d2450a945",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/engines.py": "56cccb92e65c2c53",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/nextboot.py": "d4d8a6b6c9055025",
+   "nexclash/recolour.py": "ed8eaa22008da1a7",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "fbbce2a769fdcb24",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-22"
+ },
+ "verified": {
+  "deps": {
+   "asm/bomb_jack_hooks.asm": "d9d7cc09683286b2",
+   "docs/profiles/bomb_jack.json": "dcceabd705f716cc",
+   "nexclash.py": "d9b430cef7478a38",
+   "nexclash/bomb_jack.py": "3a6d6a0d2450a945",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/engines.py": "56cccb92e65c2c53",
+   "nexclash/machine.py": "659903f13de0fcee",
+   "nexclash/nextboot.py": "d4d8a6b6c9055025",
+   "nexclash/recolour.py": "ed8eaa22008da1a7",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "fbbce2a769fdcb24",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-22"
+ },
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/bomb_jack.md#results"
+   ],
+   "coverage": "The recordings in the record, in the simulator.",
+   "result": "Hooks 3,974-14,547 simulated T a frame by recording (about 0.9-3.5 % of a frame, estimated); no real-machine timing."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/bomb_jack.md#rendering-model-playbook-2-masked-plots-from-a-clean-copy"
+   ],
+   "coverage": "Every recording's plots and the clean copy they run from (Rendering model); scan of the screen readers.",
+   "result": "Masked plots from a clean copy: figures become sprites over their own pixels; nothing reads them back for logic."
+  },
+  "decision": "Figures as sprites in their own colours over the masked plots; arcade colours as a set (owner approved 1.1).",
+  "next_experiment": "A board run of 1.1: pace against the original within 2 % in a busy round."
+ }
+}

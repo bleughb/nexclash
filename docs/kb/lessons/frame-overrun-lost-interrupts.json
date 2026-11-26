@@ -1,0 +1,50 @@
+{
+ "id": "lesson.frame-overrun-lost-interrupts",
+ "kind": "fact",
+ "claim": "A game frame running with interrupts off that overruns one video frame misses the interrupt it spans, so that limiter cycle takes one extra interrupt; track the raster and credit missed interrupts.",
+ "limit": "Times are simulated and optimistic: wait states are modelled by an 8/6.5 factor.",
+ "evidence": [
+  {
+   "game": "games/rainbow_z80n.md",
+   "text": "A game frame longer than one video frame (20 ms) loses the interrupt it spans; the limiter then counts from the next, so that cycle takes 4 interrupts: 8 % and 17 % of game frames over 20 ms in two recordings (x 8/6.5 for 28 MHz wait states).",
+   "quote": "next one, so that cycle takes 4 interrupts = a 1/50 s hitch, and music ticks bunch. Measured with",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/rainbow_z80n.md",
+   "text": "The raster line is sampled at the interrupt, render start, band ends and frame end; a sample below the previous one is a wrap, and missed interrupts are credited.",
+   "quote": "a sample below the previous one = a wrap (V_WR)",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/rainbow_z80n_pace.md",
+   "text": "The redraw after a lost life went from 124 frames to 57-58 on JNext; the update then starts at the next interrupt, so it moves in 20 ms steps.",
+   "quote": "Result 57 to 58 frames, on JNext; the update then starts at the next interrupt, so it moves in 20 ms steps.",
+   "shown_on": "jnext"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
+   "test": "I03",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite I03): im2hold T1-T7 held: interrupts held through a 3-frame DI in hold mode, lost in pulse mode; a RET-ended handler blocked later ones until a RETI.",
+   "shown_on": "hardware"
+  }
+ ],
+ "level": "observed",
+ "area": "platform",
+ "facts": {
+  "interrupts": "on"
+ },
+ "words": [
+  "missed interrupt",
+  "frame limiter",
+  "20 ms",
+  "28 MHz",
+  "hitch",
+  "raster line",
+  "overrun",
+  "wait states"
+ ],
+ "review": "source-checked",
+ "as_of": "0.1.7"
+}

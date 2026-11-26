@@ -597,6 +597,12 @@ setup:
         nextreg 0x12,16
         nextreg 0x69,0
         nextreg 0x14,1
+        xor a                   ; hide all 128 sprites: another program may have left any of them visible
+.hide:  nextreg 0x34,a
+        nextreg 0x38,0
+        inc a
+        cp 128
+        jr nz,.hide
         nextreg 0x15,0x41
         nextreg 0x4B,0
         nextreg 0x1C,2
