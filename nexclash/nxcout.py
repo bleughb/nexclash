@@ -307,16 +307,18 @@ NOT_SETS = ('sprites', 'plain', 'diag', 'debug', 'raw')
 def manifest(out, name, since=None):
     """The outputs a build wrote, by role (docs/ENGINE_CONTRACT.md "Outputs"):
     {'default', 'loading': file or None, 'colours': {SET: {'default', 'loading'}}, 'plain': file or None,
-     'toggles': {NAME: {'logic', 'what', 'default', 'loading', 'colours'}}, 'other': [files], 'stale': [files]}.
+     'toggles': {NAME: {'logic', 'what', 'default', 'loading', 'colours'}}, 'needs': [[A, B]], 'other': [files],
+     'stale': [files]}.
     Names: NAME_sprites.nex the default sprite build; NAME_sprites_loading.nex the same build with the tape's loading
     screen; NAME_SET.nex a colour set (one lower-case word: enhanced -> Enhanced), NAME_SET_loading.nex with the screen;
     NAME.nex the plain conversion; anything else (diagnostic, raw, noring) is other. An engine names its own outputs in
     NAME_outputs.json (the same keys, file names) when it does not follow these; only it can declare a toggle (an
     option a player switches on: "toggles", by its menu name: "logic" true when it changes the game logic, "what" it
-    does, its build as "default" / "loading" and with each colour set as "colours"). Only .nex files written since
+    does, its build as "default" / "loading" and with each colour set as "colours"), and "needs": [A, B] pairs, menu
+    names, where option A works only with B on (nxc.py --needs, OPR1). Only .nex files written since
     `since` (this run's start) count: an older one is stale, never packaged as this build."""
     since = _START - 1 if since is None else since
-    m = {'default': None, 'loading': None, 'colours': {}, 'plain': None, 'toggles': {}, 'other': [], 'stale': []}
+    m = {'default': None, 'loading': None, 'colours': {}, 'plain': None, 'toggles': {}, 'needs': [], 'other': [], 'stale': []}
     if not os.path.isdir(out):
         return m
     fresh = []
@@ -333,6 +335,7 @@ def manifest(out, name, since=None):
                             'colours': {c: {'default': x.get('default'), 'loading': x.get('loading')}
                                         for c, x in (v.get('colours') or {}).items()}}
                         for k, v in d.get('toggles', {}).items()}
+        m['needs'] = [[str(x), str(y)] for x, y in d.get('needs', [])]
     else:
         for f in fresh:
             stem = f[:-4]
@@ -409,9 +412,10 @@ def _run(nxc, argv):
     return log.getvalue().splitlines()
 
 
-def make(a, z80, out, name, spr, rep, say, colours=None, toggles=None, checks=None):
+def make(a, z80, out, name, spr, rep, say, colours=None, toggles=None, checks=None, needs=()):
     """GAME.nxc from the sprite build, its colour sets {SET: .nex path}, its toggles {NAME: (.nex path, logic, what,
-    {SET: .nex path})} and the .z80, through nxc.py make (+ import-pok); checks = the run's structured status (PRF1).
+    {SET: .nex path})} and the .z80, through nxc.py make (+ import-pok); checks = the run's structured status (PRF1);
+    needs = [(A, B)]: option A works only with B on (nxc.py --needs).
     Every build it holds, each toggle alone and with each colour set, is checked on read-back. -> its path."""
     from nexclash import nxc
     nxc.ZX0_DIR = zx0_dir()
@@ -432,6 +436,8 @@ def make(a, z80, out, name, spr, rep, say, colours=None, toggles=None, checks=No
         argv += ['--colours', '%s=%s' % (k, f)]
     for k, (f, logic, _what, _cs) in toggles.items():
         argv += ['--toggle-logic' if logic else '--toggle', '%s=%s' % (k, f)]
+    for x, y in needs:
+        argv += ['--needs', '%s=%s' % (x, y)]
     argv += ['--title', t] if t else []
     argv += ['--publisher', a.publisher] if getattr(a, 'publisher', None) else []
     argv += ['--patch-by', who] if who else []
@@ -468,8 +474,11 @@ def make(a, z80, out, name, spr, rep, say, colours=None, toggles=None, checks=No
     if nxc.toggles_of(f) != [(k, x[1]) for k, x in toggles.items()]:
         os.remove(dst)
         raise ValueError('it offers toggles %s, the build made %s' % (nxc.toggles_of(f), list(toggles)))
+    need = dict(needs)                          # a toggle that needs a colour set is checked only with that set
     for k, (tf, _logic, _what, cs) in toggles.items():
         for c, g in [(None, tf)] + sorted(cs.items()):
+            if k in need and need[k] in colours and c != need[k]:
+                continue
             if nxc.apply(f, game=game, colours=c, toggles=[k]) != open(g, 'rb').read():
                 os.remove(dst)
                 raise ValueError('with toggle %s%s it does not give %s' % (k, ' and colour set %s' % c if c else '',
@@ -535,7 +544,7 @@ def package(a):
             dst = make(a, z80, out, name, os.path.join(out, main), rep, lines.append,
                        {k: os.path.join(out, f) for k, f in sets.items()},
                        {k: (os.path.join(out, f), lg, w, {c: os.path.join(out, g) for c, g in cs.items()})
-                        for k, (f, lg, w, cs) in tgl.items()}, ck)
+                        for k, (f, lg, w, cs) in tgl.items()}, ck, m.get('needs', ()))
         except (ValueError, OSError, RuntimeError, subprocess.SubprocessError, SystemExit) as e:
             lines.append('NXC       : not made - %s (the .nex files are kept)' % e)
     if dst:

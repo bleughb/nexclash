@@ -1054,6 +1054,34 @@
     }
    ]
   },
+  "ff5eae3b61188cb5095a6177c3c34a06": {
+   "game": "The Great Escape",
+   "doc": "great_escape.md",
+   "nex": {
+    "plain": "326a79986f348693816f6a7d6b6bf535",
+    "enhanced": "a6595a5d5a6c97da4cdfcb8ec502af0d",
+    "enhanced_loading": "0478d68577acccd28ca2e0bb53341ed8",
+    "sprites": "9d2f3cfbab260c95e086648caca829c6",
+    "sprites_loading": "77b5d9b5016acf2be86bf112f7b4fabc"
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "great_escape",
+     "game": "The Great Escape",
+     "doc": "great_escape.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "326a79986f348693816f6a7d6b6bf535",
+      "enhanced": "a6595a5d5a6c97da4cdfcb8ec502af0d",
+      "enhanced_loading": "0478d68577acccd28ca2e0bb53341ed8",
+      "sprites": "9d2f3cfbab260c95e086648caca829c6",
+      "sprites_loading": "77b5d9b5016acf2be86bf112f7b4fabc"
+     }
+    }
+   ]
+  },
   "c1a76349d08289810323bae0e62a9102": {
    "game": "Green Beret",
    "doc": "green_beret.md",
