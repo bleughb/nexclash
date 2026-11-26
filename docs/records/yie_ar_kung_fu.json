@@ -1,0 +1,156 @@
+{
+ "name": "yie_ar_kung_fu",
+ "order": 281,
+ "game": "Yie Ar Kung-Fu (128K)",
+ "doc": "yie_ar_kung_fu.md",
+ "engine": "yie_ar_kung_fu",
+ "representative": true,
+ "reference": "yie_ar_kung_fu",
+ "inputs": {
+  "snapshot": {
+   "name": "yie_ar_kung_fu.z80",
+   "md5": "954472db58451ab0183075154cd70169",
+   "path": "yie_ar_kung_fu/yie_ar_kung_fu.z80",
+   "note": "128K edition (7FFD 0x17), from the pilot run"
+  },
+  "recordings": [
+   {
+    "name": "t1.rzx",
+    "md5": "31cbfb60cdc2de6598f6e568b58db19a",
+    "path": "yie_ar_kung_fu/t1.rzx",
+    "role": "machine-played, 6,002 frames"
+   },
+   {
+    "name": "t2.rzx",
+    "md5": "9b486fa3ebffc7effccb602d5eb63bf4",
+    "path": "yie_ar_kung_fu/t2.rzx",
+    "role": "machine-played, 12,002 frames"
+   },
+   {
+    "name": "t3.rzx",
+    "md5": "7fd960fd3c8da26737ed5f5a4f136a72",
+    "path": "yie_ar_kung_fu/t3.rzx",
+    "role": "machine-played, 15,004 frames: Feedle's caves and the courtyard level"
+   },
+   {
+    "name": "yie_ar_kung_fu.pok",
+    "md5": "e27d85c207ecd80e900aa29ab0562c55",
+    "path": "yie_ar_kung_fu/yie_ar_kung_fu.pok",
+    "note": "two archive cheats checked against this release (games/yie_ar_kung_fu.md Cheats)"
+   }
+  ]
+ },
+ "modules": [
+  "yie_ar_kung_fu"
+ ],
+ "own_modules": [
+  "yie_ar_kung_fu"
+ ],
+ "data": [
+  "asm/yie_ar_kung_fu_hooks.asm",
+  "docs/profiles/yie_ar_kung_fu.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "t1.rzx",
+   "t2.rzx",
+   "t3.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 30,
+  "note": "Lockstep replay: registers at every hook exit, PC, SP, paging, all RAM every 4 frames; at layer checks the shown screen equal to the original's and the sprite layer against it (ink set, body clear, no figure-store pixel uncovered), Layer 2 cave pixels on the original's ink, bodies in the ground's paper. Speed matrix (entered at 1-3), hide cases at four speeds, 8 negative controls each by its own failure."
+ },
+ "outputs": {
+  "plain": {
+   "file": "yie_ar_kung_fu.nex",
+   "md5": "fa391314578494bfd3ec58e784cc8489"
+  },
+  "sprites": {
+   "file": "yie_ar_kung_fu_sprites.nex",
+   "md5": "0ffc86204a42fa2cd29f07bf2d926439"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Yie Ar Kung-Fu (128K)",
+  "engine_col": "yie_ar_kung_fu (yie_ar_kung_fu.md)",
+  "build": "yie_ar_kung_fu_sprites.nex (figures as sprites over the figures the game still draws; Feedle's caves on Layer 2; no outline)",
+  "software": "replay IDENTICAL on 3 recordings (33,008 frames); speed matrix; 64 hide cases; 8 negatives detected",
+  "hardware": "not tested",
+  "next": "Codex review; Enhanced arcade colours for Jon"
+ },
+ "checks": [
+  "asm2profile:yie_ar_kung_fu"
+ ],
+ "techniques": [
+  {
+   "application": "the whole design",
+   "id": "patch.xor-overlay-keep-ula",
+   "revision": 1,
+   "target": "every figure pixel store",
+   "phases": []
+  },
+  {
+   "application": "design",
+   "id": "detect.gameplay-screen-readers",
+   "revision": 1,
+   "target": "0xF622 star hit test, 0xB9AE generator",
+   "phases": []
+  },
+  {
+   "application": "Feedle's caves",
+   "id": "patch.scenery-edge-masks",
+   "revision": 1,
+   "target": "0xB547-0xB5B7 cave ORs",
+   "phases": []
+  },
+  {
+   "application": "every hook exit",
+   "id": "patch.restore-speed",
+   "revision": 1,
+   "target": "all stubs",
+   "phases": []
+  }
+ ],
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/yie_ar_kung_fu.md#pacing"
+   ],
+   "coverage": "Hook T counted by the verifier over t1-t3 (33,008 frames); no JNext or hardware timing.",
+   "result": "About 1.5 % of a frame on average; first conversions of new graphics up to about 1.5 frames (31 hooks over 280k T at 28 MHz in t3)."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/yie_ar_kung_fu.md#dependencies"
+   ],
+   "coverage": "All RAM compared every 4 frames and registers at every hook exit over three recordings; star hit test and generator reached.",
+   "result": "The star hit test and the generator read the screens: every pixel store kept, so they read the original's bytes; only the spark's attribute stores removed."
+  },
+  "decision": "Overlay: figures stay on the ULA, sprites cover them; caves on Layer 2 over the sprites; bodies in the ground's paper; no outline.",
+  "next_experiment": "JNext pace against the original (verify.update-locked-pace): within 3 %."
+ },
+ "results": [
+  {
+   "application": "the whole design",
+   "check": "replay",
+   "scope": "3 recordings, 33,008 frames",
+   "evidence": "games/yie_ar_kung_fu.md#verification-2026-11-26",
+   "status": "pass",
+   "build": "0ffc8620"
+  }
+ ]
+}

@@ -17,7 +17,7 @@ import importlib
 ENGINES = [
     ('cisco_heat', 'is_cisco_heat', None),                               # Cisco Heat (128K), smooth engine
     ('winter_sports', 'is_winter_sports', None),                        # Winter Sports (48K), six tape events embedded; plain build
-    ('yie', 'is_yie', None),                                              # Yie Ar Kung-Fu, 128K edition
+    ('yie_ar_kung_fu', 'is_yie_ar_kung_fu', None),                        # Yie Ar Kung-Fu, 128K edition
     ('stock_car_3d', 'is_stock_car_3d', None),                           # 3D Stock Car Championship (48K)
     ('highway_encounter', 'is_highway_encounter', None),             # Highway Encounter (48K), optional Enhanced
     ('exolon', 'is_exolon', None),                                   # Exolon (128K), optional Enhanced

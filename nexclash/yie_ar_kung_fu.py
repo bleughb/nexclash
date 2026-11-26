@@ -1,5 +1,5 @@
 """Yie Ar Kung-Fu (Imagine 1985, 128K edition): fighters, thrown stars, chain and hit spark -> 4-bit hardware sprites.
-Game facts: games/yie_ar_kung_fu.md; hook source: asm/yie_hooks.asm. Original and patched machines replay the recording
+Game facts: games/yie_ar_kung_fu.md; hook source: asm/yie_ar_kung_fu_hooks.asm. Original and patched machines replay the recording
 in lockstep; hook instructions are not counted, so game code stays in step."""
 import collections
 import copy
@@ -7,7 +7,7 @@ import hashlib
 import json
 import os
 
-RECORD = 'yie'
+RECORD = 'yie_ar_kung_fu'
 SIG = (0xB3F9, bytes.fromhex('01fd7f'))
 ROM_ORG = 0x386E
 HB = 0xE000
@@ -17,24 +17,28 @@ STORE = 28
 NSTORE = 32
 ALT_PAGE, HPG = 24, 26
 V_RING = 0x0004
+V_GBODY, V_GROUND = 0x003B, 0x003C
+GROUND = 0x5800 + 22 * 32 + 2
+ULA_COLOURS = (0x00, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4, 0xB6, 0x00, 0x03, 0xE0, 0xE7, 0x1C, 0x1F, 0xFC, 0xFF)
 TAB = 0x1800
 _HERE = os.path.dirname(os.path.abspath(__file__))
-COLOURS = os.path.join(_HERE, '..', 'docs', 'profiles', 'yie_colours.json')
+COLOURS = os.path.join(_HERE, '..', 'docs', 'profiles', 'yie_ar_kung_fu_colours.json')
 # Group colours: index 0 transparent, 1 ink, 2 body, 3 outline. 0 hero, 1 opponent, 2 objects and chain, 3 spark.
 # The game's own colours in play: black ink on the lawn's cyan paper (attribute 0x28); the outline is the owner's white.
 BLACK, CYAN, WHITE = 0x00, 0x16, 0xFF
 GROUPS_DEFAULT = [[0, BLACK, CYAN, WHITE]] * 3 + [[0, BLACK, CYAN, WHITE]]
-NOP_SITES = [(0xB632, 0x12), (0xB6AC, 0x12), (0xB6C4, 0x12), (0xB73A, 0x12), (0xB7BA, 0x12), (0xB7D7, 0x12),
-             (0xF571, 0x12), (0xEF39, 0x77), (0xEF76, 0x77), (0xB90B, 0x77), (0xB914, 0x77), (0xB91B, 0x77), (0xB948, 0x12),
-             (0xB92D, 0x12)]
+# Overlay (2026-11-26): every pixel store stays, so the screens hold what the original's hold and the thrown-star hit
+# test (0xF622: drawing-screen cell vs clean copy) and the random generator read the original's bytes; the sprites
+# cover the figures. Only the spark's attribute stores go (its coloured cell would clash); nothing reads them.
+NOP_SITES = [(0xB90B, 0x77), (0xB914, 0x77), (0xB91B, 0x77), (0xB948, 0x12)]
 SITES = [(0xB4EC, 'cdd8b5', 'CD', 'e_plot'), (0xB528, 'cdd8b5', 'CD', 'e_plot'), (0xB3F9, '01fd7f', 'CD', 'e_flip'),
          (0xF563, 'cd6cf5', 'CD', 'e_star'), (0xEF25, '22e3bd', 'CD', 'e_chain'), (0xEFAB, '2ae3bd', 'C3', 'e_cwipe'),
          (0xB908, '3ac8b9', 'CD', 'e_spark'), (0xB91C, 'cd90f4', 'CD', 'e_spoff'),
-         (0xAAAF, '21ff5a', 'C3', 'e_wa'), (0xAAE9, '3acfbd', 'C3', 'e_wb')]
+         (0xAAAF, '21ff5a', 'C3', 'e_wa'), (0xAAE9, '3acfbd', 'C3', 'e_wb'), (0xB547, '3abfbd', 'CD', 'e_cave')]
+L2BANK, L2PG = 30, 60           # Layer 2 over the sprites: the Feedle caves (asm c_cave), transparent elsewhere
+CAVE_X = ((0, 40), (216, 256))
+CAVE_Y = (144, 188)
 CMP = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 26, 27]
-# A and F may differ on plots over a figure's pixels: the stores are gone, so what a plot reads differs until A is next loaded
-FIG_SPANS = [(0xB5D8, 0xB7EF), (0xB4EF, 0xB50F), (0xB52B, 0xB546), (0xF56C, 0xF579), (0xF566, 0xF56B), (0xEF36, 0xEF56), (0xEF73, 0xEF93),
-             (0xF410, 0xF41B), (0xB417, 0xB422), (0xB3D6, 0xB3D9), (0xB547, 0xB54B)]
 RNG_READ = 0xB9AE
 CLEAN = 0x5B00                  # clean copy of the screen's lower two thirds, from 0x4800
 ZONE = (64, 192)
@@ -42,7 +46,7 @@ HALT = 0xB3E2
 OBJI, FPTR = 48570, 47088
 
 
-def is_yie(snap):
+def is_yie_ar_kung_fu(snap):
     a, b = SIG
     try:
         m = snap.ram(-1)
@@ -77,9 +81,9 @@ def tab_bytes():
 
 
 class YiePatch:
-    name = 'Yie Ar Kung-Fu figures -> hardware sprites (alt ROM stubs, page 26 at slot 7, screen stores gone)'
+    name = 'Yie Ar Kung-Fu figures -> hardware sprites over the figures the game still draws (alt ROM stubs, page 26 at slot 7)'
 
-    def __init__(self, prof=None, colours=None, rom_code=None, page_code=None, outline=True, sites=None, nops=None):
+    def __init__(self, prof=None, colours=None, rom_code=None, page_code=None, outline=False, sites=None, nops=None):
         self.prof = prof or load_profile()
         h = self.prof['hooks']
         self.rom_code = rom_code if rom_code is not None else bytes.fromhex(h['rom'])
@@ -102,6 +106,8 @@ class YiePatch:
         self.page[ROM_ORG - 0x2000:ROM_ORG - 0x2000 + len(self.rom_code)] = self.rom_code
         self.hpage = bytearray(16384)
         self.hpage[V_RING] = 1 if outline else 0
+        self.hpage[V_GBODY] = 1 if colours is None else 0   # default colours: bodies in the ground's paper (asm ground_body)
+        self.hpage[V_GROUND] = 0x01                         # no body colour written yet
         self.hpage[CODE0:CODE0 + len(self.page_code)] = self.page_code
         self.hpage[TAB:TAB + 1024] = tab_bytes()
         self.hpage[BITS:BITS + 4] = bytes([1, 2, 4, 8])
@@ -119,6 +125,8 @@ class YiePatch:
 
     def _banks(self):
         self.extra_banks = {12: bytes(self.page) + bytes(8192), 13: bytes(self.hpage)}
+        for b in range(L2BANK, L2BANK + 3):
+            self.extra_banks[b] = bytes([0xE3]) * 16384
 
     def apply(self, snap):
         from . import z80tonex as zt
@@ -155,20 +163,39 @@ class _NS:
     """Next-side state of the patched machine."""
 
     def __init__(self, patch):
-        self.nr = {0x07: 0, 0x56: 14, 0x57: 15, 0x15: 1}
+        self.nr = {0x07: 0, 0x56: 14, 0x57: 15, 0x15: 5, 0x43: 0x20}   # as the stub's set-up leaves them
+        self.sel = 0                    # 0x243B selection (hlib_speed reads NR 7 through 0x253B)
         self.store = bytearray(NSTORE * 8192)
         self.attr = [[0, 0, 0, 0, 0] for _ in range(128)]
         self.pat = bytearray(16384)
         self.pat_ptr = 0
         self.H = bytearray(patch.hpage[:8192])
+        self.spal = bytearray(256)                 # sprite palette 0 as the hooks leave it (the stub's set-up first)
+        self.spal[:64] = patch.palette()
+        self.l2 = bytearray([0xE3]) * 49152      # Layer 2 256 x 192, one byte a pixel
         self.palhold = dict()
 
     def nextreg(self, reg, val):
         self.nr[reg] = val
+        if reg == 0x41 and (self.nr.get(0x43, 0) >> 4) & 7 == 2:   # sprite palette 0, 8-bit colour, auto-increment
+            i = self.nr.get(0x40, 0)
+            self.spal[i] = val
+            if not self.nr.get(0x43, 0) & 0x80:
+                self.nr[0x40] = (i + 1) & 255
         if 0x35 <= reg <= 0x39:
             self.attr[self.nr.get(0x34, 0) & 0x7F][reg - 0x35] = val
 
+    def read_nr(self):
+        v = self.nr.get(self.sel, 0)
+        return ((v & 3) << 4) | (v & 3) if self.sel == 0x07 else v      # NR 7 read: actual speed 5:4, programmed 1:0
+
     def out(self, port, val):
+        if port == 0x243B:
+            self.sel = val
+            return True
+        if port == 0x253B:
+            self.nextreg(self.sel, val)
+            return True
         if port == 0x303B:
             self.pat_ptr = (val & 0x3F) * 256 + (128 if val & 0x80 else 0)
             return True
@@ -224,6 +251,8 @@ class _Ports:
         self.bad = 0
 
     def read_port(self, registers, port):
+        if self.ns is not None and port == 0x253B:      # a hook reading a NextReg: the Next, not the recording
+            return self.ns.read_nr()
         if self.i < len(self.ins):
             self.i += 1
             return self.ins[self.i - 1]
@@ -246,12 +275,15 @@ def _patched_memory(mem, patch, ns, err):
     H = ns.H
     nr = ns.nr
     store = ns.store
+    l2 = ns.l2
 
     class PM(Memory):
         def __getitem__(self, a):
             if a >= HB and nr[0x57] == HPG:
                 return H[a - HB]
             if 0xC000 <= a < 0xE000 and nr[0x56] != 14:
+                if L2PG <= nr[0x56] < L2PG + 6:
+                    return l2[(nr[0x56] - L2PG) * 8192 + a - 0xC000]
                 pg = nr[0x56] - STORE
                 if 0 <= pg < NSTORE:
                     return store[pg * 8192 + a - 0xC000]
@@ -271,6 +303,9 @@ def _patched_memory(mem, patch, ns, err):
                 H[a - HB] = v
                 return
             if 0xC000 <= a < 0xE000 and nr[0x56] != 14:
+                if L2PG <= nr[0x56] < L2PG + 6:
+                    l2[(nr[0x56] - L2PG) * 8192 + a - 0xC000] = v
+                    return
                 pg = nr[0x56] - STORE
                 if 0 <= pg < NSTORE:
                     store[pg * 8192 + a - 0xC000] = v
@@ -331,10 +366,6 @@ def _addr(line, col, base=0x4000):
     return base + (((line & 0xC0) << 5) | ((line & 7) << 8) | ((line & 0x38) << 2)) + col
 
 
-def in_spans(pc):
-    return any(a <= pc <= b for a, b in FIG_SPANS)
-
-
 def shown_bank(o7ffd):
     return 7 if o7ffd & 8 else 5
 
@@ -358,7 +389,37 @@ def cell_of(addr):
     return (a & 31) * 8, ((a >> 8) & 7) | ((a >> 2) & 0x38) | ((a >> 5) & 0xC0)
 
 
-def expected_vs_original(so_mem, sp_mem, o7ffd, lay, skip_chain=None, allowed=None, hole=None):
+# The original's figure stores (fighters, star, chain, spark): the pixels they change are figure pixels; any other
+# store (the clean-copy restores, the Feedle level's edge arches 0xB5B8 / 0xB588 / 0xB5AA) makes its pixels scenery.
+FIG_STORES = frozenset((0xB632, 0xB6AC, 0xB6C4, 0xB73A, 0xB7BA, 0xB7D7, 0xF571, 0xEF39, 0xEF76, 0xB92D))
+
+
+def track_figure_pixels(sim):
+    """Per screen byte, the bits the original's figure stores set last (bank 5 and bank 7 bitmaps). -> {bank: bytearray}"""
+    own = {5: bytearray(0x1800), 7: bytearray(0x1800)}
+    R = sim.registers
+    MS = type(sim.memory).__setitem__
+
+    class Tracked(type(sim.memory)):
+        def __setitem__(self, a, v):
+            if 0x4000 <= a < 0x5800:
+                b, off = 5, a - 0x4000
+            elif a >= 0xC000 and a < 0xD800 and (self.o7ffd & 7) in (5, 7):
+                b, off = self.o7ffd & 7, a - 0xC000
+            else:
+                MS(self, a, v)
+                return
+            changed = self[a] ^ v
+            if R[24] in FIG_STORES:
+                own[b][off] |= changed
+            else:
+                own[b][off] &= ~changed & 255
+            MS(self, a, v)
+    sim.memory.__class__ = Tracked
+    return own
+
+
+def expected_vs_original(so_mem, sp_mem, o7ffd, lay, skip_chain=None, allowed=None, hole=None, own=None, l2=None):
     """The shown screen of the original against sprites over the patched screen, for the figure zone.
     A sprite ink pixel must be set in the original; a body pixel clear; outline and empty pixels as the clean copy shows.
     Exceptions, by design, both about the outline (the owner's white ring, which the game does not draw): it may lie on
@@ -366,8 +427,9 @@ def expected_vs_original(so_mem, sp_mem, o7ffd, lay, skip_chain=None, allowed=No
     figure (both hide the scenery there). And the spark: the game copies it over its whole cell, so a figure there
     loses those pixels until the game draws that screen again; sprites keep the figure whole. `hole` = the last
     spark's cell (x, y) while that lasts: in it, a figure pixel where the original shows the clean copy is allowed.
-    Such pixels go to `allowed` as (x, y, kind). -> list of (x, y, sprite code,
-    original bit, clean bit)."""
+    Such pixels go to `allowed` as (x, y, kind). own (track_figure_pixels): a pixel off the clean copy that no figure
+    store drew is the game's own scenery (the Feedle level's edge arches), not a figure to cover. -> list of (x, y,
+    sprite code, original bit, clean bit)."""
     bad = []
     under = getattr(lay, 'under_ink', ())
     b = shown_bank(o7ffd)
@@ -387,9 +449,19 @@ def expected_vs_original(so_mem, sp_mem, o7ffd, lay, skip_chain=None, allowed=No
                         continue
                 bit = 0x80 >> i
                 ob, cb = bool(o & bit), bool(c & bit)
+                if l2 is not None and l2[y * 256 + x] != 0xE3:  # Layer 2 (a cave) over the sprites: the original's ink
+                    if not ob:
+                        bad.append((x, y, 'Layer 2', ob, cb))
+                    elif allowed is not None:
+                        allowed.append((x, y, 'cave'))
+                    continue
                 if v is None or v[0] == 3:
                     if ob != cb:
                         if skip_chain and skip_chain(x, y):
+                            continue
+                        if own is not None and not own[b][a] & bit:
+                            if allowed is not None:
+                                allowed.append((x, y, 'scenery'))
                             continue
                         if v and ob and (x, y) in under:
                             if allowed is not None:
@@ -417,7 +489,10 @@ def expected_vs_original(so_mem, sp_mem, o7ffd, lay, skip_chain=None, allowed=No
 # Differential verification: lockstep over the recording
 # ---------------------------------------------------------------------------------------------
 
-def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=4):
+HIDE_SITES = {0xAAAF: 'wipe A', 0xAAE9: 'wipe B', 0xB91C: 'spark off', 0xEFAB: 'chain wipe'}
+
+
+def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=4, speed=0):
     """-> (Counter, examples, states). Failure keys end in '!'."""
     c = collections.Counter()
     ex = collections.defaultdict(list)
@@ -432,10 +507,12 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=4):
     lo, hi = patch.altrom
     for snap, frames in _frames(rzx_path):
         so = game_machine(snap)
+        own = track_figure_pixels(so)
         po = _Ports(so, snap)
         so.set_tracer(po)
         err = []
         sp, ns = patched_machine(snap, patch, err)
+        ns.nr[0x07] = speed             # the player's CPU speed: every hook must give it back
         pp = _Ports(sp, snap, ns)
         sp.set_tracer(pp)
         Ro, Rp, mo, mp, op = so.registers, sp.registers, so.memory, sp.memory, sp.opcodes
@@ -459,17 +536,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=4):
             if pp.o7ffd != po.o7ffd:
                 fail('paging differs', hex(pp.o7ffd), hex(po.o7ffd))
                 return
-            scr = mp.banks[bk]
-            cl = mp.banks[5]
-            for y in range(*ZONE):
-                a0 = _addr(y, 0) - 0x4000
-                k0 = CLEAN - 0x4000 + (a0 + 0x4000 - 0x4800)
-                if bytes(scr[a0:a0 + 32]) != bytes(cl[k0:k0 + 32]):
-                    for col in range(32):
-                        if scr[a0 + col] != cl[k0 + col]:
-                            fail('patched screen not clean at a layer check', where, y, col, scr[a0 + col], cl[k0 + col])
-                            break
-                    break
+            if bytes(mp.banks[bk][:0x1800]) != bytes(mo.banks[bk][:0x1800]):
+                fail('shown screen pixels differ from the original at a layer check', where)
             lay = ns.sprite_layer()
             chn = None
             if H[0x12]:
@@ -484,13 +552,26 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=4):
                 c['chain up at a layer check'] += 1
             ok_out = []
             hole = st['hole'][:2] if st.get('hole') else None
-            bad = expected_vs_original(mo, mp, po.o7ffd, lay, chn, ok_out, hole)
+            bad = expected_vs_original(mo, mp, po.o7ffd, lay, chn, ok_out, hole, own, ns.l2)
+            c['cave pixels over the sprites (Layer 2)'] += sum(1 for q in ok_out if q[2] == 'cave')
+            c['game-drawn pixels off the clean copy, not figures (Feedle arches)'] += sum(1 for q in ok_out if q[2] == 'scenery')
             c['figure pixels in a spark\'s cell the original has wiped (by design)'] += sum(1 for q in ok_out if q[2] == 'spark hole')
             c['outline pixels on another figure\'s ink (by design)'] += sum(1 for q in ok_out if q[2] == 'on ink')
             c['outline pixels where the game masks the scenery (by design)'] += sum(1 for q in ok_out if q[2] == 'masked')
             if bad:
                 fail('sprite layer differs from the original screen', where, len(bad), bad[:6])
             c['layer pixels compared'] += len(lay)
+            if ns.H[V_GBODY]:            # default colours: every shown figure's body in the ground's paper
+                at = mo.banks[bk][GROUND - 0x4000]
+                want = ULA_COLOURS[(at >> 3) & 7 | (8 if at & 0x40 else 0)]
+                for sl in range(128):
+                    a = ns.attr[sl]
+                    if a[3] & 0x80 and sl != 127:
+                        got = ns.spal[(a[2] >> 4) * 16 + 2]
+                        c['body colour checks'] += 1
+                        if got != want:
+                            fail('body colour is not the ground paper', where, sl, hex(got), hex(want))
+                            break
             mx = 0
             per = collections.Counter()
             for s in range(128):
@@ -505,11 +586,6 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=4):
         def compare_state(pc):
             for i in CMP:
                 if Ro[i] != Rp[i]:
-                    if i in (0, 1) and in_spans(pc):
-                        c['A or F differ in a figure span'] += 1
-                        continue
-                    if i in (0, 1) and 0xC000 <= pc:
-                        continue
                     fail('register differs', hex(pc), i, Ro[i], Rp[i])
             if Ro[24] != Rp[24]:
                 fail('PC differs', hex(Ro[24]), hex(Rp[24]))
@@ -526,8 +602,6 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=4):
                 for a in range(16384):
                     if bo[a] != bp[a]:
                         addr = a + (0x4000 if b == 5 else 0x8000 if b == 2 else 0xC000)
-                        if b in (5, 7) and a < 0x1800:
-                            continue
                         if b in (5, 7) and a < 0x1B00 and st.get('spark'):
                             continue
                         if b == 2 and 0xBF80 <= addr <= 0xBFFF:
@@ -554,6 +628,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=4):
                 pcp = Rp[24]
                 if in_hook(pcp):
                     r0 = list(Rp)
+                    spd0 = nr[0x07]
                     t0 = Rp[25]
                     while in_hook(Rp[24]):
                         r15 = Rp[15]
@@ -572,8 +647,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=4):
                         fail('hook left interrupts off', hex(Rp[24]))
                     if nr[0x57] != 15 or nr[0x56] != 14:
                         fail('hook page left mapped', hex(Rp[24]))
-                    if nr[0x07] != 0:
-                        fail('speed not restored', hex(Rp[24]), nr[0x07])
+                    if nr[0x07] != spd0:
+                        fail('speed not restored', hex(Rp[24]), nr[0x07], spd0)
                     pcp = Rp[24]
                     # a hook ended in place of the original's own instruction
                     t = st.get('site')
@@ -582,8 +657,6 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=4):
                         st['site'] = None
                         _run_one(so, Ro, mo)
                         for i in CMP:
-                            if i in (0, 1) and in_spans(Rp[24]):
-                                continue
                             if Rp[i] != Ro[i]:
                                 fail('hook changed a register', hex(t), i, Rp[i], Ro[i])
                         c['hook exits checked'] += 1
@@ -601,6 +674,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=4):
                     if tick[0] % every == 0 and n > 2:
                         check_shown('HALT')
                 if pcp in ENTRIES:
+                    if collect and pcp in HIDE_SITES and sum(1 for q in states if q[0] == pcp) < collect:
+                        states.append((pcp, list(Rp), [bytes(mp.banks[b]) for b in range(8)], pp.o7ffd, snap, bytes(ns.H)))
                     c['site %04X' % pcp] += 1
                     if pcp == 0xB3F9:
                         st['spark'] = False
@@ -718,12 +793,14 @@ def boot_check(nex, z80, patch=None):
             bad.append(('alt image 1 differs from ROM 3 + hooks',))
         if st['nr'].get(0x8C) != 0x80:
             bad.append(('$8C', st['nr'].get(0x8C)))
-        if (0x15, 0x01) not in st['nrlog']:
-            bad.append(('sprites not enabled',))
+        if (0x15, 0x05) not in st['nrlog']:
+            bad.append(('sprites and Layer 2 (LSU) not set up',))
+        if (0x12, L2BANK) not in st['nrlog']:
+            bad.append(('Layer 2 bank not set',))
     return bad
 
 
-def build(z80, out, name, say=print, outline=True):
+def build(z80, out, name, say=print, outline=False):   # Jon 2026-11-26: no white outlines on anything
     from . import z80tonex as zt
     md5 = lambda p: hashlib.md5(open(p, 'rb').read()).hexdigest()
     plain = os.path.join(out, name + '.nex')
@@ -731,8 +808,180 @@ def build(z80, out, name, say=print, outline=True):
     bad = boot_check(plain, z80)
     say('Plain     : %s  %s  boot %s' % (os.path.basename(plain), md5(plain), 'OK' if not bad else 'MISMATCH %s' % str(bad[:3])[:300]))
     patch = YiePatch(outline=outline, colours=load_colours())
-    spr = os.path.join(out, name + ('_sprites.nex' if outline else '_noring_sprites.nex'))
+    spr = os.path.join(out, name + ('_sprites.nex' if not outline else '_ring_sprites.nex'))
     zt.convert(z80, spr, quiet=True, patch=patch)
     bad2 = boot_check(spr, z80, YiePatch(outline=outline, colours=load_colours()))
     say('Sprites   : %s  %s  boot %s' % (os.path.basename(spr), md5(spr), 'OK' if not bad2 else 'MISMATCH %s' % str(bad2[:3])[:300]))
     return (not bad and not bad2), (plain, spr), patch
+
+
+# ---------------------------------------------------------------------------------------------
+# Unit cases, negative controls and the whole run (docs/ENGINE_TEMPLATES.md "New engine checklist")
+# ---------------------------------------------------------------------------------------------
+
+# Page H's run-time ranges (asm/yie_ar_kung_fu_hooks.asm): variables, plot/cache/frame tables (0x0000-0x05FF), the silhouette,
+# ink and ring planes (0x1200-0x17FF), scratch tile and hook stack (0x1C00-0x1FFF). Code (CODE0-) and TAB are the build's.
+H_RUNTIME = ((0x0000, CODE0), (0x1200, 0x1800), (0x1C00, 0x2000))
+
+HIDE_SLOTS = {0xAAAF: range(128), 0xAAE9: range(128), 0xB91C: (127,), 0xEFAB: range(80, 112)}
+
+
+def hide_run(patch, state, speed):
+    """A hide hook from a state the recording reached, every sprite shown first (and the chain counted whole for the
+    chain wipe), entered at CPU speed `speed`. -> (failures, the slots it had to hide that are still shown)."""
+    pc, R, banks, o7ffd, snap, H = state
+    err = []
+    sim, ns = patched_machine(snap, patch, err)
+    for b in range(8):
+        sim.memory.banks[b][:] = banks[b]
+    sim.memory.out7ffd(o7ffd)
+    ports = _Ports(sim, snap, ns)
+    ports.o7ffd = o7ffd
+    sim.set_tracer(ports)
+    for lo_, hi_ in H_RUNTIME:                  # only the run-time ranges: the patch's own code and tables stay its own
+        ns.H[lo_:hi_] = H[lo_:hi_]
+    if pc == 0xEFAB:
+        ns.H[0x12] = 32
+    wipe = pc in (0xAAAF, 0xAAE9)
+    if wipe:                                    # caves shown: a wipe must take them off Layer 2
+        ns.H[0x35] = 1
+        for y in range(*CAVE_Y):
+            for x0, x1 in CAVE_X:
+                ns.l2[y * 256 + x0:y * 256 + x1] = bytes(x1 - x0)
+    for i in range(128):
+        ns.attr[i] = [40, 40, 0, 0x80 | (i & 63), 0]
+    ns.nr[0x07] = speed
+    sim.registers[:] = R
+    lo, hi = patch.altrom
+    nr = ns.nr
+    sim.opcodes[sim.memory[sim.registers[24]]]()            # the site's CALL / JP into the hook
+    n = 0
+    while lo <= sim.registers[24] < hi or (sim.registers[24] >= HB and nr[0x57] == HPG):
+        sim.opcodes[sim.memory[sim.registers[24]]]()
+        n += 1
+        if n > 200000:
+            return ['no return from the hook'], []
+    bad = ['%s %s' % e for e in err[:2]]
+    if nr[0x07] != speed:
+        bad.append('speed not restored (%d, entered at %d)' % (nr[0x07], speed))
+    if nr[0x57] != 15 or nr[0x56] != 14:
+        bad.append('hook page left mapped')
+    if wipe and any(v != 0xE3 for v in ns.l2):
+        bad.append('cave left on Layer 2')
+    return bad, [i for i in HIDE_SLOTS[pc] if ns.attr[i][3] & 0x80]
+
+
+def unit_tests(patch, states):
+    """The hide hooks (two wipes, spark off, chain wipe) from captured states with every sprite shown, at the four
+    CPU speeds (hooklib.hide_cases). -> Counter, failures end in '!'."""
+    from . import hooklib
+    c = collections.Counter()
+    for pc, name in HIDE_SITES.items():
+        mine = [q for q in states if q[0] == pc]
+        if not mine:
+            c['%s hook: no state captured' % name] += 1
+            continue
+        c.update(hooklib.hide_cases(mine, {pc: name}, lambda _pc, st, speed: hide_run(patch, st, speed)))
+    return c
+
+
+def _rom_mutated(patch, find, new, after_sym):
+    rom = bytearray(patch.rom_code)
+    at = rom.find(bytes.fromhex(find), patch.syms[after_sym] - ROM_ORG)
+    if at < 0:
+        raise AssertionError('negative-control site missing: %s' % find)
+    rom[at:at + len(bytes.fromhex(new))] = bytes.fromhex(new)
+    return YiePatch(prof=patch.prof, colours={'groups': patch.groups}, rom_code=bytes(rom), outline=patch.outline)
+
+
+def _page_mutated(patch, find, new):
+    page = bytearray(patch.page_code)
+    at = page.find(bytes.fromhex(find))
+    if at < 0 or page.find(bytes.fromhex(find), at + 1) >= 0:
+        raise AssertionError('negative-control site not unique: %s' % find)
+    page[at:at + len(bytes.fromhex(new))] = bytes.fromhex(new)
+    return YiePatch(prof=patch.prof, colours={'groups': patch.groups}, page_code=bytes(page), outline=patch.outline)
+
+
+def negative_patches(patch):
+    """-> [(name, broken patch, how it must be caught: ('verify', failure key) or ('unit', hide site))]. Each control
+    is caught only by its own failure."""
+    no_plot = YiePatch(prof=patch.prof, colours={'groups': patch.groups}, outline=patch.outline,
+                       sites=[x for x in SITES if x[0] not in (0xB4EC, 0xB528)])
+    no_ink = YiePatch(prof=patch.prof, colours={'groups': patch.groups}, outline=patch.outline)
+    no_ink.hpage[TAB:TAB + 1024] = bytes(1024)
+    no_ink._banks()
+    return [
+        ('plot hook leaves the CPU at 28 MHz', _rom_mutated(patch, '3a34e0ed9207', '3a34e0000000', 'e_plot'),
+         ('verify', 'speed not restored')),
+        ('plot hook swaps HL and DE', _rom_mutated(patch, '3a34e0ed9207dde1e1d1', '3a34e0ed9207dde1d1e1', 'e_plot'),
+         ('verify', 'hook changed a register')),
+        ('fighter plot sites not applied', no_plot, ('verify', 'sprite layer differs')),
+        ('ink lost in the pattern tables', no_ink, ('verify', 'sprite layer differs')),
+        ('a wipe leaves the sprites shown', _page_mutated(patch, 'afed9234ed913800', 'afed923400000000'), ('unit', 0xAAAF)),
+        ('spark off leaves the spark shown', _page_mutated(patch, 'ed91347fed913800', 'ed91347f00000000'), ('unit', 0xB91C)),
+        ('bodies keep the lawn cyan on every level', _page_mutated(patch, 'ed92404f7bed924179c610', 'ed92404f7b00000079c610'),
+         ('verify', 'body colour is not the ground paper')),
+        ('cave hook not applied (clones in front of the caves)',
+         YiePatch(prof=patch.prof, colours={'groups': patch.groups}, outline=patch.outline,
+                  sites=[x for x in SITES if x[0] != 0xB547]), ('verify', 'sprite layer differs')),
+    ]
+
+
+def auto(a, z80, name, out, say):
+    """The whole run: plain + sprite builds with boot checks, each recording verified (autosaves are not stripped:
+    _frames keeps each segment's own snapshot, and the patched machine starts again from it), the speed matrix,
+    hide cases and the negative controls. -> True on PASS."""
+    say('Game      : %s' % name)
+    say('Engine    : yie_ar_kung_fu (figures as sprites over the figures the game still draws; spark cell attributes removed)')
+    ok, files, patch = build(z80, out, name, say)
+    rz, quick = list(getattr(a, 'rzx', None) or []), getattr(a, 'quick', None)
+    if not rz:
+        say('Verify    : none (no recording given): builds and boot checks only')
+        say('Result    : %s (builds and boot checks only)' % ('PASSED' if ok else 'FAILED'))
+        return ok
+    states, reached = [], collections.Counter()
+    for r in rz:
+        c, ex, st = verify(patch, r, stop=quick, collect=4)
+        states += st
+        reached.update({k: v for k, v in c.items() if k.startswith('site ')})
+        fails = {k: v for k, v in c.items() if k.endswith('!')}
+        if not c['hook returns'] or not c['layer checks']:
+            fails['no hook or layer check reached: nothing verified!'] = 1
+        ok = ok and not fails
+        say('Verify    : %s  %d frames, %d hook returns, %d layer checks (%d pixels), %d RAM compares -> %s' % (
+            os.path.basename(r), c['frames'], c['hook returns'], c['layer checks'], c['layer pixels compared'],
+            c['RAM compares'], 'IDENTICAL' if not fails else 'FAILED %s' % fails))
+        for k, v in ex.items():
+            say('            %s: %s' % (k, str(v)[:220]))
+    missing = ['%04X' % x[0] for x in SITES if not reached['site %04X' % x[0]]]
+    if missing and not quick:
+        ok = False
+    say('Coverage  : sites not reached: %s' % (', '.join(missing) or 'none'))
+    n = min(quick or 1500, 1500)
+    for k in (1, 2, 3):
+        c, _, _ = verify(patch, rz[0], stop=n, speed=k)
+        bad = {x: v for x, v in c.items() if x.endswith('!')}
+        ok = ok and not bad
+        say('Speed     : entered at speed %d, %d frames: %s' % (k, c['frames'], 'IDENTICAL' if not bad else bad))
+    u = unit_tests(patch, states)
+    ok = ok and not any(k.endswith('!') for k in u) and not any('no state captured' in k for k in u)
+    say('Unit      : %s' % ', '.join('%s %d' % (k, v) for k, v in sorted(u.items()) if not k.startswith('  ')))
+    caught = []
+    for nm, broken, (how, what) in negative_patches(patch):
+        hit = False
+        if how == 'verify':
+            for r in rz:
+                frames = 4400 if 'cave' in nm else 30000 if 'cyan' in nm else 3000   # Feedle t3 4191-; the courtyard later
+                c, _, _ = verify(broken, r, stop=min(quick or frames, frames))
+                if any(k.endswith('!') and what in k for k in c):
+                    hit = True
+                    break
+        else:
+            mine = [q for q in states if q[0] == what]
+            hit = any(hide_run(broken, q, 0)[1] for q in mine[:2])
+        caught.append(hit)
+        say('Negative  : %s: %s' % (nm, 'DETECTED' if hit else 'MISSED'))
+    ok = ok and all(caught)
+    say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
+    return ok

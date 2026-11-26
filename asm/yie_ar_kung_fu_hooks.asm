@@ -10,7 +10,7 @@
 ; Method: the game's own code runs, the same instructions in the same order. Only the stores change: each store to a
 ; screen is a NOP, so both screens stay clean and the game's restores copy clean bytes over clean bytes.
 ;
-; Patch sites (original bytes verified by yie.py):
+; Patch sites (original bytes verified by yie_ar_kung_fu.py):
 ;   0xB4EC, 0xB528  CD D8 B5  CALL 0xB5D8 -> CALL e_plot: note the object, then the plot's own bookkeeping runs
 ;   0xB632 0xB6AC 0xB6C4 0xB73A 0xB7BA 0xB7D7  12 LD (DE),A -> 00   fighter stores
 ;   0xB3F9          01 FD 7F  LD BC,32765 -> CALL e_flip: commit this tick's sprites, then the flip
@@ -24,6 +24,7 @@
 ; Hook code: stubs in alt ROM image 1 (0x386E-, free in the 48K ROM), the rest in page H at slot 7, interrupts off.
 
         DEVICE ZXSPECTRUMNEXT
+        INCLUDE "lib/hlib_speed.asm"     ; macros only
 
 HPG     EQU 26                  ; hook page, MMU slot 0 while a hook runs
 
@@ -66,6 +67,21 @@ V_T     EQU HB+0x002F
 V_TFW   EQU HB+0x0030       ; (2)
 V_N     EQU HB+0x0032
 V_SOL   EQU HB+0x0033       ; 0x0F: small8s fills the silhouette (the spark's cell is opaque), 0: ink only
+V_SPD   EQU HB+0x0034       ; hlib_speed latch: the caller's CPU speed, given back on every exit
+V_CAVE  EQU HB+0x0035       ; 1 = the Feedle caves are on Layer 2
+V_CX    EQU HB+0x0036       ; cave being drawn: left x
+V_CY    EQU HB+0x0037       ;   line
+V_CN    EQU HB+0x0038       ;   lines left
+V_CF    EQU HB+0x0039       ;   0xFF on the solid fill lines
+V_CAVEP EQU HB+0x003A       ; 1 = the game drew the caves on the hidden screen this tick (0xB547)
+V_GBODY EQU HB+0x003B       ; 1 = default colours: figure bodies take the ground's paper (Python sets it)
+V_GROUND EQU HB+0x003C      ; the body colour last written to the sprite palette
+GROUND  EQU 0x5800+22*32+2  ; a ground cell's attribute (lawn, courtyard; the caves are pixels only)
+L2BANK  EQU 30              ; Layer 2 (16K banks 30-32, 8K pages 60-65): the Feedle caves over the sprites, else transparent
+L2PG    EQU 60
+CAVEF   EQU 48575           ; non-zero: the game draws the two caves each tick (0xB547)
+CAVEL   EQU 41500           ; their rows (5 bytes drawn, 6 apart: 0xB5C3), OR plotted from line 144 at x 0 and x 216
+CAVER   EQU 41741
 BITS    EQU HB+0x00F0       ; 1, 2, 4, 8, written by Python
 PLOTS   EQU HB+0x0100              ; 4 x 8: object, ptr (2), x, y, mirror, -, -
 CACHE   EQU HB+0x0140              ; 4 x 8: ptr (2), tile flags (2), W, H, -, -
@@ -100,7 +116,6 @@ SPKINK  EQU 47560
 
         MACRO ENTER
         di
-        nextreg 0x07,3
         nextreg 0x57,HPG
         ld (V_SP),sp
         ld sp,HSTK
@@ -109,9 +124,11 @@ SPKINK  EQU 47560
         push de
         push hl
         push ix
+        HLIB_SPEED_IN_ABC V_SPD     ; A, F, B, C are on the hook stack
         ENDM
 
         MACRO LEAVEDI
+        HLIB_SPEED_OUT_A V_SPD      ; the caller's speed; A comes back from the stack
         pop ix
         pop hl
         pop de
@@ -119,7 +136,6 @@ SPKINK  EQU 47560
         pop af
         ld sp,(V_SP)
         nextreg 0x57,15
-        nextreg 0x07,0
         ENDM
 
         MACRO LEAVE
@@ -156,7 +172,6 @@ e_cwipe: push af
         ld a,i
         di
         push af                     ; P/V = IFF
-        nextreg 0x07,3
         nextreg 0x57,HPG
         ld (V_SP),sp
         ld sp,HSTK
@@ -164,14 +179,15 @@ e_cwipe: push af
         push de
         push hl
         push ix
+        HLIB_SPEED_IN_ABC V_SPD     ; A, F on the game's stack, B, C on the hook stack
         call c_cwipe
+        HLIB_SPEED_OUT_A V_SPD      ; A comes back from the game's stack
         pop ix
         pop hl
         pop de
         pop bc
         ld sp,(V_SP)
         nextreg 0x57,15
-        nextreg 0x07,0
         pop af
         jp po,.di
         pop af
@@ -204,6 +220,12 @@ e_wb:   ENTER
         LEAVE
         ld a,(48591)
         jp 0xAAEC
+
+e_cave: ENTER
+        call c_cave
+        LEAVE
+        ld a,(CAVEF)
+        ret
 rom_end:
 
 ; ---- page H ----
@@ -257,7 +279,9 @@ c_plot: ld a,(V_NP)
         ret
 
 ; before the flip: the stars come off (the game has just wiped them) and this tick's figures go up
-c_flip: ld a,(V_STS)
+c_flip: call cave_flip
+        call ground_body
+        ld a,(V_STS)
         or a
         call nz,hide_stars
         xor a
@@ -1013,10 +1037,12 @@ c_star: ld a,(STARI)
 ; the game has just stored the shown screen's cell in 47566; the graphic is at 47393; no outline on a spark
 c_spark:
         ld hl,47393
+        ld a,(V_RING)                   ; the build's outline setting, given back after the spark
+        push af
         xor a
         ld (V_RING),a
         call small8s
-        ld a,1
+        pop af
         ld (V_RING),a
         ld a,PSPARK
         ld (V_PAT),a
@@ -1410,7 +1436,169 @@ c_wipe: xor a
         ld (hl),0
         ld bc,1023
         ldir
+        ld a,(V_CAVE)
+        or a
+        call nz,cave_clear
         ret
+
+; ---- Feedle's caves: the game ORs them over everything each tick (0xB560, 0xB588, 0xB5AA), so a clone inside is
+; hidden in the black. Their ink pixels go on Layer 2, over the sprites (LSU); the rest of Layer 2 is transparent.
+; 0xB547 notes that the game drew them on the hidden screen; the flip (c_flip) shows them on Layer 2 with that screen.
+c_cave: ld a,(CAVEF)
+        or a
+        ret z
+        ld a,1
+        ld (V_CAVEP),a
+        ret
+
+cave_flip:
+        ld a,(CAVEF)
+        or a
+        jp z,cave_off
+        ld a,(V_CAVEP)
+        or a
+        ret z
+        xor a
+        ld (V_CAVEP),a
+        ld a,(V_CAVE)
+        or a
+        ret nz
+        inc a
+        ld (V_CAVE),a
+        ld hl,CAVEL
+        xor a
+        call cave_draw
+        ld hl,CAVER
+        ld a,216
+cave_draw:                          ; HL = 40 rows of 5 bytes, A = left x: lines 144-181 from the rows, 182-187 solid
+        ld (V_CX),a
+        ld a,144
+        ld (V_CY),a
+        ld a,44
+        ld (V_CN),a
+.ln:    ld a,(V_CN)
+        cp 7
+        sbc a,a
+        ld (V_CF),a
+        call l2_line
+        ld b,5
+.by:    ld a,(V_CF)
+        or a
+        ld a,0xFF
+        jr nz,.fill
+        ld a,(hl)
+        inc hl
+.fill:  ld c,8
+.bt:    rla
+        push af
+        ld a,0xE3
+        jr nc,.w
+        xor a
+.w:     ld (de),a
+        inc e
+        pop af
+        dec c
+        jr nz,.bt
+        djnz .by
+        inc hl                              ; the row's sixth byte is not drawn
+        ld a,(V_CY)
+        inc a
+        ld (V_CY),a
+        ld a,(V_CN)
+        dec a
+        ld (V_CN),a
+        jr nz,.ln
+        nextreg 0x56,14
+        ret
+
+l2_line:                            ; DE = Layer 2 address of (V_CX, V_CY), its page at slot 6
+        ld a,(V_CY)
+        ld c,a
+        and 0xE0
+        rlca
+        rlca
+        rlca
+        add a,L2PG
+        nextreg 0x56,a
+        ld a,c
+        and 0x1F
+        or 0xC0
+        ld d,a
+        ld a,(V_CX)
+        ld e,a
+        ret
+
+cave_off:
+        ld a,(V_CAVE)
+        or a
+        ret z
+cave_clear:                         ; both caves transparent again (also on a wipe)
+        xor a
+        ld (V_CAVE),a
+        ld (V_CAVEP),a
+        ld a,144
+        ld (V_CY),a
+.cl:    xor a
+        ld (V_CX),a
+        call l2_line
+        ld a,0xE3
+        ld b,40
+.c1:    ld (de),a
+        inc e
+        djnz .c1
+        ld e,216
+        ld b,40
+.c2:    ld (de),a
+        inc e
+        djnz .c2
+        ld a,(V_CY)
+        inc a
+        ld (V_CY),a
+        cp 188
+        jr nz,.cl
+        nextreg 0x56,14
+        ret
+
+; The original shows a figure's body (its mask, no ink) in the paper of the cells under it: the lawn's cyan, the
+; courtyard's yellow. Default colours give every body the ground's paper, set at each flip when it changes.
+ground_body:
+        ld a,(V_GBODY)
+        or a
+        ret z
+        ld a,(GROUND)
+        ld c,a
+        rrca
+        rrca
+        rrca
+        and 7
+        bit 6,c
+        jr z,.nb
+        or 8
+.nb:    ld e,a
+        ld d,0
+        ld hl,GTAB
+        add hl,de
+        ld a,(hl)
+        ld hl,V_GROUND
+        cp (hl)
+        ret z
+        ld (hl),a
+        ld e,a
+        nextreg 0x43,0x20               ; sprite palette 0
+        ld b,4
+        ld a,2                          ; index 2 (body) of the four groups
+.g:     nextreg 0x40,a
+        ld c,a
+        ld a,e
+        nextreg 0x41,a
+        ld a,c
+        add a,16
+        djnz .g
+        ret
+
+; Spectrum paper -> the Next's ULA colours (normal, then BRIGHT)
+GTAB:   db 0x00,0x02,0xA0,0xA2,0x14,0x16,0xB4,0xB6
+        db 0x00,0x03,0xE0,0xE7,0x1C,0x1F,0xFC,0xFF
 
 ; spark ink colours, 8-bit, per ink value
 SPKP:   db 0x00,0,0x03,0,0xE0,0,0xE3,0,0x1C,0,0x1F,0,0xFC,0,0xFF,0
@@ -1434,7 +1622,21 @@ setup:  nextreg 0x43,0x20           ; sprite palette 0, auto-increment
         inc a
         cp 128
         jr nz,.h
-        nextreg 0x15,0x01           ; sprites on, SLU, higher number on top
+        nextreg 0x12,L2BANK         ; Layer 2: the Feedle caves only, transparent elsewhere (pages prefilled 0xE3)
+        nextreg 0x14,0xE3
+        nextreg 0x16,0
+        nextreg 0x17,0
+        nextreg 0x70,0
+        nextreg 0x43,0x10           ; Layer 2 palette 0: 0 black, 0xE3 transparent
+        nextreg 0x40,0
+        nextreg 0x41,0
+        nextreg 0x40,0xE3
+        nextreg 0x41,0xE3
+        nextreg 0x43,0x20           ; back to sprite palette 0: the spark and body hooks write it without selecting it
+        ld bc,0x123B
+        ld a,2                      ; Layer 2 shown, no write paging; NR 0x69 is left alone (its bit 6 = 7FFD bit 3)
+        out (c),a
+        nextreg 0x15,0x05           ; sprites on, LSU: Layer 2 over the sprites, higher sprite number on top
         ret
 pal:                                ; 64 palette bytes appended by Python
 
