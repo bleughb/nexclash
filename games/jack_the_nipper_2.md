@@ -176,6 +176,8 @@ Immunity 1 (34426 = 0 freezes the flashing timer after a hit), Immunity 2 (a RET
 - [local: this game's draw paths] observed: a census at the 16 blit sites missed the rope, drawn another way, whose
   cells also take slots; the colour walk counts against the game's slot counter and falls back to the whole map.
 
+- [tool asm/jack_the_nipper_2_hooks.asm] A sprite's Y is 9 bits: writing only bits 0-7 wrapped a figure above the room
+  (top 248) onto the top rows, where the game shows nothing; carry into attribute 4 bit 0 (II's full verify caught 4).
 ## Technique use
 - detect.pacing-structure: used: no frame sync, so the hooks' time is the slowdown; measured per routine
 - patch.scratch-redirect: used: IY's high byte AND 0x3F, as Jack the Nipper's RES 6,H

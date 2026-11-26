@@ -167,6 +167,10 @@ sprites, so patterns are uploaded per figure from a cache (more figure kinds tha
 - [local: this game's colours] observed: the line art is black and the body shows the paper of the cells under it;
   the clash-free default is the paper under the feet, one colour per figure.
 
+- [tool asm/jack_the_nipper_hooks.asm] A sprite's Y is 9 bits: writing only bits 0-7 wrapped a figure above the room
+  (top 248) onto the top rows, where the game shows nothing; carry into attribute 4 bit 0 (II's full verify caught 4).
+- [tool nexclash/jack_the_nipper.py] dead_after gave up inside a 65,536 x 256 delay loop (frame 107,675): an alternate
+  register is read only by EXX, so run one machine on to the next EXX, then compare the two in lockstep.
 ## Technique use
 - detect.pacing-structure: used: no frame sync, so the hooks' time is the slowdown (1.87 %)
 - patch.scratch-redirect: used and amended (the run-on dead proof; the commit at the copier's entry)

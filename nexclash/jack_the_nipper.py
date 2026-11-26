@@ -505,6 +505,7 @@ def restored_boot_check(path, z80, patch, nexload=False):
 
 
 RUN_ON = 400000             # dead_after: at most this many (Jack's own draw, the last of a frame: up to ~185,000)
+SOLO_ON = 40000000          # dead_after: one machine on to the next EXX (a 65,536 x 256 delay loop: ~33M)
 
 
 def dead_after(base, writes, regs, idx, alt, n=RUN_ON):
@@ -512,12 +513,28 @@ def dead_after(base, writes, regs, idx, alt, n=RUN_ON):
     it is and once with idx = alt, in lockstep. The difference may travel (EXX at 0x8014 swaps it into H, EX DE,HL
     at 0x8240 into D); it is dead when every register agrees again (overwritten, for H by the next CALL 0x87BB) and
     memory agrees then too, apart from popped bytes below SP (0x85D0 pushes HL), with both machines on the same PC at
-    every step on the way. A different path, or no agreement within n instructions: live."""
+    every step on the way. A different path, or no agreement within n instructions: live. An alternate register is
+    read only by EXX, so one machine first runs on to the next EXX (SOLO_ON at most: a delay loop between)."""
     from skoolkit.simulator import Simulator
     from .hooklib import CMP
     mem = bytearray(base)
     for a, v in writes.items():
         mem[a] = v
+    if idx in (18, 19, 20, 21, 22, 23):
+        # An alternate register is read only through EXX (DD / FD EXX too): until the first one the two machines run
+        # identically, so run one on to it (a delay loop can take millions of instructions), then compare in lockstep.
+        one = Simulator(bytearray(mem), {})
+        one.registers[:] = list(regs)
+        r1, m1 = one.registers, one.memory
+        for _ in range(SOLO_ON):
+            pc = r1[24]
+            op = m1[pc]
+            if op == 0xD9 or (op in (0xDD, 0xFD) and m1[(pc + 1) & 0xFFFF] == 0xD9):
+                break
+            one.opcodes[op]()
+        else:
+            return False
+        regs, mem = list(r1), bytearray(m1)
     sims = []
     for v in (regs[idx], alt):
         r = list(regs)

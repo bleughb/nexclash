@@ -1250,10 +1250,15 @@ attrs:  ld a,(V_NSPR)
         add a,a
         add a,a
         add a,a
-        add a,(ix+7)            ; top + 16 x row (mod 256)
-        add a,32
-        ld (hl),a               ; attribute 1 (rows above the screen wrap far below it: off screen)
-        inc hl
+        ld c,0                  ; C = Y bit 8
+        add a,(ix+7)            ; top + 16 x row
+        jr nc,.y1
+        inc c
+.y1:    add a,32
+        jr nc,.y2
+        inc c
+.y2:    ld (hl),a               ; attribute 1: Y bits 0-7. A figure above the room (top 224-255, the game's off-screen
+        inc hl                  ; rows) gets Y 256 or more, below the screen, as the game leaves it unseen
 .n_bank: ld a,0                   ; one bank holds normal and bright (negative control: LD A,1 = the wrong bank)
         nop
         add a,a
@@ -1275,6 +1280,7 @@ attrs:  ld a,(V_NSPR)
         rrca
         rrca                    ; N6 = the tile's half (bit 6)
         or 0x80                 ; 4-bit pattern
+        or c                    ; Y bit 8
         ld (hl),a               ; attribute 4
         inc hl
         ld (C_ATP),hl

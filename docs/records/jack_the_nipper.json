@@ -1,6 +1,6 @@
 {
  "name": "jack_the_nipper",
- "order": 276,
+ "order": 278,
  "game": "Jack the Nipper",
  "doc": "jack_the_nipper.md",
  "engine": "jack_the_nipper",
@@ -68,7 +68,7 @@
   },
   "sprites": {
    "file": "jack_the_nipper_sprites.nex",
-   "md5": "3232643edacbf59513aaeaf30f82a1d3"
+   "md5": "7cdc264427f7bf45239bdc88f009a117"
   }
  },
  "repro": [],

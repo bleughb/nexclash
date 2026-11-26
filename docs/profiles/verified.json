@@ -1320,7 +1320,7 @@
    "doc": "jack_the_nipper.md",
    "nex": {
     "plain": "496edfe068623f9a3c3fe5895784d97d",
-    "sprites": "3232643edacbf59513aaeaf30f82a1d3"
+    "sprites": "7cdc264427f7bf45239bdc88f009a117"
    },
    "proof": "differential",
    "variants": [
@@ -1332,7 +1332,7 @@
      "proof": "differential",
      "nex": {
       "plain": "496edfe068623f9a3c3fe5895784d97d",
-      "sprites": "3232643edacbf59513aaeaf30f82a1d3"
+      "sprites": "7cdc264427f7bf45239bdc88f009a117"
      }
     }
    ]
@@ -1342,7 +1342,7 @@
    "doc": "jack_the_nipper_2.md",
    "nex": {
     "plain": "e63f00da62e1ac853765bf7825f2241a",
-    "sprites": "0080e7034028149ac2643fa5f5bb9f51"
+    "sprites": "7ef0c3aa859747653767d51b1bb0ecd4"
    },
    "proof": "differential",
    "variants": [
@@ -1354,7 +1354,7 @@
      "proof": "differential",
      "nex": {
       "plain": "e63f00da62e1ac853765bf7825f2241a",
-      "sprites": "0080e7034028149ac2643fa5f5bb9f51"
+      "sprites": "7ef0c3aa859747653767d51b1bb0ecd4"
      }
     }
    ]

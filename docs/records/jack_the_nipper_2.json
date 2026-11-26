@@ -1,6 +1,6 @@
 {
  "name": "jack_the_nipper_2",
- "order": 277,
+ "order": 279,
  "game": "Jack the Nipper II - In Coconut Capers",
  "doc": "jack_the_nipper_2.md",
  "engine": "jack_the_nipper_2",
@@ -69,7 +69,7 @@
   },
   "sprites": {
    "file": "jack_the_nipper_2_sprites.nex",
-   "md5": "0080e7034028149ac2643fa5f5bb9f51"
+   "md5": "7ef0c3aa859747653767d51b1bb0ecd4"
   }
  },
  "repro": [],
