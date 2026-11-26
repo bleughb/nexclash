@@ -1319,8 +1319,9 @@
    "game": "Jack the Nipper",
    "doc": "jack_the_nipper.md",
    "nex": {
-    "plain": "496edfe068623f9a3c3fe5895784d97d",
-    "sprites": "7cdc264427f7bf45239bdc88f009a117"
+    "plain": "e16cf411e852104abab355c4757ed0f5",
+    "sprites": "dfee03ae40053a4dcaced7e2b762d3b9",
+    "enhanced": "645fdaf327d95fc2b7591ef99af5d423"
    },
    "proof": "differential",
    "variants": [
@@ -1331,8 +1332,9 @@
      "args": [],
      "proof": "differential",
      "nex": {
-      "plain": "496edfe068623f9a3c3fe5895784d97d",
-      "sprites": "7cdc264427f7bf45239bdc88f009a117"
+      "plain": "e16cf411e852104abab355c4757ed0f5",
+      "sprites": "dfee03ae40053a4dcaced7e2b762d3b9",
+      "enhanced": "645fdaf327d95fc2b7591ef99af5d423"
      }
     }
    ]
@@ -1342,7 +1344,8 @@
    "doc": "jack_the_nipper_2.md",
    "nex": {
     "plain": "e63f00da62e1ac853765bf7825f2241a",
-    "sprites": "7ef0c3aa859747653767d51b1bb0ecd4"
+    "sprites": "24d8b204ec3948616bd372dbc2e497f2",
+    "enhanced": "bc99c10512829195519e0179f19847bb"
    },
    "proof": "differential",
    "variants": [
@@ -1354,7 +1357,8 @@
      "proof": "differential",
      "nex": {
       "plain": "e63f00da62e1ac853765bf7825f2241a",
-      "sprites": "7ef0c3aa859747653767d51b1bb0ecd4"
+      "sprites": "24d8b204ec3948616bd372dbc2e497f2",
+      "enhanced": "bc99c10512829195519e0179f19847bb"
      }
     }
    ]

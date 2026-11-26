@@ -58,6 +58,11 @@ T_COL     EQU 0x31E0        ; tile: byte column of its first byte
 T_G       EQU 0x31E1        ; tile: graphics byte address (2)
 C_T       EQU 0x31E3        ; figure: the current tile index
 V_HASH    EQU 0x31E4        ; slot: the key's hash
+V_PREV    EQU 0x31E7        ; slot: the last update's number (its sprites stay on screen until this one's attributes)
+V_OVR     EQU 0x31E6        ; Enhanced: 1 = the painted colours are on (the build sets it)
+OVR_BASE  EQU 0xE000        ; the painted colours: 4 bytes (8 nibbles, pixel 0 first; 0 = the default) per graphics
+OVR_SPAN  EQU 0x2000        ; byte from OVR_BASE, OVR_SPAN bytes, in Next pages OVR_PAGE0.. (2048 bytes of game a page),
+OVR_PAGE0 EQU 40            ; mapped at slot 0 only inside ovr (the game takes no interrupt: interrupts are off)
 V_LATCHD  EQU 0x31E5        ; hlib_speed latch of the figure hooks
 TILEBUF   EQU 0x3200        ; 256 bytes: the two 4-bit tiles of a slot
 HSTACK    EQU 0x3400        ; hook stack top (0x3300-0x33FF)
@@ -414,9 +419,30 @@ slot:   ld e,(ix+0)
         inc a
         and 63
         djnz .p
-        ld a,(V_HASH)           ; a slot not serving this update
+        ld a,(V_UPD)            ; a slot serving neither this update nor the last: the last update's sprites stay on
+        dec a                   ; screen until this one writes the attributes, and an image put in their slot now
+        jr nz,.pv               ; would show in them for the rest of the frame (the owner saw mum's and dad's legs)
+        dec a                   ; the update before 1 is 255 (0 is never one)
+.pv:    ld (V_PREV),a
+        ld a,(V_HASH)
         ld b,64
 .q:     ld c,a
+        add a,low SLOTUSE
+        ld l,a
+        ld h,high SLOTUSE
+        ld a,(V_UPD)
+        cp (hl)
+        jr z,.qn
+        ld a,(V_PREV)
+        cp (hl)
+.n_prev: jr nz,.free            ; (negative control: JR .free always = the old rule, a shown slot taken)
+.qn:    ld a,c
+        inc a
+        and 63
+        djnz .q
+        ld a,(V_HASH)           ; none: one not serving this update (only with more figures than half the memory)
+        ld b,64
+.q2:    ld c,a
         add a,low SLOTUSE
         ld l,a
         ld h,high SLOTUSE
@@ -426,7 +452,7 @@ slot:   ld e,(ix+0)
         ld a,c
         inc a
         and 63
-        djnz .q
+        djnz .q2
         ld a,c                  ; all 64 serve this update (more figures than pattern memory): reuse the last
 .free:  ld a,c
         push af
@@ -551,7 +577,7 @@ byte2:  push de
         djnz .px
         pop bc
         pop de
-        ret
+        jp ovr                  ; the painted pixels over these 4 bytes (DE = the graphics byte)
 .out:   xor a
         ld (hl),a
         inc hl
@@ -563,6 +589,71 @@ byte2:  push de
         inc hl
         pop bc
         pop de
+        ret
+
+; ovr: DE = a graphics byte just turned into the 4 pattern bytes before HL -> its painted pixels over them, on the
+; pixels that draw (ink or body; a see-through pixel stays see-through): 1 black, 2 the body (the cell's paper, the
+; sprite's bank), 3-15 the painting palette (the same in every bank). Off unless V_OVR. Keeps BC, DE, HL.
+ovr:    ld a,(V_OVR)
+        or a
+        ret z
+        push bc
+        push de
+        push hl
+        ex de,hl                ; HL = the graphics byte's address, DE = past the 4 pattern bytes
+        ld bc,-OVR_BASE
+        add hl,bc
+        jr nc,.none             ; below the table
+        ld a,h
+        cp high OVR_SPAN
+        jr nc,.none             ; past it
+        rrca
+        rrca
+        rrca
+        and 31
+        add a,OVR_PAGE0
+        nextreg 0x50,a          ; this byte's page at slot 0
+        ld a,h
+        and 7
+        ld h,a
+        add hl,hl
+        add hl,hl               ; HL = its entry
+        ex de,hl                ; DE = the entry, HL = past the pattern bytes
+        ld bc,-4
+        add hl,bc
+        ld b,4
+.b:     ld a,(de)
+        or a
+        jr z,.n
+        ld c,a                  ; two painted nibbles (0: that pixel's default)
+        and 0xF0
+        jr z,.l
+        ld a,(hl)
+        and 0xF0
+        jr z,.l                 ; the pixel draws nothing
+        ld a,(hl)
+        xor c
+        and 0xF0
+        xor (hl)
+.n_ovr: ld (hl),a               ; (negative control: NOP = the painted colours left out)
+.l:     ld a,c
+        and 0x0F
+        jr z,.n
+        ld a,(hl)
+        and 0x0F
+        jr z,.n
+        ld a,(hl)
+        xor c
+        and 0x0F
+        xor (hl)
+        ld (hl),a
+.n:     inc de
+        inc hl
+        djnz .b
+        nextreg 0x50,0xFF       ; the ROM back at slot 0
+.none:  pop hl
+        pop de
+        pop bc
         ret
 
 ; cls: the top pixel of D (graphics) and E (mask) -> A = 1 ink, 2 body (mask clear), 0 clear; D, E shifted left.
@@ -686,17 +777,22 @@ setup:  nextreg 0x43,0x20       ; edit the first sprite palette, auto-increment
         ld a,(hl)
         inc hl
         nextreg 0x41,a          ; 2: the bank's colour
+        push hl
+        ld hl,setspare
         ld c,13
-        xor a
-.z:     nextreg 0x41,a
+.z:     ld a,(hl)               ; 3-15: Enhanced's painting palette (zeros otherwise), the same in every bank
+        inc hl
+        nextreg 0x41,a
         dec c
         jr nz,.z
+        pop hl
         djnz .b
         nextreg 0x4B,0          ; sprite transparency index
         nextreg 0x15,0x01       ; sprites visible (SLU order); bit 6 clear = sprite 127 on top: later objects over earlier
         ret
 setpal: db 0x00, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4, 0xB6    ; RGB332: black, blue, red, magenta, green, cyan, yellow, white
          db 0x00, 0x03, 0xE0, 0xE3, 0x1C, 0x1F, 0xFC, 0xFF    ; bright
+setspare: ds 13                 ; entries 3-15 of every bank: Enhanced's painting palette (the build writes it)
 
 setup_end:
         SAVEBIN "jtn_setup.bin", setup_start, setup_end - setup_start

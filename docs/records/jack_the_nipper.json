@@ -36,7 +36,9 @@
  ],
  "data": [
   "docs/profiles/jack_the_nipper.json",
-  "asm/jack_the_nipper_hooks.asm"
+  "asm/jack_the_nipper_hooks.asm",
+  "docs/profiles/jack_the_nipper_colours.json",
+  "docs/profiles/jack_the_nipper_palette.json"
  ],
  "shared_data": [
   "asm/lib/hlib_speed.asm",
@@ -68,14 +70,18 @@
   },
   "sprites": {
    "file": "jack_the_nipper_sprites.nex",
-   "md5": "7b6f2344cd457eac237eabb4816afcfd"
+   "md5": "dfee03ae40053a4dcaced7e2b762d3b9"
+  },
+  "enhanced": {
+   "file": "jack_the_nipper_enhanced.nex",
+   "md5": "645fdaf327d95fc2b7591ef99af5d423"
   }
  },
  "repro": [],
  "status": {
   "title": "Jack the Nipper",
   "engine_col": "jack_the_nipper (jack_the_nipper.md)",
-  "build": "jack_the_nipper_sprites.nex: every figure (pickups and effects too) a 4-bit sprite, black lines, the body in the paper of the cell under its feet; scenery, HUD and text on the ULA",
+  "build": "jack_the_nipper_sprites.nex: every figure (pickups and effects too) a 4-bit sprite, black lines, the body in the paper of the cell under its feet; + Enhanced (645fdaf3): every figure painted (the owner approved Codex's first pass, 2026-11-26)",
   "software": "RZX replay verify (draws, copies, picture), units + 6 negative controls; the whole recording on the final build: the stamp, pending; JNext: figures show as sprites",
   "hardware": "untested",
   "next": "the whole-recording stamp; colour sheets and recolour (stage 3); the owner tests in JNext / on a Next"

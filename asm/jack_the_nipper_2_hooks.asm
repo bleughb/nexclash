@@ -23,6 +23,12 @@ TILEATTR  EQU 0xED00        ; colour per tile
 SLOTCOL   EQU 0xBD68        ; colour per slot
 FCELL     EQU 0x2D50        ; each figure's cell colours as the game held them at its blit (20 a figure: 5 rows x 4 columns)
 V_CAP     EQU 0x21F6        ; capture: the figure's FCELL block (2)
+V_OVR     EQU 0x21F8        ; Enhanced: 1 = the painted colours are on (the build sets it)
+REMAP     EQU 0x2780        ; a pixel value (bank 0's Spectrum colour) -> the one the sprite shows: identity, or Enhanced's
+                            ; nearest colour in the painting palette (bank 1); 16-aligned (16)
+OVR_BASE  EQU 0x8E00        ; the painted colours: 4 bytes (8 nibbles, pixel 0 first; 0 = the default) per graphics
+OVR_SPAN  EQU 0x6000        ; byte from OVR_BASE, OVR_SPAN bytes, in Next pages OVR_PAGE0.. (2048 bytes of game a page),
+OVR_PAGE0 EQU 40            ; mapped at slot 0 only inside ovr (the game takes no interrupt: none in the recordings)
 MAXFIG    EQU 24
 FIGSZ     EQU 10            ; +0 gfx, +2 colour, +3 -, +4 rows, +5 width bytes, +6 x, +7 top, +8 mirror, +9 bank
 SPR0      EQU 0
@@ -921,7 +927,7 @@ tile:   ld a,(C_COLS)
 byte2:  push de
         push bc
         cp (ix+5)
-        jr nc,.out
+        jp nc,.out
         push af
         add a,a
         add a,a
@@ -956,7 +962,7 @@ byte2:  push de
         EDUP
         pop bc
         pop de
-        ret
+        jp ovr                  ; the painted pixels over these 4 bytes (DE = the graphics byte)
 .multi: ld b,4
 .px:    call cls
         rlca
@@ -971,7 +977,7 @@ byte2:  push de
         djnz .px
         pop bc
         pop de
-        ret
+        jp ovr
 .out:   xor a
         ld (hl),a
         inc hl
@@ -1047,6 +1053,7 @@ codes:  push bc
         ld b,a
         and 7
         call code
+        call remap
         ld (T_INK),a
         ld a,b
         rrca
@@ -1054,7 +1061,80 @@ codes:  push bc
         rrca
         and 7
         call code
+        call remap
         ld (T_PAP),a
+        pop bc
+        ret
+; remap: A = a pixel value 0-15 -> REMAP's (identity but in Enhanced). Keeps BC, DE, HL.
+remap:  push hl
+        ld hl,REMAP
+        add a,l
+        ld l,a
+.n_rmp: ld a,(hl)               ; (negative control: NOP NOP = the Spectrum colour kept in the painting palette's bank)
+        pop hl
+        ret
+
+; ovr: DE = a graphics byte just turned into the 4 pattern bytes before HL -> its painted pixels over them, on the
+; pixels that draw (ink or paper; a see-through pixel stays see-through). Off unless V_OVR. Keeps BC, DE, HL.
+ovr:    ld a,(V_OVR)
+        or a
+        ret z
+        push bc
+        push de
+        push hl
+        ex de,hl                ; HL = the graphics byte's address, DE = past the 4 pattern bytes
+        ld bc,-OVR_BASE
+        add hl,bc
+        jr nc,.none             ; below the table
+        ld a,h
+        cp high OVR_SPAN
+        jr nc,.none             ; past it
+        rrca
+        rrca
+        rrca
+        and 31
+        add a,OVR_PAGE0
+        nextreg 0x50,a          ; this byte's page at slot 0
+        ld a,h
+        and 7
+        ld h,a
+        add hl,hl
+        add hl,hl               ; HL = its entry
+        ex de,hl                ; DE = the entry, HL = past the pattern bytes
+        ld bc,-4
+        add hl,bc
+        ld b,4
+.b:     ld a,(de)
+        or a
+        jr z,.n
+        ld c,a                  ; two painted nibbles (0: that pixel's default)
+        and 0xF0
+        jr z,.l
+        ld a,(hl)
+        and 0xF0
+        jr z,.l                 ; the pixel draws nothing
+        ld a,(hl)
+        xor c
+        and 0xF0
+        xor (hl)
+.n_ovr: ld (hl),a               ; (negative control: NOP = the painted colours left out)
+.l:     ld a,c
+        and 0x0F
+        jr z,.n
+        ld a,(hl)
+        and 0x0F
+        jr z,.n
+        ld a,(hl)
+        xor c
+        and 0x0F
+        xor (hl)
+        ld (hl),a
+.n:     inc de
+        inc hl
+        djnz .b
+        nextreg 0x50,0xFF       ; the ROM back at slot 0
+.none:  pop hl
+        pop de
         pop bc
         ret
 code:   bit 6,b
@@ -1445,7 +1525,7 @@ setup_start:
 setup:  nextreg 0x43,0x20
         nextreg 0x40,0
         ld hl,setpal
-        ld b,16
+        ld b,32                 ; bank 0 (the Spectrum colours), bank 1 (Enhanced's painting palette)
 .p:     ld a,(hl)
         inc hl
         nextreg 0x41,a
@@ -1455,5 +1535,6 @@ setup:  nextreg 0x43,0x20
         ret
 setpal: db 0x00, 0x00, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4, 0xB6        ; 0 clear, 1-8 normal black .. white
         db 0x03, 0xE0, 0xE3, 0x1C, 0x1F, 0xFC, 0xFF                    ; 9-15 bright blue .. white
+setpal1: ds 16                  ; bank 1: Enhanced's painting palette (the build writes it; 0 entries otherwise)
 setup_end:
         SAVEBIN "jtn2_setup.bin", setup_start, setup_end - setup_start

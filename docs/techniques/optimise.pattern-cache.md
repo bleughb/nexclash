@@ -63,7 +63,7 @@ Pattern slots (or a store in Next pages); HLIB_PCACHE (128 bytes, 256-aligned).
 |---|---|---|---|---|
 | Busy scenes slow (Midnight tank) | 16 entries thrash | distinct images there | larger cache | - |
 | Bigger cache no help (Cyclone; Spellbound colour cycling) | images rarely repeat | distinct / renders | faster misses | larger cache |
-| Wrong image flashes | evicted a slot still shown | unit: full cache case | never evict shown slots | - |
+| Wrong image flashes | took the last update's slot (still shown) | shown-slot check | skip it too | - |
 | Old image after a partial one | key kept on a mutable upload | 'stale pattern!' | key 0 | - |
 
 ## Verification

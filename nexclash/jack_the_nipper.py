@@ -133,10 +133,83 @@ class PlainPatch(_PagePatch):
     name = 'Jack the Nipper plain conversion'
 
 
+# Enhanced colours (docs/COLOURS.md): a painted colour per graphics pixel -----------------------------------------
+# Shared with Jack the Nipper II: the table (4 bytes = 8 nibbles a graphics byte, 0 = the default) the hooks' ovr reads
+# at slot 0, built from a colour map keyed by graphics byte.
+RECORD = 'jack_the_nipper'
+COLOURS = os.path.join(_HERE, '..', 'docs', 'profiles', RECORD + '_colours.json')
+PALETTE = os.path.join(_HERE, '..', 'docs', 'profiles', RECORD + '_palette.json')
+V_OVR = 0x31E6
+OVR_BASE, OVR_SPAN, OVR_PAGE0 = 0xE000, 0x2000, 40  # = the asm's: figure graphics 0xE000-0xFDF8 (2026-11-26 census; the image the game builds at 0x5B00 keeps its colours)
+# 1 black, 2 the body (the cell's paper: varies, shown light grey on the sheets), 3-15 the painting palette (Next
+# RRRGGGBB): greys, white, skin, brown, reds, orange, yellow, greens, blues, purple
+PALETTE_DEFAULT = (0x00, 0x00, 0xB6, 0x49, 0x92, 0xFF, 0xF6, 0x88, 0xE0, 0xF0, 0xFC, 0x3C, 0x10, 0x0B, 0x77, 0x83)
+
+
+def ovr_entries(get, cmap, base, span):
+    """Colour map -> ({graphics byte address: 8 nibbles}, info): the entries the build uses (inside the table, the
+    check byte equal to the game's)."""
+    import collections
+    out, info = {}, collections.Counter()
+    for k, e in cmap.items():
+        a = int(k, 16)
+        if not base <= a < base + span:
+            info['map entries outside the table'] += 1
+            continue
+        if e[0] is not None and e[0] != get(a):
+            info['map entries ignored (check byte differs)'] += 1
+            continue
+        if any(e[2]):
+            out[a] = list(e[2])
+            info['graphics bytes with colours'] += 1
+    return out, info
+
+
+def ovr_pages(ovr, base, span, page0):
+    """{address: 8 nibbles} -> {Next page: 8192 bytes} (page0..)."""
+    pages = {page0 + i: bytearray(8192) for i in range(span * 4 // 8192)}
+    for a, nib in ovr.items():
+        o = (a - base) * 4
+        pages[page0 + o // 8192][o % 8192:o % 8192 + 4] = bytes(nib[2 * i] << 4 | nib[2 * i + 1] for i in range(4))
+    return {k: bytes(v) for k, v in pages.items()}
+
+
+def add_pages(extra, pages):
+    """Next pages {page: 8192 bytes} into an extra_banks dict {16K bank: bytes}."""
+    for p, data in pages.items():
+        b, half = p // 2, p % 2
+        cur = extra.get(b, bytes(16384))
+        extra[b] = cur[:half * 8192] + data + cur[half * 8192 + 8192:]
+
+
+def palette():
+    return list(json.load(open(PALETTE))) if os.path.exists(PALETTE) else list(PALETTE_DEFAULT)
+
+
+def load_colours():
+    from . import coloursheet as cs
+    from .recolour import build_colours_path
+    p = build_colours_path(COLOURS)
+    return cs.load(p) if os.path.exists(p) else {}
+
+
+def figure_keys(f):
+    """{(x, y): (graphics byte address, bit)} for each pixel position of the figure (rows stored bottom first)."""
+    out = {}
+    w8 = f['width'] * 8
+    for r in range(f['rows']):
+        for b in range(f['width']):
+            a = (f['gfx'] + r * f['width'] + b) & 0xFFFF
+            for bit in range(8):
+                c = b * 8 + bit
+                out[f['x'] + (w8 - 1 - c if f['mirror'] else c), f['y'] - r] = (a, bit)
+    return out
+
+
 class JtnPatch(_PagePatch):
     name = 'Jack the Nipper figures -> hardware sprites (slot-1 page, scratch-shadow redirect)'
 
-    def __init__(self, prof=None):
+    def __init__(self, prof=None, colours=None, pal=None, enhanced=None):
         self.prof = prof or load_profile()
         h = self.prof['hooks']
         self.syms = {k: int(v, 16) for k, v in h['syms'].items()}
@@ -147,6 +220,23 @@ class JtnPatch(_PagePatch):
         self.setup_call = self.syms['setup']
         self.sites = [(a, bytes.fromhex(old), bytes([SITE_OP[a][0]]) + self.syms[SITE_OP[a][1]].to_bytes(2, 'little'))
                       for a, old in SITES_ORIG.items()]
+        self.colours = colours or {}            # the Enhanced colour map
+        self.enhanced = bool(self.colours) if enhanced is None else enhanced    # the Enhanced build (its banks, empty or not)
+        self.pal = list(pal or palette()) if self.enhanced else [0] * 16
+        self.ovr, self.cinfo = {}, {}
+        pg = bytearray(self.page)
+        pg[V_OVR - 0x2000] = 1 if self.enhanced else 0
+        self.page = bytes(pg)
+        st = bytearray(self.stub_extra)
+        o = self.syms['setspare'] - self.setup_call
+        st[o:o + 13] = bytes(self.pal[3:16])
+        self.stub_extra = bytes(st)
+
+    def apply(self, snap):
+        super().apply(snap)
+        if self.enhanced:
+            self.ovr, self.cinfo = ovr_entries(snap.read, self.colours, OVR_BASE, OVR_SPAN)
+            add_pages(self.extra_banks, ovr_pages(self.ovr, OVR_BASE, OVR_SPAN, OVR_PAGE0))
 
 
 def build(z80, out, name, say=print):
@@ -157,7 +247,8 @@ def build(z80, out, name, say=print):
     md5 = lambda p: hashlib.md5(open(p, 'rb').read()).hexdigest()
     bad = []
     paths = []
-    for label, patch, suffix in (('Plain', PlainPatch(), ''), ('Sprites', JtnPatch(), '_sprites')):
+    for label, patch, suffix in (('Plain', PlainPatch(), ''), ('Sprites', JtnPatch(), '_sprites'),
+                                 ('Enhanced', JtnPatch(colours=load_colours(), enhanced=True), '_enhanced')):
         path = os.path.join(out, name + suffix + '.nex')
         conv = zt.convert(z80, path, None, True, quiet=True, patch=patch, keep_printer_buffer=True)
         b = check(path, z80, patch, (conv[1], conv[1] + len(conv[2])))
@@ -571,7 +662,18 @@ def pair(patch, regs, base, vpage, vns, span):
     from .simpool import machine
     from . import z80n
     psite = {a + k: v for a, old, new in patch.sites for k, v in enumerate(new)}
-    O, P = _overlays(base, vpage, psite)
+    O, P0 = _overlays(base, vpage, psite)
+    banks = getattr(patch, 'extra_banks', {})
+
+    class P(P0):
+        """Slot 0 shows the Next page NR 0x50 names (the painted colours' table inside ovr), else the ROM."""
+        def __getitem__(s, a):
+            if a < 0x2000:
+                pg = vns.nr.get(0x50, 0xFF)
+                if pg != 0xFF:
+                    d = banks.get(pg // 2)
+                    return d[(pg % 2) * 8192 + a] if d else 0
+            return P0.__getitem__(s, a)
     o, p = O(), P()
     so = machine(Simulator, o, list(regs), 'jo')
     sp = Simulator(p, {})                   # not pooled: its opcodes are wrapped for the slot-1 page
@@ -584,6 +686,8 @@ def pair(patch, regs, base, vpage, vns, span):
     speed0 = vns.nr.get(0x07, 0)
     bad, ok, det = collections.Counter(), collections.Counter(), []
     sp0 = regs[12]
+    shown0 = {vns.attr[5 * n + 3] & 0x3F for n in range(128) if vns.attr[5 * n + 3] & 0x80}   # on screen at entry
+    pat0 = bytes(vns.pat)
     if not (_run(so, sp0, span) and _run(sp, sp0, span, record=True)):
         bad['did not return!'] += 1
         return bad, ok, det, o.w, p.pw
@@ -598,6 +702,12 @@ def pair(patch, regs, base, vpage, vns, span):
         det.append(('ports', vns.events[:4]))
     if vns.nr.get(0x07, 0) != speed0:
         bad['CPU speed not given back!'] += 1
+    if vns.nr.get(0x50, 0xFF) != 0xFF:
+        bad['slot 0 not given back to the ROM!'] += 1
+    hit = sorted(n for n in shown0 if vns.pat[n * 256:n * 256 + 256] != pat0[n * 256:n * 256 + 256])
+    if hit:                                 # a sprite still on screen (the last update's) shows the new image until the
+        bad['pattern of a sprite on screen overwritten!'] += 1      # attributes are written (card optimise.pattern-cache)
+        det.append(('pattern slots overwritten while shown', hit[:6]))
     ro, rp = so.registers, sp.registers
     diff = [i for i in CMP if ro[i] != rp[i]]
     if diff == [22] and rp[22] == ro[22] - 0x40:
@@ -695,8 +805,11 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
         figs, pre = upd['figs'], upd['pre']
         exp = {}
         for f in figs:                      # later over earlier
+            keys = figure_keys(f) if patch.ovr else None
             for (x, y), v in figure_pixels(f, get).items():
-                exp[x, y] = (v, f['bank'])
+                n = patch.ovr.get(keys[x, y][0]) if keys else None
+                pv = n[keys[x, y][1]] if n and n[keys[x, y][1]] else v      # a painted colour, else 1 black / 2 body
+                exp[x, y] = (pv, f['bank'], v)                   # (sprite pixel, bank, 1 ink / 2 body)
         # (1) the model against the original's own drawing: every byte the draws touched
         for a, b0 in pre.items():
             y = (a >> 5 & 0xC0) | (a >> 8 & 7) | (a >> 2 & 0x38)
@@ -704,7 +817,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
             want = 0
             for bit in range(8):
                 v = exp.get((x0 + bit, y))
-                pb = b0 >> (7 - bit) & 1 if v is None else (1 if v[0] == 1 else 0)
+                pb = b0 >> (7 - bit) & 1 if v is None else (1 if v[2] == 1 else 0)
                 want |= pb << (7 - bit)
             if want != get(a):
                 fail('figure model differs from the original drawing!', ('%04X' % a, want, get(a)))
@@ -713,7 +826,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
         got, bad = render(vns, sprite127_on_top(patch.stub_extra))
         for b in bad:
             fail('sprite attributes!', b)
-        want = {(x + 32, y + 32): v for (x, y), v in exp.items() if 0 <= x < PLAY[0] and 0 <= y < PLAY[1]}
+        want = {(x + 32, y + 32): v[:2] for (x, y), v in exp.items() if 0 <= x < PLAY[0] and 0 <= y < PLAY[1]}
         have = {k: v for k, v in got.items() if 32 <= k[0] < 32 + PLAY[0] and 32 <= k[1] < 32 + PLAY[1]}
         if want != have:
             d = sorted(set(want) ^ set(have) | {k for k in want if have.get(k) != want[k]})
@@ -758,6 +871,7 @@ def negative_patches(patch=None):
     make('wrong colour bank (the mirror flag)', [(_sym(base, 'attrs.n_bank') + 2, b'\x08')])
     make('leftover sprites not hidden', [(_sym(base, 'commit.n_hide'), b'\x7A\x00\x00')])
     make("caller's speed not given back", [(_sym(base, 'e_cmt.n_spd') + 4, b'\x00\x00\x00')])
+    make("a slot on screen from the last update taken", [(_sym(base, 'slot.n_prev'), b'\x18')])     # JR NZ -> JR
     p = copy.deepcopy(base)                 # the setup's NR 0x15 with bit 6 set: sprite 0 on top
     p.stub_extra = bytes(p.stub_extra).replace(b'\xED\x91\x15\x01', b'\xED\x91\x15\x41')
     out['later figures under earlier (NR 0x15 bit 6)'] = p
@@ -770,7 +884,8 @@ NEG_EXPECT = {                              # the failure each control must give
                                       'scratch writes are not the shadow writes moved by 0x4000!'},
     'never mirrored': {SPRITES_WRONG}, 'wrong colour bank (the mirror flag)': {SPRITES_WRONG},
     'leftover sprites not hidden': {SPRITES_WRONG}, "caller's speed not given back": {'CPU speed not given back!'},
-    'later figures under earlier (NR 0x15 bit 6)': {SPRITES_WRONG}}
+    'later figures under earlier (NR 0x15 bit 6)': {SPRITES_WRONG},
+    'a slot on screen from the last update taken': {'pattern of a sprite on screen overwritten!'}}
 
 
 def negative_results(negs, rzx, frames, expect, verify_fn):
@@ -792,6 +907,158 @@ def store_form_case():
     code = {0x3000: 0xDD, 0x3001: 0x22, 0x3002: 0x00, 0x3003: 0x30, 0x3004: 0x22, 0x3005: 0x00, 0x3006: 0x30}
     got = store_form_problems(lambda a: code.get(a, 0), {0x3000, 0x3004})
     return 'ok' if [g[0] for g in got] == ['3000'] else 'FAIL!'
+
+
+def capture(rzx_path, stop=None):
+    """Every figure image the game draws in a recording: {(gfx, mask, width, rows): {'count', 'frame'}}."""
+    from . import rzx as RZ
+    seen, n = {}, [0]
+
+    def on(pc, sim):
+        m = sim.memory
+        f = figure_of(pc, list(sim.registers), lambda a: m[a])
+        e = seen.setdefault((f['gfx'], f['mask'], f['width'], f['rows']), {'count': 0, 'frame': n[0]})
+        e['count'] += 1
+        n[0] += 1
+    frames, err = RZ.trace(rzx_path, {0x80C9, 0x8273}, on, stop=stop)
+    return seen, frames, err
+
+
+def image_part(get, g, mk, w, rows):
+    """The coloursheet part of image (g, mask, w, rows), top row first: ink (code 1, default 1 black) and body
+    (code 2, default 2: the cell's paper) pixels keyed by the graphics byte; see-through pixels code 0."""
+    px, ent = [], {}
+    for y in range(rows):
+        r = rows - 1 - y                    # memory row: the bottom row first
+        for b in range(w):
+            ga, ma = (g + r * w + b) & 0xFFFF, (mk + r * w + b) & 0xFFFF
+            gb, m = get(ga), get(ma)
+            key = '%04X' % ga
+            ent[key] = [gb, 'g']
+            for bit in range(8):
+                c = 1 if gb >> (7 - bit) & 1 else 2 if not m >> (7 - bit) & 1 else 0
+                px.append((b * 8 + bit, y, key, bit, c, c))
+    return {'id': '%04X:%dx%d' % (g, w, rows), 'size': 1, 'w': 8 * w, 'h': rows, 'x': 0, 'y': 0, 'mir': 0,
+            'pixels': px, 'entries': ent, 'dx': 0, 'dy': 0, 'dmir': 0, 'vmir': 0, 'group': 0}
+
+
+def colour_identity(peek, imgs=None):
+    """What a colour map / sheet means for this build (docs/COLOURS.md "Identity"): key = graphics byte, bit = pixel;
+    inputs = the game's bytes over the painted-colour table's range (no patch site or tail lies there)."""
+    import hashlib
+    return {'schema': 1, 'game': RECORD, 'engine': RECORD, 'keys': 'jack_the_nipper-gfx-1: %04X graphics byte, bit = pixel',
+            'inputs': hashlib.md5(bytes(peek(a) for a in range(OVR_BASE, OVR_BASE + OVR_SPAN))).hexdigest(), 'geometry': None}
+
+
+# nexclash/recolour.py: `python nexclash.py recolour <name>_enhanced.nex PAINTED.png` (seconds, no rebuild): only the
+# painted-colour table's banks change; the game never reads them (slot 0 inside ovr).
+NOTE = ('Jack the Nipper colour map (docs/COLOURS.md): key = graphics byte (hex address; check = its value); 8 nibbles, '
+        '0 = the default (1 black lines, 2 the body: the paper of the cell under the figure), 3-15 the painting palette')
+RECOLOUR = {'game': RECORD, 'output': 'enhanced', 'colours': 'docs/profiles/' + RECORD + '_colours.json', 'clear': False,
+            'note': NOTE}
+
+
+def recolour(nex, cmap):
+    """This engine's Enhanced .nex bytes + colour map -> (new .nex bytes, info). Refuses anything else."""
+    from .recolour import banks, splice
+    have = banks(nex)
+    pb = JTN_PAGE // 2
+    tb = sorted({pg // 2 for pg in ovr_pages({}, OVR_BASE, OVR_SPAN, OVR_PAGE0)})
+    need = {5, 2, 0, pb} | set(tb)
+    if not need <= set(have):
+        raise ValueError('not a Jack the Nipper Enhanced build: banks %s missing (recolour the _enhanced.nex)'
+                         % sorted(need - set(have)))
+    ram = have[5] + have[2] + have[0]
+    peek = lambda a: ram[a - 0x4000]
+    page = have[pb][(JTN_PAGE % 2) * 8192:(JTN_PAGE % 2) * 8192 + 8192]
+    p0 = JtnPatch(enhanced=True)
+    if page[V_OVR - 0x2000] != 1:
+        raise ValueError('not an Enhanced build (recolour the _enhanced.nex)')
+    o = CODE_ORG - 0x2000
+    code = p0.page[o:o + len(bytes.fromhex(p0.prof['hooks']['page']))]
+    if page[o:o + len(code)] != code:
+        raise ValueError("hook code differs from this version's (rebuild with nexclash.py auto)")
+    for a, old, new in p0.sites:
+        if bytes(peek(a + k) for k in range(len(new))) != new:
+            raise ValueError("patch site 0x%04X does not hold this build's hook jump" % a)
+    ovr, info = ovr_entries(peek, cmap, OVR_BASE, OVR_SPAN)
+    new = {b: have[b] for b in tb}
+    add_pages(new, ovr_pages(ovr, OVR_BASE, OVR_SPAN, OVR_PAGE0))
+    out, changed = splice(nex, new)
+    info = dict(info)
+    info['banks changed'] = changed
+    return out, info
+
+
+ENH_FRAMES = 6000                   # the Enhanced build's replay: its patterns differ from the default's only by the
+                                    # painted table (asm ovr); the hooks are the same code
+
+
+def enhanced_checks(z80, rzx, quick, say):
+    """The Enhanced build with its colour map, replayed on the first ENH_FRAMES of the first recording (every sprite
+    pixel the painted colour or 1 / 2, in the cell's bank); then a build painting every graphics byte of the table, and
+    the same with the paint left out (its own failure). -> ok"""
+    import copy
+    from . import z80tonex as zt
+    n = min(quick or ENH_FRAMES, ENH_FRAMES)
+    pe = JtnPatch(colours=load_colours(), enhanced=True)
+    pe.apply(zt.Z80Snapshot(z80))
+    c, ex, _ = verify(pe, rzx, stop=n)
+    fails = {k: v for k, v in c.items() if k.endswith('!')}
+    say('Enhanced  : %s  %d frames, %d painted graphics bytes, sprite pixels %d -> %s' % (
+        os.path.basename(rzx), c['frames'], len(pe.ovr), c['sprite pixels compared'],
+        'IDENTICAL' if not fails else 'FAILED %s' % fails))
+    ok = not fails
+    get = zt.Z80Snapshot(z80).read
+    cmap = {'%04X' % a: [get(a), 'g', [((a >> 3) + k) % 13 + 3 if (a + k) % 3 else 0 for k in range(8)]]
+            for a in range(OVR_BASE, OVR_BASE + OVR_SPAN)}
+    pt = JtnPatch(colours=cmap, enhanced=True)
+    pt.apply(zt.Z80Snapshot(z80))
+    m = min(n, 1500)
+    c, ex, _ = verify(pt, rzx, stop=m)
+    f2 = {k: v for k, v in c.items() if k.endswith('!')}
+    q = copy.deepcopy(pt)
+    pg = bytearray(q.page)
+    pg[q.syms['ovr.n_ovr'] - 0x2000] = 0
+    q.page = bytes(pg)
+    q.extra_banks = dict(q.extra_banks)
+    q.extra_banks[JTN_PAGE // 2] = q.page + bytes(8192)
+    cq, _, _ = verify(q, rzx, stop=m)
+    det = SPRITES_WRONG in cq
+    say('Enh unit  : every graphics byte painted, %d frames -> %s; negative painted colours left out: %s' % (
+        m, 'IDENTICAL' if not f2 else 'FAILED %s' % f2, 'DETECTED' if det else 'MISSED!'))
+    return ok and not f2 and det
+
+
+def sheets(rzx_path, z80, out_dir, prefix=RECORD, colours=None, stop=None, say=print):
+    """<prefix>_PAINTING_SPRITES.png + _REFERENCE_ALL_SPRITES.png (every image) in the painting palette (index 2, the
+    body, shown light grey: on the Next it is the paper of the cell under the figure), each with its _layout.json."""
+    from . import coloursheet as cs
+    from . import z80tonex as zt
+    seen, frames, err = capture(rzx_path, stop)
+    if err:
+        say('capture   : stopped at frame %d: %s' % (frames, err))
+    get = zt.Z80Snapshot(z80).read
+    comps = []
+    for (g, mk, w, rows), e in sorted(seen.items(), key=lambda t: t[1]['frame']):
+        if not OVR_BASE <= g and g + w * rows <= OVR_BASE + OVR_SPAN:
+            say('            image %04X (%d x %d) is outside the painted-colour table (built by the game at run time): '
+                'not on the sheets' % (g, w, rows))
+            continue
+        part = image_part(get, g, mk, w, rows)
+        if any(q[4] for q in part['pixels']):
+            comps.append({'count': e['count'], 'group': 0, 'parts': [part]})
+    pal = palette()
+    cmap = load_colours() if colours is None else colours
+    rgb = cs.palette_rgb(pal)
+    pre = os.path.join(out_dir, prefix)
+    ident = colour_identity(get)
+    n1 = cs.write(cs.choose(comps, {}), pre + '_PAINTING_SPRITES.png', pre + '_PAINTING_SPRITES_layout.json', rgb,
+                  colours=cmap, identity=ident)
+    n2 = cs.write(comps, pre + '_REFERENCE_ALL_SPRITES.png', pre + '_REFERENCE_ALL_SPRITES_layout.json', rgb,
+                  colours=cmap, identity=ident)
+    say('Sheets    : %d images in %d frames; painting sheet %d figures, reference %d' % (len(seen), frames, n1, n2))
+    return seen
 
 
 def unit_tests(patch, states, negs=(), rzx=None, neg_frames=1500, full=False):
@@ -881,5 +1148,7 @@ def auto(a, z80, name, out, say):
         say('Unit      : no states from the recordings: FAIL')
     else:
         say('Unit      : not run (no recording: a rebuild)')
+    if first_rzx:
+        ok = enhanced_checks(z80, first_rzx, getattr(a, 'quick', None), say) and ok
     say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
     return ok

@@ -71,6 +71,18 @@ Owner, 2026-11-26 (OverSpec test: Jack against a bat, the snake, the dummy, an i
 Each figure keeps the colours the game gave its own cells, captured at its blit; a later figure in a shared cell no
 longer recolours it.
 
+Owner, 2026-11-26: Enhanced colours, every figure painted (Codex first pass, "looks good").
+
+## Enhanced colours (2026-11-26)
+- Sheet: the 100 images of the recording keyed by graphics byte (in each row the mask bytes come first); the painting
+  palette is bank 1 (15 colours, docs/profiles/jack_the_nipper_2_palette.json); the game's colours stay in bank 0.
+- Hooks: byte2's four pattern bytes go through `ovr` (the table for that graphics byte at slot 0: OVR_BASE 0x8E00, 12
+  pages from 40); codes' values go through REMAP (identity in the default build, the nearest painting colour in
+  Enhanced) so an unpainted pixel still shows its cell colour; attrs puts Enhanced sprites in bank 1.
+- Build, recolour, verify: as Jack the Nipper (plain, sprites, _enhanced; table banks only; the model gives a painted
+  pixel its nibble, else REMAP of the cell colour, bank 1); Enhanced unit: a painted figure exact and three broken
+  builds caught (paint left out, the Spectrum colour kept, bank 0).
+
 ## Build (stage 2, 2026-11-23)
 - Sites: the 16 blits' `LD (0xBDE8),SP` (4 bytes) jump to 9-byte stubs, which hand their way back to one shared body
   (the page is RAM: a JP operand); the body records the figure (graphics, colour, size, x from 0xB2D5, top, mirror)
@@ -157,7 +169,8 @@ Immunity 1 (34426 = 0 freezes the flashing timer after a hit), Immunity 2 (a RET
 - 2026-11-23: stage 2 (engine, verifier, units, negatives, record, .nxc), ~120 tool calls, no user rounds (design
   as Jack the Nipper).
 - 2026-11-26: the owner's test: figure-on-figure clash removed (capture at each blit), negative 'cell colours not
-  captured', restamped; ~30 tool calls, 3 user rounds.
+  captured'; Enhanced colours (sheet, ovr, REMAP, bank 1, recolour; Codex's painting approved); ~80 tool calls, 5
+  rounds.
 
 ## Lessons
 - [local: this engine's colour list] The game's colour list is per buffer slot and two figures in one cell share the

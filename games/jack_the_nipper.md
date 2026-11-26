@@ -73,6 +73,23 @@ dumping emulator's ROM interrupt), so every space prints as two dashes once the 
 original .z80 in OverSpec does the same). Both builds write eight zero bytes there when they find that value; the
 verify replays the original with the same repair (only the two printers read those bytes: scan, 30,000 frames).
 
+Owner, 2026-11-26: Enhanced colours, every figure painted (Codex first pass from the sheet, the owner approved it).
+
+## Enhanced colours (2026-11-26)
+- Sheet: every image the recording draws (68; the one the game builds in the printer buffer at 0x5B00 keeps its
+  colours), keyed by graphics byte; 1 black, 2 the body (the cell's paper, the sprite's bank), 3-15 the painting
+  palette, written into entries 3-15 of all 16 banks (setup `setspare`), so the game's body colour stays available.
+- Hooks: byte2's four pattern bytes go through `ovr`, which maps the table page for that graphics byte at slot 0
+  (OVR_BASE 0xE000, 4 pages from 40: 4 bytes = 8 nibbles a graphics byte) and puts each painted nibble over a pixel
+  that draws; V_OVR off in the default build (byte for byte as before but for the new code).
+- Build: plain, sprites and _enhanced (the .nxc's colour set); recolour rewrites only the table banks (selftest guard).
+- Verify: the model gives a painted pixel its nibble; Enhanced replay on the first 6,000 frames; a build painting every
+  graphics byte of the table and the same with the paint left out (caught).
+- The owner saw mum's and dad's lower halves flash: the pattern cache took a slot the last update's sprites still
+  showed (its attributes stay until this update writes new ones). `slot` now skips this and the last update's slots;
+  the verifier fails a pattern overwritten under a sprite on screen (192 times in 6,000 frames before); negative: the
+  old rule put back.
+
 ## Build (stage 2, 2026-11-23)
 - Technique: patch.scratch-redirect. The game's own figure draws keep running unchanged (the same work, so the same
   pace in a game with no frame sync) into a scratch shadow at slot 1 (page 24: 0x2000-0x2FFF, the ROM's place; the
@@ -154,9 +171,13 @@ sprites, so patterns are uploaded per figure from a cache (more figure kinds tha
 - 2026-11-22: stage 0, ~1.5 h wall (both games' surveys in parallel), ~20 tool calls, no user rounds.
 - 2026-11-23: stage 1 closed: the owner took every default (one round).
 - 2026-11-23: stage 2 (engine, verifier, units, negatives, record, .nxc), ~90 tool calls, no user rounds.
-- 2026-11-26: the owner's test: the dump's dashed spaces repaired (his answer), restamped; ~25 tool calls, 2 rounds.
+- 2026-11-26: the owner's test: the dump's dashed spaces repaired (his answer); Enhanced colours (sheet, ovr, recolour,
+  Codex's painting approved); the shown-slot flash fixed; ~90 tool calls, 6 rounds.
 
 ## Lessons
+- [card optimise.pattern-cache §Failure lookup] demonstrated: "never evict a shown slot" read as "used this update" let
+  the cache overwrite the last update's slots while their sprites were still on screen (mum's and dad's legs flashed);
+  the replay compared only the state after each commit, so a shown-slot check went into the verifier.
 - [local: this dump; the recording starts in play] The replay never redraws the menu, so a defect only the menu and
   the messages show (the dump's space glyph, 0x5C00, written by the dumping emulator's ROM interrupt) passed every
   check; the owner saw it at the menu. Run the original past its attract loop in OverSpec when a game keeps data in

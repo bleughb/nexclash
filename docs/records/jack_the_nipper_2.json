@@ -37,7 +37,9 @@
  ],
  "data": [
   "docs/profiles/jack_the_nipper_2.json",
-  "asm/jack_the_nipper_2_hooks.asm"
+  "asm/jack_the_nipper_2_hooks.asm",
+  "docs/profiles/jack_the_nipper_2_colours.json",
+  "docs/profiles/jack_the_nipper_2_palette.json"
  ],
  "shared_data": [
   "asm/lib/hlib_speed.asm",
@@ -69,14 +71,18 @@
   },
   "sprites": {
    "file": "jack_the_nipper_2_sprites.nex",
-   "md5": "7ef0c3aa859747653767d51b1bb0ecd4"
+   "md5": "24d8b204ec3948616bd372dbc2e497f2"
+  },
+  "enhanced": {
+   "file": "jack_the_nipper_2_enhanced.nex",
+   "md5": "bc99c10512829195519e0179f19847bb"
   }
  },
  "repro": [],
  "status": {
   "title": "Jack the Nipper II",
   "engine_col": "jack_the_nipper_2 (jack_the_nipper_2.md)",
-  "build": "jack_the_nipper_2_sprites.nex: every figure (pickups and effects too) a 4-bit sprite in its cells' colours from the game's own colour list; scenery, HUD and text on the ULA",
+  "build": "jack_the_nipper_2_sprites.nex: every figure (pickups and effects too) a 4-bit sprite in its cells' colours from the game's own colour list; + Enhanced (bc99c105): every figure painted (the owner approved Codex's first pass, 2026-11-26)",
   "software": "RZX replay verify of 3,000 frames (blits, copies, picture; the whole recording: the stamp, pending), units + 9 negative controls; JNext: figures show as sprites",
   "hardware": "untested",
   "next": "the whole-recording stamp; colour sheets and recolour (stage 3); the owner tests in JNext / on a Next"
