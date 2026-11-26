@@ -3,18 +3,16 @@
 Techniques: `patch.scratch-redirect`, `optimise.pattern-cache`, `patch.restore-speed`, `detect.pacing-structure`, `detect.gameplay-screen-readers`
 
 ## Next session
-Stage: 3 (prove + deliver)   State: engine, units, negatives, record and test .nxc done 2026-11-23, Codex review fixed; the
-whole-recording stamp on the final build (`selftest.py --game jack_the_nipper --verify --stamp`, ~90 min) was started
-2026-11-23 20:50 (log ~/.cache/nexclash-selftest-tmp/games/jack_the_nipper.stamp.log); rerun it if it never finished
+Stage: 3 (prove + deliver)   State: `selftest.py --game jack_the_nipper --verify --stamp` PASSED 2026-11-26 (stamped) on the
+final build (sprite Y bit 8, the H' proof past delay loops); Codex review fixed; PR with both games
 Inputs: TOSEC `Jack the Nipper (1986)(Gremlin Graphics Software)[a].z80` (4c5398b8bcfd88ebd83656f01c3aca21);
 rzxarchive `j/jacknipper.rzx` (108,043 frames, 36 min)    Reference: reference-local/jack_the_nipper
 Branch: add-jack-the-nipper (local, with Jack the Nipper II)
-Start with: the stamp; then "Results" + the record's result, the owner's test of `~/nxc-test/Jack the Nipper 1.0
-test`, colour sheets (docs/COLOURS.md), the PR with Jack the Nipper II (the Codex review is done: 13 findings fixed)
+Start with: the owner's test of the remade test copy (~/nxc-test), then colour sheets (docs/COLOURS.md)
 Open: pace in JNext; the cheats not yet tried in play; stage 3: colour sheets and recolour (ENGINE_CONTRACT: required for new
 engines)
-Test copy: ~/nxc-test/Jack the Nipper 1.0 test (remade 2026-11-23 after the Codex review: sprites 3232643e, Immunity +
-Infinite lives; the menu boots and reaches play in JNext).
+Test copy: ~/nxc-test/Jack the Nipper 1.0 test (remade 2026-11-26 from the stamped build: sprites 7cdc2644,
+Immunity + Infinite lives).
 
 ## Snapshot (0b)
 48K, in game (PC 0x908B in RAM; the recording's start 0x90AD), IM 1 with interrupts OFF (DI), I = 0x3F, SP 0x7FF7,

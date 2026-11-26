@@ -3,19 +3,17 @@
 Techniques: `patch.scratch-redirect`, `optimise.pattern-cache`, `patch.restore-speed`, `detect.pacing-structure`, `detect.gameplay-screen-readers`
 
 ## Next session
-Stage: 3 (prove + deliver)   State: engine, units, negatives, record and test .nxc done 2026-11-23, Codex review fixed; the stamp
-(`selftest.py --game jack_the_nipper_2 --verify --stamp`, ~2-3 h) was started 2026-11-23 20:50 (log
-~/.cache/nexclash-selftest-tmp/games/jack_the_nipper_2.stamp.log); rerun it if it never finished
+Stage: 3 (prove + deliver)   State: `selftest.py --game jack_the_nipper_2 --verify --stamp` PASSED 2026-11-26 (stamped) on the
+final build (sprite Y bit 8, the H' proof past delay loops); Codex review fixed; PR with both games
 Inputs: TOSEC `Jack the Nipper II - In Coconut Capers (1987)(Gremlin Graphics Software)[a].z80` (md5
 6f5d708c439f3356a930ea4f176a0c8f: 48K, in game); rzxarchive `j/jacknipper2.rzx` (158,593 frames, 52 min)
 Reference: reference-local/jack_the_nipper_2 (to bleughb/specnext with the PR)    Branch: add-jack-the-nipper (local)
-Start with: the stamp's result (rerun it if it never finished); then "Results" + the record's result `pass`, the
-owner's test of `~/nxc-test/Jack the Nipper II 1.0 test`, colour sheets (docs/COLOURS.md), the PR with Jack the Nipper
+Start with: the owner's test of the remade test copy (~/nxc-test), then colour sheets (docs/COLOURS.md)
 Open: pace 4.5 % (below); the cheats not tried in play; stage 3: colour sheets and recolour (ENGINE_CONTRACT: required
 for new engines); the rope (drawn another way) stays on the ULA in the scenery's
-colours (owner question, below)
-Test copy: ~/nxc-test/Jack the Nipper II 1.0 test (2026-11-23, after the Codex review: sprites 0080e703, Infinite lives,
-Infinite ammo, Immunity; the menu boots and reaches play in JNext).
+colours (owner's answer 2026-11-26: keep it)
+Test copy: ~/nxc-test/Jack the Nipper II 1.0 test (remade 2026-11-26 from the stamped build: sprites 7ef0c3aa,
+Infinite lives, Infinite ammo, Immunity).
 
 ## Snapshot (0b)
 - The plain TOSEC `.z80` (812f365c792c8af30edafcf227843a96) is a BASIC loader (`LOAD ""SCREEN$`, "IBM copy by
