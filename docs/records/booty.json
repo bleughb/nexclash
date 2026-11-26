@@ -126,7 +126,7 @@
   "engine_col": "booty (booty.md)",
   "build": "v1.0; booty_loading.nex 6393a6f9 and booty_enhanced_loading.nex 8113662c equal the published .nxc 1.0 bare builds, default and Enhanced (without the screen 7a41de52, ebc40ec7); default: the original game, no game byte changed, no hook, Sinclair's ROM as the whole alt ROM, no clash to remove and none claimed; Enhanced, off by default: the Spec256 set's pixels on a Layer 2 over the unchanged ULA; top bank 47, fits a 1MB Next",
   "software": "5 recordings, 32,815 frames (a1 to 6,000, over to 9,000), 269,627 hooks with R and 48K RAM, 3,655 Layer 2 pictures against the set's planes, 1,455,922 ULA cells; 768 ABI cases and 4 with an interrupt inside a hook, 21 of 21 broken builds; ROM paths complete (the two alt ROM hook sites known); review run: pace in JNext in lockstep, music off: whole runs and thirds within 2% (Enhanced -1.00% to +0.99%), but the slowest 20-update stretch in hold 8 reads +2.78% to +3.33% in Enhanced, against +1.95% to +2.35% in the default, which runs no hook; the default reads +0.5% whole-run with no hook; 15-minute soaks, flicker, real loader on private cards",
-  "hardware": "untested",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-26, good",
   "next": "hardware checklist; natural completion"
  },
  "checks": [
