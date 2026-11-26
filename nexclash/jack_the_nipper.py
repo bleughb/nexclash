@@ -26,6 +26,8 @@ REGBLOCK = 0x3F00           # the stub's register block (20 bytes)
 SCRATCH = (0x2000, 0x3000)  # the scratch shadow the figure draws land in
 SHADOW = (0x6000, 0x7000)   # the game's shadow screen
 TAIL_ADDR = 0x6F00          # the start-up tail; restore_tail puts its bytes back before the game starts
+SPACE_GLYPH = 0x5C00        # the font is at 0x5B00 (printers 0xFF32, 0xFF7D), so the space is where the ROM keeps KSTATE
+DUMP_KSTATE = bytes.fromhex('00f7000000f70000')     # the TOSEC [a] dump's: the dumping emulator's ROM interrupt wrote it
 SITES_ORIG = {0x80C9: 'e5f5a7', 0x8273: 'e5f5a7', 0x86F9: '21ff7c'}
 SITE_OP = {0x80C9: (0xC3, 'e_d16'), 0x8273: (0xC3, 'e_d24'), 0x86F9: (0xC3, 'e_cmt')}
 INTERIORS = (0x80CA, 0x80CB, 0x8274, 0x8275, 0x86FA, 0x86FB)
@@ -118,6 +120,9 @@ class _PagePatch:
         self._check(ram)
         for a, old, new in self.sites:
             ram[a - 0x4000:a - 0x4000 + len(new)] = new
+        g = SPACE_GLYPH - 0x4000                # the owner, 2026-11-26: print blank spaces again (dashes in the dump)
+        if bytes(ram[g:g + 8]) == DUMP_KSTATE:
+            ram[g:g + 8] = bytes(8)
         snap.banks[5], snap.banks[2], snap.banks[0] = bytes(ram[:16384]), bytes(ram[16384:32768]), bytes(ram[32768:])
         restore_tail(self, snap)
         self.extra_banks = {JTN_PAGE // 2: self.page + bytes(8192)}
@@ -653,6 +658,9 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
             ex[k].append(info)
 
     def on(pc, sim):
+        if not c['space glyph repaired (dump)'] and bytes(sim.memory[SPACE_GLYPH:SPACE_GLYPH + 8]) == DUMP_KSTATE:
+            sim.memory[SPACE_GLYPH:SPACE_GLYPH + 8] = bytes(8)     # the original replayed with the build's repair
+            c['space glyph repaired (dump)'] += 1                   # (only the text printers read it)
         if pc in INTERIOR_PREV:             # the patched bytes' insides: only by running on from the site itself
             if INTERIOR_PREV[pc] is None or last[0] != INTERIOR_PREV[pc]:
                 fail('jump into a patched instruction!', hex(pc))
@@ -839,6 +847,12 @@ def auto(a, z80, name, out, say):
     say('Engine    : jack_the_nipper (the game\'s own figure draws into a scratch shadow; figures as 4-bit sprites)')
     plain, spr, bad = build(z80, out, name, say)
     ok = not bad
+    from .recolour import banks as _banks
+    for f in (plain, spr):
+        b5 = _banks(open(f, 'rb').read())[5]
+        blank = b5[SPACE_GLYPH - 0x4000:SPACE_GLYPH - 0x4000 + 8] == bytes(8)
+        ok = ok and blank
+        say('Repair    : %s: the space glyph at 0x%04X %s' % (_os.path.basename(f), SPACE_GLYPH, 'blank' if blank else 'NOT REPAIRED: FAIL'))
     patch = JtnPatch()
     from . import z80tonex as zt
     patch.apply(zt.Z80Snapshot(z80))

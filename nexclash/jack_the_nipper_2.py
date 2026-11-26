@@ -26,12 +26,14 @@ REGBLOCK = J1.REGBLOCK
 TAIL_ADDR = 0xBF00          # the start-up tail; restore_tail puts its bytes back before the game starts
 BUFFER = (0xE900, 0xED00)   # the cell buffer the blits draw into (128 slots of 8 bytes)
 SCRATCH = (0x2900, 0x2D50)  # where they draw instead (IY high byte AND 0x3F; offsets up to +0x4F)
+FCELL = (0x2D50, 0x2F30)    # each figure's cell colours, captured at its blit (asm capture: 24 x 20)
 STATE = (0x2000, 0x2900)    # the page's hook state and stack
 DIRTY, TILEMAP, TILEATTR, SLOTCOL = 0xFB00, 0xF800, 0xED00, 0xBD68
 BLITS = (0xB34B, 0xB39B, 0xB3FD, 0xB471, 0xB579, 0xB5C1, 0xB618, 0xB679, 0xB727, 0xB75F, 0xB799, 0xB816, 0xB903,
          0xB931, 0xB960, 0xB9B3)
 COPIER = 0xBC62
 V_NFIG, V_SHOWN, MAXFIG = 0x21C0, 0x21C1, 24   # the hook state's figure count and sprites shown (asm)
+FIGS_ADDR = 0x2000          # the figure table (asm FIGS: 10 bytes an entry)
 SITES_ORIG = {**{a: 'ed73e8bd' for a in BLITS}, COPIER: '2180fd'}
 SITE_SYM = {**{a: 'e_b%d' % i for i, a in enumerate(BLITS)}, COPIER: 'e_cmt'}
 INTERIORS = frozenset(a + k for a in BLITS for k in (1, 2, 3)) | {COPIER + 1, COPIER + 2}   # never instruction starts
@@ -133,6 +135,24 @@ def figure_of(regs, get):
                 mirror=bool(get(ix + 5) & 2), ink=col & 7, paper=col >> 3 & 7, bright=bool(col & 0x40))
 
 
+def captured(f, get):
+    """The colours of the cells a figure covers, as the game holds them at its blit (asm capture, fbox's box):
+    {(column, row): attribute, or None for a cell with no slot}; None when the box is off the map (top >= 160)."""
+    top = f['y']
+    if top >= 160:
+        return None
+    cx0, cx1 = f['x'] >> 3, min(31, (f['x'] + f['width'] * 8 - 1) >> 3)
+    end = top + f['rows'] - 1
+    cy0, cy1 = top >> 3, 19 if end > 255 else min(19, end >> 3)
+    out = {}
+    for cy in range(cy0, cy1 + 1):
+        for cx in range(cx0, cx1 + 1):
+            if cy - cy0 < 5 and cx - cx0 < 4:
+                s = get(DIRTY + cy * 32 + cx)
+                out[(cx, cy)] = get(SLOTCOL + s) if s >= 3 else None
+    return out
+
+
 def figure_pixels(f, get):
     """{(x, y): 1 ink / 2 paper} on the screen (rows top first: the mask bytes, then the graphics bytes)."""
     out = {}
@@ -218,7 +238,7 @@ def pair(patch, regs, base, vpage, vns, span):
     from .simpool import machine
     from . import z80n
     psite = {a + k: v for a, old, new in patch.sites for k, v in enumerate(new)}
-    O, P = J1._overlays(base, vpage, psite, STATE, SCRATCH)
+    O, P = J1._overlays(base, vpage, psite, STATE, (SCRATCH[0], FCELL[1]))     # the scratch, then the captured colours
     o, p = O(), P()
     so = machine(Simulator, o, list(regs), 'j2o')
     sp = Simulator(p, {})
@@ -352,7 +372,9 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
                 fail('the game rewrote a patch site!', '%04X' % a)
         c[SITE_KIND[pc]] += 1
         if pc in BLITS:
-            upd['figs'].append(figure_of(regs, get))
+            f = figure_of(regs, get)
+            f['cap'] = captured(f, get)     # its own cells' colours, before a later figure overwrites a shared one
+            upd['figs'].append(f)
             bad, ok, det, ow, pw = pair(patch, regs, base, vpage, vns, DRAW)
             for a in ow:
                 if BUFFER[0] <= a < BUFFER[1]:
@@ -373,9 +395,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
         figs, pre = upd['figs'], upd['pre']
         exp = {}
         for f in figs:
-            col = (f['ink'], f['paper'], f['bright'])
             for xy, v in figure_pixels(f, get).items():
-                exp[xy] = (v, col)
+                exp[xy] = (v, f.get('cap'))
         cells = slot_cells(get)
         for a, b0 in pre.items():
             s, k = (a - BUFFER[0]) // 8, (a - BUFFER[0]) % 8
@@ -394,13 +415,18 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
         for b in bad:
             fail('sprite attributes!', b)
         want = {}
-        for (x, y), (v, _) in exp.items():   # each pixel in its cell's colour, from the original's own colour list
-            if 0 <= x < PLAY[0] and 0 <= y < PLAY[1]:
-                s = get(DIRTY + (y >> 3) * 32 + (x >> 3))
-                if s < 3:
+        for (x, y), (v, cap) in exp.items():   # each pixel in its cell's colour, from the original's own colour list as
+            if 0 <= x < PLAY[0] and 0 <= y < PLAY[1]:     # it was at that figure's blit (its own, not a later figure's)
+                cell = (x >> 3, y >> 3)
+                if cap is not None and cell in cap:
+                    a = cap[cell]
+                else:                                    # outside the captured box: the list at the copy (asm fcell)
+                    s = get(DIRTY + cell[1] * 32 + cell[0])
+                    a = get(SLOTCOL + s) if s >= 3 else None
+                if a is None:
                     fail('figure pixel on a cell with no slot!', (x, y))
                     continue
-                want[(x + 32, y + 32)] = (code(get(SLOTCOL + s), v), 0)
+                want[(x + 32, y + 32)] = (code(a, v), 0)
         have = {k: v for k, v in got.items() if 32 <= k[0] < 32 + PLAY[0] and 32 <= k[1] < 32 + PLAY[1]}
         if want != have:
             d = sorted(set(want) ^ set(have) | {k for k in want if have.get(k) != want[k]})
@@ -437,6 +463,7 @@ def negative_patches(patch=None):
         out[name] = p
     make('no redirect (AND 0xFF)', [(_sym(base, 'blit.n_red') + 1, b'\xFF')])
     make('colour list not put back', [(_sym(base, 'rest.n_col') + 6, b'\x00')])
+    make('cell colours not captured', [(_sym(base, 'capture.n_cap'), b'\x00')])
     make('one colour for every figure', [(_sym(base, 'fcolour.n_multi') + 3, b'\x01')])
     make('multi-colour cache ignores the colours', [(_sym(base, 'sigeq.n_sig'), b'\x00\x00')])
     make('never mirrored', [(_sym(base, 'attrs.n_mir') + 1, b'\x00')])
@@ -453,10 +480,49 @@ NEG_EXPECT = {                              # the failure each control must give
     'no redirect (AND 0xFF)': {'patched blit wrote the cell buffer!',
                                'scratch writes are not the buffer writes moved by 0xC000!'},
     'colour list not put back': {"colour list not the scenery's!"},
+    'cell colours not captured': {J1.SPRITES_WRONG},
     'one colour for every figure': {J1.SPRITES_WRONG}, 'multi-colour cache ignores the colours': {J1.SPRITES_WRONG},
     'never mirrored': {J1.SPRITES_WRONG}, 'wrong palette bank': {J1.SPRITES_WRONG},
     'leftover sprites not hidden': {J1.SPRITES_WRONG}, "caller's speed not given back": {'CPU speed not given back!'},
     'later figures under earlier (NR 0x15 bit 6)': {J1.SPRITES_WRONG}}
+
+
+MCACHE_NEG = 'multi-colour cache ignores the colours'   # caught by mcache_case: the recordings never reuse a several-
+                                                        # colour figure in other colours since each keeps its own
+
+
+def mcache_case(patch, copy_state, gfx, width=2, rows=16):
+    """The several-colour cache (slots MUT0-63, keyed by a colour signature): one figure recorded over cells of two
+    colours, committed, then the same figure with the two colours swapped (the page and the sprite memory kept, as from
+    one update to the next): each time the sprites must show exactly the captured colours. -> list of failures"""
+    pc, regs, base = copy_state
+    get = base.__getitem__
+    vpage, vns = bytearray(patch.page), J1.NextSide()
+    x, top = 64, 64
+    f = dict(gfx=gfx, rows=rows, width=width, x=x, y=top, mirror=False)
+    px = figure_pixels(f, get)
+    fails = []
+    for k, (ca, cb) in enumerate(((0x47, 0x42), (0x42, 0x47))):     # white over red, then red over white
+        e = FIGS_ADDR - 0x2000
+        vpage[e:e + 10] = bytes([gfx & 255, gfx >> 8, ca, 0, rows, width, x, top, 0, 1])
+        vpage[V_NFIG - 0x2000] = 1
+        blk = bytearray([0xFF] * 20)
+        for r in range(5):
+            for col in range(4):
+                blk[r * 4 + col] = ca if r < 1 else cb      # the top cell row one colour, the rest the other
+        vpage[FCELL[0] - 0x2000:FCELL[0] - 0x2000 + 20] = blk
+        bad = pair(patch, regs, base, vpage, vns, COPY)[0]
+        if 'did not return!' in bad:
+            fails.append('did not return (pass %d)' % k); continue
+        got, _ = J1.render(vns, J1.sprite127_on_top(patch.stub_extra))
+        want = {}
+        for (xx, yy), v in px.items():
+            r = (yy >> 3) - (top >> 3)
+            want[(xx + 32, yy + 32)] = (code(ca if r < 1 else cb, v), 0)
+        have = dict(got)                    # a fresh sprite side: only this figure's sprites
+        if want != have:
+            fails.append('pass %d: %d pixels differ' % (k, len(set(want) ^ set(have) | {q for q in want if have.get(q) != want[q]})))
+    return fails
 
 
 def unit_tests(patch, states, negs=(), rzx=None, neg_frames=1500, full=False):
@@ -509,8 +575,19 @@ def unit_tests(patch, states, negs=(), rzx=None, neg_frames=1500, full=False):
         for k in bad:
             c['figure table full: ' + k] += 1
         c['figure table full ' + ('ok' if bytes(vpage[:V_NFIG - 0x2000 + 1]) == before else 'FAIL!')] += 1
+    blits = [s for s in states if s[0] in BLITS]
+    if copies and blits:                    # the several-colour cache: good build exact, its broken cache caught
+        gfx = figure_of(blits[0][1], blits[0][2].__getitem__)['gfx']
+        bad = mcache_case(patch, copies[0], gfx)
+        for k in bad:
+            c['multi-colour cache: %s!' % k] += 1
+        c['multi-colour cache ' + ('ok' if not bad else 'FAIL!')] += 1
+        allneg = negs or negative_patches(patch)
+        if MCACHE_NEG in allneg:
+            c['negative %s: %s' % (MCACHE_NEG, 'DETECTED' if mcache_case(allneg[MCACHE_NEG], copies[0], gfx) else 'MISSED!')] += 1
     if rzx:
-        c.update(J1.negative_results(negs or negative_patches(patch), rzx, neg_frames, NEG_EXPECT, verify))
+        rest = {k: v for k, v in (negs or negative_patches(patch)).items() if k != MCACHE_NEG}
+        c.update(J1.negative_results(rest, rzx, neg_frames, NEG_EXPECT, verify))
     return c
 
 

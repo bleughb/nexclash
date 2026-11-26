@@ -67,6 +67,12 @@ RAMTOP 0x7C60, border 0. No loader to run.
 ## Design decisions (the owner, 2026-11-23)
 All defaults taken: every figure a sprite (pickups included); scenery, HUD, score and text on the ULA; figures in front of all scenery, later objects over earlier; the game's own colours until the painted sheet; effects (pea, sparkle, smoke) as sprites; the masks' black outline kept; no pause or message window known (a hide gets its own fix if one turns up).
 
+Owner, 2026-11-26: repair the dump's space character. The font is at 0x5B00 (printers 0xFF32, 0xFF7D read char x 8 from
+there), so the space is 0x5C00-0x5C07, the ROM's KSTATE; the TOSEC [a] dump holds 00 F7 00 00 00 F7 00 00 there (the
+dumping emulator's ROM interrupt), so every space prints as two dashes once the game redraws its menu or a message (the
+original .z80 in OverSpec does the same). Both builds write eight zero bytes there when they find that value; the
+verify replays the original with the same repair (only the two printers read those bytes: scan, 30,000 frames).
+
 ## Build (stage 2, 2026-11-23)
 - Technique: patch.scratch-redirect. The game's own figure draws keep running unchanged (the same work, so the same
   pace in a game with no frame sync) into a scratch shadow at slot 1 (page 24: 0x2000-0x2FFF, the ROM's place; the
@@ -148,8 +154,13 @@ sprites, so patterns are uploaded per figure from a cache (more figure kinds tha
 - 2026-11-22: stage 0, ~1.5 h wall (both games' surveys in parallel), ~20 tool calls, no user rounds.
 - 2026-11-23: stage 1 closed: the owner took every default (one round).
 - 2026-11-23: stage 2 (engine, verifier, units, negatives, record, .nxc), ~90 tool calls, no user rounds.
+- 2026-11-26: the owner's test: the dump's dashed spaces repaired (his answer), restamped; ~25 tool calls, 2 rounds.
 
 ## Lessons
+- [local: this dump; the recording starts in play] The replay never redraws the menu, so a defect only the menu and
+  the messages show (the dump's space glyph, 0x5C00, written by the dumping emulator's ROM interrupt) passed every
+  check; the owner saw it at the menu. Run the original past its attract loop in OverSpec when a game keeps data in
+  0x5B00-0x5CB5, and compare the text it prints.
 - [doc LEARNINGS 2.3] demonstrated: SkoolKit drops writes below 0x4000, so the verifier models the slot-1 page by
   wrapping every store form the hooks use (LD (nn), PUSH, CALL, LD (IX+d), LD (HL) / (DE) / (BC)).
 - [card patch.scratch-redirect §Failure lookup] demonstrated: H' differed after a redirected draw; a check of H' alone

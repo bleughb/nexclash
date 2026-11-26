@@ -67,15 +67,20 @@ Infinite lives, Infinite ammo, Immunity).
 ## Design decisions (the owner, 2026-11-23)
 The same answers as Jack the Nipper: every figure a sprite (pickups and effects too), the outline kept, the game's own
 colours until a painting; no pause or message window known. Not a colour run yet.
+Owner, 2026-11-26 (OverSpec test: Jack against a bat, the snake, the dummy, an item): no clash between figures either.
+Each figure keeps the colours the game gave its own cells, captured at its blit; a later figure in a shared cell no
+longer recolours it.
 
 ## Build (stage 2, 2026-11-23)
 - Sites: the 16 blits' `LD (0xBDE8),SP` (4 bytes) jump to 9-byte stubs, which hand their way back to one shared body
   (the page is RAM: a JP operand); the body records the figure (graphics, colour, size, x from 0xB2D5, top, mirror)
   at 28 MHz and moves IY's high byte AND 0x3F, so the blit masks into a scratch copy of the cell buffer at
   0x2900-0x2D4F (slot-1 page 24) and the real buffer keeps the scenery. The copier's entry (0xBC62) commits.
-- Colours: each sprite pixel takes the ink or paper of its cell in the game's own colour list (0xBD68), read before
-  the commit puts the scenery's colour back in every slot's entry (TILEATTR[TILEMAP[cell]], as the copier's background
-  path). So an item coloured per cell (0xBA8A's table at 0x8A36: the pineapple) and the two-colour creatures
+- Colours: each sprite pixel takes the ink or paper of its cell in the game's own colour list (0xBD68) as it was at
+  that figure's blit: 0xBAF9 / 0xBA8A write the cells' colours just before each blit, so `capture` (after `record`)
+  keeps the figure's own (FCELL 0x2D50, 5 x 4 cells a figure, `fcell` reads them); the list read at the copy gave a
+  shared cell the later figure's colour for both (the first build, 2026-11-23). The commit then puts the scenery's
+  colour back in every slot's entry (TILEATTR[TILEMAP[cell]], as the copier's background path). So an item coloured per cell (0xBA8A's table at 0x8A36: the pineapple) and the two-colour creatures
   ((IX+6) = 0xD0: white head, red body) look as on the original; where two figures share a cell its one colour serves
   both, as on the original. One palette bank: 1-8 normal black .. white, 9-15 bright blue .. white.
 - Patterns: one-colour figures keyed by graphics + pair + colour in slots 0-47 (a two-pixel look-up per build; a miss
@@ -151,8 +156,14 @@ Immunity 1 (34426 = 0 freezes the flashing timer after a hit), Immunity 2 (a RET
 - 2026-11-23: stage 1 analysis (draw path, figure census, readers), ~25 tool calls, no user rounds.
 - 2026-11-23: stage 2 (engine, verifier, units, negatives, record, .nxc), ~120 tool calls, no user rounds (design
   as Jack the Nipper).
+- 2026-11-26: the owner's test: figure-on-figure clash removed (capture at each blit), negative 'cell colours not
+  captured', restamped; ~30 tool calls, 3 user rounds.
 
 ## Lessons
+- [local: this engine's colour list] The game's colour list is per buffer slot and two figures in one cell share the
+  slot, so its last writer wins; read at the copy it brought the original's clash between figures into the sprites.
+  The owner saw it on the first overlap in play; the replay compared against the same rule, so nothing failed. Read a
+  shared per-cell list at each figure's own draw.
 - [card optimise.pattern-cache §Failure lookup] demonstrated: a miss taking the first unshown slot from the hash
   evicts animation frames the next update needs (Jack: 162 builds of 23 keys in 1,000 frames); the oldest unshown
   slot of the probe window builds each key once; the oldest anywhere is worse (outside the window: never found).

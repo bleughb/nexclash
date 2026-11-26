@@ -64,11 +64,11 @@
  "outputs": {
   "plain": {
    "file": "jack_the_nipper.nex",
-   "md5": "496edfe068623f9a3c3fe5895784d97d"
+   "md5": "e16cf411e852104abab355c4757ed0f5"
   },
   "sprites": {
    "file": "jack_the_nipper_sprites.nex",
-   "md5": "7cdc264427f7bf45239bdc88f009a117"
+   "md5": "7b6f2344cd457eac237eabb4816afcfd"
   }
  },
  "repro": [],

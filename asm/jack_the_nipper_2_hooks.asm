@@ -21,6 +21,8 @@ DIRTY     EQU 0xFB00        ; dirty map: 640 cells (32 x 20), a slot number from
 TILEMAP   EQU 0xF800        ; tile per cell
 TILEATTR  EQU 0xED00        ; colour per tile
 SLOTCOL   EQU 0xBD68        ; colour per slot
+FCELL     EQU 0x2D50        ; each figure's cell colours as the game held them at its blit (20 a figure: 5 rows x 4 columns)
+V_CAP     EQU 0x21F6        ; capture: the figure's FCELL block (2)
 MAXFIG    EQU 24
 FIGSZ     EQU 10            ; +0 gfx, +2 colour, +3 -, +4 rows, +5 width bytes, +6 x, +7 top, +8 mirror, +9 bank
 SPR0      EQU 0
@@ -228,6 +230,171 @@ record: ld a,(V_NFIG)
         rlca
         and 1                   ; bright -> palette bank 1
         ld (de),a               ; +9 bank
+                                ; on into capture (DE = the entry + 9)
+
+; capture: the figure just recorded (DE = its entry + 9) -> the colours of the cells it covers, from the game's colour
+; list as it is now, at this figure's own blit (0xBAF9 / 0xBA8A wrote them just before it): FCELL + 2 x (entry - FIGS),
+; 5 rows x 4 columns from the box's top left cell; 0xFF no slot; all 0xFE when the box is off the map (fbox), and the
+; lookups (fcell) then read the list at the copy. A later figure that shares a cell gives the list its colour, so
+; reading the list at the copy (as the first build did) gave both figures the later one's: the clash between figures.
+capture:
+        push ix
+        ld hl,-9
+        add hl,de
+        push hl
+        pop ix                  ; IX = the entry
+        ld de,-FIGS
+        add hl,de
+        add hl,hl
+        ld de,FCELL
+        add hl,de
+        ld (V_CAP),hl
+        call fbox
+        ld a,0xFF
+        jr nc,.fill
+        ld a,0xFE               ; off the map
+.fill:  ld hl,(V_CAP)
+        ld b,20
+.f:     ld (hl),a
+        inc hl
+        djnz .f
+        cp 0xFE
+        jr z,.done
+        ld a,(F_CY0)
+.row:   ld b,a                  ; B = cell row
+        ld a,(F_CX0)
+.col:   ld c,a                  ; C = cell column
+        ld hl,F_CY0
+        ld a,b
+        sub (hl)
+        cp 5
+        jr nc,.next
+        add a,a
+        add a,a
+        ld e,a
+        ld hl,F_CX0
+        ld a,c
+        sub (hl)
+        cp 4
+        jr nc,.next
+        add a,e
+        ld e,a
+        ld d,0
+        push de                 ; the cell's index in the block
+        ld l,b
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld e,c
+        add hl,de
+        ld de,DIRTY
+        add hl,de
+        ld a,(hl)               ; the cell's slot
+        pop de
+        cp 3
+        jr c,.next              ; no slot: 0xFF stays
+        push de
+        ld e,a
+        ld d,0
+        ld hl,SLOTCOL
+        add hl,de
+        ld a,(hl)
+        pop de
+        ld hl,(V_CAP)
+        add hl,de
+.n_cap: ld (hl),a               ; (negative control: NOP = nothing captured, every cell 'no slot')
+.next:  ld a,(F_CX1)
+        cp c
+        jr z,.nr
+        ld a,c
+        inc a
+        jr .col
+.nr:    ld a,(F_CY1)
+        cp b
+        jr z,.done
+        ld a,b
+        inc a
+        jr .row
+.done:  pop ix
+        ret
+
+; fcell: A = cell row, E = cell column, IX = a figure -> A = that cell's colour as the game held it at the figure's blit
+; (capture), 0xFF no slot. A cell outside the captured block, or a figure captured off the map: the list at the copy.
+; Keeps BC, DE, HL.
+fcell:  push hl
+        push de
+        push bc
+        ld c,a                  ; C = row
+        ld b,e                  ; B = column
+        ld a,(ix+7)
+        rrca
+        rrca
+        rrca
+        and 31
+        ld d,a
+        ld a,c
+        sub d
+        jr c,.live
+        cp 5
+        jr nc,.live
+        add a,a
+        add a,a
+        ld l,a
+        ld a,(ix+6)
+        rrca
+        rrca
+        rrca
+        and 31
+        ld d,a
+        ld a,b
+        sub d
+        jr c,.live
+        cp 4
+        jr nc,.live
+        add a,l
+        ld e,a
+        ld d,0
+        push ix
+        pop hl
+        push de
+        ld de,-FIGS
+        add hl,de
+        add hl,hl
+        ld de,FCELL
+        add hl,de
+        pop de
+        add hl,de
+        ld a,(hl)
+        cp 0xFE
+        jr nz,.out
+.live:  ld l,c
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld e,b
+        ld d,0
+        add hl,de
+        ld de,DIRTY
+        add hl,de
+        ld a,(hl)
+        cp 3
+        jr c,.none
+        ld e,a
+        ld d,0
+        ld hl,SLOTCOL
+        add hl,de
+        ld a,(hl)
+        jr .out
+.none:  ld a,0xFF
+.out:   pop bc
+        pop de
+        pop hl
         ret
 
 ; e_cmt: JP here from the copier's entry 0xBC62. Every register and flag is kept; then LD HL,0xFD80 and the copier.
@@ -946,25 +1113,9 @@ pixcol: push hl
         and 31                  ; cell row
         cp 20
         jr nc,.none
-        ld l,a
-        ld h,0
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        add hl,hl               ; row x 32
-        ld d,0
-        add hl,de
-        ld de,DIRTY
-        add hl,de
-        ld a,(hl)               ; the cell's slot
-        cp 3
-        jr c,.none
-        ld e,a
-        ld d,0
-        ld hl,SLOTCOL
-        add hl,de
-        ld a,(hl)
+        call fcell              ; A = cell row, E = column -> the cell's colour at this figure's blit
+        cp 0xFF
+        jr z,.none
         call codes
 .none:  pop bc
         pop de
@@ -1148,26 +1299,11 @@ fcolour:
         ld a,(F_CX0)
 .col:   ld c,a                  ; C = cell column
         push bc
-        ld l,b
-        ld h,0
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        add hl,hl
+        ld a,b
         ld e,c
-        ld d,0
-        add hl,de
-        ld de,DIRTY
-        add hl,de
-        ld a,(hl)
-        cp 3
-        jr c,.noslot            ; no slot here
-        ld e,a
-        ld d,0
-        ld hl,SLOTCOL
-        add hl,de
-        ld a,(hl)
+        call fcell              ; the cell's colour at this figure's blit
+        cp 0xFF
+        jr z,.noslot            ; no slot here
         ld e,a
         call sigput
         ld a,(F_COL)
