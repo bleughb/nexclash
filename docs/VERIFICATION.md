@@ -141,8 +141,8 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Elite (elite): `elite.nex` e611573d6c45159be56936fc09dfd84d, `elite_sprites.nex` 93c35409631f7682e8e505dcd0284139; verified never
 - Hard Drivin' (hard_drivin): `hard_drivin.nex` d74f75e6995eb0f54eaec2122a5164d0, `hard_drivin_smooth.nex` 9fb23f8e64fa8187ba304c34af9a6016, `hard_drivin_steps.nex` 9cc6f829055ca1f17c491609de22b016, `hard_drivin_steps_loading.nex` 9d1a130d7e723c9395cca8266181da4b, `hard_drivin_smooth_loading.nex` f789a1c70aaa5f889f64c128a67527a0; verified 2026-11-24
 - Elite (standard Firebird release) (elite_std): `elite_std.nex` 4e176c9cf03bb207782221ac05396899; verified 2026-11-24
-- Jack the Nipper (jack_the_nipper): `jack_the_nipper.nex` 496edfe068623f9a3c3fe5895784d97d, `jack_the_nipper_sprites.nex` 7cdc264427f7bf45239bdc88f009a117; verified never
-- Jack the Nipper II - In Coconut Capers (jack_the_nipper_2): `jack_the_nipper_2.nex` e63f00da62e1ac853765bf7825f2241a, `jack_the_nipper_2_sprites.nex` 7ef0c3aa859747653767d51b1bb0ecd4; verified never
+- Jack the Nipper (jack_the_nipper): `jack_the_nipper.nex` 496edfe068623f9a3c3fe5895784d97d, `jack_the_nipper_sprites.nex` 7cdc264427f7bf45239bdc88f009a117; verified 2026-11-26
+- Jack the Nipper II - In Coconut Capers (jack_the_nipper_2): `jack_the_nipper_2.nex` e63f00da62e1ac853765bf7825f2241a, `jack_the_nipper_2_sprites.nex` 7ef0c3aa859747653767d51b1bb0ecd4; verified 2026-11-26
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13
