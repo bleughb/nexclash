@@ -64,9 +64,9 @@ def selfcheck():
     from .analyse import analyse
     from .verify import verify
     bad, t = [], tempfile.mkdtemp(prefix='nexclash_m128_')
-    # 0x8000: DI; LD BC,7FFD; LD A,0x11; OUT (C),A; LD HL,C000; LD (HL),0x55; LD A,0x13; OUT (C),A; LD (HL),0xAA;
-    # LD A,0x10; OUT (C),A; then INC (HL) forever (bank 0 at C000)
-    code = bytes.fromhex('F301FD7F3E11ED7921 00C0 3655 3E13 ED79 36AA 3E10 ED79 34 18FD'.replace(' ', ''))
+    # 0x8000: DI; LD BC,7FFD; LD A,0x11; OUT (C),A; LD HL,C000; LD (HL),0x55; LD A,0x10; OUT (C),A; INC (HL);
+    # LD A,0x13; OUT (C),A; LD (HL),0xAA; then INC (HL) forever (bank 3 at C000: it ends on another bank than it began)
+    code = bytes.fromhex('F301FD7F3E11ED7921 00C0 3655 3E10 ED79 34 3E13 ED79 36AA 34 18FD'.replace(' ', ''))
     per_frame = {}
     try:
         files = {}
@@ -107,10 +107,12 @@ def selfcheck():
             if mach == '128K':
                 if [bytes(b) for b in sim.memory.banks] != [bytes(b) for b in m.sim.memory.banks]:
                     bad.append('128K replay banks differ from the recorder\'s')
-                if sim.memory.o7ffd != m.out7ffd or m.out7ffd != 0x10:
-                    bad.append('128K paging: replay 7FFD %02X, recorder %02X (want 10)' % (sim.memory.o7ffd, m.out7ffd))
-                if m.sim.memory.banks[1][0] != 0x55 or m.sim.memory.banks[3][0] != 0xAA or not m.sim.memory.banks[0][0]:
+                if sim.memory.o7ffd != m.out7ffd or m.out7ffd != 0x13:
+                    bad.append('128K paging: replay 7FFD %02X, recorder %02X (want 13)' % (sim.memory.o7ffd, m.out7ffd))
+                if m.sim.memory.banks[1][0] != 0x55 or m.sim.memory.banks[0][0] != 1:     # bank 3 counts on: the replay compare covers it
                     bad.append('128K paging writes not in banks 1 / 3 / 0')
+                if Snapshot.get(_tmp_z80(t, m.z80_bytes())).out7ffd != 0x13:
+                    bad.append('128K snapshot block: 7FFD not the machine\'s')
             elif bytes(sim.memory[0x4000:]) != m.view(0x4000, 0x10000):
                 bad.append('48K replay memory differs from the recorder\'s')
         ratio = per_frame['128K'] / per_frame['48K']
@@ -118,6 +120,25 @@ def selfcheck():
             bad.append('128K frame length: %.0f fetches a frame against 48K\'s %.0f (ratio %.4f, want %.4f)' % (
                 per_frame['128K'], per_frame['48K'], ratio, 70908 / 69888))
         z128, r128, _ = files['128K']
+        # a state saved before a paging lock, restored: the CPU reads the restored bank, not the locked one
+        ram = [[0] * 16384 for _ in range(8)]
+        page = bytes.fromhex('01FD7F3E33ED791807')                         # 0x8000: page bank 3 and lock; JR 0x8010
+        loop = bytes.fromhex('3A00C032009018F8')                           # 0x8010: (9000) = (C000), loop
+        ram[2][0:len(page)] = list(page)
+        ram[2][0x10:0x10 + len(loop)] = list(loop)
+        ram[0][0], ram[3][0] = 0x11, 0x33
+        zl = os.path.join(t, 'lock.z80')
+        write_snapshot(zl, ram, ('pc=32784', 'sp=65000'), ('7ffd=16', 'iff=0'), '128K')
+        m = Machine(zl)
+        st = m.save()
+        m.sim.registers[PC] = 0x8000
+        m.frame()
+        locked = m.view(0x9000, 0x9001)[0]
+        m.load(st)
+        m.frame()
+        if locked != 0x33 or m.view(0x9000, 0x9001)[0] != 0x11 or m.out7ffd != 0x10:
+            bad.append('128K restore: CPU read %02X after load (want 11; before it %02X, want 33), 7FFD %02X' % (
+                m.view(0x9000, 0x9001)[0], locked, m.out7ffd))
         a = analyse(None, r128, 65000)
         if a.get('machine') != '128K' or not a['wr128'][0x4000 + 1 * 0x4000] or not a['wr128'][0x4000 + 3 * 0x4000]:
             bad.append('analyse: 128K writes not placed in banks 1 and 3')
@@ -141,6 +162,12 @@ def selfcheck():
     finally:
         shutil.rmtree(t, ignore_errors=True)
     return bad
+
+
+def _tmp_z80(d, data):
+    p = os.path.join(d, 'block.z80')
+    open(p, 'wb').write(data)
+    return p
 
 
 def parse_inputs(text):
@@ -170,6 +197,9 @@ class Machine:
         self.ins = []
         self.cov = set()
         self.is128 = isinstance(self.sim.memory, Memory)
+        if self.is128 and getattr(snap, 'machine', '128K') not in ('128K', '+2'):
+            raise Refused('%s snapshot: the shared machine models 128K / +2 paging (7FFD) only, not +2A / +3 (1FFD)'
+                          % getattr(snap, 'machine', '?'))
         self.frame_t = getattr(self.sim, 'frame_duration', FRAME_T)     # 69888 (48K) or 70908 (128K)
         self.out7ffd = getattr(snap, 'out7ffd', 0) if self.is128 else 0
         self.outfffd = getattr(snap, 'outfffd', 0) or 0
@@ -183,6 +213,10 @@ class Machine:
             for b, base in ((5, 0x4000), (2, 0x8000)) + tuple((b, 0xC000) for b in range(8)):
                 d = bytes(mem.banks[b])
                 self.ldr |= {base + o for o in range(16383) if d[o] == 0xED and d[o + 1] == 0x4F}
+            if mem.banks[5][16383] == 0xED and mem.banks[2][0] == 0x4F:      # ED at 0x7FFF, 4F at 0x8000
+                self.ldr.add(0x7FFF)
+            if mem.banks[2][16383] == 0xED and any(mem.banks[b][0] == 0x4F for b in range(8)):   # 0xBFFF / 0xC000
+                self.ldr.add(0xBFFF)
         else:
             m = bytes(self.sim.memory)
             self.ldr = {a for a in range(0x4000, 65535) if m[a] == 0xED and m[a + 1] == 0x4F}
@@ -203,6 +237,8 @@ class Machine:
             v = 0
             for k in self.held:
                 v |= KEMPSTON.get(k, 0)
+        elif self.is128 and port & 0xC002 == 0xC000:     # AY register read-back (0xFFFD)
+            v = self.ay[self.outfffd] if self.outfffd < 16 else 0xFF
         self.ins.append(v)
         return v
 
@@ -298,6 +334,20 @@ class Machine:
             return bytes(m[a] for a in range(lo, hi))
         return bytes(m[lo:hi])
 
+    def display_view(self, lo, hi):
+        """Screen / attribute bytes lo..hi-1 (0x4000-0x5AFF) as the display shows them: bank 7 when 7FFD bit 3 is set."""
+        if self.is128 and self.out7ffd & 8:
+            b = self.sim.memory.banks[7]
+            return bytes(b[a - 0x4000] for a in range(lo, hi))
+        return self.view(lo, hi)
+
+    def ram_state(self):
+        """Game RAM outside the screens, for telling inputs apart: 48K 0x5B00-0xFFFF; 128K every bank, both screens left out."""
+        if not self.is128:
+            return self.view(0x5B00, 0x10000)
+        banks = self.sim.memory.banks
+        return b''.join(bytes(banks[b][0x1B00:] if b in (5, 7) else banks[b]) for b in range(8))
+
     def save(self):
         if self.is128:
             m = self.sim.memory
@@ -317,9 +367,23 @@ class Machine:
             self.ay = list(ay)
         else:
             self.sim.memory[:] = mem
-        self.sim.registers[:] = type(self.sim.registers)('H' if False else self.sim.registers.typecode, regs)
+        r = self.sim.registers
+        if isinstance(r, list):                         # the Python simulator's registers
+            r[:] = regs
+        else:
+            r[:] = type(r)(r.typecode, regs)
         self.outfe = fe
         self.border = [(0, fe)]
+        if self.is128 and CSimulator is not None and isinstance(self.sim, CSimulator):
+            # SkoolKit's C core keeps its own bank pointers and paging lock: start a new one from the restored state
+            fd, path = tempfile.mkstemp(suffix='.z80')
+            os.close(fd)
+            try:
+                open(path, 'wb').write(self.z80_bytes())
+                self.sim = from_snapshot(CSimulator, Snapshot.get(path), config={'int_active': 0})
+            finally:
+                os.remove(path)
+            self.sim.set_tracer(self)
 
     def z80_bytes(self):
         """Current state as .z80 bytes (for an RZX snapshot block)."""

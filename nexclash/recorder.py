@@ -95,7 +95,7 @@ class Recorder:
         screens). Inputs with an identical effect are merged (Z / 6 / Sinclair keys)."""
         g = self.m.save()
         self.run(40)
-        idle_ram, idle_attr = self.m.view(0x5B00, 0x10000), self.m.view(0x5800, 0x5B00)
+        idle_ram, idle_attr = self._ram(), self._attrs()
         seen, res = {}, []
         for k in list(KEYPOS) + list(KEMPSTON):
             if self.inputs == 'keyboard' and k in KEMPSTON:
@@ -104,12 +104,12 @@ class Recorder:
                 continue
             self.m.load(g)
             self.run(40, frozenset([k]))
-            ram = self.m.view(0x5B00, 0x10000)
+            ram = self._ram()
             d = sum(1 for a, b in zip(ram, idle_ram) if a != b)
             if not d or ram in seen:
                 continue
             seen[ram] = k
-            c = sum(1 for a, b in zip(self.m.view(0x5800, 0x5B00), idle_attr) if a != b)
+            c = sum(1 for a, b in zip(self._attrs(), idle_attr) if a != b)
             res.append((d, k, c))
         self.m.load(g)
         res.sort(reverse=True)
@@ -123,8 +123,19 @@ class Recorder:
             self.report['inputs'] += ' (actions: %s; menus: %s)' % (' '.join(self.actions) or '-', ' '.join(self.menus) or '-')
         return self.atoms
 
+    def _view(self, lo, hi, kind='view'):
+        f = getattr(self.m, kind, None) or getattr(self.m, 'view', None)
+        return f(lo, hi) if f else bytes(self.m.sim.memory[lo:hi])     # an engine's machine without view()
+
+    def _ram(self):
+        f = getattr(self.m, 'ram_state', None)
+        return f() if f else self._view(0x5B00, 0x10000)
+
+    def _attrs(self, lo=0x5800, hi=0x5B00):
+        return self._view(lo, hi, 'display_view')       # the screen shown (bank 7 when 7FFD bit 3 is set)
+
     def room(self):
-        return self.m.view(PLAY_ATTRS.start, PLAY_ATTRS.stop)
+        return self._attrs(PLAY_ATTRS.start, PLAY_ATTRS.stop)
 
     def find_room(self, rooms, attrs):
         """Index of the known room these attributes belong to, or None."""

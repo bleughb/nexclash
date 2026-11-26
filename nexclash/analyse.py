@@ -67,7 +67,7 @@ def analyse(prof, rzx_path, z80_sp, stop=None, progress=None):
     st.P = None; st.drawn = False; st.synced = False
     c = collections.Counter(); diffw = collections.Counter(); diffr = collections.Counter()
     RD = bytearray(65536); WR = bytearray(65536); ccache = {}
-    RD128 = bytearray(0x24000); WR128 = bytearray(0x24000)
+    RD128 = bytearray(0x24000); WR128 = bytearray(0x24000); RBW128 = bytearray(0x24000)   # RBW: read before any write
     REG = [None]
 
     def phys(m, a):                 # 128K: where address a is now (ROM, or bank n at 0x4000 + n * 0x4000)
@@ -135,7 +135,10 @@ def analyse(prof, rzx_path, z80_sp, stop=None, progress=None):
                     def __getitem__(s, a):
                         if type(a) is int and REG[0] is not None:
                             RD[a] = 1
-                            RD128[phys(s, a)] = 1
+                            p = phys(s, a)
+                            RD128[p] = 1
+                            if not WR128[p]:
+                                RBW128[p] = 1
                         return base.__getitem__(s, a)
 
                     def __setitem__(s, a, v):
@@ -164,6 +167,20 @@ def analyse(prof, rzx_path, z80_sp, stop=None, progress=None):
     finally:
         rzxplay.Simulator, rzxplay.CSimulator = old
     REG[0] = None
+    rbw = None
+    if is128:
+        # By place, not by address: a byte of bank 5 or 2 read or written through 0xC000 counts at its fixed address
+        # too (0x4000- / 0x8000-), and 0xC000- holds every bank's accesses (any of them may be paged there)
+        def fold(m):
+            v = bytearray(65536)
+            v[0:0x4000] = m[0:0x4000]
+            v[0x4000:0x8000] = m[0x18000:0x1C000]
+            v[0x8000:0xC000] = m[0xC000:0x10000]
+            for b in range(8):
+                blk = m[0x4000 + b * 0x4000:0x8000 + b * 0x4000]
+                v[0xC000:] = bytes(x | y for x, y in zip(v[0xC000:], blk))
+            return v
+        RD, WR, rbw = fold(RD128), fold(WR128), fold(RBW128)
     # stack low-water mark below the snapshot's SP (contiguous stack writes)
     low, a, gap = z80_sp, z80_sp - 1, 0
     while a > z80_sp - 1024 and gap < 8:
@@ -182,5 +199,5 @@ def analyse(prof, rzx_path, z80_sp, stop=None, progress=None):
         'rom_used': rom_reads > 0, 'printer_buffer_touched': pb_touched,
         'stack_low_water': low, 'self_modified_sites': c['WRITES TO PATCH SITES'],
         'rd': RD, 'wr': WR, 'machine': '128K' if is128 else '48K',
-        'rd128': RD128 if is128 else None, 'wr128': WR128 if is128 else None,
+        'rd128': RD128 if is128 else None, 'wr128': WR128 if is128 else None, 'rbw': rbw,
     }
