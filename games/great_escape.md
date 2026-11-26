@@ -42,6 +42,21 @@ one bitmap but select red, yellow and green palettes by item ID. Editable sprite
 four world sheets use enlarged flat pixels. Import rejects antialiasing, outside-silhouette
 paint and conflicting shared-key edits; an unchanged export/import is byte-identical.
 
+### Painting a thinner outline
+
+Paint a mask-only figure or item pixel with the exact sheet grey `#30343a` to reveal the
+colour already drawn behind it. Native ink must keep a paint colour. One edit propagates
+to every use of the source pixel, including the three keys. Conflicting edits are rejected.
+Export shows erased pixels in canvas grey, so they can be painted back in a later pass.
+
+`colours.bin` reserves 255 for these erasures. Bright paint occupies 0..127, so the sign
+flag after the existing outfit/key OR tests the marker in one branch. Layer 2 index 255
+already maps to transparent magenta (RGB9 0x1C7, NextReg 0x14 = 0xE3). Writing that index
+would expose native paper where the game's mask cleared the bitmap. The halo kernel skips
+both the bright and dark canvas stores. Foreground clipping, native bitmap stores and final
+publication follow the normal path. Only a colour map containing the marker selects the two
+assembled overlays in page 26. All five recorded outputs with period-v2-jon art retain their hashes.
+
 ## Hooks and memory
 
 Techniques: patch.pace-limiter, patch.restore-speed, patch.preserve-r, verify.update-locked-pace.
@@ -103,6 +118,18 @@ measured contention. Independent hook-overhead checks guard double charging in d
 Native A11D..A12E beeper checks at nine contention phases have identical register and 37-write
 traces at equal starting phase. Live FE writes remain at 3.5MHz. This is a 48K beeper game.
 
+For the round-two halo art, JNext 1.3.5 gave the following elapsed-time differences against
+the original at the same player updates. All 18 windows were within 2%. Position and R matched
+at every sampled update, as did beeper values and call sites. The three isolated figure/item
+hook trials (E2A2, E102, E29F, model core 0x32) changed by +1.5, +4.5 and -10.25 base-clock
+T-states respectively against the same round-two scenery with the previous black outlines.
+
+| Scene | Automatic windows (%) | Stationary trials (%) |
+| --- | --- | --- |
+| Quiet | +1.862, +0.560, +0.596 | -1.955, -1.627, -1.587 |
+| Busy | +0.596, +0.058, +0.653 | +0.789, +0.756, +0.659 |
+| Searchlight | +1.880, +1.564, +1.579 | +1.799, +1.563, +1.526 |
+
 ## Proof and coverage
 
 Independent native geometry matches both supplied recordings: 47658 frames, 369765 tile calls,
@@ -144,6 +171,9 @@ checked alternate archive snapshots; they are not shipped as separate working ch
 
 ## Lessons
 
+- [local: erased halos] Preserve the colour at the destination while still applying the native mask to the
+  one-bit canvas. The red-key unit starts with bright 7 and dark 135 under two erased pixels. Removing the
+  skip must change exactly those destinations to 255 on both canvases, including mirrored and page-crossing draws.
 - [local: original relocation] Exact native register restore and relocation avoid inheriting loader workspace corruption. Retain raw source banks in the NEX and relocate at startup so NXC SIT1 holds only small patches.
 - [local: world context] The same bitmap bytes serve different materials; colour by native block and subcell identity.
 - [local: clipped damage] F28F and column23 spills require wrapped canvas access and conservative cache invalidation.
@@ -197,3 +227,8 @@ Upstream cc60245 unchanged at the pre-release refresh. Final selftest and ROM au
 verification stamped. Nine real-loader cases and sustained live restart trials passed.
 Source and package are ready for final visual review and upstream integration; no push made.
 - 2026-11-26: ported onto main (add-great-escape), Jon's edited art in, Codex review (10 findings) fixed; full stamp, package, loader checks and Jon's play review next.
+- 2026-11-26: Jon’s 1,000 round-two outline edits imported as 966 distinct erased halo pixels. The four
+  painting binaries round-tripped exactly. Matched JNext captures showed tan ground and olive speckles
+  through the erased outlines. The quick play1 and controlled-result replays passed (2,500 frames,
+  22,464 hooks), including ROM-path checks on 13 builds. All 551 captured-state unit and control cases
+  passed across all 16 hooks. The full four-recording release stamp was outside this art check.

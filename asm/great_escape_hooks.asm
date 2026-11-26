@@ -1096,6 +1096,26 @@ prepare_figure:
         dec de
 .target: ld (V_TARGET),de
         ret
+        MACRO SELECT_PIXELS forward_entry, reverse_entry, forward_cross_entry, reverse_cross_entry
+        ld hl,forward_entry
+        ld a,(mirrored)
+        or a
+        jr z,.kernel
+        ld hl,reverse_entry
+.kernel:
+        ld a,d
+        cp 0x5F
+        jr nz,.safe
+        ld a,e
+        cp 0xE0
+        jr c,.safe
+        ld hl,forward_cross_entry
+        ld a,(mirrored)
+        or a
+        jr z,.safe
+        ld hl,reverse_cross_entry
+.safe:  ld (pixels_call+1),hl
+        ENDM
 draw_figure:
         call prepare_figure
         ld bc,0x243B
@@ -1143,24 +1163,8 @@ draw_figure:
         ld a,(canvas_page)
         add a,4
         nextreg 0x53,a
-        ld hl,pixels_forward
-        ld a,(mirrored)
-        or a
-        jr z,.kernel
-        ld hl,pixels_reverse
-.kernel:
-        ld a,d
-        cp 0x5F
-        jr nz,.safe
-        ld a,e
-        cp 0xE0
-        jr c,.safe
-        ld hl,pixels_forward_cross
-        ld a,(mirrored)
-        or a
-        jr z,.safe
-        ld hl,pixels_reverse_cross
-.safe:  ld (pixels_call+1),hl
+.select: SELECT_PIXELS pixels_forward,pixels_reverse,pixels_forward_cross,pixels_reverse_cross
+.select_end:
         ld hl,(pixel_source)
         xor a
         ld (byte_index),a
@@ -1275,75 +1279,64 @@ pixel_dual_wrap:
         add a,4
         nextreg 0x53,a
         ret
-        MACRO DUAL_PIXEL
+        ; The optional kernel takes advantage of OR C setting sign. Outfit/key
+        ; bases and ordinary bright colours all have bit 7 clear.
+        MACRO PAINT_PIXEL step,masked,check_halo
+        IF masked
+        rlc b
+        jr nc,.advance
+        ENDIF
         ld a,(hl)
         or c
+        IF check_halo
+        jp m,.advance
+        ENDIF
         ld (de),a
         or 128
         set 5,d
         ld (de),a
         res 5,d
-        ENDM
-        MACRO PIXEL_FORWARD
-        rlc b
-        jr nc,$+12
-        DUAL_PIXEL
-        inc hl
+.advance:
+        step hl
         inc de
         ENDM
-        MACRO PIXEL_REVERSE
-        rlc b
-        jr nc,$+12
-        DUAL_PIXEL
-        dec hl
-        inc de
-        ENDM
-pixels_forward:
+
+        MACRO PIXEL_KERNEL step,empty_entry,full_entry,check_halo
         ld a,b
         or a
-        jp z,pixels_empty_forward
+        jp z,empty_entry
         cp 255
-        jp z,pixels_full_forward
+        jp z,full_entry
+@.masked:
         DUP 8
-        PIXEL_FORWARD
+        PAINT_PIXEL step,1,check_halo
         EDUP
         ret
-pixels_reverse:
-        ld a,b
-        or a
-        jp z,pixels_empty_reverse
-        cp 255
-        jp z,pixels_full_reverse
+        ENDM
+        MACRO FULL_KERNEL step,check_halo
         DUP 8
-        PIXEL_REVERSE
+        PAINT_PIXEL step,0,check_halo
         EDUP
         ret
-pixels_full_forward:
-        DUP 8
-        DUAL_PIXEL
-        inc hl
-        inc de
-        EDUP
-        ret
-pixels_full_reverse:
-        DUP 8
-        DUAL_PIXEL
-        dec hl
-        inc de
-        EDUP
-        ret
-pixels_forward_cross:
-        DUP 8
+        ENDM
+        MACRO CROSS_KERNEL step,check_halo
+        IF check_halo
+        ; Reuse four pixels twice on these rare wrapped rows to fit the overlay.
+        call .four
+.four:
+        ENDIF
+        DUP 8/(1+check_halo)
         call pixel_dual_wrap
-        PIXEL_FORWARD
+        PAINT_PIXEL step,1,check_halo
         EDUP
         ret
-pixels_reverse_cross:
-        DUP 8
-        call pixel_dual_wrap
-        PIXEL_REVERSE
-        EDUP
-        ret
+        ENDM
+pixels_forward:       PIXEL_KERNEL inc,pixels_empty_forward,pixels_full_forward,0
+pixels_reverse:       PIXEL_KERNEL dec,pixels_empty_reverse,pixels_full_reverse,0
+pixels_full_forward:  FULL_KERNEL inc,0
+pixels_full_reverse:  FULL_KERNEL dec,0
+pixels_forward_cross: CROSS_KERNEL inc,0
+pixels_reverse_cross: CROSS_KERNEL dec,0
 figure_mmu4: db 0
 clip16r: dw 0xE319,0xE32A,0xE340,0xE340
 clip16l: dw 0xE3C5,0xE3D6,0xE3EC,0xE3EC
@@ -2270,3 +2263,20 @@ dialog_hook:
 extra_end:
         ASSERT extra_end <= 0x1C00
         SAVEBIN "ge_extra.bin",extra_start,extra_end-extra_start
+
+; Build-time overlays for colour maps with erased halo pixels. Both replace
+; only code in page 26. All other addresses and the no-marker build stay fixed.
+        ORG pixels_forward
+halo_forward:       PIXEL_KERNEL inc,pixels_empty_forward,halo_full_forward,1
+halo_reverse:       PIXEL_KERNEL dec,pixels_empty_reverse,halo_full_reverse,1
+halo_full_forward:  FULL_KERNEL inc,1
+halo_full_reverse:  FULL_KERNEL dec,1
+halo_forward_cross: CROSS_KERNEL inc,1
+halo_reverse_cross: CROSS_KERNEL dec,1
+        ASSERT halo_forward.masked == pixels_forward.masked
+        ASSERT $ <= figure_mmu4
+        SAVEBIN "ge_halo_pixels.bin",halo_forward,$-halo_forward
+        ORG draw_figure.select
+halo_select: SELECT_PIXELS halo_forward,halo_reverse,halo_forward_cross,halo_reverse_cross
+        ASSERT $ == draw_figure.select_end
+        SAVEBIN "ge_halo_select.bin",halo_select,$-halo_select

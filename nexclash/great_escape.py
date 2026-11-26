@@ -8,6 +8,8 @@ from functools import lru_cache
 from skoolkit import CSimulator
 from . import z80tonex as Z,hooklib
 SOURCE_MD5='ff5eae3b61188cb5095a6177c3c34a06'
+SHEET_GREY=(48,52,58)
+SEE_THROUGH=255  # Source-only marker. All ordinary bright paint uses indices 0..127.
 CMP=hooklib.CMP_R
 LOADING_SHA256='7eff616121a684dd0c0e9e7642181129aadb2dc9951c8a4c804c86dd8c55803d'
 TRAINERS={
@@ -151,6 +153,24 @@ def searchlight_table(code):
     return bytes(result)
 
 
+def _validate_halos(colours,memory):
+    """Only a native mask clear with no ink may carry the source marker."""
+    if any(128<=v<SEE_THROUGH for v in set(colours)):
+        raise ValueError('Bright source colours must be 0..127 or the halo marker')
+    allowed = set()
+    for table, count, padding in ((0xCE22, 38, 1), (0xDD7D, 16, 0)):
+        for entry in range(table, table + 6*count, 6):
+            stride = memory[entry] - padding
+            bitmap, mask = _word(memory, entry+2), _word(memory, entry+4)
+            for i in range(stride * memory[entry+1]):
+                halo = ~(memory[bitmap+i] | memory[mask+i])
+                for x in range(8):
+                    if halo & (128 >> x):
+                        allowed.add((bitmap+i-16384)*8 + x)
+    if sum(colours[n]==SEE_THROUGH for n in allowed)!=colours.count(SEE_THROUGH):
+        raise ValueError('See-through source pixel outside a native mask-only halo')
+
+
 class EnhancedPatch(OriginalPatch):
     """External pixel-cache companion; the native drawing and game RAM are retained."""
     name='The Great Escape Enhanced'
@@ -198,13 +218,22 @@ class EnhancedPatch(OriginalPatch):
         nr(0x43,0x10);nr(0x14,0xE3);nr(0x69,0x80 if enabled else 0);setup.append(0xC9)
         assert len(setup)<0xFF0, "Setup collides with the stub stack"
         self.setup_call,self.stub_extra=0xD000,bytes(setup)
-    def apply(self,snap):
-        if not self.native_state:normalize_source(snap)
-        memory=Z.rom48()+snap.banks[5]+snap.banks[2]+snap.banks[0]
-        self.native_memory=bytes(memory)
+
+    def _prepare_art(self,memory):
         colours=self.colours or bytes(7 if memory[a]&(128>>x) else 0 for a in range(16384,65536) for x in range(8))
         self.colour_data=colours
         if len(colours)!=393216:raise ValueError('Pixel cache must cover exactly 48K x 8')
+        if SEE_THROUGH in colours:
+            _validate_halos(colours,memory)
+            # Use the assembled overlays only for marked art. Save the active code
+            # in hooks as well so negative controls mutate the installed version.
+            code=bytearray.fromhex(self.hooks['code'])
+            for block,label in (('halo_select','halo_select'),('halo_pixels','halo_forward')):
+                at=self.syms[label];overlay=bytes.fromhex(self.hooks[block])
+                code[at:at+len(overlay)]=overlay
+            self.hooks['code']=code.hex()
+            private=bytearray(self.extra_banks[13]);private[:len(code)]=code
+            self.extra_banks[13]=bytes(private)
         # Compact native source pages plus contextual 8x8 world tiles. Bright and
         # dark pools are identical in layout, 22 pages apart, and fit below ROM47.
         pages=tuple(range(0x21,0x28))+tuple(range(0x34,0x39))
@@ -250,6 +279,12 @@ class EnhancedPatch(OriginalPatch):
         assert len(canvas)==32768
         self.extra_banks[17],self.extra_banks[18]=canvas[:16384],canvas[16384:]
         dark=bytes(v|128 for v in canvas);self.extra_banks[19],self.extra_banks[20]=dark[:16384],dark[16384:]
+
+    def apply(self,snap):
+        if not self.native_state:normalize_source(snap)
+        memory=Z.rom48()+snap.banks[5]+snap.banks[2]+snap.banks[0]
+        self.native_memory=bytes(memory)
+        self._prepare_art(memory)
         self.sites=[]
         if self.enabled:
             for pc,old,label in self.entries:
@@ -471,7 +506,12 @@ class CanvasOracle:
                     if not enabled[col] or not opaque or not (m[fga]&(128>>(dx&7))):continue
                     n=(dest+y*24-CANVAS_START)*8+dx
                     if not 0<=n<len(self.bits):raise AssertionError('Visible native figure outside canvas')
-                    self.bits[n]=bit;self.colours[n]=p.colour_data[(a-16384)*8+(xx&7)]|base
+                    self.bits[n]=bit  # The native mask still clears paper beneath an erased halo.
+                    value=p.colour_data[(a-16384)*8+(xx&7)]
+                    if value != SEE_THROUGH:
+                        self.colours[n] = value | base
+                    elif bit:
+                        raise AssertionError(('See-through on native ink', a, xx&7))
         elif pc==0xEED3:
             for n in range(24*128):
                 value=sum(self.bits[n*8+x]<<(7-x) for x in range(8))
@@ -485,6 +525,7 @@ class CanvasOracle:
     def compare(self,pc,m,mem):
         bad=[]
         if pc!=0xEED3:
+            # Compare every destination, including the retained colour under an erased halo.
             bright=bytes(sum((mem.pages[j] for j in range(34,38)),[]))[:len(self.colours)]
             dark=bytes(sum((mem.pages[j] for j in range(38,42)),[]))[:len(self.colours)]
             for label,want,got in (('canvas',self.colours,bright),('dark canvas',bytes(self.colours).translate(DARK),dark)):
@@ -591,7 +632,7 @@ def negative_patches(patch):
     cases.append(('missing publication site',broken))
     for name,block,offset,before,after in (
         ('position','code',patch.syms['buffer_offset'],bytes.fromhex('1190F2'),bytes.fromhex('1191F2')),
-        ('transparency','code',None,bytes.fromhex('CB00300A'),bytes.fromhex('CB00180A')),
+        ('transparency','code',patch.syms['pixels_forward.masked'],bytes.fromhex('CB0030'),bytes.fromhex('CB0018')),
         ('R','resident',None,bytes.fromhex('ED4F'),bytes.fromhex('0000')),
         ('speed','resident',None,bytes.fromhex('ED9207'),bytes.fromhex('000000')),
         ('frame end leaves Layer 2 hidden','code',None,bytes.fromhex('ED916980'),bytes.fromhex('00000000')),
@@ -608,6 +649,53 @@ def negative_patches(patch):
             bank=bytearray(broken.extra_banks[12]);bank[:8192]=page;broken.extra_banks[12]=bytes(bank)
         cases.append((name,broken))
     return cases
+
+
+def _halo_units(patch,state):
+    """A real red-key row has a full coverage byte followed by a partial one."""
+    counts=collections.Counter()
+    registers=list(state['registers']);registers[24]=0xE29F
+    state=dict(state,pc=0xE29F,registers=registers)
+    m=bytearray(state['memory']);iy=_pair(registers,10)
+    desc=0xDD7D+9*6
+    bitmap=_word(m,desc+2)+7*2;mask=_word(m,desc+4)+7*2
+    m[iy]=9
+    m[0x81AC:0x81B0]=bitmap.to_bytes(2,'little')+mask.to_bytes(2,'little')
+    m[0x81B0:0x81B2]=(0x8100).to_bytes(2,'little');m[0x8100:0x8104]=bytes([255])*4
+    m[0xE2C2]=1
+    for store in (0xE319,0xE32A,0xE340):m[store]=0x77
+    pixels=(0,10)
+    marked=copy.deepcopy(patch)
+    colours=bytearray(patch.colour_data.replace(bytes([SEE_THROUGH]),b'\0'))
+    for x in pixels:
+        bit=128>>(x&7)
+        assert not (m[bitmap+x//8]|m[mask+x//8])&bit
+        colours[(bitmap-16384)*8+x]=SEE_THROUGH
+    marked.colours=bytes(colours)
+    marked._prepare_art(marked.native_memory)
+    # Remove just the JP M after LD A,(HL) / OR C in every installed kernel.
+    broken=copy.deepcopy(marked);code=bytearray(broken.extra_banks[13])
+    start=broken.syms['halo_forward'];end=start+len(bytes.fromhex(broken.hooks['halo_pixels']))
+    prefix=bytes.fromhex('7EB1FA')
+    branches=[at+2 for at in range(start,end-4) if code[at:at+3]==prefix]
+    if not branches:raise AssertionError('Missing halo skip control')
+    for at in branches:code[at:at+3]=bytes(3)
+    broken.extra_banks[13]=bytes(code)
+    for offset in (32,1023):  # Ordinary row, then straddle an 8K bright/dark page boundary.
+        dest=CANVAS_START+offset
+        m[0x81A2:0x81A4]=dest.to_bytes(2,'little')
+        m[dest:dest+2]=b'\xff\xff'  # Seed bright 7 and dark 135, also verify native paper is cleared.
+        for mirror in (0,128):
+            m[0x81B7]=mirror
+            fixture=dict(state,memory=bytes(m))
+            positions=sorted(offset*8+(15-x if mirror else x) for x in pixels)
+            expected=[(label,[(n,prior,SEE_THROUGH) for n in positions])
+                      for label,prior in (('canvas',7),('dark canvas',135))]
+            bad=_case(marked,fixture)
+            counts['key halo retains scenery'+('!' if bad else '')]+=1
+            bad=_case(broken,fixture)
+            counts['halo skip negative detected' if bad==expected else 'halo skip negative missed!']+=1
+    return counts
 
 
 def unit_tests(patch,states):
@@ -659,6 +747,9 @@ def unit_tests(patch,states):
             except (AssertionError,ValueError,KeyError,IndexError):bad=[]
             if bad and NEG_EXPECT[name](bad,0):detected=True;break
         counts[name+' negative detected' if detected else name+' negative missed!']+=1
+    seed=first.get(0xE29F) or first.get(0xE2A2) or first.get(0xE102)
+    if seed:counts.update(_halo_units(patch,seed))
+    else:counts['missing figure state for halo control!']+=1
     if 0xE29F in first:
         s=first[0xE29F];iy=_pair(s['registers'],10)
         for item in range(16):
@@ -690,15 +781,16 @@ def sheets(source,assets,out):
     palette=[rgb(n) for n in art['palette']]
     variants=('Player RAF','Prisoner brown','Prisoner blue brown','Prisoner cream','Prisoner olive',
               'Prisoner RAF','Prisoner rust knit','McQueen player','Guard or disguise')
-    image=Image.new('RGB',(1280,1140),'#30343a');draw=ImageDraw.Draw(image);figures=[]
+    image=Image.new('RGB',(1280,1140),SHEET_GREY);draw=ImageDraw.Draw(image);figures=[]
     for i in range(38):
         a=0xCE22+i*6;width=(memory[a]-1)*8;height=memory[a+1];bitmap=_word(memory,a+2);mask=_word(memory,a+4)
-        x0=(i%8)*160+8;y0=(i//8)*190+25;tile=Image.new('RGB',(width,height),'#30343a')
+        x0=(i%8)*160+8;y0=(i//8)*190+25;tile=Image.new('RGB',(width,height),SHEET_GREY)
         for y in range(height):
             for x in range(width):
                 addr=bitmap+y*(width//8)+x//8;bit=128>>(x&7)
                 if memory[addr]&bit or not memory[mask+y*(width//8)+x//8]&bit:
-                    tile.putpixel((x,y),palette[colours[(addr-16384)*8+(x&7)]])
+                    value=colours[(addr-16384)*8+(x&7)]
+                    if value!=SEE_THROUGH:tile.putpixel((x,y),palette[value])
         image.paste(tile.resize((width*5,height*5),Image.Resampling.NEAREST),(x0,y0))
         name='Stove' if i==0 else 'Crate' if i==1 else 'Person walk' if i<10 else 'Person crawling' if i<14 else 'Dog' if i<22 else 'Guard' if i<30 else 'Disguise'
         draw.text((x0,y0-18),f'{name} {i:02}',fill='white')
@@ -707,17 +799,18 @@ def sheets(source,assets,out):
         x0=(i%3)*420+8;y0=955+(i//3)*60;draw.text((x0,y0),name,fill='white')
         for n in range(8):draw.rectangle((x0+n*28,y0+18,x0+n*28+23,y0+40),fill=palette[i*8+n])
     image.save(out/'GREAT_ESCAPE_PAINTING_SPRITES.png')
-    image=Image.new('RGB',(1280,400),'#30343a');draw=ImageDraw.Draw(image);items=[]
+    image=Image.new('RGB',(1280,400),SHEET_GREY);draw=ImageDraw.Draw(image);items=[]
     names={0:'Cutters',1:'Spade',3:'Uniform',5:'Chocolate',8:'Poison',9:'Red key',10:'Yellow key',11:'Green key',12:'Parcel'}
     for i in range(16):
         a=0xDD7D+i*6;width=memory[a]*8;height=memory[a+1];bitmap=_word(memory,a+2);mask=_word(memory,a+4)
         x0=i%8*160+8;y0=i//8*140+25;base=104+(i-9)*8 if 9<=i<=11 else 0
-        tile=Image.new('RGB',(width,height),'#30343a')
+        tile=Image.new('RGB',(width,height),SHEET_GREY)
         for y in range(height):
             for x in range(width):
                 addr=bitmap+y*(width//8)+x//8;bit=128>>(x&7)
                 if memory[addr]&bit or not memory[mask+y*(width//8)+x//8]&bit:
-                    tile.putpixel((x,y),palette[colours[(addr-16384)*8+(x&7)]|base])
+                    value=colours[(addr-16384)*8+(x&7)]
+                    if value!=SEE_THROUGH:tile.putpixel((x,y),palette[value|base])
         image.paste(tile.resize((width*5,height*5),Image.Resampling.NEAREST),(x0,y0))
         name=names.get(i,'Item');draw.text((x0,y0-18),f'{name} {i:02}',fill='white')
         items.append(dict(index=i,name=name,width=width,height=height,bitmap=bitmap,mask=mask,x=x0,y=y0,scale=5,base=base))
@@ -726,14 +819,14 @@ def sheets(source,assets,out):
         for n in range(8):draw.rectangle((x0+n*28,318,x0+n*28+23,340),fill=palette[104+i*8+n])
     draw.text((8,365),'The three keys share one drawing; their swatches select the three original key colours.',fill='white')
     image.save(out/'GREAT_ESCAPE_PAINTING_ITEMS.png')
-    image=Image.new('RGB',(1280,1040),'#30343a');draw=ImageDraw.Draw(image)
+    image=Image.new('RGB',(1280,1040),SHEET_GREY);draw=ImageDraw.Draw(image)
     for i in range(194):
         a=0x9768+i*8;tile=Image.new('RGB',(8,8));tile.putdata([palette[v] for v in colours[(a-16384)*8:(a-16384)*8+64]])
         x0=i%16*80+4;y0=i//16*80+14
         image.paste(tile.resize((64,64),Image.Resampling.NEAREST),(x0,y0));draw.text((x0,y0-12),f'Inside {i:02X}',fill='white')
     image.save(out/'GREAT_ESCAPE_PAINTING_INTERIORS.png')
     for group in range(4):
-        image=Image.new('RGB',(1200,1200),'#30343a');draw=ImageDraw.Draw(image)
+        image=Image.new('RGB',(1200,1200),SHEET_GREY);draw=ImageDraw.Draw(image)
         for j in range(64):
             block=group*64+j;tile=Image.new('RGB',(32,32));tile.putdata([palette[v] for v in world[block*1024:(block+1)*1024]])
             x0=j%8*150+4;y0=j//8*150+18
@@ -752,6 +845,7 @@ def import_sheets(source,assets,sheet_dir,destination):
     control the nine costumes without changing the game's shared animation data.
     Other figures/world use the existing 128-colour palette. No nearest-colour
     blending: an unavailable colour is reported rather than silently substituted.
+    Exact canvas grey erases a mask-only halo. Aliases share one physical edit.
     """
     from PIL import Image
     assets=Path(assets);folder=Path(sheet_dir);destination=Path(destination)
@@ -776,20 +870,36 @@ def import_sheets(source,assets,sheet_dir,destination):
             if n==0 and value:raise ValueError('Keep each outfit black swatch black')
             palette[variant*8+n]=value
     def index(rgb,previous,allowed):
+        if rgb==SHEET_GREY:raise ValueError('Canvas grey is reserved for mask-only figure and item pixels')
         value=packed(rgb)
-        if value==old[previous] or value==palette[previous]:return previous
+        if previous!=SEE_THROUGH and value in (old[previous],palette[previous]):return previous
         found=[i for i in allowed if value in (old[i],palette[i])]
         if not found:raise ValueError(f'Colour {rgb} is outside this sheet palette; edit the named outfit swatch to change its colour')
         return found[0]
-    for f in meta['figures']:
-        i=f['index'];w=f['width'];h=f['height'];allowed=range(8) if 2<=i<14 else range(128)
-        for y in range(h):
+    edits={}
+    def read_figure(f,kind,allowed,base=0):
+        w=f['width'];scale=f['scale']
+        for y in range(f['height']):
             for x in range(w):
-                rgb=pixel(image,f['x']+x*5,f['y']+y*5,5);a=f['bitmap']+y*(w//8)+x//8;bit=128>>(x&7)
-                if not (m[a]&bit or not m[f['mask']+y*(w//8)+x//8]&bit):
-                    if rgb!=(48,52,58):raise ValueError(f'Paint outside native figure {i} at {x},{y}')
+                rgb=pixel(image,f['x']+x*scale,f['y']+y*scale,scale)
+                offset=y*(w//8)+x//8;addr=f['bitmap']+offset;bit=128>>(x&7)
+                ink=m[addr]&bit
+                if not ink and m[f['mask']+offset]&bit:
+                    if rgb!=SHEET_GREY:raise ValueError(f"Paint outside native {kind} {f['index']} at {x},{y}")
                     continue
-                n=(a-16384)*8+(x&7);colours[n]=index(rgb,colours[n],allowed)
+                n=(addr-16384)*8+(x&7);previous=colours[n]
+                if rgb==SHEET_GREY:
+                    if ink:raise ValueError(f"Grey on native {kind} ink {f['index']} at {x},{y}")
+                    value=SEE_THROUGH
+                else:
+                    value=index(rgb,previous|base,allowed)
+                    if base:value&=7
+                if value==previous:continue
+                if n in edits and edits[n]!=value:
+                    raise ValueError(f"Conflicting edits to shared {kind} pixel {addr:04X}/{x&7}")
+                edits[n]=value
+    for f in meta['figures']:
+        read_figure(f,'figure',range(8) if 2<=f['index']<14 else range(128))
     image=Image.open(folder/'GREAT_ESCAPE_PAINTING_ITEMS.png').convert('RGB')
     if image.size!=(1280,400):raise ValueError('Item sheet dimensions changed')
     for variant in range(3):
@@ -797,21 +907,9 @@ def import_sheets(source,assets,sheet_dir,destination):
             value=packed(image.getpixel((variant*420+8+n*28+12,328)))
             if n==0 and value:raise ValueError('Keep each key black swatch black')
             palette[104+variant*8+n]=value
-    edits={}
     for f in meta['items']:
-        w=f['width'];base=f['base']
-        for y in range(f['height']):
-            for x in range(w):
-                rgb=pixel(image,f['x']+x*5,f['y']+y*5,5);a=f['bitmap']+y*(w//8)+x//8;bit=128>>(x&7)
-                if not (m[a]&bit or not m[f['mask']+y*(w//8)+x//8]&bit):
-                    if rgb!=(48,52,58):raise ValueError(f"Paint outside native item {f['index']} at {x},{y}")
-                    continue
-                n=(a-16384)*8+(x&7);previous=colours[n]
-                value=index(rgb,previous|base,range(base,base+8) if base else range(128))
-                if base:value&=7
-                if value==previous:continue
-                if n in edits and edits[n]!=value:raise ValueError('Conflicting edits to the shared key drawing')
-                edits[n]=value
+        base=f['base']
+        read_figure(f,'item',range(base,base+8) if base else range(128),base)
     for n,v in edits.items():colours[n]=v
     image=Image.open(folder/'GREAT_ESCAPE_PAINTING_INTERIORS.png').convert('RGB')
     if image.size!=(1280,1040):raise ValueError('Interior sheet dimensions changed')
