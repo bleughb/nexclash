@@ -103,7 +103,7 @@
   "engine_col": "army_moves (army_moves.md)",
   "build": "v1.1; army_moves_sprites_loading.nex 1b60bd04 equals the published .nxc 1.1 bare build; with the Spec256 sets (rework enhanced) Enhanced c8cb9484 and Backdrop off 9825b827 equal --colours Enhanced [--toggle \"Backdrop off\"]; original bitmap and scenery attributes on the ULA, figures' ink on a double-buffered Layer 2, both parts; Enhanced on a full-screen Layer 2 with a backdrop, off by default",
   "software": "4 recordings, 40,613 frames, 51,818 hooks with R and 48K RAM against a model; 1,152 ABI cases, 10 of 10 broken builds; v1.1 review run: all three modes replayed (121,839 frames, 190,334 hooks with R), negatives 10/10 and 18/18, pace within 2% except Enhanced part 2 room changes (40 to 55% longer, paid back; whole runs -0.03 to -0.14%), soaks, flicker, real loader 5 of 5 equal to nxc.py",
-  "hardware": "untested",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-26, good",
   "next": "hardware checklist; Enhanced part 2 room-change time; the rest of part 2 and natural completion"
  },
  "checks": [

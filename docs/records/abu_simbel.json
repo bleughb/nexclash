@@ -144,7 +144,7 @@
   "engine_col": "abu_simbel (abu_simbel.md)",
   "build": "abu_simbel_sprites.nex c2dd86f1 (v1.0, as published in nxc 1.0: player and enemies sprites in the game's ink; plotter whole at 28 MHz into page 31; pace ORIGINAL; whole Sinclair alt ROM; Enhanced abu_simbel_enhanced.nex b4560370 (Spec256 colours approved 2026-11-03), English abu_simbel_english.nex 2e3aa225, both 053806e5; three cheats in the .nxc)",
   "software": "replay IDENTICAL with R on 10 recordings (75,427 plots); unit PASS (4-clock sites, positions, depth, guard); 18 negatives detected; JNext pace -0.7 to -1.7 %; real loader",
-  "hardware": "untested",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-26, fine",
   "next": "hardware test (EAR bit 6); owner play of v1.0"
  },
  "checks": [
