@@ -95,7 +95,7 @@
   "engine_col": "cookie (cookie.md)",
   "build": "cookie_sprites.nex faaacc0b (the game draws as it does; every figure a sprite on the same pixels in its own colour; the colour paint stores nothing; loading screen) + enhanced 7df95fe3 (34 pictures painted with 12 fixed colours, a first pass; a pixel left unpainted keeps the game's colour)",
   "software": "Verify IDENTICAL on two whole machine-played recordings (40,426 frames), both builds: 106,799 figures as sprites, 12,817,707 sprite pixels against the figure's model (itself checked against the original's plot at every draw-only entry) and, on Enhanced, every pixel's colour against the painted map; every register with R and all memory at every hook; the IM 1 handler compared at 32,491 interrupts; unit PASS on both builds (1,632 graphic cases over all 34 graphics, negative control 40 of 40); 6 of 6 broken builds detected; ROM path check pass",
-  "hardware": "untested (both builds run in OverSpec)",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-26, good",
   "next": "a recording played by hand into later levels; hardware test"
  },
  "checks": [

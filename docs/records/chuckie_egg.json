@@ -68,7 +68,7 @@
   "engine_col": "chuckie (chuckie_egg.md)",
   "build": "Chuckie_Egg_sprites.nex bfad6be1",
   "software": "RZX IDENTICAL, unit PASS",
-  "hardware": "untested",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-26, good",
   "next": "hardware test"
  },
  "checks": [
