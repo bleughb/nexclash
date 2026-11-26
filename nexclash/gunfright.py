@@ -270,14 +270,14 @@ class Model:
             def __getitem__(s,a):
                 if isinstance(a,slice):return [s[i] for i in range(*a.indices(65536))]
                 p=outer.mmu[a>>13]
-                return outer.rom[a] if p==255 else outer.pages.setdefault(p,bytearray(8192))[a&8191]
+                return outer.rom[a] if p==255 else (outer.pages.get(p) or outer.pages.setdefault(p, bytearray(8192)))[a&8191]
             def __setitem__(s,a,v):
                 if isinstance(a,slice):
                     for i,n in zip(range(*a.indices(65536)),v):s[i]=n
                     return
                 p=outer.mmu[a>>13]
                 if p!=255:
-                    outer.pages.setdefault(p,bytearray(8192))[a&8191]=v
+                    (outer.pages.get(p) or outer.pages.setdefault(p, bytearray(8192)))[a&8191]=v
                     if outer.trace_writes:outer.writes.add(a)
         self.mem=Mem(); self.mem[0x4000:]=ram[0x4000:]
         for a,old,new in patch.sites:self.mem[a:a+len(new)]=new

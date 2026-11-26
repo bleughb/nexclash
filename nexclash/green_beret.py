@@ -21,7 +21,7 @@ ALT_PAGE = 24
 SCRPAGE = 26
 OVPAGE = 27
 ULAPAGE = 10
-TAIL_ADDR = 0x8342          # first scenery-buffer row: every byte the game uses here is written before read; tail bytes change nothing (work/tailtest.py)
+TAIL_ADDR = 0x8342          # scenery-buffer row; the copier reads it before the game writes it, so restore_tail puts it back
 DRAW_SITE, FEND_SITE = 0xA38F, 0xA392
 PLOT, PLOT2, SMALL = 0xA7DF, 0xA8E8, 0xAFD8
 AFTER = 0xC21A
@@ -312,20 +312,52 @@ def colour_identity(peek, prof=None):
 # The patches
 # ---------------------------------------------------------------------------------------------
 
+def restore_tail(p, s):
+    """The start-up tail puts the snapshot's bytes back before the game starts. TAIL_ADDR is a scenery-buffer row that
+    the screen copier (0xA9C7) reads before the game writes it, at the start of play (nextboot.rom_paths: 0 to 26
+    frames of the tail's bytes on screen). As Alien 8's: the tail jumps to code in the alt ROM image's free span after
+    the register block, which copies the backup over the tail and runs the tail's register restore again, so no game
+    memory is assumed dead. Call before extra_banks takes p.page; idempotent (check() applies a copy again)."""
+    from . import z80tonex as zt
+    from .build import rom48
+    tail, _, restore, _ = zt.build_tail(s, p.tail_addr, p.slot1, True)
+    backup = p.slot1[1] + 20
+    entry = backup + len(tail)
+    code = (b'\xF3\x21' + zt.w16(backup) + b'\x11' + zt.w16(p.tail_addr) + b'\x01' + zt.w16(len(tail)) + b'\xED\xB0'
+            + tail[restore:])
+    end = entry + len(code)
+    if end > 0x3D00 or set(rom48()[backup:end]) != {0xFF}:
+        raise ValueError('tail restore 0x%04X-0x%04X is not in the 48K ROM\'s free span' % (backup, end))
+    page = bytearray(p.page)
+    page[backup - 0x2000:entry - 0x2000] = bytes(s.read(p.tail_addr + i) for i in range(len(tail)))
+    page[entry - 0x2000:end - 0x2000] = code
+    p.page = bytes(page)
+    p.altrom = (p.altrom[0], end)
+    p.original_pc, p.tail_restore_bytes, s.pc = s.pc, len(tail), entry
+
+
 class PlainPatch:
-    """The plain .nex: no hooks. The game keeps code at 0x5B00, so the stub restores the printer buffer."""
+    """The plain .nex: no hooks. The game keeps code at 0x5B00, so the stub restores the printer buffer. The alt ROM
+    (Sinclair's ROM) holds only the register block and restore_tail's code."""
     name = 'Green Beret plain conversion'
     stub_extra = b''
     setup_call = None
     hook_page_data = b''
-    extra_banks = {}
     uses_printer_buffer = True
     keep_printer_buffer = True
     tail_addr = TAIL_ADDR
     sites = []
 
+    def __init__(self):
+        from .build import rom48
+        self.page = bytes(rom48()[0x2000:0x4000])
+        self.slot1 = (ALT_PAGE, ROM_ORG)
+        self.altrom = (ROM_ORG, ROM_ORG + 20)
+        self.extra_banks = {12: self.page + bytes(8192)}
+
     def apply(self, snap):
-        pass
+        restore_tail(self, snap)
+        self.extra_banks = {12: self.page + bytes(8192)}
 
 
 class GreenBeretPatch:
@@ -381,6 +413,7 @@ class GreenBeretPatch:
         snap.banks[5] = bytes(ram[0:16384])
         snap.banks[2] = bytes(ram[16384:32768])
         snap.banks[0] = bytes(ram[32768:49152])
+        restore_tail(self, snap)
         self.peek = lambda a: ram[a - 0x4000] if a >= 0x4000 else 0
         self.prepare(self.peek)
 
@@ -1221,7 +1254,8 @@ def recolour(nex, cmap):
     for a, old, new in p.sites:
         if bytes(peek(a + k) for k in range(len(new))) != new:
             raise ValueError('patch site 0x%04X does not hold this build\'s hook' % a)
-    if have[12] != p.page + bytes(8192):
+    img, rb = p.page + bytes(8192), p.regblock + 20 - 0x2000    # restore_tail's bytes (per snapshot) sit in rb..0x3D00
+    if have[12][:rb] != img[:rb] or have[12][0x1D00:] != img[0x1D00:]:
         raise ValueError('alt ROM image / hook code differs from this version\'s (rebuild with nexclash.py auto)')
     if have[13][:8192] != page_image():
         raise ValueError('hook page differs from this version\'s (rebuild with nexclash.py auto)')

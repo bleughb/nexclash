@@ -50,7 +50,8 @@ free runs (diff of option screens and gameplay snapshots). High Scores display w
   and I, IM, IFF agree. Unit tests call the hook directly: 12 headers (6 events x 2 destinations), 6 data blocks (bytes, IX advanced, ROM back),
   and a negative control (pages shifted by one: all 6 data cases fail).
 - JNext 1.2.0 (headless): menu -> option screen -> keys -> S: Downhill, Ice Hockey, Ski Jumping, Bobsled, Biathlon, Speed Skating reach play;
-  event A -> Exit -> event B works. The rebuilt .nex is byte-identical to the delivered one (md5 8dc688fa980454c63f98bc0e802d5f88).
+  event A -> Exit -> event B works. The rebuilt .nex is byte-identical to the delivered one (md5 8dc688fa980454c63f98bc0e802d5f88; `auto`'s plain
+  output adds the DivMMC automap-off start: 518144ff82bc534b5fa33a7df8d49176, the record's).
 - Hardware: the .nex loads and Downhill ran (user, 2026-11-22).
 
 ## Downhill stage 1 (survey and design, 2026-11-22; Downhill = event 0 = Downhill / Slalom / Giant Slalom)
@@ -155,10 +156,10 @@ code goes in free bytes of the event's own block (find a zero run in the tape bl
 Ice Hockey (nexclash/winter_sports_ice_hockey.py), Speed Skating (_speed_skating), Bobsled (_bobsled) and Biathlon (_biathlon) are plugins built on winter_sports_pace.PaceEvent: each of the event's screen-copy call
 sites becomes a wrapper (winter_sports_common.draw_wrapper): halt to the frame interrupt (N frames where the loop is free-running), the copy at 28 MHz (NextReg 0x07 = 3), 3.5 MHz back; the
 beeper (blocking, interrupts off) is never sped up (tests: no port 0xFE write while fast). Per event, found with C:\1NEXT\wintersports_work\findloop.py / freecheck.py (work folder, not in the repo):
-- Ice Hockey: 0x7809 (the rink, 423,000 T) from 0x7FC1 and 0x8063; halts 5; interval 6.80 -> 6.41 frames (-5.7 %); wrappers 0xF42A, mode byte 0xF482.
-- Speed Skating: 0x8BFE (78,600 T) from 0x84C3 (loop 0x841E..0x84F1, interrupts on after 0x848F); halts 1; 9.10 -> 8.56 (-5.9 %); wrapper 0xC390, mode byte 0xC3C0; the race starts with SPACE on the ready screen (port 0x7FFE bit 0 at 0x8415).
-- Bobsled: 0x87E6 (a row-blit, 28,400 T) from 0x7A43 (`DI / CALL / EI`, the run), 0x8446, 0x8554; self-paced (its delay loops set the speed: 8 frames per update at a standstill to 2 at speed), halts 1; 2.29 -> 2.23 (-2.8 %); wrappers 0xC390, mode byte 0xC414.
-- Biathlon: 0x81E8 (set-up + the 152,000-byte copy 0x80FD) from 0x8270 and the attribute copy 0x8202 from 0x8273; halts 1 / 0; 11.46 -> 11.25 (-1.9 %); wrappers 0xACAE, mode byte 0xAD06; SPACE starts the race (0x89B1).
+- Ice Hockey: 0x7809 (the rink, 423,000 T) from 0x7FC1 and 0x8063; halts 5; interval 6.80 -> 6.40 frames (-5.8 %); wrappers 0xF42A, mode byte 0xF48A.
+- Speed Skating: 0x8BFE (78,600 T) from 0x84C3 (loop 0x841E..0x84F1, interrupts on after 0x848F); halts 1; 9.10 -> 8.50 (-6.6 %); wrapper 0xC390, mode byte 0xC3C0; the race starts with SPACE on the ready screen (port 0x7FFE bit 0 at 0x8415).
+- Bobsled: 0x87E6 (a row-blit, 28,400 T) from 0x7A43 (`DI / CALL / EI`, the run), 0x8446, 0x8554; self-paced (its delay loops set the speed: 8 frames per update at a standstill to 2 at speed), halts 1; 2.29 -> 2.23 (-2.8 %); wrappers 0xC390, mode byte 0xC420.
+- Biathlon: 0x81E8 (set-up + the 152,000-byte copy 0x80FD) from 0x8270 and the attribute copy 0x8202 from 0x8273; halts 1 / 0; 11.46 -> 11.25 (-1.9 %); wrappers 0xACAE, mode byte 0xAD0E; SPACE starts the race (0x89B1).
 Free memory: only zero runs that stay zero through menu, options and a run (freecheck): the runs at 0x9E3D-0xABFF of events 1-4 are written when the event starts and must not be used.
 Tests per plugin (winter_sports_pace.PaceEvent.tests): the key script through the original (tape served at ROM 0x0562) and the build, update interval mean within 8 %, no beeper write at 28 MHz, 3.5 MHz restored at every marker, each wrapper transparent
 (from a copy of the build's state, halts NOPed, its registers and memory equal the plain call's), negative controls (a wrapper that leaves 28 MHz on; one that calls a bare RET instead of the routine) caught.
@@ -172,11 +173,21 @@ hardware test of events 1,3,4,5 and of the new Downhill default. Events keep the
   menu, options and a run (freecheck over the whole flow, from the menu).
 - [local: this game's keys] A snapshot that sits in a delay loop is waiting for a key: Speed Skating and Biathlon start the race on SPACE (port 0x7FFE bit 0), Ski Jumping's loop at 0x864F is the GAME OVER exit. Read the port the loop polls before guessing keys.
 - [none: the shared wrapper (winter_sports_common.draw_wrapper) and the pace plugin (winter_sports_pace) are in this game's engine modules; no other game uses them yet]
+- [local: a speed latch must not sit on the timed path] The wrappers wrote NR 7 = 0 after every drawing and the
+  display-off code did too (F8 lost; Codex review C6). A latch read after the halt moved Speed Skating's frame-edge
+  pacing by 3 % (-6.0 % -> -8.8 %, over the 8 % limit); SPD_IN now runs before the halt and writes the player's speed
+  into the wrapper's own exit NEXTREG 7,n, so after the halt the wrapper runs as before.
+- [local: an event load must not undo the menu's speed] SPD_OUT restored the latched speed at every event load, so an
+  F8 in the menu was undone (Codex review). It restores only while a drawing was left unfinished: SPD_IN clears the
+  ACT mark before the halt, the wrapper's exit sets it with LD (nn),SP (no register or flag touched). Wrapper slots
+  grew from 44 to 48 bytes (the mode bytes above moved with them).
 
 ## Technique use
 - patch.hybrid-display-replacement: helped: Downhill's left view (display-only, proven by read-back tracing) moved to Layer 2 with the game's own pole drawing left on the ULA (2026-11-22)
 - patch.pace-limiter: no help: events 1-5 use a halt-to-interrupt wrapper with the drawing at 28 MHz instead; Downhill's pad table is the limiter's original-pace form (2026-11-22)
 - detect.routine-removal: no help: read-back tracing of screen / buffer reads (simrun on_read) answered display-only without removing the routine
+- patch.restore-speed: used: a latch per window (the player's speed written into the wrapper's exit NEXTREG), read
+  before the frame wait so the timed path stays as it was
 
 ## Friction
 - reuse: [tool nexclash.winter_sports_pace] the tear-free fast-draw plugin (wrapper, transparency test, negative controls) is generic for events that copy their screen with one routine
@@ -184,3 +195,4 @@ hardware test of events 1,3,4,5 and of the new Downhill default. Events keep the
 - environment: [none: no workaround needed]
 - hand-rolled: [local: this game's work folder] callprof / findloop / freecheck / varwatch / tapeload / jrun scripts in C:\1NEXT\wintersports_work were hand-rolled for the surveys and JNext pictures
 - scratch: [none: the scratch scripts answer game-specific questions; the reusable parts are in winter_sports_pace and winter_sports_dh_test]
+- retries: [local: the speed latch lesson above] the first C6 latch (after the halt) failed Speed Skating's 8 % limit

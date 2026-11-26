@@ -45,7 +45,9 @@
   "docs/profiles/rambo.json",
   "asm/rambo_hooks.asm"
  ],
- "shared_data": [],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm"
+ ],
  "rebuild": {
   "args": [
    "--no-record"

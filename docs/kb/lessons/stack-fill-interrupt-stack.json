@@ -8,6 +8,11 @@
    "text": "PUSH fill used for spans of 16 pixels or more and clear rows, with SP in Layer 2 and interrupts on (an entry may write only its return address at SP); an interrupt in the renderer goes isr_e = JP isr_full, which switches to the game stack and pages back.",
    "shown_on": "unknown",
    "quote": "there (alt ROM: JP to the handler): game stack, pages 10 / 11 / 4 / 5 back, CALL 0xC01F"
+  },
+  {
+   "game": "sessions",
+   "text": "Castle Master: PUSH fill for spans of 16 pixels or more (5.5 T a pixel instead of 11), stack in Layer 2, interrupts on; safe because the interrupt entry switches stacks first. An interrupt sweep of 75,666 injected moments gave equal pictures.",
+   "shown_on": "simulator"
   }
  ],
  "level": "observed",
@@ -16,6 +21,9 @@
   "exec.interrupts_on_at_sites"
  ],
  "card": "optimise.layer2-renderer-speed",
+ "facts": {
+  "interrupts": "on"
+ },
  "words": [
   "PUSH fill",
   "stack",

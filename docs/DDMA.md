@@ -86,9 +86,9 @@ measurement on a released 3.03.00 core is still to do.
 | Figure (guide) | Value | Where |
 |---|---|---|
 | Port cycle length after reset `$C3` | 3 + 3 cycles = 6 a byte | 2.7 |
-| Fastest port cycle setting | 2 + 2 cycles = 4 a byte; "about 12% faster" in the examples | 2.7, 3.4 |
+| Fastest port cycle setting | 2 + 2 cycles = 4 a byte; "about 12% faster" in the examples. N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite D02): 4 T at 3.5 MHz but 4.96 clocks at 28 MHz; reset timing 6 T / 5.92 | 2.7, 3.4 |
 | Fill (`$DF` bit 3, `$F7`) | no read phase: twice as fast as a fixed-source fill | 2.5 mode flags |
-| Prescaler | 875 kHz / prescaler bytes a second at every CPU speed | 2.7 |
+| Prescaler | 875 kHz / prescaler bytes a second at every CPU speed. N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite D04): 32P clocks a byte at 28 MHz (P >= 55 within 0.3 %, P = 12: 390); at 3.5 MHz 4P+3 T plus 2-7 T (P = 12: 58.4 T); burst mode leaves the CPU 99.37 % (D05) | 2.7 |
 | 32 x 16x16 rectangles, Layer 2 320x256, 3-cycle | 2D opaque 2.1 ms, 2D transparent 2.1 ms (LDIR 7.2, CPU transparent 15.6, zxnDMA per column 8.2) | 3.4 compare (core 3.02.21) |
 | One ball: rub out + draw | about 0.13 ms (2 video lines) | 3.5 sprites |
 | One 12x12 lemming | about 1.6 video lines | 3.7 lemmings |

@@ -7,6 +7,12 @@
    "game": "notes",
    "text": "Maintainers' note: hardware-proven builds were rejected by a model assuming 7FFD locked at launch.",
    "shown_on": "hardware"
+  },
+  {
+   "game": "docs/LEARNINGS.md",
+   "text": "A \"7FFD locked at launch\" model rejected every hardware-proven build; docs/BRIEFING.md adds that all hardware-tested builds page with legacy writes without unlocking.",
+   "quote": "Model the NEX launch state from hardware evidence",
+   "shown_on": "hardware"
   }
  ],
  "level": "observed",
@@ -21,6 +27,6 @@
   "boot model",
   "hardware"
  ],
- "review": "extracted",
+ "review": "source-checked",
  "as_of": "0.1.7"
 }

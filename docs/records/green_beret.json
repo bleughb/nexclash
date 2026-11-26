@@ -70,11 +70,11 @@
  "outputs": {
   "plain": {
    "file": "green_beret.nex",
-   "md5": "c55d3d8303928a1dbddca65059674575"
+   "md5": "0679156534b3372bfb2280262b39bcb1"
   },
   "sprites": {
    "file": "green_beret_sprites.nex",
-   "md5": "8e0d11e37eb93495a1b8d85a75292224"
+   "md5": "bdfaa782be7651d631fb1eabd2b51598"
   }
  },
  "repro": [],
@@ -126,44 +126,52 @@
  ],
  "checked": {
   "deps": {
-   "asm/green_beret_hooks.asm": "6d575dc50250a854",
-   "docs/profiles/green_beret.json": "d28c9b9ceb4aa797",
-   "nexclash.py": "71dc4c592918bff8",
+   "asm/green_beret_hooks.asm": "1a7464eba94d31c0",
+   "docs/profiles/green_beret.json": "789e782b7b57f318",
+   "nexclash.py": "d9b430cef7478a38",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "e407745055645fc7",
-   "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "9b8914eeef5dae39",
-   "nexclash/green_beret.py": "4b670b407f6e236a",
-   "nexclash/nextboot.py": "44c08db48a1bf32d",
-   "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "37b0e84f39f58243",
-   "nexclash/rzx.py": "45f6a7e4fd28e07e",
+   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/engines.py": "7ce4a95aeb51d4c8",
+   "nexclash/green_beret.py": "9d75964fa3998158",
+   "nexclash/nextboot.py": "a48f70d32f869201",
+   "nexclash/recolour.py": "28ecc65866678e42",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80n.py": "7154a8152c825615",
-   "nexclash/z80tonex.py": "a6ff9eef9ca737b3",
-   "skoolkit": "10.1"
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "2341a01d15719f00",
+   "rom": "sinclair"
   },
-  "date": "2026-11-03"
+  "date": "2026-11-23"
  },
  "verified": {
   "deps": {
-   "asm/green_beret_hooks.asm": "6d575dc50250a854",
-   "docs/profiles/green_beret.json": "d28c9b9ceb4aa797",
-   "nexclash.py": "71dc4c592918bff8",
+   "asm/green_beret_hooks.asm": "1a7464eba94d31c0",
+   "docs/profiles/green_beret.json": "789e782b7b57f318",
+   "nexclash.py": "d9b430cef7478a38",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "e407745055645fc7",
-   "nexclash/dizzy6.py": "e606eb11f42382f6",
-   "nexclash/engines.py": "9b8914eeef5dae39",
-   "nexclash/green_beret.py": "4b670b407f6e236a",
-   "nexclash/nextboot.py": "44c08db48a1bf32d",
-   "nexclash/recolour.py": "091578827a6f24a5",
-   "nexclash/records.py": "37b0e84f39f58243",
-   "nexclash/rzx.py": "45f6a7e4fd28e07e",
+   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/engines.py": "7ce4a95aeb51d4c8",
+   "nexclash/green_beret.py": "9d75964fa3998158",
+   "nexclash/nextboot.py": "a48f70d32f869201",
+   "nexclash/recolour.py": "28ecc65866678e42",
+   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80n.py": "7154a8152c825615",
-   "nexclash/z80tonex.py": "a6ff9eef9ca737b3",
-   "skoolkit": "10.1"
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "2341a01d15719f00",
+   "rom": "sinclair"
   },
-  "date": "2026-11-03"
+  "date": "2026-11-23"
  }
 }

@@ -3,6 +3,7 @@
 The colour file supplies artwork only. No executable bytes from its snapshot
 are used. Default builds neither read the colour source nor add these hooks.
 """
+from . import l2pal
 import json
 from pathlib import Path
 from . import dizzy_patch as DP
@@ -145,6 +146,7 @@ def apply(patch, snap, original, path, palette_path):
         canvas[y*256+x:y*256+x+8]=cs
     for n in range(16,19):patch.extra_banks[n]=bytes(canvas[(n-16)*16384:(n-15)*16384])
     palette=b''.join(rgb9(c) for c in rgb[:255])+bytes([0xE3,0]) + sprpal
+    palette=l2pal.fix(palette[:510],'pairs')+palette[510:]     # opaque 0xE3 -> 0xE7: a Next shows 0xE3 see-through
     setup=bytes.fromhex(p['setup'])+palette
     # Existing pattern upload, new palette setup, then printer-buffer restoration.
     base=bytearray(patch.stub_extra[:len(DP.SETUP)])

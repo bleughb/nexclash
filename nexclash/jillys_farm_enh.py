@@ -105,18 +105,8 @@ class Set256:
 
 def palette(rgb):
     """The set's palette as NR 0x44 pairs. Value 255 is the transparent colour; no other value may land on it."""
-    out = bytearray()
-    for i, c in enumerate(rgb):
-        r, g, b = (c >> 16) & 255, (c >> 8) & 255, c & 255
-        r3, g3, b3 = round(r * 7 / 255), round(g * 7 / 255), round(b * 7 / 255)
-        top = r3 << 5 | g3 << 2 | b3 >> 1
-        low = b3 & 1
-        if i == 255:
-            top, low = 0xE3, 1
-        elif top == 0xE3:
-            top = 0xE7
-        out += bytes((top, low))
-    return bytes(out)
+    from .l2pal import spec256_pairs
+    return spec256_pairs(rgb)
 
 
 def entry(s, a):

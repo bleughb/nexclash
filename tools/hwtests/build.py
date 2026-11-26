@@ -22,15 +22,20 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('name', help='test name (tools/hwtests/<name>.asm)')
     ap.add_argument('-o', '--out', default='.', help='output folder')
+    ap.add_argument('--sym', action='store_true', help='also write <name>.sym (labels, for emulator scripts)')
     a = ap.parse_args(argv)
     src = os.path.join(HERE, a.name + '.asm')
     exe = sjasm.find()
     with tempfile.TemporaryDirectory() as tmp:
         shutil.copy(src, tmp)
+        inc = os.path.join(HERE, a.name)
+        if os.path.isdir(inc):                  # a test split into include files (nxsuite/*.asm)
+            shutil.copytree(inc, os.path.join(tmp, a.name))
         gen = os.path.join(HERE, a.name + '_gen.py')
         if os.path.exists(gen):                 # a test whose cases are generated (z80ntest)
             subprocess.run([sys.executable, gen, tmp], check=True, stdout=subprocess.DEVNULL)
-        r = subprocess.run([exe, '--zxnext', '--nologo', os.path.basename(src)], cwd=tmp,
+        sym = ['--sym=' + a.name + '.sym'] if a.sym else []
+        r = subprocess.run([exe, '--zxnext', '--nologo'] + sym + [os.path.basename(src)], cwd=tmp,
                            capture_output=True, text=True)
         if r.returncode:
             sys.exit('sjasmplus failed:\n' + r.stdout + r.stderr)
@@ -38,6 +43,8 @@ def main(argv=None):
         os.makedirs(a.out, exist_ok=True)
         dst = os.path.join(a.out, a.name + '.nex')
         shutil.copy(nex, dst)
+        if a.sym:
+            shutil.copy(os.path.join(tmp, a.name + '.sym'), os.path.join(a.out, a.name + '.sym'))
     print('%s (%d bytes)' % (dst, os.path.getsize(dst)))
 
 

@@ -126,5 +126,5 @@
   },
   "date": "2026-10-13"
  },
- "excluded": "deprecated (user 2026-10-21): superseded by rainbow_z80n; rainbow.py (also the shared NextState / _machine library), asm/rainbow_hooks.asm, its profile and builds are kept unchanged; run it explicitly with selftest.py --game rainbow [--verify] (--engine rainbow)"
+ "excluded": "deprecated (user 2026-10-21): superseded by rainbow_z80n; rainbow.py (also the shared NextState / _machine library), asm/rainbow_hooks.asm, its profile and builds are kept unchanged; run it explicitly with selftest.py --game rainbow [--verify] (--engine rainbow); known limit, kept frozen: rsafe reads the raster line once, so a 255 -> 256 crossing can commit inside the visible frame (games/rainbow_islands.md Open 1b; fixed in rainbow_z80n)"
 }

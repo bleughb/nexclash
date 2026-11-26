@@ -370,7 +370,7 @@ class NextMem(object):
         if p < 16:
             b = self.banks[p >> 1]
             return memoryview(b)[(p & 1) * 8192:(p & 1) * 8192 + 8192]
-        return self.pages.setdefault(p, bytearray(8192))
+        return (self.pages.get(p) or self.pages.setdefault(p, bytearray(8192)))
 
     def __getitem__(self, a):
         if a < 0x2000 and self.mmu0 != 0xFF:

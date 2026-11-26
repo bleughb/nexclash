@@ -492,28 +492,8 @@ def _machine(Sim, mem, regs, ns, slot='o'):
     sim = machine(Sim, mem, regs, slot)
     R, ed = sim.registers, sim.after_ED
 
-    def nn():
-        p = R[24]
-        ns.nextreg(mem[(p + 2) % 65536], mem[(p + 3) % 65536])
-        R[15] = R2[R[15]]; R[24] = (p + 4) % 65536
-
-    def na():
-        p = R[24]
-        ns.nextreg(mem[(p + 2) % 65536], R[0])
-        R[15] = R2[R[15]]; R[24] = (p + 3) % 65536
-    ed[0x91], ed[0x92] = nn, na
-
-    # Z80N instructions the hooks use (flags unaffected)
-    def add_hl_a():
-        v = (R[6] << 8 | R[7]) + R[0]
-        R[6], R[7] = (v >> 8) & 255, v & 255
-        R[15] = R2[R[15]]; R[24] = (R[24] + 2) % 65536; R[25] += 8
-
-    def mul_de():
-        v = R[4] * R[5]
-        R[4], R[5] = v >> 8, v & 255
-        R[15] = R2[R[15]]; R[24] = (R[24] + 2) % 65536; R[25] += 8
-    ed[0x31], ed[0x30] = add_hl_a, mul_de
+    from . import z80n                      # the shared Z80N handlers, NEXTREG's T-states included (Codex review D1)
+    z80n.install(sim, ns.nextreg)
 
     def halt():                             # the render's frame wait: the interrupt arrives, the game's handler
         ns.halts.append(R[26])              # (not modelled, as everywhere in this verifier) returns after it

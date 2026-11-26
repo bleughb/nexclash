@@ -6,6 +6,7 @@ from collections import Counter
 from . import winter_sports as W
 from . import winter_sports_dh as dh
 from .winter_sports import EVENT_ADDR, _sim, _pages, _original_trap
+from . import winter_sports_common as WC
 from .winter_sports_common import CADENCE
 
 DH_KEYS = [(20, 28, '1'), (1600, 1630, 'K'), (1700, 1730, 'Q'), (1770, 1800, 'A'), (1840, 1870, 'O'), (1910, 1940, 'P'),
@@ -271,6 +272,35 @@ def unit_downhill(patch, z80, rotate=0):
         C['pace wrapper: 14 calls = %d frames, drawing at 28 MHz' % want + ('' if ok else '!')] += 1
         if not ok:
             fails.append(('wrapper', total / FRAME_T, speeds[:3]))
+        # the player's speed (F8) comes back after the 28 MHz drawing at every speed, not a fixed 3.5 MHz (Codex review C6)
+        for s in (1, 2, 3):
+            sim.player_speed(s)
+            n0 = len(log)
+            t, _n, ok_ret = _call(sim, dh.WRAP)
+            got = [v for r, v in log[n0:] if r == 0x07]
+            ok = got == [3, s] and sim.nr7 == s
+            C['pace wrapper at NR 7 = %d: 28 MHz, then %d back' % (s, s) + ('' if ok else '!')] += 1
+            if not ok:
+                fails.append(('wrapper speed', s, got, sim.nr7))
+        # SPD_OUT (the display-off code, at every event load): after a finished drawing the speed the player chose since
+        # (F8 in the menu) stands; a drawing left unfinished at 28 MHz gets the latched speed back, once
+        mem = sim.memory
+
+        def menu_f8():
+            sim.player_speed(2)
+            _call(sim, WC.SPD_OUT)
+            return sim.nr7 == 2
+        ok = menu_f8()
+        C['event load after a finished drawing: the menu\'s F8 speed stands' + ('' if ok else '!')] += 1
+        mem[WC.SPD], mem[WC.ACT + 1] = 1, 0                # a drawing left at 28 MHz, the player's speed 1 latched
+        sim.player_speed(3)
+        _call(sim, WC.SPD_OUT)
+        ok = sim.nr7 == 1 and mem[WC.ACT + 1] != 0 and menu_f8()
+        C['event load after an unfinished drawing: the latched speed back, once' + ('' if ok else '!')] += 1
+        mem[WC.SPD_OUT + 6] = 0                           # negative: SPD_OUT restores whatever the mark says
+        C['negative: unconditional speed restore ' + ('NOT caught!' if menu_f8() else 'caught')] += 1
+        mem[WC.SPD_OUT + 6] = WC.speed_code()[WC.SPD_OUT - WC.SPD_IN + 6]
+        sim.player_speed(0)
     return C, fails
 
 

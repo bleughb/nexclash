@@ -21,6 +21,12 @@
    "text": "Simulated 28 MHz T x 8/6.5 (wait states) turned 13 simulated overruns into 128 hardware ones in 1,043 frames (inferred from board figures, not measured on this game).",
    "quote": "Simulated 28 MHz T x 8/6.5 (wait states) turned 13 simulated overruns into",
    "shown_on": "analysis"
+  },
+  {
+   "game": "games/hard_drivin.md",
+   "text": "JNext: the render's K 6.17-6.28 by scene; a fixed or averaged K lagged, the latest run-time calibration sample tracks it",
+   "quote": "K 6.17-6.28 depending on the scene (contention share)",
+   "shown_on": "jnext"
   }
  ],
  "level": "observed",

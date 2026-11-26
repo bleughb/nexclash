@@ -39,7 +39,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Magicland Dizzy (magicland_dizzy): `magicland_dizzy.nex` d4209fa73afd96c05936b3b90bf496a6, `magicland_dizzy_sprites.nex` f0e32785990472fb01a8370e3a187e78, `magicland_dizzy_sprites.nex --strategy slot1` 8ff3d10c0a600924a938d0541cd87fa2; verified 2026-10-13
 - Treasure Island Dizzy (treasure_island_dizzy): `treasure_island_dizzy.nex` 6dc4fec1e4dd2bd28882d520c70456dc, `treasure_island_dizzy_sprites.nex` 7251663345f34cef7f3b1626a57a8c9c; verified 2026-11-21
 - Treasure Island Dizzy (title screen) (treasure_island_title): `treasure_island_title.nex` cc8fcb90942d294d66d33c0b836f24c1, `treasure_island_title_sprites.nex` 3f887a8475fc214d7174cd59259f8fb4; verified 2026-11-21
-- Dizzy: The Ultimate Cartoon Adventure (dizzy1): `dizzy1.nex` 7714c95e4d1c43d37f7b7e292770274a, `dizzy1_sprites.nex` 47212772fe612ea0c9c5b14e51c73c60; verified 2026-11-21
+- Dizzy: The Ultimate Cartoon Adventure (dizzy1): `dizzy1.nex` 7714c95e4d1c43d37f7b7e292770274a, `dizzy1_sprites.nex` 90e4ce0e37bdd1f9f542dd4066450172; verified 2026-11-21
 - Commando (commando): `commando.nex` 509b4ad6c9ef57ea95dedc91f0830a48, `commando_sprites.nex` 04b29c6403638def8f74c3971f70bd81; verified 2026-11-20
 - Crystal Kingdom Dizzy (128K) (crystal_kingdom_dizzy): `crystal_kingdom_dizzy_sprites.nex` d4dfcce8e0d1c6b88909ea6391213971; verified 2026-11-22
 - Midnight Resistance (128K) (midnight_resistance): `midnight_resistance.nex` 6d489652889fcfbadb7980c4fe92806e, `midnight_resistance_sprites.nex` f28fbbc0e861c5aebcfd47b9de583837; verified 2026-11-21
@@ -61,7 +61,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Inferno (inferno): `inferno.nex` 0a3bde4734c5b3f15ad0f2a55cc81e19; verified never
 - Altered Beast (128K) (altered_beast): `altered_beast.nex` 3a40cd83e14bad535b3f147708b2284e, `altered_beast_sprites.nex` 87afba14d9243c82397ab0c201bfac8c; verified 2026-11-22
 - Ghosts 'n Goblins (ghosts_n_goblins): `ghosts_n_goblins.nex` 61b31a77638e7c6393695f61473a518b, `ghosts_n_goblins_sprites.nex` 49b9383466196c36335b50943e6101b4, `ghosts_n_goblins_enhanced.nex` fff9a32e8e4ab38f395550639c8af3b7, `ghosts_n_goblins_sprites_loading.nex` 5f2bd47639ddecd8960998536be05f79, `ghosts_n_goblins_enhanced_loading.nex` d1627c16e3edf7f691f24d73614bf64f; verified 2026-11-20
-- Green Beret (green_beret): `green_beret.nex` c55d3d8303928a1dbddca65059674575, `green_beret_sprites.nex` 8e0d11e37eb93495a1b8d85a75292224; verified 2026-11-03
+- Green Beret (green_beret): `green_beret.nex` 0679156534b3372bfb2280262b39bcb1, `green_beret_sprites.nex` bdfaa782be7651d631fb1eabd2b51598; verified 2026-11-23
 - Nightshade (nightshade): `nightshade.nex` c2555ad8f43e1ebda5f07094a48bd041, `nightshade_sprites.nex` 37a5c792172120f2c5f5406e476e83bf, `nightshade_enhanced.nex` a09286f6c193f4f911a87a2a2317ebb8; verified 2026-11-21
 - Knight Tyme (128K) (knight_tyme): `knight_tyme.nex` ec43a9c6bd1ac6631ab7c8dde3ee36dd, `knight_tyme_sprites.nex` 8baef8197af76204c12356931837daf5; verified 2026-11-04
 - Spellbound (128K, Magic Knight 2) (spellbound_magic_knight): `spellbound_magic_knight.nex` a3a71c4bc642afb58842e368ebf64682, `spellbound_magic_knight_sprites.nex` 9e1cf675b59a4c1f555b0870d414818b, `spellbound_magic_knight_enhanced.nex` 1fa636cdb0c2c2a1f36a2a29eb880b42; verified 2026-11-20
@@ -94,8 +94,8 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Army Moves (army_moves): `army_moves_sprites.nex` fd03197076dc02dd70516a8219e63c3d, `army_moves_sprites_loading.nex` a2edd6afce2aadb34e6153895fc8080c; verified 2026-11-20
 - Game Over (game_over): `game_over_sprites.nex` c2879a731b23ff57e6f47064fb4769e1, `game_over_sprites_loading.nex` df968f3774d4c577fd74ac1ae4f60d14; verified 2026-11-20
 - Chase H.Q. (chase_hq): `chase_hq.nex` 26d072e215166d94b4a1050b9b1afb50, `chase_hq_speed.nex` 440824a836c77a29abbf5690f66265f8, `chase_hq_orig_pace.nex` a6a78043039c4b98bebaaf13e2f1942f; verified never
-- Silkworm (silkworm): `silkworm.nex` ebfedb75fe5d04df236e3e28bb0d58c2, `silkworm_loading.nex` 696d4c1811af50f822fdcbd0080602cb, `silkworm_enhanced.nex` b90dbd935048c4d63f4f0ae18778b244, `silkworm_enhanced_loading.nex` 48fc71b1f87b360ec497e8d787f7f522; verified 2026-11-20
-- Into the Eagle's Nest (into_the_eagles_nest): `into_the_eagles_nest.nex` 9cb2840fd7312db1b793c6014703359d, `into_the_eagles_nest_loading.nex` c042ccfd28323cbdbe1a293b389bd48d, `into_the_eagles_nest_enhanced.nex` 40b427317b4a431a3d8372155af4c040, `into_the_eagles_nest_enhanced_loading.nex` 58f2f433bd283220aa89da2f0145e41c; verified 2026-11-20
+- Silkworm (silkworm): `silkworm.nex` ebfedb75fe5d04df236e3e28bb0d58c2, `silkworm_loading.nex` 696d4c1811af50f822fdcbd0080602cb, `silkworm_enhanced.nex` 98bb762e2023873e09ef911851135113, `silkworm_enhanced_loading.nex` 366ebf7b0116b32c887f666dd81370a8; verified 2026-11-20
+- Into the Eagle's Nest (into_the_eagles_nest): `into_the_eagles_nest.nex` 9cb2840fd7312db1b793c6014703359d, `into_the_eagles_nest_loading.nex` c042ccfd28323cbdbe1a293b389bd48d, `into_the_eagles_nest_enhanced.nex` 829c1eba9bf1a785cfb407bcb717d688, `into_the_eagles_nest_enhanced_loading.nex` 0f84e47244f250c84cfe4efb202e72f3; verified 2026-11-20
 - Atom Ant (atom_ant): `atom_ant.nex` b9652c798a834eb130e14f905a7932d1, `atom_ant_loading.nex` 90d513dc30b322aa46b0c49d58179e54, `atom_ant_enhanced.nex` 32ecbdebb2aaa1c17fa5c51b5057b8a4, `atom_ant_enhanced_loading.nex` 9add845f2ed6d7b2237d4f93b8db4646; verified 2026-11-20
 - Ruff and Reddy in the Space Adventure (ruff_and_reddy): `ruff_and_reddy.nex` 5ffde90e442cc5b7c30fbc2271c9ea06, `ruff_and_reddy_loading.nex` 174008d46ed1b4dac423c14d2e25a461, `ruff_and_reddy_enhanced.nex` e8017c93011341ec41acecbf417a949e, `ruff_and_reddy_enhanced_loading.nex` e6b3a2e82407295ad217947b6e1f1e09; verified 2026-11-20
 - Gunrunner (gunrunner): `gunrunner.nex` 91ac6cc6ef836637fd225cae6fb600d7, `gunrunner_loading.nex` 7cb1984f1758022536799ce706d73597, `gunrunner_enhanced.nex` 2b8991079d665f55ebf523e58a781d05, `gunrunner_enhanced_loading.nex` f509de2eb7fff67cbd12d1afb91ec3fe; verified 2026-11-21
@@ -103,7 +103,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Mad Mix 2 - en el Castillo de los Fantasmas (mad_mix_2): `mad_mix_2_sprites.nex` 259a464a36cf4c68d385d6705d5b9ad0, `mad_mix_2_sprites_loading.nex` 1c1d116585a067ecdaa89c3fc1a38762, `mad_mix_2_enhanced.nex` 532c47182be034001b0e6398efb98352, `mad_mix_2_enhanced_loading.nex` edc192338a25df497455260c684ac46e; verified 2026-11-20
 - Phantis / Game Over 2, part 1 (phantis): `phantis1_sprites.nex` 9bc7be780ee378c9d42bbd18f5e8829a, `phantis1_sprites_loading.nex` f54f7969be2f6aa68930dc165cbfb27a, `phantis1_enhanced.nex` 7b754be4bb97a99bff3429839c526853, `phantis1_enhanced_loading.nex` 873aa581572cd978c3ac7a6fb4947952; verified 2026-11-21
 - Phantis / Game Over 2, part 2 (phantis2): `phantis2_sprites.nex` 684bdadd06394e0409a3ae347335f7e2, `phantis2_sprites_loading.nex` fc07a3048883981f6f620730285ee4b6; verified 2026-11-20
-- Booty (booty): `booty.nex` 91f8b0c6a627bb3f93aa3a06b6f6848a, `booty_loading.nex` 5fa9ab15cd91d6041cc67521cd5cf6c5, `booty_enhanced.nex` 42f9a3e98e2aa5c2968e92a652c5227d, `booty_enhanced_loading.nex` f0a38e93ba4b8abf1efb1be61cf43d68; verified 2026-11-20
+- Booty (booty): `booty.nex` 91f8b0c6a627bb3f93aa3a06b6f6848a, `booty_loading.nex` 5fa9ab15cd91d6041cc67521cd5cf6c5, `booty_enhanced.nex` 0ffd319cd2693cc607303f71ae376420, `booty_enhanced_loading.nex` 2982ad3b1e4ba850fcb1eeb03975ca29; verified 2026-11-20
 - Flying Shark (flying_shark): `flying_shark_sprites.nex` 62def398462731ce0e858bb73ab909b5; verified 2026-11-20
 - The Official Father Christmas Game (father_christmas): `father_christmas_sprites.nex` 0a9357198747b9db78648c36b8bb25a4; verified 2026-11-20
 - Comando Quatro (comando_quatro): `comando_quatro_sprites.nex` 4c043b47801164617477c423da9b9ff8, `comando_quatro_sprites_loading.nex` 4d5b233a4e42580fd2993ea5089ab1ca; verified 2026-11-20
@@ -133,12 +133,15 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Pssst (pssst): `pssst.nex` acb40bf686174fcfc9ae2b68375faf2d, `pssst_sprites.nex` 275dcd59c5d7fc9563913619f2f117f2, `pssst_enhanced.nex` 1a45b565ee8eb3e56b98be2e171fd0f0; verified 2026-11-20
 - Cookie (cookie): `cookie.nex` f79626650e54545a5818fd0067e33ee5, `cookie_sprites.nex` 350767afe81d88de4126c88db1e5d7df, `cookie_enhanced.nex` cd1ec11109c2fd8833178d33527310a7; verified 2026-11-20
 - Tranz Am (tranz_am): `tranz_am.nex` 5b7ed517c752b2899bddd6539aaedfc9, `tranz_am_sprites.nex` 62b76f0325fec6055b068f57434bf602, `tranz_am_enhanced.nex` 2d9e69880cf7a8c9a8a8fc27303bc0b3; verified 2026-11-20
-- Winter Sports (winter_sports): `winter_sports.nex` 8dc688fa980454c63f98bc0e802d5f88, `winter_sports_sprites.nex` eab9ae6fc1ba2e5184b57a7796140cd7; verified 2026-11-22
+- Winter Sports (winter_sports): `winter_sports.nex` 518144ff82bc534b5fa33a7df8d49176, `winter_sports_sprites.nex` dc0711f0a74c3e3025059010c99b0d5d; verified 2026-11-22
 - Monty is Innocent (monty_is_innocent): `monty_is_innocent.nex` 673011349213f7feceff3f528bf9b4ea, `monty_is_innocent_sprites.nex` a776f3429f34364eb7263a1cde03b1c8; verified 2026-11-22
 - Finders Keepers (finders_keepers): `finders_keepers.nex` b434bc905a813514567d3cbd38dbe670, `finders_keepers_sprites.nex` ba99b0cb1058987d0ab4549eac9ce46e; verified 2026-11-22
 - Monty on the Run (monty_on_the_run): `monty_on_the_run.nex` 86c30493dbd683b5076dfa43098180bb, `monty_on_the_run_sprites.nex` 7fdb25d99b58c4413042f4b7a7f919c8; verified 2026-11-22
 - Auf Wiedersehen Monty (auf_wiedersehen_monty): `auf_wiedersehen_monty.nex` a29cf9b873dec7c71238c90004b8df9c, `auf_wiedersehen_monty_sprites.nex` ad20fe1d69ccc920798b6c1dc5ba89d9; verified 2026-11-22
+- Elite (elite): `elite.nex` e611573d6c45159be56936fc09dfd84d, `elite_sprites.nex` 93c35409631f7682e8e505dcd0284139; verified never
+- Hard Drivin' (hard_drivin): `hard_drivin.nex` d74f75e6995eb0f54eaec2122a5164d0, `hard_drivin_smooth.nex` 9fb23f8e64fa8187ba304c34af9a6016, `hard_drivin_steps.nex` 9cc6f829055ca1f17c491609de22b016, `hard_drivin_steps_loading.nex` 9d1a130d7e723c9395cca8266181da4b, `hard_drivin_smooth_loading.nex` f789a1c70aaa5f889f64c128a67527a0; verified 2026-11-24
 - Jack the Nipper (jack_the_nipper): `jack_the_nipper.nex` 496edfe068623f9a3c3fe5895784d97d, `jack_the_nipper_sprites.nex` 3232643edacbf59513aaeaf30f82a1d3; verified never
+- Elite (standard Firebird release) (elite_std): `elite_std.nex` 4e176c9cf03bb207782221ac05396899; verified 2026-11-24
 - Jack the Nipper II - In Coconut Capers (jack_the_nipper_2): `jack_the_nipper_2.nex` e63f00da62e1ac853765bf7825f2241a, `jack_the_nipper_2_sprites.nex` 0080e7034028149ac2643fa5f5bb9f51; verified never
 <!-- end generated -->
 

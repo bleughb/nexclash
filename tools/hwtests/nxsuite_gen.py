@@ -1,0 +1,249 @@
+"""Generated parts of nxsuite.asm (GPL-3.0-or-later, part of nexclash).
+
+    python tools/hwtests/nxsuite_gen.py OUTDIR
+
+build.py runs it before assembling nxsuite. Writes into OUTDIR:
+- nxsuite_tests.inc: the test table from nxsuite_claims.json (the one place the .nex and intake.py both read:
+  test id -> group, claims, risk), the group table and their strings. A test is BUILT when the sources define
+  its routine `t_<id>:` (lower case); a test with a "left_out" reason in the claims file is written as
+  `SKIP why=left-out` (flag 16; intake.py prints the reason); every other one as `SKIP why=not-built`.
+- z80ntest_cases.inc: z80ntest's FUNC / TIME cases (z80ntest_gen.py, the same expected values) for group G2.
+- nb_cases.inc / nb_far.inc: the nextbench v3 rows (nextbench_gen.py, suite layout) for group G7.
+- nxsuite_sysvars.inc: the 48K system variables $5C00-$5CFF as Sinclair's ROM leaves them after start-up
+  (run in SkoolKit; the .nex loads bank 5 whole, so its image must hold sane system variables for the
+  ROM 3 IM 1 path that an esxDOS call may enable).
+"""
+import datetime
+import glob
+import json
+import os
+import re
+import subprocess
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(HERE))
+sys.path.insert(0, HERE)
+
+FLAG_RISK, FLAG_OPER, FLAG_OPTIN, FLAG_OVL2, FLAG_LEFT = 1, 2, 4, 8, 16
+STATUS = ['', 'PASS', 'FAIL', 'INFO', 'SKIP', 'HANG-GUARD', 'VISUAL', 'VISUAL-SHOWN', 'OPERATOR', 'PENDING-OPERATOR']
+
+
+def table():
+    return json.load(open(os.path.join(HERE, 'nxsuite_claims.json')))
+
+
+def built_labels():
+    srcs = [os.path.join(HERE, 'nxsuite.asm')] + glob.glob(os.path.join(HERE, 'nxsuite', '*.asm'))
+    labels = set()
+    for p in srcs:
+        for line in open(p):
+            m = re.match(r'@?(t_[a-z0-9]+):', line)
+            if m:
+                labels.add(m.group(1))
+    return labels
+
+
+def second_page_files():
+    """source files included under `MMU 7,OVL2_<group>`: their tests run with the group's page + 1."""
+    out, cur = set(), ''
+    for line in open(os.path.join(HERE, 'nxsuite.asm')):
+        m = re.match(r'\s+MMU 7,(\w+)', line)
+        if m:
+            cur = m.group(1)
+        m = re.match(r'\s+INCLUDE "nxsuite/(\w+\.asm)"', line)
+        if m and cur.startswith('OVL2_'):
+            out.add(m.group(1))
+    return out
+
+
+def page2_labels():
+    out = set()
+    for f in second_page_files():
+        for line in open(os.path.join(HERE, 'nxsuite', f)):
+            m = re.match(r'@?(t_[a-z0-9]+):', line)
+            if m:
+                out.add(m.group(1))
+    return out
+
+
+DESCRIBE = ('purpose', 'method', 'fields')          # every built test must say these (emulator authors read them)
+DESCRIBE_MORE = ('expect', 'needs', 'hazard')
+
+
+def describe_problems(tests):
+    """[problem] for built tests (no left_out) that lack a plain description: purpose, method and fields are
+    required (`intake.py --describe` and the test reference print them); expect / needs / hazard are too."""
+    bad = []
+    for x in tests:
+        if 'left_out' in x:
+            continue
+        for k in DESCRIBE + DESCRIBE_MORE:
+            v = x.get(k)
+            if not isinstance(v, str) or len(v.strip()) < 3:
+                bad.append('%s: no %s' % (x['id'], k))
+            elif any(ord(c) > 126 for c in v):
+                bad.append('%s: %s is not plain ASCII' % (x['id'], k))
+    return bad
+
+
+def extra_pages():
+    """[(k, OVLX_k symbol, set of test labels)] for files included under `MMU 7,OVLX_<k>` (k = 1-7): their tests
+    run with slot 7 = page OVLX_k (test table flags bits 5-7 = k, harness xpage table)."""
+    files, cur = {}, ''
+    for line in open(os.path.join(HERE, 'nxsuite.asm')):
+        m = re.match(r'\s+MMU 7,(\w+)', line)
+        if m:
+            cur = m.group(1)
+        m = re.match(r'\s+INCLUDE "nxsuite/(\w+\.asm)"', line)
+        if m and cur.startswith('OVLX_'):
+            files.setdefault(int(cur[5:]), set()).add(m.group(1))
+    out = []
+    for k in sorted(files):
+        assert 1 <= k <= 7, k
+        labs = set()
+        for f in files[k]:
+            for line in open(os.path.join(HERE, 'nxsuite', f)):
+                m = re.match(r'@?(t_[a-z0-9]+):', line)
+                if m:
+                    labs.add(m.group(1))
+        out.append((k, 'OVLX_%d' % k, labs))
+    return out
+
+
+def overlays():
+    """group id -> overlay page symbol, for groups whose code sits in a slot-7 overlay (OVL_<id> equ ...)."""
+    out = {}
+    for line in open(os.path.join(HERE, 'nxsuite.asm')):
+        m = re.match(r'(OVL_(\w+))\s+equ', line)
+        if m:
+            if not m.group(1).startswith('OVL2_'):
+                out[m.group(2)] = m.group(1)
+    return out
+
+
+def asm_str(s):
+    assert '"' not in s and all(32 <= ord(c) < 127 for c in s), s
+    return '"%s",0' % s
+
+
+def platform_list(t):
+    """the questionnaire's machine list, checked: two capitals / digits, unique, a name of at most 26 characters,
+    at most 17 entries (screen rows 3-19)"""
+    pl = t['platforms']['list']
+    codes = [p_['code'] for p_ in pl]
+    assert len(pl) <= 17, 'at most 17 platforms fit the screen'
+    assert len(set(codes)) == len(codes), 'platform codes must be unique'
+    for p_ in pl:
+        assert len(p_['code']) == 2 and all(c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789' for c in p_['code']), p_
+        assert p_['code'] != 'S' * 2 and p_['code'][0] != 'S', 'S skips: no code may start with S'
+        assert len(p_['name']) <= 26, p_
+    return pl
+
+
+def tests_inc(out):
+    t = table()
+    labels = built_labels()
+    p2 = page2_labels()
+    lines = ['; generated by tools/hwtests/nxsuite_gen.py from nxsuite_claims.json - do not edit']
+    groups, tests = t['groups'], t['tests']
+    lines += ['NTESTS  equ %d' % len(tests), 'NGROUPS equ %d' % len(groups)]
+    try:
+        src = subprocess.run(['git', 'rev-parse', '--short=8', 'HEAD'], cwd=ROOT, capture_output=True,
+                             text=True).stdout.strip() or 'unknown'
+    except OSError:
+        src = 'unknown'
+    lines.append('srcstr: db ' + asm_str(src))
+    lines.append('datestr: db ' + asm_str(datetime.date.today().isoformat()))
+    # group table, 8 bytes: first test, count, built count, key, kind (0 auto, 1 operator, 2 opt-in), name ptr,
+    # overlay page (0 = none: slot 7 keeps the home page)
+    ovl = overlays()
+    lines.append('gtab:')
+    first = 0
+    nbuilt_all = 0
+    for g in groups:
+        rows = [x for x in tests if x['group'] == g['id']]
+        nb = sum(1 for x in rows if 't_' + x['id'].lower() in labels or 'left_out' in x)
+        nbuilt_all += nb
+        kind = {'auto': 0, 'operator': 1, 'opt-in': 2}[g['kind']]
+        lines.append('        db %d,%d,%d,"%s",%d : dw gname_%s : db %s   ; %s' % (
+            first, len(rows), nb, g['key'], kind, g['id'], ovl.get(g['id'], '0'), g['id']))
+        first += len(rows)
+    lines.append('NBUILT  equ %d' % nbuilt_all)
+    lines += ['GI_%s equ %d' % (g['id'], i) for i, g in enumerate(groups)]   # group / test index by id
+    lines += ['TI_%s equ %d' % (x['id'], i) for i, x in enumerate(tests)]
+    # test table, 12 bytes: id (4 chars), group index, flags, routine, claims ptr, title ptr (strings: STRPAGE)
+    xp = extra_pages()
+    xk = {lab: k for k, _, labs in xp for lab in labs}
+    lines.append('xpage:  db %s' % (','.join(sym for _, sym, _ in xp) or '0'))
+    assert [k for k, _, _ in xp] == list(range(1, len(xp) + 1)), 'OVLX_ pages must be numbered 1, 2, ...'
+    why = describe_problems(tests)
+    assert not why, 'tests without a description (nxsuite_claims.json): ' + '; '.join(why[:8])
+    lines.append('ttab:')
+    gidx = {g['id']: g['index'] for g in groups}
+    for x in tests:
+        assert len(x['id']) <= 4, x['id']
+        lab = 't_' + x['id'].lower()
+        flags = (FLAG_RISK if x['risk'] != 'none' else 0) | (FLAG_OPER if x['operator'] else 0) | \
+                (FLAG_OPTIN if x['opt_in'] else 0) | (FLAG_OVL2 if lab in p2 else 0) | \
+                (FLAG_LEFT if 'left_out' in x else 0) | (xk.get(lab, 0) << 5)
+        assert not ('left_out' in x and lab in labels), x['id'] + ': left out and built'
+        # the final suite: every test is built or left out with a reason - no SKIP why=not-built line
+        assert 'left_out' in x or lab in labels, x['id'] + ': neither built nor left out (give it a left_out reason)'
+        lines.append('        db "%-4s",%d,%d : dw %s,cl_%s,ti_%s' % (
+            x['id'], gidx[x['group']], flags, lab if lab in labels else '0', x['id'], x['id']))
+    lines.append('ttab_end:')
+    lines.append('        ASSERT ttab_end <= $E000      ; slot 6 only: slot 7 holds the group overlays')
+    # strings, in the string page (mapped into slot 6 by far_copy)
+    lines.append('        MMU 6,STRPAGE')
+    lines.append('        ORG $C000')
+    lines.append('strings:')
+    for g in groups:
+        lines.append('gname_%s: db %s' % (g['id'], asm_str(g['name'])))
+    for x in tests:
+        lines.append('cl_%s: db %s' % (x['id'], asm_str(','.join(x['claims']) or '-')))
+        lines.append('ti_%s: db %s' % (x['id'], asm_str(x['title'][:20])))
+    lines.append('qmodels:')                  # the questionnaire's machine list (gq.asm): "K1 name", then a 0
+    for p_ in platform_list(t):
+        lines.append('        db %s' % asm_str('%s %s' % (p_['code'], p_['name'])))
+    lines.append('        db 0')
+    lines.append('strings_end:')
+    lines.append('        ASSERT strings_end <= $DCF0   ; page-62 offsets $1CF0-$1FFF hold ROM8C and FONTC')
+    p = os.path.join(out, 'nxsuite_tests.inc')
+    open(p, 'w').write('\n'.join(lines) + '\n')
+    return p, labels
+
+
+def sysvars():
+    """$5C00-$5CFF after Sinclair's 48K ROM has started (SkoolKit Simulator, run to MAIN-EXEC $12A9)."""
+    from skoolkit import ROM48, read_bin_file
+    from skoolkit.simulator import Simulator
+    mem = list(read_bin_file(ROM48, 16384)) + [0] * 49152
+    sim = Simulator(mem, {})
+    r, ops = sim.registers, sim.opcodes
+    for _ in range(5_000_000):
+        if r[24] == 0x12A9:
+            break
+        ops[mem[r[24]]]()
+    else:
+        raise SystemExit('48K ROM did not reach MAIN-EXEC')
+    return mem[0x5C00:0x5D00]
+
+
+def main(out):
+    os.makedirs(out, exist_ok=True)
+    p, labels = tests_inc(out)
+    import z80ntest_gen
+    z80ntest_gen.main(out)
+    import nextbench_gen
+    nextbench_gen.main(out, suite=True)
+    sv = sysvars()
+    with open(os.path.join(out, 'nxsuite_sysvars.inc'), 'w') as fh:
+        fh.write('; generated by nxsuite_gen.py: 48K system variables after the ROM start-up\n')
+        for i in range(0, 256, 16):
+            fh.write('        db ' + ','.join('$%02X' % b for b in sv[i:i + 16]) + '\n')
+    return p
+
+
+if __name__ == '__main__':
+    print(main(sys.argv[1] if len(sys.argv) > 1 else '.'))

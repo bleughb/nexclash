@@ -72,7 +72,12 @@
   "asm/atom_ant_hooks.asm",
   "docs/profiles/atom_ant.json"
  ],
- "shared_data": [],
+ "shared_data": [
+  "asm/lib/hlib_iff.asm",
+  "asm/lib/hlib_pace.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_speed.asm"
+ ],
  "rebuild": {
   "args": [
    "--no-record"

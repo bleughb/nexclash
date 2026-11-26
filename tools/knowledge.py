@@ -52,9 +52,12 @@ extracted (written from the notes, unchecked) < source-checked (each evidence ga
 every address / number in it is in those notes: `gate` checks that part; an evidence `quote`, the
 notes' own words, is checked to be in the file) < reviewed (a maintainer agrees).
 A lesson that stops being true is not deleted: status "retired" with superseded_by or retired_why.
-Evidence `game` is a games/<game>.md file, or notes / sessions (no file to check), or reference: published
+Evidence `game` is a games/<game>.md file, or a docs/<file>.md that states it (with a `quote`, checked like a
+game's), or notes / sessions (no file to check), or reference: published
 documentation, with `source` (its URL or title); a lesson with only reference evidence is level inferred
-until a game shows it on a machine. A lesson holds at most 6 evidence items; the games that met it are those
+until a game shows it on a machine. Or hardware: a board record of the hardware test suite, with `record`
+(docs/kb/hardware/<board>-<core>.json, written by tools/hwtests/intake.py) and `test` (a test id in it),
+shown_on hardware; the text names the board and core, since a result holds for that board and core. A lesson holds at most 6 evidence items; the games that met it are those
 plus every games/<game>.md that tags it [kb lesson.<name>] (counted, never stored: `promote`, `--facts`).
 `enforced_by` names the shared code that now checks the lesson (nexclash.<module>.<function>, or a file):
 such a lesson is kept for its evidence, and `promote` lists the well-met lessons that have none yet, each
@@ -93,8 +96,31 @@ NUMBER = re.compile(r'(?:0x|\$|#)?\b(?=[0-9A-Fa-f]*[0-9])[0-9A-Fa-f]{4}\b|\b\d{1
 STOP = set('the a an of to in is and or for it on at by be as that this with not from are was its can must before '
            'after when which one two only than then into does do no any each all so if but has have had will would '
            'where what how why game games'.split())
-ORIGINS = ('notes', 'sessions', 'reference')   # no games/<game>.md holds it: maintainers' notes / working sessions /
-#                                                published documentation (the evidence item names its `source`)
+ORIGINS = ('notes', 'sessions', 'reference', 'hardware')   # no games/<game>.md holds it: maintainers' notes /
+#   working sessions / published documentation (the item names its `source`) / a board record (`record`, `test`)
+HWREC = re.compile(r'docs/kb/hardware/[\w.-]+\.json')
+
+
+def hw_evidence_problem(e, load=None):
+    """A `hardware` evidence item -> what is wrong with it, or None: its `record` is a board record that exists
+    and holds `test`, and shown_on is hardware. load(rel) -> the record's JSON or None (default: the file)."""
+    rec, test = e.get('record') or '', e.get('test') or ''
+    if not HWREC.fullmatch(rec):
+        return 'hardware evidence: record %r is not docs/kb/hardware/<name>.json' % rec
+    if load is None:
+        def load(rel):
+            try:
+                return json.loads(_read(rel))
+            except (OSError, ValueError):
+                return None
+    doc = load(rec)
+    if not isinstance(doc, dict):
+        return 'hardware evidence: record %s not found' % rec
+    if test not in (doc.get('run') or {}).get('tests', {}):
+        return 'hardware evidence: test %r is not in %s' % (test, rec)
+    if e.get('shown_on') != 'hardware':
+        return 'hardware evidence: shown_on must be hardware'
+    return None
 KBTAG = re.compile(r'\[kb (lesson\.[a-z0-9-]+)')
 TERM = re.compile(r'\b(?:0x[0-9A-Fa-f]{4}|(?=[0-9]*[A-F])[0-9A-F]{4}|[A-Za-z]+_[A-Za-z_]+|[A-Z][A-Z0-9]{3,}|[A-Z][a-z]+[A-Z]\w*)\b')
 
@@ -191,7 +217,7 @@ def met(x, tags):
 
 def add_evidence(x, game, quote, text=None, shown='unknown', read=None):
     """Add games/<game>.md to a lesson's evidence -> (changed, message). The quote must be in that file."""
-    rel = game if game.startswith('games/') else 'games/%s.md' % game
+    rel = game if game.startswith(('games/', 'docs/')) else 'games/%s.md' % game
     q = ' '.join((quote or '').split())
     try:
         notes = ' '.join((read or _read)(rel).split())
@@ -200,7 +226,7 @@ def add_evidence(x, game, quote, text=None, shown='unknown', read=None):
     if len(q) < 20 or q not in notes:
         return False, 'the quote must be 20+ characters copied exactly from %s' % rel
     tag = 'tag the lesson in %s: [kb %s: what this game adds]' % (rel, x['id'])
-    if rel in _games(x):
+    if rel in [e.get('game') for e in x.get('evidence', [])]:
         return False, '%s is already in the evidence of %s' % (rel, x['id'])
     if len(x.get('evidence', [])) >= EVIDENCE_ITEMS:
         return False, '%s holds %d evidence items and takes no more; %s - the tag counts the game' % (x['id'], EVIDENCE_ITEMS, tag)
@@ -613,8 +639,15 @@ def check_lessons(cs, preds):
             bad('needs 1 to %d evidence items' % EVIDENCE_ITEMS)
         for e in ev:
             g = e.get('game') or ''
-            if g not in ORIGINS and not (re.fullmatch(r'games/[\w.-]+\.md', g) and os.path.exists(os.path.join(ROOT, g))):
-                bad('evidence game %r: a games/<game>.md file, or %s' % (g, ' | '.join(ORIGINS)))
+            doc = bool(re.fullmatch(r'docs/[\w./-]+\.md', g)) and '..' not in g and os.path.exists(os.path.join(ROOT, g))
+            if doc and not e.get('quote'):
+                bad('evidence %s: a docs file needs a quote' % g)
+            if g not in ORIGINS and not doc and not (re.fullmatch(r'games/[\w.-]+\.md', g) and os.path.exists(os.path.join(ROOT, g))):
+                bad('evidence game %r: a games/<game>.md file, a docs/<file>.md with a quote, or %s' % (g, ' | '.join(ORIGINS)))
+            if g == 'hardware' or e.get('record') or e.get('test'):
+                why = hw_evidence_problem(e) if g == 'hardware' else 'record / test belong to hardware evidence only'
+                if why:
+                    bad(why)
             if (g == 'reference') != bool(e.get('source')) or (g == 'reference' and len(e['source']) < 10):
                 bad('evidence %r: reference evidence names its `source` (URL or title); other evidence has none' % g)
             if not e.get('text') or len(e['text']) > EVIDENCE_MAX:
@@ -675,6 +708,10 @@ def selfcheck():
         bad.append('selfcheck stated')
     if applies({'when': ['p.x']}, {'p.x': 'false'}) or not applies({'when': ['p.x']}, {}):
         bad.append('selfcheck applies')
+    rec = {'docs/kb/hardware/b-1.json': {'run': {'tests': {'T1': {}}}}}
+    hw = dict(game='hardware', record='docs/kb/hardware/b-1.json', test='T1', text='x', shown_on='hardware')
+    if hw_evidence_problem(hw, rec.get) or not hw_evidence_problem(dict(hw, test='T2'), rec.get)             or not hw_evidence_problem(dict(hw, record='games/b.md'), rec.get)             or not hw_evidence_problem(dict(hw, shown_on='jnext'), rec.get)             or not hw_evidence_problem(dict(hw, record='docs/kb/hardware/none.json'), rec.get):
+        bad.append('selfcheck hw_evidence_problem')
     sh = [dict(id='lesson.a', claim='NEXLOAD overwrites 5B00', words=['boot'], level='observed', facts={'machine': '128K'},
                evidence=[dict(game='games/g1.md', text='tail at 0x5B00, 1,234 bytes and 999 more'), dict(game='notes', text='7777')]),
           dict(id='lesson.b', claim='Pace windows hold the hook time', words=['pace'], level='demonstrated',

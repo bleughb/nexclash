@@ -36,7 +36,9 @@ class _State:
 
 
 def analyse(prof, rzx_path, z80_sp, stop=None, progress=None):
-    """prof=None: access scan only (free memory, ROM use, stack low-water)."""
+    """prof=None: access scan only (free memory, ROM use, stack low-water). 48K recordings only: a 128K one is refused."""
+    from .machine import refuse_128k_rzx
+    refuse_128k_rzx(rzx_path, 'analyse (memory hooks over a flat 48K view)')
     if prof:
         P0, E0 = prof['plotter'], prof['eraser']
         player = (P0, E0 + 53)

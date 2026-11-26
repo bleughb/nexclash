@@ -787,4 +787,8 @@ def main():
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    from nexclash.machine import Refused
+    try:
+        sys.exit(main())
+    except Refused as e:
+        sys.exit('nexclash: ' + str(e))

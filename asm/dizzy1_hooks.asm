@@ -54,8 +54,9 @@ V_F7_TARGET EQU 0x7B9A
 ; there; lib/hlib_speed's HLIB_SPEED_IN needs the hook stack, so it ran after the stack switch and cost
 ; 97 T at 3.5 MHz: the game has no frame sync, so 1.1 played ~1.6% slower). 51 T at the incoming clock,
 ; no stack (the game's dead stack stays the original's), every register and flag kept (IN A,(n) keeps
-; the flags). Port 0x243B selects NR 7 already: setup selects it, and spdfix selects it again whenever a
-; read was not NR 7. spd_p / spd_d / spd_h then latch V_RAW on the hook stack, at 28 MHz.
+; the flags). Port 0x243B selects NR 7 after the first hook: the stub's last read (NR 8, after setup) moves it
+; and NR 8's values pass the layout test, so spdfix selects NR 7 on the first call after boot (V_SELOK) and
+; whenever a read was not NR 7. spd_p / spd_d / spd_h then latch V_RAW on the hook stack, at 28 MHz.
         MACRO DZ_SPEED_IN
         ld (V_A),a
         ld a,0x25
@@ -93,6 +94,7 @@ V_T     EQU 0x5B46              ; 2 bytes scratch
 V_FM    EQU 0x5B48              ; 1 = exit with the XOR's flags, 0 = keep the entry flags
 V_R2    EQU 0x5B4A              ; plotter 2's caller (its return address, swapped for t_p2)
 V_R1    EQU 0x5B4C              ; Dizzy plotter's caller (swapped for t_dz)
+V_SELOK EQU 0x5B4F              ; 0 until the first hook after boot selected NR 7 (zero in the snapshot)
 V_PIX   EQU 0x5B50              ; 8 colours of the byte being written (bit 0 = leftmost)
 V_IM    EQU 0x5B58              ; its interior mask (enclosed paper bits)
 V_CL    EQU 0x5B59              ; its transparent mask (painted transparent)
@@ -723,6 +725,9 @@ spd_d:  push hl
 spd_h:  push hl
         ld hl,V_SPDH
 spdfix: push af
+        ld a,(V_SELOK)
+        or a
+        jr z,.first             ; the first read after boot was NR 8's (the stub's last read): keep the latch
         ld a,(V_RAW)
         and 0xCC
         jr nz,.sel
@@ -732,6 +737,8 @@ spdfix: push af
         pop af
         pop hl
         ret
+.first: ld a,1
+        ld (V_SELOK),a
 .sel:   push bc
         ld bc,0x243B
         ld a,7

@@ -77,7 +77,11 @@
   "docs/profiles/jillys_farm.json",
   "docs/profiles/jillys_farm_enh.json"
  ],
- "shared_data": [],
+ "shared_data": [
+  "asm/lib/hlib_pace.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_speed.asm"
+ ],
  "rebuild": {
   "args": [
    "--no-record"

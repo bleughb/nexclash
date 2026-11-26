@@ -44,12 +44,13 @@
   "docs/profiles/tid128_loading.json"
  ],
  "shared_data": [
-  "nexclash/templates.json",
-  "nexclash/evidence.json",
+  "asm/lib/hlib_iff.asm",
+  "asm/lib/hlib_pace.asm",
   "asm/lib/hlib_r.asm",
   "asm/lib/hlib_speed.asm",
-  "asm/lib/hlib_iff.asm",
-  "asm/lib/hlib_pace.asm"
+  "asm/lib/loading_stub.inc",
+  "nexclash/evidence.json",
+  "nexclash/templates.json"
  ],
  "rebuild": {
   "args": [],
@@ -430,11 +431,11 @@
    "outputs": {
     "sprites": {
      "file": "Dizzy 2 - Treasure Island Dizzy (1989)(Code Masters)(128K)_sprites.nex",
-     "md5": "74aedb6600f7a8d65597667a9ab94ff7"
+     "md5": "1bbe2306beec0ede885590a4e2ea2b37"
     },
     "loading": {
      "file": "Dizzy 2 - Treasure Island Dizzy (1989)(Code Masters)(128K)_sprites_loading.nex",
-     "md5": "1e4ca30d59ade5fc2016f229d7ac803b"
+     "md5": "21c892518b5e92667068826bdf7a7664"
     }
    },
    "proof": "Five declared original-game recordings compare registers including R, game memory and absolute player pixels. Routine matrices cover clocks, interrupt states and positions; deliberate faults must be detected. Enhanced additionally compares an independent colour canvas and injected interrupts. Completion is recorded by the verified stamp; measured native pace and coverage limits are in the game document.",

@@ -201,3 +201,277 @@ docs/TECHNIQUES.md 1.0. Photos: specnext reference/hwtests/nextbench/.
 Checked before any board (2026-10-22): in SkoolKit + z80n with a modelled raster (no DMA, no CPU
 speed change) every CPU-only row at 3.5 MHz matches its T-state count within 0.7 % (e.g. LDI x256
 1251.3 for 1249.7 us, NEXTREGv 5.5 for 5.7, ULA CHAR 61.7 for 61.7).
+
+## nxsuite - one .nex that answers the open hardware claims, results in a text file
+
+Sources: `nxsuite.asm` + `nxsuite/*.asm` (harness, timing core, one file per group), the test table and
+claims inventory `nxsuite_claims.json` (read by `nxsuite_gen.py` and by `intake.py`), `intake.py`.
+Groups: G0 SYS, G1 CPU, G2 Z80N, G3 IRQ, G4 FRAME, G5 COPPER, G6 DMA, G7 BENCH, G8 SPRITES, G9 MEM
+(automatic, RUN ALL), V VISUAL (the person at the machine answers), XT TIMING, XD DIVMMC, XH DMA-HAZARD
+(opt-in, never in RUN ALL). Every test of the table is built, or left out on purpose with a reason in
+`nxsuite_claims.json` (`left_out`; the file says `SKIP why=left-out`, the intake prints the reason);
+`nxsuite_gen.py` refuses a test that is neither, so no `why=not-built` line can appear. Group code that does
+not fit bank 0 runs from a slot-7 overlay page (40-43, 60, 61, 63; a group may have a second page, flag 8
+in the test table, and a test any other page of the generator's `xpage` list, flags bits 5-7: the V tests in
+`gv3.asm`-`gv6.asm`).
+
+Which machines the board results come from: two so far. The first (corrected 2026-11-24) is an N-Go, the
+open-source clone of the Issue 2 Next, not an official Kickstarter board. It reads machine id $0A and board
+id $00, exactly like an official Issue 2, so the registers cannot tell them apart. Which core build the N-Go
+loads (the official Issue 2 bitstream or its own) is not stated in any source the repository holds:
+unverified. Its facts are labelled "N-Go board (Issue 2-compatible clone), core 3.03.00"; by the owner's
+word the earlier board runs in this file (im2hold, z80ntest, nextbench) came from the same N-Go. The second
+(2026-11-25) is an official Kickstarter 3 board, board id $03, core 3.03.03, record `next-ks3-3.03.03.json`:
+one run of build 1f10237, every group. It gave the N-Go's verdict on every claim except two visual answers
+(V10, V18) that are not repeatable; `docs/kb/hardware/board-vs-board.md` lists what differs. No KS1 or KS2
+board has run the suite.
+
+### Owner checklist (one board, one core)
+
+1. Copy `nxsuite.nex` into a new folder of its own on the SD card; start it from the Browser. The first
+   start asks a few optional questions (below); S skips them, and so do 20 s without a key.
+2. Press A (RUN ALL): about 6 minutes, leave the machine alone. The border is blue while a group runs,
+   then green / yellow / red. F03 and F06 switch to the other refresh rate for a moment (the picture may
+   blink; if it does not come back within 10 s: reset, start the suite again - it resumes). From the
+   second group on, row 1 of the group screen says `Saved: <n> lines` - the file's length after the last
+   group was written; the number grows group by group. DONE: the border turns green when the file was
+   saved, red with FILE WRITE FAILED when it was not: the run then shows every result as pages to
+   photograph first (a failed write at a group end no longer stops the run: the message goes after a key
+   or 20 s); any key.
+3. Press V (the visual pass, about 8 minutes): answer each screen with Y / N or a number (1 to 3, 4 or 5 as the
+   screen's last line says; S = ask later).
+   Each picture is drawn under the question with a reference beside it (white / yellow lines, a square,
+   a computed colour); V01, V03, V07, V09, V12 and V18 ask about two pictures, one after the other.
+   V19 first asks which cable carries the picture, then the refresh rate the display itself shows in its
+   info / OSD menu, if any (digits, M or SYMBOL SHIFT + M = the point, at most 2 decimals, 40-80 only; then
+   optionally the mode text it shows, e.g. 720x576; S skips each), then needs a watch showing seconds
+   (SPACE starts, SPACE after 60 s or more stops, type the seconds, ENTER; S skips it; the machine times
+   the same interval by its CTC). Either the monitor rate or the watch counts as an answer. The intake
+   puts three rates side by side - the program's (F01 lines x F02 line length, CTC-timed), the watch's
+   (+- its reading error) and the monitor's as typed (monitors round, and some show the nominal mode rate
+   rather than the measured one) - and flags only a disagreement beyond both tolerances.
+4. Optional, only if you agree to the risk shown before each test (Y runs it, N skips it):
+   T (timing; the machine timing is put back after each test and at the next start after a hang),
+   D (DivMMC; no SD write; when it ends check that the DONE screen's line count grew and the border is
+   green), H (DMA hazards; XH1 can freeze the machine; XH2 leaves the DMA deaf: let the group finish,
+   soft-reset - or power off and on -, start the suite again: it asks at once which reset you used and
+   reports what that reset did; no key to press first). After a freeze: reset (or power off and on), start the suite from the same folder:
+   the test is marked HANG-GUARD and the run goes on.
+5. When the NEXT STEP line says NOTHING OUTSTANDING: copy `NXSUITE.TXT` (and any `NXSUITE.0nn` parts) and
+   `NXSUITE.PRG` to the PC; run `python tools/hwtests/intake.py NXSUITE.TXT --board <name>`.
+
+Build (keep the .nex out of the repository):
+
+    python tools/hwtests/build.py nxsuite -o OUTDIR          # --sym also writes nxsuite.sym
+
+Run: copy `nxsuite.nex` into a folder of its own on the SD card and start it from the Browser. The suite
+writes `NXSUITE.TXT` (results), `NXSUITE.PRG` (progress record, 64 bytes; offsets 52-63 hold the
+first-start answers, flag bit 2 = asked) and, when needed, parts
+`NXSUITE.001`, `NXSUITE.002`, ... into that folder and nothing anywhere else. Menu keys: A = all automatic tests (about 6 minutes - G7 BENCH alone is about 3 - leave it alone), 0-9 = one group,
+R = resume, U = retry the tests that hung, V = the visual pass (the person at the machine answers: Y / N or
+a number, S = ask later; in RUN ALL these tests are PENDING-OPERATOR), T / D / H = the opt-in groups (timing,
+DivMMC, DMA hang: each test shows what it risks and what to do if the machine does not come back, Y runs it,
+N skips it; never in RUN ALL). Opt-in details: X-T (T) writes NextReg $03 (machine timing, survives a soft
+reset) only after saving the start value in `NXSUITE.PRG` (offset 50, flag bit 1); each test puts it back, and
+a start after a hang puts it back from the record and measures the preamble again before anything else.
+XT4 never writes $3FFD when NextReg $D8 bit 0 (the +3 disk-port trap) was set at launch. X-D (D) writes only
+$BB bit 6, a few alt-ROM bytes and two DivMMC RAM bytes at $3D00 (each saved, written back); interrupts stay
+off while DivMMC can be mapped, only one-byte RETs (and XD2's OR A) run there, and the ROM bytes are checked
+against a copy taken at start before anything is printed. Its only esxDOS call is a fallback F_OPEN (read) of
+`NXNOFILE.XXX`, which does not exist; if DivMMC still cannot be unmapped the machine stops on a red screen
+(power off and on). The suite's screens use a RAM copy of the ROM font taken at start. X-H (H): XH1 can freeze the machine if the interrupt escape fails
+(reset, start again: HANG-GUARD); XH2 leaves the DMA deaf on purpose - let the group finish, soft-reset,
+start the suite again: the start itself asks which reset was used (a one-group XH pass with XH2 only) and
+reports `reset-frees` or `still-locked` from the one DMA byte the start tried (`NXSUITE.PRG` offset 51, flag bit 0). The NEXT STEP line under the group list
+says in plain words what to do next. Border during a group: blue running, then green (no FAIL), yellow
+(INFO only) or red (a FAIL).
+
+File (`NXSUITE.TXT`): plain ASCII, LF line ends. `NXSUITE 1`, then per session `H` lines (suite, core,
+video, timing, speed, calibration, DivMMC registers), `R` lines (every NextReg at the first start), per
+pass a `P pass=<n> mode=<ALL|GROUP:Gn|RESUME|HUNG>` line, per group `G id= start` / `G id= end fails=`,
+one `T` line per test:
+`T id=<test> st=<status> c=<claims> v=<value> u=<unit> n=<runs> min= max= [why=] [key=value ...]`, and a
+last line `END lines=<n> crc16=$hhhh` (CRC-16/CCITT over every byte before it). Sub-test lines carry the
+parent's prefix: `zf.` (Z01 cases), `zt.` / `zu.` (Z06 / Z07), `ih.` (I03 = im2hold T1-T7), `nb.` (N01 =
+the nextbench table: `nb.<name>.<size>.<35|28>`, v = microseconds per call, mean of 5 runs, min / max,
+`R=` calls per measurement; FAIL only when a copy / fill check fails; suite-only rows `DMA_cont.1` - $D3
+continue, both ports fixed - and `DMA_arm.256` - WR0 port A only, $CF, $87); they have no `c=` (the parent's
+claims). A later
+session or pass appends to the same file. The intake keeps every pass: a test's verdict uses its latest
+pass, and every test whose passes disagree is listed (files from before the `P` line: a pass is inferred
+where a group starts that does not follow the previous one).
+
+Parts (no 64 KB limit): the program keeps the text in a 48 KB buffer. When it passes 40 KB the buffer is
+written, with its own END line, to the next free `NXSUITE.nnn`, and `NXSUITE.TXT` goes on as a continuation:
+`NXSUITE 1`, then `C part=<nnn> src=<build>`. The intake follows the C lines back through the parts (give it
+`NXSUITE.TXT`; every part must be beside it and check; a missing one is refused). At start, an
+`NXSUITE.TXT` from another build (its first `src=` differs) or one that does not check (cut short, damaged,
+longer than the 48 KB the program reads back) is first copied unchanged to the next free `NXSUITE.nnn`
+(menu: "file: other build kept, new" / "old kept as NXSUITE.nnn"; the new file's second line names the
+part) and a new file is started; if that copy fails the program stops with a message and writes nothing.
+If a part cannot be written, the buffer fills and every later write carries `X truncated lost=<bytes>`
+before END: the intake prints a WARNING and the JSON has `"truncated"`. The DONE screen shows the bytes and
+lines written and any bytes lost. (Builds up to 3803884 lost everything past 64 KB silently while still
+writing a valid END line.)
+
+50 / 60 Hz (addition B): F06 (in G4, so in RUN ALL) measures lines per frame, line length and the ULA
+interrupt line at the start rate and at the other one (NextReg $05 bit 2 read-modify-write, put back; a
+line on the screen warns that the picture may blink); the intake prints them side by side with F01 / F02 /
+F03 / I09. Starting the machine at 60 Hz gives the same table (the keys are named by rate, not by order).
+
+`video=`: always `unknown` - no register the repository's sources cite says which output (HDMI, VGA, RGB)
+is in use. Board facts (N-Go board, an Issue 2-compatible clone, core 3.03.00): NextReg $11 read $00
+with an HDMI cable and with "Digital" selected in the settings, and the frame was 128K VGA timing (311 lines, INT line 248), so digital output
+does not imply a different frame. (The book report: $11 modes 0-6 are VGA master-clock steps, HDMI works
+in modes 0 and 1, $11 is set by the firmware from the display settings; the start-up screen's D key
+shows the digital test card.) `geom=` is what the measurements match: line length in CTC ticks (16 clocks) and lines per frame:
+108 = hdmi, 112 / 312 = vga48, 112 / 320 = pentagon, 114 / 311 = vga128, else other.
+
+Board results so far: docs/kb/hardware/n-go-3.03.00.json (N-Go board (Issue 2-compatible clone), core 3.03.00, RUN ALL of
+4548f5f: 83 confirmed, 32 measured, 21 choices, 4 disproved - V01 two lines late, V17 $15 keeps the clips,
+D02 4.96 clocks at 28 MHz, XT2 $03 taken at once - 2 left out). The same build in JNext 1.3.0 and CSpect
+4.5.9.0 (50 / 60 Hz): docs/kb/hardware/emulator/, compared in board-vs-emulators.md there. The lessons and
+doc lines each result corrects cite the test id and the record (knowledge.py `hardware` evidence).
+
+Statuses: PASS, FAIL (the claim's expectation is wrong on this machine), INFO (a number or a choice, no
+verdict), SKIP (`why=not-built`, `not-selected`, `hung-last-run`, `no-blitter` - D09's probe found no blitter, or
+D09 did not run this session and the core is below 3.03 -, `dma-deaf` - XH: the DMA still locked by an earlier XH2 -, `left-out` -
+on purpose: the reason is in `nxsuite_claims.json` and the intake prints it), HANG-GUARD (the machine stopped in this
+test on the run before), OPERATOR (`key=` / `means=`, answered by the person at the machine),
+PENDING-OPERATOR (an operator question left for the U pass), VISUAL / VISUAL-SHOWN (later stages).
+
+First start (once per folder): the machine as a two-key code from `nxsuite_claims.json` `platforms`
+(adding a platform is a data change; `nxsuite_gen.py` checks the list), display connection and kind, RAM
+believed fitted, Pi / accelerator, and a machine label of up to 8 letters / digits - the screen says it is
+a machine nickname, not a person's name. Every session writes them as
+`H operator model=K1 conn=1 disp=2 ramq=1 pi=2 label=BENCH1` (`-` = not given); the intake decodes them
+into the record's `operator` (what was said, not measured). The typed label is WITHHELD by default: it
+goes neither into the record name nor into its content (the other answers are kept), because the record is
+published in the repository. `--label NAME` sets a public label (`<platform>-<core>-<name>.json`);
+`--keep-label` keeps the typed one, only when its owner agreed to publish it. The label never names the
+platform: that comes from the machine answer (a label such as one containing "KS1" on an N-Go means nothing).
+
+After a hang: reset the Next, start `nxsuite.nex` again from the same folder. It finds the progress record,
+resumes by itself after 5 seconds (or press R): the test it stopped in is written HANG-GUARD, its group is
+run again from its start without it, and the run carries on. Nothing that persists across power is written.
+
+Intake (on the PC):
+
+    python tools/hwtests/intake.py NXSUITE.TXT [--board NAME]   # -> docs/kb/hardware/<board>-<core>.json
+    python tools/hwtests/intake.py NXSUITE.TXT --platform "JNext 1.3.0"
+                                          # emulator -> docs/kb/hardware/emulator/<platform>-<core>.json
+    python tools/hwtests/intake.py --dry-run NXSUITE.TXT         # report only
+    python tools/hwtests/intake.py --compare A.json B.json
+    python tools/hwtests/intake.py --runs RUN1/NXSUITE.TXT RUN2/NXSUITE.TXT   # stability across runs
+    python tools/hwtests/intake.py --selfcheck                   # also run by selftest.py --tools
+    python tools/hwtests/intake.py --describe [TEST]             # what a test does, without the assembly
+    python tools/hwtests/intake.py --reference A.json B.json ... --out DIR   # DIR/nxsuite-test-reference.md
+    python tools/hwtests/intake.py --conformance EMU.json --against BOARD.json
+    python tools/hwtests/intake.py --summary A.json B.json ...    # machines / cores / emulators side by side
+
+Every built test carries a plain `purpose`, `method`, `expect`, `fields`, `needs` and `hazard` in
+`nxsuite_claims.json`; the build stops if a built test lacks purpose, method or fields (or has non-ASCII
+text). `--describe` prints them; `--reference` writes them, with every given record's result labelled by its
+board and core (or emulator), into one Markdown file generated on demand (not kept in docs/).
+`--summary` prints the hardware identity of each record (NextReg $00 / $0F raw, core, RAM, timing,
+50 / 60 Hz, lines, start speed, 28 MHz wait, CTC calibration, DMA type, port enables, DivMMC registers,
+the operator's answers; each row names its source, decoded only as far as the source says; Pi / ESP / RTC
+are not probed: no safe documented read), then every test whose results differ beyond the `--runs`
+tolerance, grouped by which records agree and what sets the sides apart (platform, board, core, video, or
+no single one), then the tests that differ only within tolerance (run-to-run noise).
+`--conformance` sets one record (an emulator) against one board record per test: SAME, DIFFERENT (with both
+values and the reason, `--runs` tolerance) or NOT COMPARABLE (not run, SKIP, unanswered). The reference is
+that one board and core: "different" means different from it, and an emulator result is never hardware
+evidence.
+
+Emulators (unattended, the automatic pass): `tools/hwtests/emurun.py` starts one emulator, presses the menu
+key, waits for the DONE flag and leaves `NXSUITE.TXT` / `.PRG` in the SD folder given; the emulator program
+and the folder are arguments (nothing machine-specific in the repository):
+
+    python tools/hwtests/emurun.py jnext  --exe JNEXT_EXE  --sd DIR --nex nxsuite.nex [--card SD_IMAGE]
+    python tools/hwtests/emurun.py cspect --exe CSPECT_EXE --sd DIR --nex nxsuite.nex [--hz60] [--port 8766]
+                                   [--sdspeed slowest]
+    python tools/hwtests/intake.py DIR/NXSUITE.TXT --platform "JNext 1.3.0"
+
+Results can depend on a local emulator settings file. CSpect 4.6 reads `cspect.ini` from its working
+folder, else from beside CSpect.exe, and saves menu changes into the working folder; emurun therefore runs
+CSpect with the SD folder as its working folder and passes every option on the command line, so it neither
+uses nor overwrites the owner's settings. A `cspect.ini` beside CSpect.exe is still read: name the CSpect
+version and say whether such a file exists when filing a record. Name each record for the exact emulator
+version that made it; a record from an older version stays as it was.
+
+Proven 2026-11-24: JNext 1.3.0 (49 s), CSpect 4.5.9.0 (374 s) and CSpect 4.6.0.0. MAME 0.289 (driver tbblue) is not
+supported: started with `-snapshot nxsuite.nex` the suite reaches its menu with an unreadable font (the
+ROM mapped there is not NextZXOS's ROM 3) and no key is taken; booted from a NextZXOS SD image it stays on
+the welcome screen (CPU at $0C90 from frame 200, keys not taken through Lua). An emulator author can still
+run the suite by hand; the V (visual) pass can be answered by eye or left PENDING.
+
+It refuses a file that is cut short, damaged (CRC), not ASCII / LF, or names an unknown test or status,
+and a continuation whose parts are not all beside it.
+Per claim it reports CONFIRMED, DISPROVED, MEASURED value +- spread, CHOICE word or NOT ANSWERED (with the
+reason), with the claim's sources; it never edits lessons or docs. A board record is named
+`<platform>-<core>[-<label>].json`. The platform is `--board` when given, else the operator's machine
+answer (the `record` of that code in nxsuite_claims.json `platforms`, for example `n-go`, `next-ks1`), else
+from the registers alone: NextReg $00 = $0A with $0F = 0 / 1 / 2 gives `issue2-compatible` / `issue3-` /
+`issue4-compatible`. The registers never name a maker or a Kickstarter board: a clone reads the same (the
+N-Go measured so far reads $0A / $00, like an official Issue 2). The record says which it came from
+(`board.named_from`: option / operator / registers). Emulator
+results (`--platform` other than `board`) are stored apart and never count as hardware evidence; `--compare`
+says when it compares a board with an emulator. Z01's cases decide their own claims (LDIX / LDPIRX / JP (C) /
+TEST cases; func-suite = every case but LDPIRX); an LDPIRX case that differs from the model only in F bits
+5 / 3 (documented as unsure) counts as right, with a note.
+
+`--runs` takes two or more result files from one board and core (it refuses a mix) and lists every test
+whose status differs, or whose value or a numeric key differs by more than its tolerance: the larger
+within-run min-max, a method resolution (`RUN_TOL`, I10 12 T), +-1 for counts, 0.5 % or 0.05 for the x100
+fixed-point values. SKIP and HANG-GUARD records are left out, and so are keys that are memory contents
+(S03 crc0 / crc96). A test it lists is not repeatable on that board: treat its value as unstable.
+
+Claims parts that cannot be answered on the board configuration in use are listed in
+`claims_not_tested` of nxsuite_claims.json with the reason (the HDMI frame geometry: the board gives a
+VGA-timed frame with an HDMI cable and no source says how to get an HDMI-timed one at boot); the report
+prints them with the run's `geom=`, `video=` and the operator's cable answer.
+
+Checklist for the owner:
+
+1. Build the .nex (above) and copy it into a new folder on the SD card, e.g. `/nxsuite/`.
+2. Start it from the Browser. Wait for the menu; check the core and video lines at the top.
+3. Press A and leave the machine alone until the screen says DONE.
+4. If the machine stopped instead: reset, start `nxsuite.nex` again from the same folder; it resumes.
+5. Do what the NEXT STEP line says until it says ALL DONE.
+6. Copy every `NXSUITE.*` file of that folder to the PC (the TXT, any `.001`, `.002`, ... parts, the PRG)
+   and run `intake.py` on `NXSUITE.TXT`; send the report. Check the DONE screen said no bytes LOST.
+7. To start clean for a new build, delete all `NXSUITE.*` files together (the program keeps an old
+   build's file as a part anyway, so nothing is lost if you forget).
+
+### Sending the suite to another tester
+
+    python tools/hwtests/package.py -o OUTDIR      # OUTDIR outside the repository
+
+writes `OUTDIR/nxsuite-<build>.zip` with `nxsuite.nex` and `TESTER.TXT` (source: `nxsuite_tester.txt`; the
+build id and date filled in). The build id is the commit the .nex was built from, the `src=` of every
+result file it writes; the package is refused while `tools/hwtests` has uncommitted changes (or named
+`-dirty` with `--allow-dirty`). TESTER.TXT says what the suite is, that it writes only `NXSUITE.*` and no
+saved settings, how to copy and start it, the passes with their times, what each hazard means, what to do
+after a hang or a red screen, which files to send back, what the answers are used for, and that it needs a
+Spectrum Next core. Nothing personal goes into the package.
+
+### Filing results
+
+1. Put the tester's `NXSUITE.*` files in a folder of their own outside the repository.
+2. `python tools/hwtests/intake.py NXSUITE.TXT --dry-run` first: it refuses a damaged or cut-short file
+   and names the board and core it found; then without `--dry-run` (add `--board NAME` only when the
+   board id does not name it). The record lands in `docs/kb/hardware/<board>-<core>[-<label>].json`; an
+   emulator's (`--platform "<name> <version>"`) in `docs/kb/hardware/emulator/`.
+3. `python tools/hwtests/intake.py --summary docs/kb/hardware/*.json docs/kb/hardware/emulator/*.json`
+   shows the new machine beside the others. A record is the board's own file: never regenerate or edit a
+   board record from anything but that board's `NXSUITE.*` files, even when the suite's format or test
+   ids change later.
+4. A one-board figure is labelled with that board and core; it becomes a general fact only when other
+   boards agree.
+
+Emulator authors: run the suite by hand or with `emurun.py`, take the record with `--platform`, and read
+`--describe TEST` (or the generated `--reference`) for what each test does and expects;
+`--conformance EMU.json --against BOARD.json` lists where the emulator differs from that board and core.
+The V (visual) pass can be answered by eye or left PENDING-OPERATOR. An emulator result is never hardware
+evidence.

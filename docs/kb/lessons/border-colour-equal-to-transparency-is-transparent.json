@@ -2,13 +2,27 @@
  "id": "lesson.border-colour-equal-to-transparency-is-transparent",
  "kind": "pitfall",
  "claim": "The ULA transparency test covers the border: a border whose colour after the palette equals NextREG 0x14 is transparent and shows the layers below, and turning the ULA off (0x68 bit 7) still leaves it a blend source.",
- "limit": "From the book, not measured here.",
+ "limit": "Seen by eye on the N-Go board (Issue 2-compatible clone, core 3.03.00, nxsuite V05 border, V04 rules); the blend-source part with the ULA off not measured.",
  "evidence": [
   {
    "game": "reference",
    "source": "I. Novak, Unraveling the ZX Spectrum Next, Vol 1 (2026; core 3.03.03), chapter 17",
    "text": "ULA, LoRes and Layer 2 are transparent by colour after the palette against NextREG 0x14; sprites and tilemap by index before the palette against 0x4B / 0x4C. The fallback colour 0x4A resets to E3, as 0x14 does.",
    "shown_on": "documentation"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
+   "test": "V05",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite V05): Layer 2 showed through side borders in the $14 colour (operator answer lower-green).",
+   "shown_on": "hardware"
+  },
+  {
+   "game": "hardware",
+   "record": "docs/kb/hardware/n-go-3.03.00.json",
+   "test": "V04",
+   "text": "N-Go board (Issue 2-compatible clone), core 3.03.00 (nxsuite V04): ULA and Layer 2 were transparent by colour = $14, tilemap and sprites by index = $4C / $4B (operator).",
+   "shown_on": "hardware"
   }
  ],
  "level": "inferred",

@@ -4,7 +4,7 @@
  "game": "Stormbringer (128K)",
  "doc": "stormbringer.md",
  "engine": "stormbringer",
- "representative": false,
+ "representative": true,
  "reference": "stormbringer",
  "inputs": {
   "snapshot": {

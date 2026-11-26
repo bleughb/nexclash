@@ -22,6 +22,7 @@ ENGINES = [
     ('exolon', 'is_exolon', None),                                   # Exolon (128K), optional Enhanced
     ('bruce_lee', 'is_bruce_lee', None),                                # Bruce Lee (48K), optional Enhanced
     ('movie', 'is_movie', None),                                       # Movie (48K), optional Enhanced
+    ('hard_drivin', 'is_hard_drivin', None),                            # Hard Drivin' (128K), smoother 3D view
     ('head_over_heels', 'is_head_over_heels', None),                    # Head Over Heels (128K), optional Enhanced
     ('bubbler', 'is_bubbler', None),                                    # Bubbler (48K), optional Enhanced
     ('underwurlde', 'is_underwurlde', None),                              # Underwurlde (48K)
@@ -127,6 +128,8 @@ ENGINES = [
     ('arkanoid', 'is_arkanoid', None),                                    # Arkanoid (48K)
     ('cybernoid', 'is_cybernoid', None),                                  # Cybernoid (48K)
     ('pentagram', 'is_pentagram', None),                                 # Pentagram (48K), original presentation + optional Enhanced
+    ('elite_std', 'is_elite_std', None),                                  # Elite (48K, standard Firebird release): the original from its real start (M2)
+    ('elite', 'is_elite', None),                                          # Elite (128K, the Russian hack): viewport on Layer 2 in colour, 50 fps
     ('jack_the_nipper', 'is_jack_the_nipper', None),                      # Jack the Nipper (48K)
     ('jack_the_nipper_2', 'is_jack_the_nipper_2', None),                  # Jack the Nipper II: Coconut Capers (128K)
 ]
