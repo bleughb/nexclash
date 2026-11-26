@@ -90,7 +90,7 @@
   "engine_col": "bubbler (bubbler.md)",
   "build": "Original monochrome default; approved MatGubbins Enhanced optional/off; original loading screen, full hidden ROM and 1MB budget.",
   "software": "Verified/stamped: clean 10000-frame plus separate five-stage 21901-frame replay; exact hook/R/48K/canvas/front images, six broken builds; 27 native pace trials, 20000-frame archive soaks and all seven private-card loader selections.",
-  "hardware": "none (JNext only)",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-26, good",
   "next": "Independent clean source rebuild and packaging handoff; physical hardware and natural completion remain untested."
  },
  "checks": [
