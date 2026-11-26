@@ -25,6 +25,8 @@ ROM_KEEP = 0x1F50
 G_LOW, G_SPAN = 0x7E00, 0x2800
 TABLES = ((0x7E1C, 41), (0x8D55, 98))    # the astronaut's graphics, then the rest
 DYNAMIC = (0x8C92, 0x8CF5)          # the appear / vanish effect rewrites these two as it shows them (0xC185, 0xC1A0): their tiles are made from the bytes as they are
+DYN_SOURCE = 0x81EE                 # the whole figure both hold (front-facing Charlie): the appear effect copies it from here (0xC1B0)
+DYN_PAINT = 0x0800                  # offset in SHADOW_PAGE of their painted tiles (768 bytes): dynload ANDs its ink (nibble F) with them
 BLIT, ROOM, NEW1, NEW2, OVER, TELE = 0xD4AF, 0xAAF1, 0xA985, 0xAA3F, 0xDA50, 0xC112
 ATTR_ENTER, ATTR_ROW, ATTR, PLAYER, IRQ_IN, IRQ_OUT, RANDOM, RANDOM2, BEAM = 0xD55A, 0xD589, 0xD580, 0xBAF8, 0xDDB3, 0xDDEE, 0xC355, 0xC1CC, 0xCF07
 SPHERE = 0xBC41                     # LD (HL),A / INC L / LD (HL),n / LD DE,31 / ADD HL,DE / LD (HL),A / INC L / LD (HL),A: the sphere's four cells coloured on the screen
@@ -205,15 +207,7 @@ def patterns(mem, g, info, cmap=None, outline=False):
     return bytes(out)
 
 
-def live_patterns(mem, g, info):
-    """A DYNAMIC graphic's tiles as the hook makes them from its bytes: ink only, the graphic one pixel in."""
-    w, h, c, bw = info
-    cols, rows = shape(bw, h)
-    can = [[0] * (cols * 16) for _ in range(rows * 16)]
-    for y, v in enumerate(bits_of(mem, g, bw, h)):
-        for x in range(bw * 8):
-            if v >> (bw * 8 - 1 - x) & 1:
-                can[y + 1][x + 1] = INK
+def _tiles(can, cols, rows):
     out = bytearray()
     for ry in range(rows):
         for cx in range(cols):
@@ -222,6 +216,45 @@ def live_patterns(mem, g, info):
                 for k in range(0, 16, 2):
                     out.append(row[k] << 4 | row[k + 1])
     return bytes(out)
+
+
+def live_patterns(mem, g, info, paint=None):
+    """A DYNAMIC graphic's tiles as the hook makes them from its bytes: its ink (the graphic one pixel in) in the painted
+    tiles' colours (dyn_paint; none: INK everywhere)."""
+    w, h, c, bw = info
+    cols, rows = shape(bw, h)
+    can = [[0] * (cols * 16) for _ in range(rows * 16)]
+    for y, v in enumerate(bits_of(mem, g, bw, h)):
+        for x in range(bw * 8):
+            if v >> (bw * 8 - 1 - x) & 1:
+                can[y + 1][x + 1] = 15
+    ink = _tiles(can, cols, rows)
+    paint = paint or bytes([INK * 17]) * len(ink)
+    return bytes(a & b for a, b in zip(ink, paint))
+
+
+def dyn_paint(mem, cmap=None):
+    """The painted tiles both DYNAMIC graphics share (they hold one figure the effect rewrites): a nibble per pixel, INK
+    where not painted. Keyed by DYNAMIC[0]'s bytes, checks ignored (the bytes change as the effect runs)."""
+    g = DYNAMIC[0]
+    w, h, c, bw = catalog(mem)[g]
+    cols, rows = shape(bw, h)
+    can = [[INK] * (cols * 16) for _ in range(rows * 16)]
+    for y in range(h):
+        for bx in range(bw):
+            e = (cmap or {}).get('%04X' % (g + y * bw + bx))
+            for k in range(8 if e else 0):
+                if e[2][k]:
+                    can[y + 1][bx * 8 + k + 1] = e[2][k]
+                elif len(e) > 3 and e[3] & (0x80 >> k):
+                    can[y + 1][bx * 8 + k + 1] = 0
+    return _tiles(can, cols, rows)
+
+
+def shadow_page(mem, cmap=None):
+    """SHADOW_PAGE as the build starts it: zero but for the painted tiles of the DYNAMIC graphics."""
+    d = dyn_paint(mem, cmap)
+    return bytes(DYN_PAINT) + d + bytes(8192 - DYN_PAINT - len(d))
 
 
 def build_tables(mem, cmap=None, outline=False):
@@ -370,6 +403,7 @@ class ArcPatch:
 
     def tables(self):
         self.low, self.pages, self.nums = build_tables(self.mem, self.colours, self.outline)
+        self.dyn_paint = dyn_paint(self.mem, self.colours)
         self.altrom_low = (ALT_PAGE + 1, self.low)
         # Recover original ink from source bits only when the uploaded tile exactly
         # matches approved art. Mutant runtime pages never define this oracle.
@@ -427,7 +461,8 @@ class ArcPatch:
         pg[self.regblock - 0x2000:self.regblock - 0x2000 + len(regs)] = regs
         self.page = bytes(pg)
         self.altrom_low = (ALT_PAGE + 1, self.low)
-        self.extra_banks = {ALT_BANK: self.page + self.low, SHADOW_PAGE // 2: bytes(16384)}
+        sh = shadow_page(self.mem, self.colours)
+        self.extra_banks = {ALT_BANK: self.page + self.low, SHADOW_PAGE // 2: sh + bytes(8192) if SHADOW_PAGE % 2 == 0 else bytes(8192) + sh}
         for p, data in self.pages.items():
             bank = p // 2
             cur = self.extra_banks.get(bank, bytes(16384))
@@ -444,6 +479,7 @@ RND2NEXT = 0xC1CF
 # the broken builds run on a recording with the beam, a lost life (the appear effect) and several enemy kinds; two need the recording that reaches their hook
 NEGATIVE_RZX = 'arc_over.rzx'
 NEGATIVE_ON = {'game over leaves sprites on': 'arc_end.rzx', 'teleport leaves sprites on': 'arc_tele.rzx', 'live tiles read the wrong page': 'arc_a1.rzx',
+               'live tiles leave out the painted colours': 'arc_a1.rzx',
                'the sphere keeps the graphic\'s white': 'arc_h1.rzx', 'the sphere\'s ink is not kept': 'arc_h1.rzx'}    # (a1: the appear effect, past frame 3,000)
 STARS = 45391
 
@@ -465,7 +501,10 @@ class NextState:
     def __init__(self, patch):
         self.patch = patch
         self.nr = {0x50: 0xFF, 0x54: 4, 0x07: 0, 0x34: 0, 0x19: 0, 0x1C: 0}
-        self.shadow = bytearray(8192)   # SHADOW_PAGE, as the hooks see it at slot 4
+        self.shadow = bytearray(8192)   # SHADOW_PAGE, as the hooks see it at slot 4 (the painted tiles of the DYNAMIC graphics)
+        dp = getattr(patch, 'dyn_paint', None)
+        if dp:
+            self.shadow[DYN_PAINT:DYN_PAINT + len(dp)] = dp
         self.sel = 0
         self.attr = [[0, 0, 0, 0, 0] for _ in range(128)]
         self.pat = bytearray(16384)
@@ -985,7 +1024,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shot=None, scal
                 a = ns.attr[s]
                 base = (a[3] & 0x3F) * 256 + (128 if a[4] & 0x40 else 0)
                 off = (s - k * 6) * 128
-                art = live_patterns(M, g, (w, h, col, bw)) if g in DYNAMIC else patch.approved_patterns[g]
+                art = live_patterns(M, g, (w, h, col, bw), patch.dyn_paint) if g in DYNAMIC else patch.approved_patterns[g]
                 if bytes(ns.pat[base:base + 128]) != art[off:off + 128]:
                     fail('sprite pattern differs from approved art', (hex(g), s))
                     break
@@ -1452,6 +1491,19 @@ def graphics_part(mem, g, info):
             'dx': 0, 'dy': 0, 'dmir': 0, 'vmir': 0, 'group': 0}
 
 
+def dynamic_part(mem, info):
+    """Front-facing Charlie (both DYNAMIC graphics, dyn_paint) as the sheet shows him: the whole figure the appear effect
+    copies (DYN_SOURCE), keyed by DYNAMIC[0]'s bytes; ink pixels only (the hook colours only the ink it finds)."""
+    w, h, c, bw = info
+    part = graphics_part(mem, DYN_SOURCE, info)
+    off = DYNAMIC[0] - DYN_SOURCE
+    key = lambda k: '%04X' % (int(k, 16) + off)
+    part['pixels'] = [(x, y, key(k), b, code, d) for x, y, k, b, code, d in part['pixels'] if code]
+    part['entries'] = {key(k): [None, 'g'] for k in part['entries']}
+    part['id'] = '%04X' % DYNAMIC[0]
+    return part
+
+
 def colour_identity(peek):
     return {'schema': 1, 'game': 'arc_of_yesod', 'engine': 'arc_of_yesod', 'keys': 'arc_of_yesod-gfx-1: %04X address of the graphics byte; bit = pixel',
             'inputs': hashlib.md5(bytes(peek(a) for a in range(G_LOW, G_LOW + G_SPAN))).hexdigest(), 'geometry': None}
@@ -1463,6 +1515,7 @@ def sheets(z80, out_dir, prefix='arc_of_yesod', colours=None, say=print):
     mem = view_from_snapshot(z80)
     cat = catalog(mem)
     comps = [{'count': 1, 'group': 0, 'parts': [graphics_part(mem, g, cat[g])]} for g in sorted(cat) if g not in DYNAMIC and any(mem[g:g + cat[g][1] * cat[g][3]])]
+    comps.append({'count': 1, 'group': 0, 'parts': [dynamic_part(mem, cat[DYNAMIC[0]])]})
     cmap = load_colours() if colours is None else colours
     pal = json.load(open(PALETTE)) if cmap else palette()       # the sheet in the colours the Enhanced build shows
     rgb = cs.palette_rgb(list(pal[15 * 16:16 * 16]))
@@ -1497,6 +1550,9 @@ def recolour(nex, cmap, outline=False, pal=None):
         cur = new.get(bank, have[bank])
         o = (pg & 1) * 8192
         new[bank] = cur[:o] + data + cur[o + 8192:]
+    bank, o = SHADOW_PAGE // 2, (SHADOW_PAGE & 1) * 8192         # the DYNAMIC graphics' painted tiles
+    cur = new.get(bank, have[bank])
+    new[bank] = cur[:o] + shadow_page(mem, cmap) + cur[o + 8192:]
     if pal is None:
         pf = PALETTE
         pal = json.load(open(pf)) if cmap else palette()
@@ -1622,6 +1678,7 @@ def negative_patches(patch):
     k = code.index(bytes([0xED, 0xB0]), s['hideall'] - ROM_ORG)
     out['a drawn room keeps the old paint'] = _rom_patch(patch, k, bytes(2))
     out['live tiles read the wrong page'] = low_patch('dynload', bytes([0xED, 0x91, 0x54, 0x04, 0x1A]), bytes(4))     # NEXTREG 0x54,4 before the graphic's bytes
+    out['live tiles leave out the painted colours'] = low_patch('dynload', bytes([0x1A, 0xA6, 0x77]), bytes(3))     # LD A,(DE) / AND (HL) / LD (HL),A: ink stays nibble F
     out['the sphere keeps the graphic\'s white'] = low_patch('e_sphere', bytes([0x32, V_SPH & 255, V_SPH >> 8]), bytes(3))        # LD (V_SPH),A
     out['the sphere\'s ink is not kept'] = low_patch('e_sphere', bytes([0x70, 0x2C, 0x3A]), bytes([0x00]))     # LD (HL),B / INC L / LD A,(0xBC44)
 

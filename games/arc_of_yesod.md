@@ -2,16 +2,16 @@
 Techniques: detect.gameplay-screen-readers
 
 ## Next session
-Stage: 3 (prove + deliver)  State: `selftest.py --game arc_of_yesod --verify --stamp` PASSED 2026-11-17 (stamped) with the owner's
-recording and the sphere hook; loading screen in, .nxc 1.0 to rebuild from this build (cheats below), the owner saw
-the Enhanced build in OverSpec and called it a first-pass 1.0; no hardware run yet
-Inputs (private, pilot runs/arc_of_yesod/reference_files/arc_of_yesod, the selftest's reference folder): the archive's
-"Arc of Yesod, The (1985)(Thor Computer)(128K).z80" as arc_of_yesod.z80, md5 f58236395e737aaa0fac1f8476711ad8; arc_s1,
-arc_a1..a6, arc_over (from that snapshot), arc_tele and arc_end (from poked states, below). Scripts: runs/.../2026-11-17.
-Branch: add-arc-of-yesod    Commit: this one    Checks: selftest --game arc_of_yesod --verify (see State), doccheck
+Stage: 4 (colour rounds)  State: `selftest.py --game arc_of_yesod --verify --stamp` PASSED 2026-11-26 (stamped) with the
+owner's painting of every figure (art-round2 in the run folder) and front-facing Charlie's painted live tiles; 11
+recordings IDENTICAL, 31 of 31 broken builds; the owner saw the Enhanced build in OverSpec; no hardware run yet
+Inputs (private, reference-local/arc_of_yesod): the archive's "Arc of Yesod, The (1985)(Thor Computer)(128K).z80" as
+arc_of_yesod.z80, md5 f58236395e737aaa0fac1f8476711ad8; the eleven recordings of the record.
+Branch: arc-colours-jon    Checks: selftest --game arc_of_yesod --verify (see State), doccheck
 Pending user answers: none
-Start with: the colour sheets and the hardware checklist to the owner, then the pace measurement
-Read: PLAYBOOK stage 3 (6a, 6b, 7), docs/COLOURS.md, "What the port changed" and the open items below
+Start with: the scenery feasibility (the owner asked 2026-11-26: Layer 2 painted scenery under the sprites, the
+surface strip with hardware scroll; Nodes of Yesod shares the engine), then the pace measurement
+Read: PLAYBOOK stage 4, docs/COLOURS.md, "Front-facing Charlie's colours" and the open items below
 Open: the list in the open-items section.
 
 ## Facts (snapshot check, survey)
@@ -109,6 +109,17 @@ nexclash/nodes_of_yesod.py and its .asm with Arc's addresses, seven sites to loc
   that line. Verify: the hook against the original, the shadow's four cells, the sprite's colour against the
   verifier's own record of A, the patched replay with the four stores gone (CP n for LD (HL),n); two broken builds.
 
+## Front-facing Charlie's colours (2026-11-26, the owner's painting)
+- The two DYNAMIC graphics (0x8C92, 0x8CF5) hold one figure, front-facing Charlie, which the appear effect copies from
+  0x81EE through a random mask and the vanish effect clears at random, in place. The hook makes their tiles from the
+  live bytes (dynload), so the first sheets left him out and the owner found him unpainted in play.
+- One colour table serves both: dyn_paint (a nibble per pixel, INK where unpainted) at 0x8800 in the shadow page;
+  dynload expands the live ink as nibble F and ANDs it with the table, so a pixel shows only while the effect has it,
+  in its painted colour. Unpainted, the table is all INK: the tiles are as before. Keys: 0x8C92's bytes (checks null);
+  the sheet shows the whole figure from 0x81EE, ink pixels only (two painted gaps in his face read back as ignored).
+- Verified: the Enhanced build replayed with the owner's map (a1 past the appear effect, tele); a broken build without
+  the AND is caught (live tiles leave out the painted colours).
+
 ## How the recordings were made
 - arc_h1.rzx: the owner's play in Fuse 1.9.1 from the archive snapshot (`fuse --snapshot ... --record`), 7,880 frames,
   37 rooms, the sphere released and parked; `nexclash.py rzx strip` dropped Fuse's nine autosave snapshots (with them
@@ -143,8 +154,8 @@ nexclash/nodes_of_yesod.py and its .asm with Arc's addresses, seven sites to loc
   figure's ink for those cells. A beam or random read there would differ from the original: the verifier's first
   replay would report it (hook against original); it has not happened in a recording.
 - The beam's pixels stay on the ULA under a sprite until the game wipes them (the original's next copy removes them).
-- Live tiles have ink only: no black fill, no painted colours while the astronaut appears or vanishes.
-- Colour sheets to the owner, hardware.
+- Live tiles have ink only: no black fill (painted colours from 2026-11-26, above).
+- Hardware.
 - Loading screen: arc_of_yesod_loading.scr beside the snapshot (the 128K tape's 6,914-byte block, flag and checksum
   dropped, MD5 6bd06bf8; game data, local only) gives arc_of_yesod_sprites_loading.nex fda37475 and
   arc_of_yesod_enhanced_loading.nex 49b7ac9d; `auto` packs them as arc_of_yesod.nxc (38,316 bytes, version 1.0,
@@ -196,6 +207,9 @@ nexclash/nodes_of_yesod.py and its .asm with Arc's addresses, seven sites to loc
   of what it wrote has to be found (scan the screen's readers), not only the ones the model engine hooks.
 - [kb lesson.rewritten-graphics-no-prebuilt-patterns: this game's port] A graphic the game rewrites in place cannot have a pre-built pattern: scan the graphics for
   writers before trusting a catalogue of patterns.
+- [card patch.runtime-colour-map §Use / do not use] A figure drawn from live bytes was left off the colour sheet without a
+  word: the owner found front-facing Charlie white in play. Every figure the player sees goes on the sheet (its whole
+  picture from the game's source, a table by pixel position ANDed with the live ink in the hook), or the gap is named.
 - [deferred Open: reconsider when the selftest's check is next touched] [kb lesson.recording-start-state-vs-tail-check] nextboot.rom_paths treats a recording that starts
   at another state as starting at the build's snapshot: a tail in write-first memory is then reported as read. Reason:
   it has no notion of a recording's own start state; here the tails went to never-touched bytes.
@@ -214,6 +228,8 @@ nexclash/nodes_of_yesod.py and its .asm with Arc's addresses, seven sites to loc
 - detect.pacing-structure: no help: the pace windows came with the Nodes port; Arc's own pacing was not measured.
 
 ## Stage log
+- 2026-11-26: stage 4 (colour round): the owner's painting of every figure (Codex first pass, his clean-up), front-facing
+  Charlie's live tiles painted (dyn_paint), 31 broken builds; about 2 h, about 70 tool calls, 4 user rounds.
 - 2026-11-17: stage 3 again (loading screen, .nxc, cheats; the owner's recording, the sphere hook, restamp), about 3 h,
   about 60 tool calls, 8 user rounds.
 - 2026-11-17: stage 0, about 3 h, about 90 tool calls, 3 user rounds (most of it on the descent).

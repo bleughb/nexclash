@@ -78,10 +78,10 @@
    "doc": "arc_of_yesod.md",
    "nex": {
     "plain": "cf3ad5b7ab250bd9e0400febd046990c",
-    "sprites": "93c1ac4a53c5d0db83b451ed53d727bb",
-    "enhanced": "dcbc7fa189c093aa4d728f358546a9ba",
-    "sprites_loading": "858ec5cda7dc2782664ed2247310589c",
-    "enhanced_loading": "62b922d83ab47c6abf8f895c7a7af110"
+    "sprites": "409421e631796f8c5d4c250103abb22f",
+    "enhanced": "fd94d49792885b3d23b06889b039f479",
+    "sprites_loading": "71f9d93964c723c65568a8b2a2559d67",
+    "enhanced_loading": "bfa951c58d234fdc36335c9bb56523d8"
    },
    "proof": "differential",
    "variants": [
@@ -93,10 +93,10 @@
      "proof": "differential",
      "nex": {
       "plain": "cf3ad5b7ab250bd9e0400febd046990c",
-      "sprites": "93c1ac4a53c5d0db83b451ed53d727bb",
-      "enhanced": "dcbc7fa189c093aa4d728f358546a9ba",
-      "sprites_loading": "858ec5cda7dc2782664ed2247310589c",
-      "enhanced_loading": "62b922d83ab47c6abf8f895c7a7af110"
+      "sprites": "409421e631796f8c5d4c250103abb22f",
+      "enhanced": "fd94d49792885b3d23b06889b039f479",
+      "sprites_loading": "71f9d93964c723c65568a8b2a2559d67",
+      "enhanced_loading": "bfa951c58d234fdc36335c9bb56523d8"
      }
     }
    ]
