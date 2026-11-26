@@ -10,7 +10,7 @@ Input script format (for `record --script FILE` / `--start`), one step per line:
 """
 import random
 from skoolkit.snapshot import Snapshot
-from .machine import Machine, parse_inputs, refuse_128k, KEYPOS, KEMPSTON
+from .machine import Machine, parse_inputs, KEYPOS, KEMPSTON
 
 START_CANDIDATES = ['SPACE', 'ENTER', '0', '1', '2', '3', '4', '5', 'S', 'P', 'K:FIRE', 'N', 'Y', 'J', 'K']
 PLAY_ATTRS = slice(0x5860, 0x5AA0)          # attribute rows 3-20: identifies the room
@@ -32,12 +32,8 @@ def parse_script(text):
 
 class Recorder:
     def __init__(self, z80, seed=1, inputs='auto', log=print, room_threshold=0.25, machine=Machine):
-        """machine: the machine class. The shared Machine is 48K only, so a 128K snapshot is refused unless the
-        engine passes its own class with 7FFD paging (lesson recorder-128k-not-in-toolkit)."""
+        """machine: the machine class (the shared Machine pages a 128K snapshot itself; an engine may pass its own)."""
         self.room_threshold = room_threshold
-        if machine is Machine:
-            z80 = Snapshot.get(z80) if isinstance(z80, str) else z80
-            refuse_128k(z80, 'the recorder')
         self.m = machine(z80)
         self.rng = random.Random(seed)
         self.inputs = inputs
@@ -99,8 +95,7 @@ class Recorder:
         screens). Inputs with an identical effect are merged (Z / 6 / Sinclair keys)."""
         g = self.m.save()
         self.run(40)
-        mem = self.m.sim.memory
-        idle_ram, idle_attr = bytes(mem[0x5B00:]), bytes(mem[0x5800:0x5B00])
+        idle_ram, idle_attr = self.m.view(0x5B00, 0x10000), self.m.view(0x5800, 0x5B00)
         seen, res = {}, []
         for k in list(KEYPOS) + list(KEMPSTON):
             if self.inputs == 'keyboard' and k in KEMPSTON:
@@ -109,13 +104,12 @@ class Recorder:
                 continue
             self.m.load(g)
             self.run(40, frozenset([k]))
-            mem = self.m.sim.memory
-            ram = bytes(mem[0x5B00:])
+            ram = self.m.view(0x5B00, 0x10000)
             d = sum(1 for a, b in zip(ram, idle_ram) if a != b)
             if not d or ram in seen:
                 continue
             seen[ram] = k
-            c = sum(1 for a, b in zip(mem[0x5800:0x5B00], idle_attr) if a != b)
+            c = sum(1 for a, b in zip(self.m.view(0x5800, 0x5B00), idle_attr) if a != b)
             res.append((d, k, c))
         self.m.load(g)
         res.sort(reverse=True)
@@ -130,7 +124,7 @@ class Recorder:
         return self.atoms
 
     def room(self):
-        return bytes(self.m.sim.memory[PLAY_ATTRS])
+        return self.m.view(PLAY_ATTRS.start, PLAY_ATTRS.stop)
 
     def find_room(self, rooms, attrs):
         """Index of the known room these attributes belong to, or None."""

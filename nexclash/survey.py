@@ -321,7 +321,7 @@ def survey(z80, rzx=None, out=None, stop=None, frames=None, keys=None, top=6, lo
     log('survey: plain conversion ...')
     plain = os.path.join(out, name + '.nex')
     an, note = None, ''
-    if rz and not is128:
+    if rz:              # 128K too: below 0xC000 (where a tail must end) banks 5 and 2 never move, so 'rd'/'wr' are exact there
         from .analyse import analyse
         ans = [analyse(None, r, s.sp, stop=stop) for r in rz]
         an = dict(ans[0])
@@ -331,7 +331,7 @@ def survey(z80, rzx=None, out=None, stop=None, frames=None, keys=None, top=6, lo
             an['rom_used'] |= x['rom_used']
             an['stack_low_water'] = min(an['stack_low_water'], x['stack_low_water'])
     elif is128:
-        note = ' (128K: tail not proven by a recording - prove it with `scan --range`, PLAYBOOK 1)'
+        note = ' (128K, no recording: tail not proven - prove it with `scan --range`, PLAYBOOK 1)'
     cap, orig = {}, zt.convert
 
     def conv(*a, **k):

@@ -674,8 +674,7 @@ Grouped by question; add a new lesson to its group.
   simulator with a patched RZXTracer.next_frame replays 53,543 frames in 4-8 s; the simrun /
   analysis commands run per-instruction Python hooks, ~100x slower (BRIEFING C2).
 - [MAME] MAME runs the .nex; loading, the Lua console (layer-by-layer snapshots) and quirks: 2.7.
-- analyse.py / recorder / machine.py are 48K-only (recorder: Machine has no ay; analyse desyncs at
-  frame 49 on 128K).
+- analyse / recorder / machine.py take 128K (2026-11-26); verify.py, nextboot.check stay 48K.
 - A module restored from an older copy can silently drop another engine's hook (identify() lost
   identify5): selftest after every session that touches shared modules.
 - The recorder writes one RZX segment per episode; per-segment state must reset (new Simulator).
