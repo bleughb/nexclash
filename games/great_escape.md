@@ -7,15 +7,15 @@ from the pilot branch `game/great-escape-release` (7e4f0f1, base cc60245). Recor
 great_escape/ (snapshot, four recordings, input/, art/period-v2-jon = Jon's 2026-11-09 sprite edits: 391 pixels,
 colours.bin only). Every output = automap_off(the engine's build with that art); with the period-v1 art the engine
 rebuilds the pilot's recorded bytes exactly.
-Codex review 2026-11-26 (10 findings) fixed: hooks counted only when entered, every event has an oracle case, a
+Review 2026-11-26 (10 findings) fixed: hooks counted only when entered, every event has an oracle case, a
 missing-site control; DDMA only on core 3.03, no DMA port write in the CPU fallbacks; writes to Sinclair's ROM pages,
 the colour/world/timing pages or the alt ROM view fail; negative controls each by their own failure (R control
 changes only R, speed control drops the NR 7 restore); Layer 2 show/hide tested from both states with a control each;
 autosaves stripped; a recording with no hook fails; boot check against the view at F068; the auto package carries
 McQueen with "needs Enhanced" (OPR1 via nxcout `needs`) and no CPU-only option; --allow-60hz refused (312-line pace).
-Art is now great_escape/art/period-v3-halo (Jon's outlines, Codex's first scenery pass). 2026-11-27: stamped
+Art is now great_escape/art/period-v3-halo (Jon's outlines, a first scenery pass). 2026-11-27: stamped
 (4 recordings, 53158 frames, 457675 hooks), Jon played Enhanced and McQueen from the .nxc in OverSpec, 1.0
-published on jattree/nxc. Open: a real Next run; 1.1 = McQueen film look (Codex art, Jon approved, pilot
+published on jattree/nxc. Open: a real Next run; 1.1 = McQueen film look (art Jon approved, pilot
 runs/great_escape/art-round3-mcqueen/art-out) plus the cooler ball (in_solitary A13A, room 24; a sprite only,
 no game memory written), released together. Recolour entry points (RECOLOUR/recolour) not yet: import_sheets()
 is this engine's painting route.
@@ -234,7 +234,7 @@ optimization, clipping/cache repairs, item/outfit importer, dialog fix and targe
 Upstream cc60245 unchanged at the pre-release refresh. Final selftest and ROM audit passed;
 verification stamped. Nine real-loader cases and sustained live restart trials passed.
 Source and package are ready for final visual review and upstream integration; no push made.
-- 2026-11-26: ported onto main (add-great-escape), Jon's edited art in, Codex review (10 findings) fixed; full stamp, package, loader checks and Jon's play review next.
+- 2026-11-26: ported onto main (add-great-escape), Jon's edited art in, review (10 findings) fixed; full stamp, package, loader checks and Jon's play review next.
 - 2026-11-26: Jon’s 1,000 round-two outline edits imported as 966 distinct erased halo pixels. The four
   painting binaries round-tripped exactly. Matched JNext captures showed tan ground and olive speckles
   through the erased outlines. The quick play1 and controlled-result replays passed (2,500 frames,

@@ -50,25 +50,25 @@
     "name": "colours.bin",
     "md5": "f3b2117011e002737200e5b78d27c0cf",
     "path": "great_escape/art/period-v3-halo/colours.bin",
-    "role": "External painting input (Jon's sprite edits of 2026-11-09 and thinner outlines of 2026-11-26, Codex's first scenery pass of 2026-11-26); not a recording."
+    "role": "External painting input (Jon's sprite edits of 2026-11-09 and thinner outlines of 2026-11-26, and a first scenery pass of 2026-11-26); not a recording."
    },
    {
     "name": "world.bin",
     "md5": "911344b8380ecd217e92669187817dda",
     "path": "great_escape/art/period-v3-halo/world.bin",
-    "role": "External painting input (Jon's sprite edits of 2026-11-09 and thinner outlines of 2026-11-26, Codex's first scenery pass of 2026-11-26); not a recording."
+    "role": "External painting input (Jon's sprite edits of 2026-11-09 and thinner outlines of 2026-11-26, and a first scenery pass of 2026-11-26); not a recording."
    },
    {
     "name": "palette.bin",
     "md5": "e74e3c50fa3703edbc7569ce54e47659",
     "path": "great_escape/art/period-v3-halo/palette.bin",
-    "role": "External painting input (Jon's sprite edits of 2026-11-09 and thinner outlines of 2026-11-26, Codex's first scenery pass of 2026-11-26); not a recording."
+    "role": "External painting input (Jon's sprite edits of 2026-11-09 and thinner outlines of 2026-11-26, and a first scenery pass of 2026-11-26); not a recording."
    },
    {
     "name": "palette-dusk.bin",
     "md5": "d8622d3aef1f93abef00c484ae732111",
     "path": "great_escape/art/period-v3-halo/palette-dusk.bin",
-    "role": "External painting input (Jon's sprite edits of 2026-11-09 and thinner outlines of 2026-11-26, Codex's first scenery pass of 2026-11-26); not a recording."
+    "role": "External painting input (Jon's sprite edits of 2026-11-09 and thinner outlines of 2026-11-26, and a first scenery pass of 2026-11-26); not a recording."
    }
   ]
  },
