@@ -48,27 +48,27 @@
    },
    {
     "name": "colours.bin",
-    "md5": "2900f76485bfe06f1ef65931f53bdaf2",
-    "path": "great_escape/art/period-v2-jon/colours.bin",
-    "role": "External painting input (Jon's native sprite edits of 2026-11-09 over period-v1); not a recording."
+    "md5": "f3b2117011e002737200e5b78d27c0cf",
+    "path": "great_escape/art/period-v3-halo/colours.bin",
+    "role": "External painting input (Jon's sprite edits of 2026-11-09 and thinner outlines of 2026-11-26, Codex's first scenery pass of 2026-11-26); not a recording."
    },
    {
     "name": "world.bin",
-    "md5": "5f0b891170290396f3d69d33e64a0f3c",
-    "path": "great_escape/art/period-v2-jon/world.bin",
-    "role": "External painting input (Jon's native sprite edits of 2026-11-09 over period-v1); not a recording."
+    "md5": "911344b8380ecd217e92669187817dda",
+    "path": "great_escape/art/period-v3-halo/world.bin",
+    "role": "External painting input (Jon's sprite edits of 2026-11-09 and thinner outlines of 2026-11-26, Codex's first scenery pass of 2026-11-26); not a recording."
    },
    {
     "name": "palette.bin",
     "md5": "e74e3c50fa3703edbc7569ce54e47659",
-    "path": "great_escape/art/period-v2-jon/palette.bin",
-    "role": "External painting input (Jon's native sprite edits of 2026-11-09 over period-v1); not a recording."
+    "path": "great_escape/art/period-v3-halo/palette.bin",
+    "role": "External painting input (Jon's sprite edits of 2026-11-09 and thinner outlines of 2026-11-26, Codex's first scenery pass of 2026-11-26); not a recording."
    },
    {
     "name": "palette-dusk.bin",
     "md5": "d8622d3aef1f93abef00c484ae732111",
-    "path": "great_escape/art/period-v2-jon/palette-dusk.bin",
-    "role": "External painting input (Jon's native sprite edits of 2026-11-09 over period-v1); not a recording."
+    "path": "great_escape/art/period-v3-halo/palette-dusk.bin",
+    "role": "External painting input (Jon's sprite edits of 2026-11-09 and thinner outlines of 2026-11-26, Codex's first scenery pass of 2026-11-26); not a recording."
    }
   ]
  },
@@ -116,19 +116,19 @@
   },
   "enhanced": {
    "file": "great_escape_enhanced.nex",
-   "md5": "9ee299086d271de1610b83296507b224"
+   "md5": "2285fdbf32e7902b6317996910f85de4"
   },
   "enhanced_loading": {
    "file": "great_escape_enhanced_loading.nex",
-   "md5": "a8c912b5a473bdfd5ab95bb1804b7090"
+   "md5": "24d95d637153fa4283f37f3ff2d076aa"
   },
   "sprites": {
    "file": "great_escape_sprites.nex",
-   "md5": "3f769bab2e87e4ac9f8bf1a6de583381"
+   "md5": "ee92da7399d191a4fe6d0a59d219c575"
   },
   "sprites_loading": {
    "file": "great_escape_sprites_loading.nex",
-   "md5": "a8eb9164d283155885a25e53064db1c2"
+   "md5": "ce8ece40e6cc2ae19b698b4f9fe8bfae"
   }
  },
  "repro": [],

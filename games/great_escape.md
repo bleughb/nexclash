@@ -193,6 +193,10 @@ checked alternate archive snapshots; they are not shipped as separate working ch
 - [local: DDMA unproven] A DMA path the recordings' machine never takes (JNext reported core 0x32) is only model
   evidence: the 3.03 blitter path froze the game in OverSpec. Ship the path an emulator or board has run; run each
   core gate's path once before a release.
+- [tool nexclash/great_escape.py] The halo overlay install copied the whole code blob over bank 13 and put the
+  assembler's DMA policy 2 back over the release's 1: Enhanced and McQueen froze again in OverSpec (2026-11-27,
+  Jon), while the verifier passed because it grants the blitter whenever policy 2 asks. The install now writes only
+  the overlay bytes and the build asserts the policy byte.
 
 ## Technique use
 
@@ -232,3 +236,6 @@ Source and package are ready for final visual review and upstream integration; n
   through the erased outlines. The quick play1 and controlled-result replays passed (2,500 frames,
   22,464 hooks), including ROM-path checks on 13 builds. All 551 captured-state unit and control cases
   passed across all 16 hooks. The full four-recording release stamp was outside this art check.
+- 2026-11-27: Jon's play of the halo build froze with Enhanced and McQueen right after the key choice (OverSpec).
+  Cause: the halo overlay install restored DMA policy 2 (blitter) in bank 13. Fixed (overlay bytes only, policy
+  asserted); a one-byte policy-1 patch of the halo build played past the key choice in both.

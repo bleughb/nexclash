@@ -194,7 +194,8 @@ class EnhancedPatch(OriginalPatch):
         private[0x1DC0:0x1E00]=bytes(n//3 for n in range(64))
         # Ordinary DMA on every core (policy 1): the core 3.03 blitter path (policy 2) froze the game in OverSpec
         # (core 3.03.03) right after the key choice and was never run on hardware; it stays in the code, unused.
-        private[self.syms['hlib_dma_policy']]=1 if dma else 0
+        self.dma_policy=1 if dma else 0
+        private[self.syms['hlib_dma_policy']]=self.dma_policy
         self.extra_banks[13]=bytes(private)
         self.colours=colours;self.palette=palette;self.world=world
         for bank in range(14,17):self.extra_banks[bank]=bytes([255])*16384
@@ -227,13 +228,15 @@ class EnhancedPatch(OriginalPatch):
             _validate_halos(colours,memory)
             # Use the assembled overlays only for marked art. Save the active code
             # in hooks as well so negative controls mutate the installed version.
-            code=bytearray.fromhex(self.hooks['code'])
+            # Write only the overlay bytes into bank 13: copying the whole code blob put the
+            # assembler's DMA policy 2 (blitter) back, and Enhanced froze in OverSpec.
+            code=bytearray.fromhex(self.hooks['code']);private=bytearray(self.extra_banks[13])
             for block,label in (('halo_select','halo_select'),('halo_pixels','halo_forward')):
                 at=self.syms[label];overlay=bytes.fromhex(self.hooks[block])
-                code[at:at+len(overlay)]=overlay
+                code[at:at+len(overlay)]=overlay;private[at:at+len(overlay)]=overlay
             self.hooks['code']=code.hex()
-            private=bytearray(self.extra_banks[13]);private[:len(code)]=code
             self.extra_banks[13]=bytes(private)
+        assert self.extra_banks[13][self.syms['hlib_dma_policy']]==self.dma_policy,'DMA policy lost from bank 13'
         # Compact native source pages plus contextual 8x8 world tiles. Bright and
         # dark pools are identical in layout, 22 pages apart, and fit below ROM47.
         pages=tuple(range(0x21,0x28))+tuple(range(0x34,0x39))
