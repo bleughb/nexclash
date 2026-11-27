@@ -1150,6 +1150,9 @@ bout:   ld a,h
         ld a,(V_COL)
         or a
         jr z,.def
+        ld a,(V_MODE)               ; a hit flash or player two: the game's colours (a map would hide them)
+        or a
+        jr nz,.def
         pop hl
         push hl
         call colent

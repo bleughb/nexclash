@@ -56,7 +56,8 @@
    "doc": "altered_beast.md",
    "nex": {
     "plain": "3a40cd83e14bad535b3f147708b2284e",
-    "sprites": "87afba14d9243c82397ab0c201bfac8c"
+    "sprites": "edea9ecd09412d385fc67cb8d28458bb",
+    "enhanced": "a64bc996659bf73a54aba1483e8c435c"
    },
    "proof": "differential",
    "variants": [
@@ -68,7 +69,8 @@
      "proof": "differential",
      "nex": {
       "plain": "3a40cd83e14bad535b3f147708b2284e",
-      "sprites": "87afba14d9243c82397ab0c201bfac8c"
+      "sprites": "edea9ecd09412d385fc67cb8d28458bb",
+      "enhanced": "a64bc996659bf73a54aba1483e8c435c"
      }
     }
    ]

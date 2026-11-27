@@ -46,9 +46,13 @@ HSTK = 0x1F00
 CMP = list(range(0, 15)) + list(range(16, 25)) + [26, 27, 28]
 # sprite palette: index 0 transparent, 1-7 colours, 8 black, 9-15 bright colours
 PALETTE = [0x00, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4, 0xB6, 0x00, 0x03, 0xE0, 0xE7, 0x1C, 0x1F, 0xFC, 0xFF]
+# entries no figure's cell colours use (blue, bright blue, bright green, bright cyan: none in level 1): a colour map's
+# 'palette' may change only these, so a figure the map does not paint keeps the game's colours
+PAL_FREE = (1, 9, 12, 13)
 CBLACK = 8
 _HERE = os.path.dirname(os.path.abspath(__file__))
 COLOURS = os.path.join(_HERE, '..', 'docs', 'profiles', 'altered_beast_colours.json')
+ENHANCED = os.path.join(_HERE, '..', 'docs', 'profiles', 'altered_beast_enhanced.json')   # the Enhanced set's map
 SIG = (0xCF0B, bytes.fromhex('0608c50669'))
 SIG2 = (0xAE3F, bytes.fromhex('76cdeb60cde46d'))
 
@@ -112,8 +116,46 @@ def save_colours(ent, path=COLOURS):
 
 
 def load_colours(path=COLOURS):
+    """coloursheet.load plus the file's top-level sprite 'palette' (RECOLOUR 'palette')."""
     from . import coloursheet as cs
-    return cs.load(path)
+    m = cs.load(path)
+    pal = json.load(open(path)).get('palette') if os.path.exists(path) else None
+    if pal is not None:
+        m['palette'] = pal
+    return m
+
+
+def set_palette(colours):
+    """The sprite palette a colour map asks for: its 'palette' entry, else PALETTE. ValueError if it is not 16 bytes, or
+    if it changes an entry outside PAL_FREE."""
+    p = (colours or {}).get('palette')
+    if p is None:
+        return list(PALETTE)
+    p = list(p)
+    if len(p) != 16 or any(not isinstance(v, int) or not 0 <= v <= 255 for v in p):
+        raise ValueError('a colour map palette is 16 bytes')
+    bad = [i for i in range(16) if p[i] != PALETTE[i] and i not in PAL_FREE]
+    if bad:
+        raise ValueError('a colour map palette may change only entries %s, not %s' % (list(PAL_FREE), bad))
+    return p
+
+
+def entries(colours):
+    """The map's colour entries, without its palette."""
+    return {k: v for k, v in (colours or {}).items() if k != 'palette'}
+
+
+def loaded_palette(nrlog):
+    """The 16 sprite palette entries the setup loads: NextReg 0x41 writes after 0x43 = 0x20 and 0x40 = 0."""
+    out, on = [], False
+    for i, (reg, val) in enumerate(nrlog):
+        if reg == 0x40 and val == 0 and i and nrlog[i - 1] == (0x43, 0x20):
+            out, on = [], True
+        elif on and reg == 0x41:
+            out.append(val)
+        elif on and reg in (0x40, 0x43):
+            on = False
+    return out[:16]
 
 
 def load_colours_build():
@@ -153,12 +195,14 @@ class AlteredBeastPatch:
         h = self.prof['hooks']
         self.rom_code = rom_code if rom_code is not None else bytes.fromhex(h['rom'])
         self.syms = {k: int(v, 16) for k, v in h['syms'].items()}
-        self.stub_extra = bytes.fromhex(h['setup']) + bytes(PALETTE)
+        cm = dict(colours) if colours is not None else load_colours_build()
+        self.palette = set_palette(cm)
+        self.stub_extra = bytes.fromhex(h['setup']) + bytes(self.palette)
         self.setup_call = 0xD000
         self.hook_page_data = b''
         self.uses_printer_buffer = False
         self.tail_addr = TAIL_ADDR
-        self.colours = dict(colours) if colours is not None else load_colours_build()
+        self.colours = entries(cm)
         self.regblock = 0x2400 + len(self.rom_code)
         if self.regblock != self.syms['rom_end']:
             raise ValueError('hook code length differs from the profile symbols')
@@ -369,7 +413,7 @@ def expected_layer(get, plots, colours=None):
                 if not y0 <= y <= y1:
                     continue
                 e = None
-                if colours:
+                if colours and not p['mode']:      # a hit flash or player two: the game's colours (bout)
                     e = colours.get('%04X' % a)
                     if e is not None and e[0] != get(a):
                         e = None
@@ -380,12 +424,15 @@ def expected_layer(get, plots, colours=None):
                     bit = 0x80 >> b
                     sb = 7 - b if p['kind'] == 1 else b
                     nib = e[2][sb] if e else 0
+                    k = 1 if v & bit else (2 if not m & bit else None)
                     if e and len(e) > 3 and e[3] & (0x80 >> sb):
+                        if k is not None:
+                            code[(x, y)] = 0       # made see-through by the map: the original draws it, the build not
                         continue
-                    if v & bit:
-                        c, k = nib or ink, 1
-                    elif not m & bit:
-                        c, k = nib or pap, 2
+                    if k == 1:
+                        c = nib or ink
+                    elif k == 2:
+                        c = nib or pap
                     elif nib:
                         c, k = nib, 0
                     else:
@@ -442,6 +489,8 @@ def boot_check(nex, z80, patch=None, tail=None):
             bad.append(('$8C', st['nr'].get(0x8C)))
         if (0x15, 0x01) not in st['nrlog']:
             bad.append(('sprites not enabled',))
+        if loaded_palette(st['nrlog']) != list(patch.palette):
+            bad.append(('sprite palette differs from the colour map\'s', loaded_palette(st['nrlog']), list(patch.palette)))
     elif st['nr'].get(0x8C, 0) != 0:
         bad.append(('$8C', st['nr'].get(0x8C)))
     return bad
@@ -980,13 +1029,13 @@ def unit_tests(patch, states, negatives=()):
         if len(fails[k]) < 4:
             fails[k].append(info)
 
-    def layer_check(name, p_, st, plots, colours=None):
+    def layer_check(name, p_, st, plots):
         ns, ok = run_commit(p_, st, plots)
         c['cases'] += 1
         if not ok:
             fail(name + ' did not return')
             return None
-        exp, _ = expected_layer(_state_get(st), [q for q in plots if plot_ok(q)], colours)
+        exp, _ = expected_layer(_state_get(st), [q for q in plots if plot_ok(q)], p_.colours)   # the build's own map
         lay = ns.sprite_layer()
         if lay != exp:
             d = [k for k in set(lay) | set(exp) if lay.get(k) != exp.get(k)]
@@ -1003,7 +1052,7 @@ def unit_tests(patch, states, negatives=()):
         if ns is not None:
             ns2, ok = run_commit(patch, st, plots, H=bytes(ns.H), ns=ns)
             c['cache hit cases'] += 1
-            if not ok or ns2.sprite_layer() != expected_layer(get, plots, None)[0] and not patch.colours:
+            if not ok or ns2.sprite_layer() != expected_layer(get, [q for q in plots if plot_ok(q)], patch.colours)[0]:
                 fail('cache hit differs')
         # position edges: each figure at the window's sides and top
         for p in plots[:6]:
@@ -1043,17 +1092,64 @@ def unit_tests(patch, states, negatives=()):
             if not ok:
                 fail('pressure commit did not return')
         # a colour map: painted ink, painted clear pixel, transparent mask, wrong check byte
+        # (the build's own map when it has one, e.g. the Enhanced set; else a synthetic one)
         if not patch.colours:
             cm = synthetic_colours(st, plots)
             pc = AlteredBeastPatch(patch.prof, colours=cm, rom_code=patch.rom_code)
-            layer_check('colour map', pc, st, plots, cm)
-            c['map entries'] = max(c['map entries'], len(cm))
-            neg = AlteredBeastPatch(patch.prof, colours=cm, rom_code=patch.rom_code)
-            ns, ok = run_commit(neg, st, plots, H=bytes(patch.hpage))
-            c['map negative cases'] += 1
-            if ok and ns.sprite_layer() != expected_layer(get, plots, cm)[0]:
-                c['map negative detected'] += 1
+            layer_check('colour map', pc, st, plots)
+        else:
+            cm, pc = patch.colours, patch
+        c['map entries'] = max(c['map entries'], len(cm))
+        ok_plots = [q for q in plots if plot_ok(q)]
+        ns, ok = run_commit(pc, st, plots, H=hook_page(None))         # the map's flag off: the hook ignores the map
+        c['map negative cases'] += 1
+        if ok and ns.sprite_layer() != expected_layer(get, ok_plots, cm)[0]:
+            c['map negative detected'] += 1
+        # a hit flash or player two shows the game's colours over a map; a hook that paints them anyway is caught
+        nm = AlteredBeastPatch(patch.prof, colours=cm, rom_code=_no_mode_skip(patch.rom_code))
+        for p in [q for q in plots if q['kind'] != 2 and plot_ok(q)][:6]:
+            for mode in (1, 2):
+                q = [dict(p, mode=mode)]
+                layer_check('colour mode over a map', pc, st, q)
+                ns, ok = run_commit(nm, st, q)
+                c['mode negative cases'] += 1
+                if ok and ns.sprite_layer() != expected_layer(get, q, cm)[0]:
+                    c['mode negative detected'] += 1
     return c, fails
+
+
+def _palette_negatives(z80, cm, tmp):
+    """The Enhanced set's own palette: caught by the boot check (the palette the setup loads) or by the engine refusing
+    a map that changes an entry a figure's cell colours use."""
+    from . import z80tonex as zt
+    res = []
+    T = os.path.join(tmp, 'negpal.nex')
+    for name, f in (('the game\'s palette loaded instead', lambda e: e[:-16] + bytearray(PALETTE)),
+                    ('skin entry wrong by one bit', lambda e: e[:-15] + bytearray([e[-15] ^ 1]) + e[-14:])):
+        p = AlteredBeastPatch(colours=cm)
+        p.stub_extra = bytes(f(bytearray(p.stub_extra)))
+        zt.convert(z80, T, quiet=True, patch=p)
+        res.append((name, bool(boot_check(T, z80, AlteredBeastPatch(colours=cm)))))
+    for i, v in ((3, 0x86), (6, 0xD1)):
+        m = dict(cm)
+        pal = list(set_palette(cm))
+        pal[i] = v
+        m['palette'] = pal
+        try:
+            AlteredBeastPatch(colours=m)
+            res.append(('map changes palette entry %d' % i, False))
+        except ValueError:
+            res.append(('map changes palette entry %d' % i, True))
+    return res
+
+
+def _no_mode_skip(rom):
+    """Negative control: bout's LD A,(V_MODE) / OR A / JR NZ,.def (the game's colours in a hit flash or for player
+    two) taken out, so the map paints those figures too."""
+    i = rom.find(bytes.fromhex('3A3680B720'))
+    if i < 0:
+        raise ValueError('negative control: the mode test in bout not found')
+    return rom[:i] + bytes(6) + rom[i + 6:]
 
 
 def plot_ok(p):
@@ -1151,34 +1247,69 @@ def run_negatives(rzx, stop=600, say=print, rzx2=None, rzx3=None):
 # ---------------------------------------------------------------------------------------------
 
 def auto(a, z80, name, out, say):
+    """Plain and default sprite builds, and the Enhanced set (NAME_enhanced.nex: the map ENHANCED, its palette) when that
+    map exists; every recording verified against each sprite build; the negative controls on the recordings (whole runs
+    only), the Enhanced palette negatives, unit tests on each build."""
+    from . import z80tonex as zt
     say('Game      : %s' % name)
     say('Engine    : altered_beast (back-buffer composer, cell plotter; blit from the clean copy; every figure -> sprites)')
     ok, (plain, spr), patch = build(z80, out, name, say)
+    builds = [('default', patch)]
+    if os.path.exists(ENHANCED):
+        cm = load_colours(ENHANCED)
+        enh = os.path.join(out, name + '_enhanced.nex')
+        ep = AlteredBeastPatch(colours=cm)
+        zt.convert(z80, enh, quiet=True, patch=ep)
+        bad = boot_check(enh, z80, AlteredBeastPatch(colours=cm))
+        ok = ok and not bad
+        say('Enhanced  : %s  %s  boot %s; %d colour-map entries, palette entries %s changed' % (
+            os.path.basename(enh), hashlib.md5(open(enh, 'rb').read()).hexdigest(), 'OK' if not bad else 'MISMATCH %s' % str(bad[:3])[:300],
+            len(ep.colours), [i for i in range(16) if ep.palette[i] != PALETTE[i]]))
+        builds.append(('Enhanced', ep))
+        import tempfile
+        pn = _palette_negatives(z80, cm, tempfile.mkdtemp(prefix='ab_'))
+        for nm, hit in pn:
+            say('Negative  : Enhanced palette: %-40s %s' % (nm, 'DETECTED' if hit else 'NOT DETECTED'))
+        ok = ok and all(h for _, h in pn)
     states = []
     stop = getattr(a, 'quick', None)
     for r in list(a.rzx or []):
-        t = __import__('time').time()
-        c, ex, st = verify(patch, r, stop=stop, collect=3)
-        states += st
-        fails = {k: v for k, v in c.items() if k.endswith('!')}
-        ok = ok and not fails
-        say('Verify    : %s  %d frames, %d commits (max %d sprites, %d plots), %d sprite pixels, %.0fs -> %s' % (
-            os.path.basename(r), c['frames'], c['commits'], c['max sprites in a frame'], c['max plots in a frame'],
-            c['sprite pixels compared'], __import__('time').time() - t, 'IDENTICAL' if not fails else 'FAILED %s' % fails))
-        say('            pairs: %s' % ', '.join('%s %d' % (k[6:], v) for k, v in sorted(c.items()) if k.startswith('pairs ')))
-        say('            hook T per game frame %d (simulator T; the commit and logs run at 28 MHz); %s' % (
-            c['hook T per game frame'], ', '.join('%s %d' % (k, v) for k, v in sorted(c.items())
-                                                  if k.startswith(('margin', 'figure cells', 'shown', 'hook T', 'plots ', 'frames with')))))
-        say('            figure types: %s' % ex.pop('types', ''))
-        for k, v in ex.items():
-            say('            %s: %s' % (k, str(v)[:300]))
+        for bname, bp in builds:
+            t = __import__('time').time()
+            c, ex, st = verify(bp, r, stop=stop, collect=3 if bname == 'default' else 0)
+            states += st
+            fails = {k: v for k, v in c.items() if k.endswith('!')}
+            ok = ok and not fails
+            say('Verify    : %s %s  %d frames, %d commits (max %d sprites, %d plots), %d sprite pixels, %.0fs -> %s' % (
+                os.path.basename(r), bname, c['frames'], c['commits'], c['max sprites in a frame'], c['max plots in a frame'],
+                c['sprite pixels compared'], __import__('time').time() - t, 'IDENTICAL' if not fails else 'FAILED %s' % fails))
+            if bname != 'default':
+                continue
+            say('            pairs: %s' % ', '.join('%s %d' % (k[6:], v) for k, v in sorted(c.items()) if k.startswith('pairs ')))
+            say('            hook T per game frame %d (simulator T; the commit and logs run at 28 MHz); %s' % (
+                c['hook T per game frame'], ', '.join('%s %d' % (k, v) for k, v in sorted(c.items())
+                                                      if k.startswith(('margin', 'figure cells', 'shown', 'hook T', 'plots ', 'frames with')))))
+            say('            figure types: %s' % ex.pop('types', ''))
+            for k, v in ex.items():
+                say('            %s: %s' % (k, str(v)[:300]))
+    by = {os.path.basename(r): r for r in (a.rzx or [])}
+    if 'ab_first.rzx' in by and not stop:
+        say('Negative  : broken builds on the recordings (ab_first 1,500 frames; player two on ab_2p; level end on ab_level):')
+        n, d = run_negatives(by['ab_first.rzx'], 1500, say=say, rzx2=by.get('ab_2p.rzx'), rzx3=by.get('ab_level.rzx'))
+        say('Negative  : %d/%d DETECTED' % (d, n))
+        ok = ok and n and d == n
     if states:
-        u, f = unit_tests(patch, states[:3])
-        uf = {k: v for k, v in u.items() if k.endswith('!')}
-        ok = ok and not uf
-        say('Unit      : %d layer cases, %d cache-hit, %d guard, %d pressure commits, colour map %d entries, map negative %d/%d -> %s' % (
-            u['cases'], u['cache hit cases'], u['guard cases'], u['pressure commits'], u['map entries'],
-            u['map negative detected'], u['map negative cases'], 'PASS' if not uf else 'FAIL %s %s' % (uf, dict(f))))
+        sel = [s for s in states if any(p['kind'] != 2 and plot_ok(p) for p in s['plots'])][:3] or states[:3]   # masked figures
+        for bname, bp in builds:
+            u, f = unit_tests(bp, sel)
+            uf = {k: v for k, v in u.items() if k.endswith('!')}
+            neg_ok = u['map negative detected'] and u['mode negative detected']
+            ok = ok and not uf and neg_ok
+            say('Unit      : %s: %d layer cases, %d cache-hit, %d guard, %d pressure commits, colour map %d entries, map negative %d/%d, '
+                'hit flash / player two over a map negative %d/%d -> %s' % (
+                    bname, u['cases'], u['cache hit cases'], u['guard cases'], u['pressure commits'], u['map entries'],
+                    u['map negative detected'], u['map negative cases'], u['mode negative detected'], u['mode negative cases'],
+                    'PASS' if not uf and neg_ok else 'FAIL %s %s' % (uf, dict(f))))
     say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
     return ok
 
@@ -1300,7 +1431,8 @@ def sheets(col, prefix, peek, colours=None):
     """<prefix>_PAINTING_SPRITES.png (fewest whole figures showing every graphics byte) and
     <prefix>_REFERENCE_ALL_SPRITES.png (every figure) with their layouts."""
     from . import coloursheet as cs
-    rgb16 = cs.palette_rgb(PALETTE)
+    rgb16 = cs.palette_rgb(set_palette(colours))
+    colours = entries(colours)                     # the sheets take entries; the palette is set above
     comps = list(col.comps.values())
     ident = colour_identity(peek)
     res = []
@@ -1314,7 +1446,8 @@ def sheets(col, prefix, peek, colours=None):
 
 
 COLOUR_BANKS = tuple([13] + [14 + n for n in range(NSTORE // 2)])
-RECOLOUR = {'game': RECORD, 'output': 'sprites', 'colours': 'docs/profiles/altered_beast_colours.json', 'clear': True, 'note': NOTE}
+RECOLOUR = {'game': RECORD, 'output': 'sprites', 'colours': 'docs/profiles/altered_beast_colours.json', 'clear': True, 'palette': True,
+            'note': NOTE}
 
 
 def colour_inputs_md5(peek):
@@ -1364,11 +1497,17 @@ def recolour(nex, cmap):
     lo, hi = p0.regblock - 0x2000, p0.regblock - 0x2000 + 20
     if b12[:lo] != bytes(p0.page[:lo]) or b12[hi:8192] != bytes(p0.page[hi:8192]):
         raise ValueError('hook code differs from this version\'s (rebuild with nexclash.py auto)')
-    if bank(10)[0x1000:0x1000 + len(p0.stub_extra)] != p0.stub_extra:
+    setup = p0.stub_extra[:-16]
+    b10 = bytearray(bank(10))
+    if bytes(b10[0x1000:0x1000 + len(setup)]) != setup:
         raise ValueError('set-up code differs from this version\'s (rebuild with nexclash.py auto)')
     p = AlteredBeastPatch(prof, colours=cmap)
-    out, changed = splice(nex, {b: p.extra_banks[b] for b in COLOUR_BANKS})
-    return out, {'banks changed': changed, 'colour-map entries': len(cmap)}
+    b10[0x1000 + len(setup):0x1000 + len(setup) + 16] = bytes(p.palette)
+    nb = {b: p.extra_banks[b] for b in COLOUR_BANKS}
+    nb[10] = bytes(b10)
+    out, changed = splice(nex, nb)
+    return out, {'banks changed': changed, 'colour-map entries': len(p.colours),
+                 'palette': 'the map\'s' if 'palette' in cmap else 'the game\'s'}
 
 
 # ---------------------------------------------------------------------------------------------
