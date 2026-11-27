@@ -1,7 +1,11 @@
 # Alien 8 (Ultimate Play The Game, 1985; 48K) - engine `alien_8` (pilot game: emulator only)
 
 ## Next session
-Stage: 4 (hardware). Hardware: untested. v1.2 (2026-11-07, owner approved, review .nxc not yet published): the default
+Stage: 4 (hardware). v1.5 (2026-11-26, branch knight-lore-clip): jattree/nxc#2 (TomCat, KS3, 1.3 and 1.4) showed
+objects drawn in the wrong order around the player, both modes: draws are now clipped to the rectangles the render pass
+copies (Renderer), and Enhanced keeps 1.4's 0xE7 for the undrawn magenta entries 29 / 157, so the repository builds
+what was published. Proof under Evidence. Next: the owner's KS3 test of the 1.5 copy, then publish.
+Earlier: v1.2 (2026-11-07, owner approved, review .nxc not yet published): the default
 build's palette holds the Next's own ULA colours instead of 205/255 shades; nothing else changes (below). v1.1 published
 as .nxc 1.1 (2026-11-07), owner approved: runtime v27, actor
 K98 / renderer K98, hook page SHA-256 de4df56e (before the start-up restore), auxiliary 9f921b99. The owner's full
@@ -41,7 +45,10 @@ Original masked draw order is captured into a bounded command list. Colour canva
 0..14, static 128..142, inherited ink 126 / 254, transparent 255, with duplicated physical colours, so no ownership
 plane. Global aligned 16x16 hardware tiles from a 64-pattern exact hash + full-byte cache; pattern-union exhaustion
 shows the complete colour canvas for that frame and rebuilds. One bounded publication per update in a 14-line
-reservation. Memory: highest bank 47 (page 95): hook page 26, auxiliary 81, colour 52-57, ownership 40-45, display
+reservation. The canvas is the screen, not the buffer (1.5): the original draws every object whole into its buffer at
+D200 and its render pass (CEAB) copies only the rectangles it cleared (CF4F, copied at CF85). From s_window_in to
+s_part (5B17 = 0) clear_rect records each cleared rectangle (64 at most; C71C lists 56 objects) and fc_ldir writes
+only the parts of a run inside them; a room drawn whole (5B17 set) is unclipped, a full copy (CE85) follows. Memory: highest bank 47 (page 95): hook page 26, auxiliary 81, colour 52-57, ownership 40-45, display
 28-39, sources 58-80, floors 46-51 / 82-93, Sinclair ROM 94/95.
 
 ## CPU, sound and pace
@@ -77,12 +84,18 @@ unsafe (items need linked world records) and are not offered.
 - Native soaks: 20,000 frames a mode; no overflow, no fast beeper write, no errors.
 - Real dot-command loader on disposable NextZXOS v2.10 / 26.11 card copies: default, Enhanced, all eight trainers
   byte-exact; all ten live trainer operands checked.
+- v1.5 (pilot run runs/alien_8/clip-20261126, the v27 harness with the repository's hooks): the oracle's buffer
+  model is copied to a screen model at CF85 / CE85 and compared after each pass end (5B17 = 0) and full copy.
+  play-08, 18,000 frames, each mode: PASS, 2,877 publications, 3,828 player updates, 17 deaths, 3 game overs. The
+  1.4 source fails at the first pass (26 pixels of a static object), and so does the clip turned off. The rest of
+  the v27 suite (pace, soaks, ABI, IRQ) was not rerun.
 Known issues: a cold room entry or death redraw lags briefly, then is repaid; Infinite lives with Start 10 lives shows
 00 although the count is 10. Missing: hardware; natural completion; an in-repository verify and stamp.
 
 ## Hardware checklist
 Both modes: walking pace and the death pause against the original; room entries; each trainer; the loading screen;
-tearing at publication; beeper effects. Record board and core.
+tearing at publication; beeper effects. Record board and core. 1.5: walk the robot behind and among stacked objects
+(TomCat's video rooms); nothing behind should be drawn over what stands in front.
 
 ## Lessons
 - [local: Alien 8 pace windows] A death-containing window mixes two costs: the sparse-room walking overhead and the cold
@@ -102,6 +115,11 @@ tearing at publication; beeper effects. Record board and core.
 - [kb lesson.fixed-table-scan-snapshot-in-play: graphic table end] The graphic table at 7827 holds ids up to 0x84 and ends where the first graphic (7931)
   begins. Read 256 words and a snapshot taken in play gives strays (A0, BA, BD, FB pointed at the stack and work RAM
   that parsed as graphics: 134 entries, `auto` refused the dump). `original_graphics` stops at the first graphic.
+- [kb lesson.back-buffer-displayed-frame: a partial copy shows only part of the buffer] As Knight Lore: whole objects
+  drawn into the buffer, only cleared rectangles copied; the canvas followed the buffer (16x16 dirty tiles are not
+  the copy), so static objects behind showed whole over those in front. Clip draws to the copied rectangles.
+- [local: the published patch is the truth] 1.4 changed entries 29 / 157 to 0xE7 in the patch only; l2pal kept them
+  0xE3 as undrawn, so the record's Enhanced differed from what players have. Fixed every entry but 126 / 254 / 255.
 - [backlog C2 #47] `patch` on Alien 8 ends "not supported yet" and makes no .nxc: userflow looks for
   NAME_sprites.nex, this engine writes NAME.nex and NAME_enhanced.nex.
 
@@ -130,3 +148,4 @@ in room 0x13; review .nxc 1.2 in the pilot (runs/alien_8/package-v1.2).
 2026-11-18: a second dump (the snapshot inside the owner's 342,604-frame RZX, in play): graphic table read fixed (see
 Lessons); both builds boot-checked, rom_paths pass on the whole recording, 118 painted figures match its graphics. Not a
 replay proof (no in-repository verify); reference rebuild not run here (reference snapshot absent from specnext).
+2026-11-26: v1.5: draws clipped to the rectangles the render pass copies; screen-model replays; 0xE7 as 1.4.

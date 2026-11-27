@@ -49,6 +49,8 @@ actor_close:
 ; Nonreturning game-over/new-game routes abandon the actor window. They must
 ; not retain28MHz, or enter a long menu/tune with a live renderer timer.
 actor_cancel:
+        xor a
+        ld (v_clip),a             ; game over / new game leave the render pass (C423 jumps to BA22)
         ld a,(v_actor_active)
         or a
         ret z

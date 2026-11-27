@@ -246,9 +246,9 @@ At every patched routine in the real recording: copy the machine state, run the
 original and the patched routine to their return, compare all registers
 (default: except T/MEMPTR; R and AF' included), all memory outside never-read draw buffers (patch area
 and sites excluded; dead stack only where a documented convergence check applies - a hook that
-returns into the game's own loop must leave it identical), the patched screen against the
-model, and the sprite pixels against the original plot (masked figures: run the plot on a 0x00
-and a 0xFF buffer for ink / paper / transparent, midres.truth). With interrupts on at the hooks,
+returns into the game's own loop must leave it identical), the patched screen against the model of the screen, not of
+the buffer it copies from (Knight Lore), and the sprite pixels against the original plot (masked figures: run the plot
+on a 0x00 and a 0xFF buffer for ink / paper / transparent, midres.truth). With interrupts on at the hooks,
 also check interrupt safety after every hook instruction (IX, IY, I, IFF, stack room; Commando,
 midres) with a negative control. Every mismatch must be explained or fixed.
 Equivalence (owner, 2026-11-10): extremely close gameplay, not 1:1. Exact where cheap; document exceptions with consumer
@@ -258,8 +258,8 @@ Also simulate the start-up tail: registers restored, no game memory touched.
 
 Iterate fast (the two levels: BRIEFING C3b): while developing use `--quick N` and the unit tests on 1-2
 captured states (minutes). N must reach the first call of every hook the unit tests capture
-states from, or the run FAILS for lack of a state (Lode Runner at 300 frames: "no captured draw
-state"; Commando: "no plot reused a cached image"): start at 2000. A verifier at ~10K frames/min ends stage 2 with a 20000-frame run (Nemesis: 2000 missed two rare cases). One quick run per change; read
+states from, or the run FAILS for lack of a state (Lode Runner at 300 frames; Commando): start at 2000. A verifier at
+~10K frames/min ends stage 2 with a 20000-frame run (Nemesis: 2000 missed two rare cases). One quick run per change; read
 its counters before changing anything else.
 Unreached paths: unit cases run the game's own routine (fields poked); index values from its
 writers, not its name (Jetpac rocket, fuel).

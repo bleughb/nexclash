@@ -60,8 +60,7 @@ fc_plot:
 .length:
         ld (fc_piece),a
         ld c,a
-        ld b,0
-        ldir
+        call fc_ldir
         ld a,e
         or a
         jr nz,.not_wrap
@@ -113,6 +112,86 @@ fc_wrap:
         ld d,0xDF
 .done:  or a
         ret
+
+; HL source, DE canvas (E = X), C = 1..255 pixels of the row 191 - fc_dy: LDIR, leaving HL and DE advanced by C.
+; Inside the render pass (v_clip) the original copies only the rectangles it cleared to the screen (CF85): only
+; those parts are written.
+fc_ldir:
+        ld b,0
+        ld a,(v_clip)
+        or a
+        jr nz,.clip
+        ldir
+        ret
+.clip:  ld (fs_src),hl
+        ld (fs_dst),de
+        ld a,c
+        ld (fs_n),a
+        add a,e
+        dec a
+        ld (fs_last),a
+        ld a,(fc_dy)
+        cpl
+        add a,192
+        ld (fs_row),a
+        ld a,(v_nrects)
+        or a
+        jr z,.done
+        ld b,a
+        ld hl,v_rects
+.rect:  push bc
+        push hl
+        ld a,(fs_row)
+        cp (hl)
+        jr c,.next
+        inc hl
+        ld c,a
+        ld a,(hl)
+        cp c
+        jr c,.next
+        inc hl
+        ld a,(fs_dst)
+        cp (hl)
+        jr nc,.lo
+        ld a,(hl)
+.lo:    ld d,a
+        inc hl
+        ld a,(fs_last)
+        cp (hl)
+        jr c,.hi
+        ld a,(hl)
+.hi:    sub d
+        jr c,.next
+        inc a
+        ld c,a
+        ld b,0
+        ld a,(fs_dst)
+        neg
+        add a,d
+        ld hl,(fs_src)
+        add hl,a
+        ld a,(fs_dst+1)
+        ld e,d
+        ld d,a
+        ldir
+.next:  pop hl
+        ld de,4
+        add hl,de
+        pop bc
+        djnz .rect
+.done:  ld a,(fs_n)
+        ld hl,(fs_dst)
+        add hl,a
+        ex de,hl
+        ld hl,(fs_src)
+        add hl,a
+        ld bc,0
+        ret
+fs_row: db 0
+fs_n:   db 0
+fs_last:db 0
+fs_src: dw 0
+fs_dst: dw 0
 
 fc_map_y:
         ld a,(fc_y)

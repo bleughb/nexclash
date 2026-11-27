@@ -124,7 +124,6 @@ def compile_assets(game, enhanced=True):
     paint_rgb = sorted({p[:3] for im in accepted_painted.values() for p in im.getdata() if p[3]})
     assert paint_rgb[0] == (0, 0, 0) and len(paint_rgb) <= 15
     rgb = paint_rgb + sorted({p[:3] for p in floor.getdata() if p[3]} - set(paint_rgb))
-    n_drawn = len(rgb)                  # entries from here on are ink entries no graphic draws (see PAL)
     def level3(v): return (v >> 5 & 7, v >> 2 & 7, (v & 3) << 1 | (v & 3 != 0))       # RRRGGGBB as the Next shows it
     ink = ENHANCED_PAL if enhanced else [tuple(n * 255 // 7 for n in level3(v)) for v in PAL]
     original_ink = []
@@ -142,8 +141,8 @@ def compile_assets(game, enhanced=True):
     ula333 = [r << 6 | g << 3 | b for r, g, b in map(level3, PAL)]      # (0, 5, 320, 325, 40, 45, 360, 365, 0, 7, ...)
     for i, value in enumerate(ula333): palettes[(64 + i) * 2:(65 + i) * 2] = bytes((value >> 1, value & 1))
     for i in (126, 254, 255): palettes[i * 2:i * 2 + 2] = bytes((0xe3, 0))
-    unused = set(range(n_drawn, 64)) | set(range(128 + n_drawn, 192))     # Enhanced keeps 1.1's unused magenta
-    palettes[:] = l2pal.fix(palettes, 'pairs', keep=unused | {126, 254, 255})     # drawn 0xE3 -> 0xE7
+    # every opaque 0xE3 -> 0xE7, the undrawn magenta ink entries too (29 / 157, as the published .nxc 1.4)
+    palettes[:] = l2pal.fix(palettes, 'pairs', keep={126, 254, 255})
     pages = {22: bytearray(8192), 23: bytearray(8192), 24: bytearray(8192), 25: bytearray(8192), 27: bytearray([255] * 8192)}
     directory = pages[24]; directory[6144:6160] = bytes(original_ink)
     directory[6160:6163] = bytes(FLOORS)

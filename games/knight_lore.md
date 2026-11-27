@@ -1,8 +1,10 @@
 # Knight Lore (Ultimate Play The Game, 1984; 48K) - engine `knight_lore` (pilot game: emulator only)
 
 ## Next session
-Stage: 4 (owner review + hardware). Hardware: untested. The owner approved the Enhanced look and the room floors
-("knight lore is good!", 2026-11-07); the .nxc v1.0 review package awaits his play.
+Stage: 4 (owner review + hardware). v1.2 (2026-11-26, branch knight-lore-clip): the owner's KS3 play test of 1.1 and
+jattree/nxc#6 showed Enhanced figures cut by scenery behind them (the chest by the steps as the knight walks past) and
+the moon past its window's frame. Cause and fix under Renderer, proof under Evidence. Next: the owner's KS3 test of the
+1.2 copy, then publish. The owner approved the Enhanced look and floors ("knight lore is good!", 2026-11-07).
 Repository layout (2026-11-07, on main 213a238): `nexclash/knight_lore.py`, `asm/knight_lore_hooks.asm` with its
 includes `asm/knight_lore_{packed,actor,grid_commit,sprite_cache}.asm` and `asm/knight_lore_palette.inc`,
 `docs/profiles/knight_lore.json`, `docs/profiles/knight_lore_sound_sites.json`. Build:
@@ -38,6 +40,11 @@ hardware figures. Two display buffers keep separate dirty bits. A cache-union ov
 frame before rebuilding the sprites. The 128-room initial-state census peaks at 50 dynamic tiles (initial states only).
 Publication covers every old/new active sprite row and every changed Layer 2 row; retired sprites keep their old X/Y
 while disabled. The upload and flip finish inside a reserved 14-line interval; full-screen redraws need vertical blank.
+The canvas is the screen, not the buffer (1.2): the original draws every object whole into its buffer at D8F3 and its
+render pass (D59F) copies only the rectangles it cleared (D67C). Inside that pass (5BB7 = 0) h_clear records each
+cleared rectangle (48 at most: 40 objects and 4 HUD boxes) and fc_span writes only the parts of a row inside them.
+The room-entry frame (5BB7 set) draws unclipped: a full copy (D56F) follows. More rectangles or a width over 32 would
+draw the rest of that pass unclipped (v_clip_full; never in the recordings).
 
 ## CPU, memory and original pace
 Shared hlib_iff, hlib_speed, hlib_r, hlib_pace and the ordinary-DMA capability/fallback (hlib_dma), unchanged. Both
@@ -80,6 +87,11 @@ Inventory, parameterised or one-shot day changes, duplicate lives and novelty op
 - 248 hook ABI cases, 128 whole-sound wrapper cases, 300 compositor cases, cache collision/eviction/protection cases.
 - Real dot-command loader on disposable card copies: default, Enhanced and Enhanced with all six trainers byte-exact.
 Frozen hook ROM SHA-256 `10083e7dba7eaacf630e98646587aa232c435c78136693e4bbf40b8c91d117a2`.
+- v1.2 (pilot run clip-20261126, work/replay_screen.py): the oracle's buffer model is copied to a screen model where the
+  original copies (D67C, D56F) and compared after each render pass and full copy. play-13 / play-14, 24,000 frames
+  each: PASS, 7,222 / 8,990 passes, displayed sprites and Layer 2 equal. The 1.1 hooks fail at the 6th pass (39
+  pixels, the sun's edge by its frame), and so does the clip turned off (h_render's AND 1 -> AND 0). Hook ROM
+  SHA-256 `a5ae69509aba63cd`. The rest of the 1.1 suite (pace, soaks, ABI) was not rerun.
 Known issues: a room entry costs about 0.2 s more than the original before the limiter repays it. Synthetic IFF1
 interrupts inside R capture/restore can lose the ISR's R contribution (gameplay is IFF0). Missing: hardware; natural
 full-game completion; a generic verify and stamp.
@@ -87,6 +99,8 @@ full-game completion; a generic verify and stamp.
 ## Hardware checklist
 Default and Enhanced: room entries (pause length against the original), transformations, deaths, the cauldron, each
 trainer, the loading screen; look for tearing at publication; beeper effects against the original. Record board/core.
+Enhanced 1.2: walk behind and in front of stacked blocks (the chest by the steps); the sun and moon at both ends of
+the window; the yellow glitch on the spiked block (owner's 1.1 photo).
 
 ## Lessons
 - [kb lesson.mask-ink-composition: the original Filmation masks establish this game's ownership] A final monochrome buffer does not establish
@@ -104,6 +118,11 @@ trainer, the loading screen; look for tearing at publication; beeper effects aga
 - [doc docs/LEARNING.md §1. Source refresh and verification freeze] Integration onto main 213a238 (2026-11-07):
   includes moved into asm/, the palette INCBIN turned into DB lines, private art read from a directory: the profile and
   both NEX files rebuild byte for byte, so the proof carried; shown by rebuilding, not assumed.
+- [kb lesson.back-buffer-displayed-frame: a partial copy shows only part of the buffer] The original draws whole
+  objects into its buffer and copies only the cleared rectangles; the canvas followed the buffer, so parts the
+  original never copies showed (owner's KS3 test and jattree/nxc#6, 2026-11-26). Clip draws to the copied rectangles.
+- [doc docs/PLAYBOOK.md §6. Verify (differential test)] The pilot's "independent" colour oracle drew into a buffer as
+  the hooks did, so 16,212 checks passed a wrong picture. The model must follow the game's copies to the screen.
 - [local: this game's Enhanced art is a private input] Register what the repository can rebuild: `auto` and the record
   cover the default build only; a build that needs private files keeps its own command and is named as such.
 
@@ -125,3 +144,4 @@ trainer, the loading screen; look for tearing at publication; beeper effects aga
 byte-identical rebuild of the profile and both builds; selftest --tools and --canary, asm2profile --check, doccheck
 PASS; .nxc v1.0 review package with real-loader runs on NextZXOS v2.09 and 26.11 card copies.
 2026-11-07: engine registered (detector, `auto` for the default build with a boot check, record); rebased on b37b4f3.
+2026-11-26: v1.2: draws clipped to the rectangles the render pass copies; screen-model replays (Evidence).
