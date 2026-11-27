@@ -137,8 +137,8 @@
   "engine_col": "great_escape (great_escape.md)",
   "build": "Original monochrome default; optional painted companion, McQueen outfit, loading and 1MB.",
   "software": "53158 frames / 457675 hooks; R, pixels, negative controls, ROM audit and 9 real-loader cases pass; pace within 2%.",
-  "hardware": "none (JNext only)",
-  "next": "Final user play review and physical hardware checks; source-only contribution ready."
+  "hardware": "none (JNext and OverSpec only)",
+  "next": "Real Next run; 1.1: McQueen film look plus the cooler ball, released together."
  },
  "checks": [
   "asm2profile:great_escape"
@@ -185,13 +185,13 @@
  "results": [],
  "checked": {
   "deps": {
-   "asm/great_escape_hooks.asm": "8995fb8dc54ba947",
+   "asm/great_escape_hooks.asm": "8a8e7572365b2b6d",
    "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
    "asm/lib/hlib_iff.asm": "b63b400926847660",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
-   "docs/profiles/great_escape.json": "41c915333a745119",
+   "docs/profiles/great_escape.json": "7860cefd816de839",
    "nexclash.py": "4a87a4de972a122f",
    "nexclash/analyse.py": "9068c7834f1f1923",
    "nexclash/build.py": "7a7bb03de0547247",
@@ -201,7 +201,7 @@
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
    "nexclash/engines.py": "ce158a77f3104b5b",
-   "nexclash/great_escape.py": "7200a8d93a7a3894",
+   "nexclash/great_escape.py": "5713fc5c56189ed8",
    "nexclash/hooklib.py": "d5cfe5321e8ff038",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/identify.py": "578e73ef2ca90c6a",
@@ -224,20 +224,20 @@
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "a434ec9b2ce403d5",
+   "recipe": "bce7cdc60eee72e2",
    "rom": "e50ee485fb4a21d2"
   },
-  "date": "2026-11-26"
+  "date": "2026-11-27"
  },
  "verified": {
   "deps": {
-   "asm/great_escape_hooks.asm": "8995fb8dc54ba947",
+   "asm/great_escape_hooks.asm": "8a8e7572365b2b6d",
    "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
    "asm/lib/hlib_iff.asm": "b63b400926847660",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
-   "docs/profiles/great_escape.json": "41c915333a745119",
+   "docs/profiles/great_escape.json": "7860cefd816de839",
    "nexclash.py": "4a87a4de972a122f",
    "nexclash/analyse.py": "9068c7834f1f1923",
    "nexclash/build.py": "7a7bb03de0547247",
@@ -247,7 +247,7 @@
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
    "nexclash/engines.py": "ce158a77f3104b5b",
-   "nexclash/great_escape.py": "7200a8d93a7a3894",
+   "nexclash/great_escape.py": "5713fc5c56189ed8",
    "nexclash/hooklib.py": "d5cfe5321e8ff038",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/identify.py": "578e73ef2ca90c6a",
@@ -270,10 +270,10 @@
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "a434ec9b2ce403d5",
+   "recipe": "bce7cdc60eee72e2",
    "rom": "e50ee485fb4a21d2"
   },
-  "date": "2026-11-26"
+  "date": "2026-11-27"
  },
  "feasibility": {
   "pacing": {

@@ -13,8 +13,12 @@ the colour/world/timing pages or the alt ROM view fail; negative controls each b
 changes only R, speed control drops the NR 7 restore); Layer 2 show/hide tested from both states with a control each;
 autosaves stripped; a recording with no hook fails; boot check against the view at F068; the auto package carries
 McQueen with "needs Enhanced" (OPR1 via nxcout `needs`) and no CPU-only option; --allow-60hz refused (312-line pace).
-Open: the full verify + stamp on the fixed engine, release package + real loader checks, OverSpec play review by
-Jon, PR. Recolour entry points (RECOLOUR/recolour) not yet: import_sheets() is this engine's painting route.
+Art is now great_escape/art/period-v3-halo (Jon's outlines, Codex's first scenery pass). 2026-11-27: stamped
+(4 recordings, 53158 frames, 457675 hooks), Jon played Enhanced and McQueen from the .nxc in OverSpec, 1.0
+published on jattree/nxc. Open: a real Next run; 1.1 = McQueen film look (Codex art, Jon approved, pilot
+runs/great_escape/art-round3-mcqueen/art-out) plus the cooler ball (in_solitary A13A, room 24; a sprite only,
+no game memory written), released together. Recolour entry points (RECOLOUR/recolour) not yet: import_sheets()
+is this engine's painting route.
 Set NEXCLASH_GREAT_ESCAPE_ART or place the four painting binaries beside great_escape.z80.
 
 ## Source and design
@@ -239,3 +243,5 @@ Source and package are ready for final visual review and upstream integration; n
 - 2026-11-27: Jon's play of the halo build froze with Enhanced and McQueen right after the key choice (OverSpec).
   Cause: the halo overlay install restored DMA policy 2 (blitter) in bank 13. Fixed (overlay bytes only, policy
   asserted); a one-byte policy-1 patch of the halo build played past the key choice in both.
+- 2026-11-27: full stamp on period-v3-halo with the DMA fix: 4 recordings identical (53158 frames, 457675 hooks),
+  units and negatives pass. 1.0 published from these builds.
