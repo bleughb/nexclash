@@ -888,12 +888,15 @@ NEG_EXPECT = {                              # the failure each control must give
     'a slot on screen from the last update taken': {'pattern of a sprite on screen overwritten!'}}
 
 
+NEG_FRAMES = {'a slot on screen from the last update taken': 3000}   # its first hit on jacknipper.rzx is after 1,500
+
+
 def negative_results(negs, rzx, frames, expect, verify_fn):
     """Each negative control's verify: 'DETECTED' only when it gives a failure it is expected to give. -> Counter"""
     import collections
     c = collections.Counter()
     for name, np_ in negs.items():
-        cc, ex, _ = verify_fn(np_, rzx, stop=frames)
+        cc, ex, _ = verify_fn(np_, rzx, stop=max(frames, NEG_FRAMES.get(name, 0)))
         got = {k for k in cc if k.endswith('!')}
         res = 'DETECTED' if got & expect.get(name, set()) else ('caught for another reason (%s)!' % sorted(got)[:2]
                                                                    if got else 'MISSED!')

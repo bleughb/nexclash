@@ -88,7 +88,7 @@ Owner, 2026-11-26: Enhanced colours, every figure painted (Codex first pass from
 - The owner saw mum's and dad's lower halves flash: the pattern cache took a slot the last update's sprites still
   showed (its attributes stay until this update writes new ones). `slot` now skips this and the last update's slots;
   the verifier fails a pattern overwritten under a sprite on screen (192 times in 6,000 frames before); negative: the
-  old rule put back.
+  old rule put back, replayed 3,000 frames (NEG_FRAMES: none of its hits fall in the controls' usual 1,500).
 
 ## Build (stage 2, 2026-11-23)
 - Technique: patch.scratch-redirect. The game's own figure draws keep running unchanged (the same work, so the same
@@ -178,6 +178,10 @@ sprites, so patterns are uploaded per figure from a cache (more figure kinds tha
 - [card optimise.pattern-cache §Failure lookup] demonstrated: "never evict a shown slot" read as "used this update" let
   the cache overwrite the last update's slots while their sprites were still on screen (mum's and dad's legs flashed);
   the replay compared only the state after each commit, so a shown-slot check went into the verifier.
+- [kb lesson.negative-control-must-reach-path: a negative the recordings cannot reach] The shown-slot negative was
+  checked on 6,000 frames but the unit runs controls on 1,500, where it never hits (first hits by 3,000): the full
+  stamp reported it MISSED, and the failed run also skipped the automap step, so every md5 differed. Run a new
+  negative on the unit's own frame budget before stamping; give it its own budget when the path comes later.
 - [local: this dump; the recording starts in play] The replay never redraws the menu, so a defect only the menu and
   the messages show (the dump's space glyph, 0x5C00, written by the dumping emulator's ROM interrupt) passed every
   check; the owner saw it at the menu. Run the original past its attract loop in OverSpec when a game keeps data in
