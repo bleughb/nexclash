@@ -33,3 +33,15 @@ Round 2 (2026-11-05, sprites 08ddd639; pilot runs/dean_cauldron work/r2):
   did (2 of 30). A pending sprite stays up to the next draw (usually under a line; after a death or a HALT pause until
   the next plot or writer); not seen in the flicker or soak captures.
 
+Round 3 (2026-11-26, Jon's KS3 play test: "when it scrolls to the next screen the trees scroll off but the bats stay on
+the screen in the same position until the next screen is fully moved to"):
+- Cause: round 2's pending hides. The game erases every figure before the screen scrolls and draws none until the new
+  screen is in; an erased figure's sprite stays pending until the next draw, and the scrolls (0xDED2 / 0xDEEA) hide only
+  pending sprites in their own rows (128-191). cauldron.rzx frames 912-975: 649 sprite pixels (the witch and two bats)
+  stood still through the scroll, the original shows none (verify shots, png in the session scratch).
+- Fix: asm dotall (alt ROM, 15 bytes): the scroll hooks touch as before, then hide every pending sprite (pall, no beam
+  wait: no figure follows). Model.pall at the same sites. Unit cases: the old "scroll left, pending images in column 31
+  only: kept" now hidden, and a scroll right with pending images in the sky; negative: the scrolls calling dotouch again
+  (caught by both). Quick run (2,000 frames, 160 right scrolls) IDENTICAL; the replay's sprite pixels 3.41M -> 1.28M.
+- Known in the quick run, also on main: rom_paths flags the 4 ROM-site JPs without NEXCLASH_NEXT_ROM; "left attribute
+  scroll skips the shadow" needs a left scroll (none in the first 2,000 frames).
