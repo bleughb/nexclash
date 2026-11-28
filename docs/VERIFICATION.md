@@ -139,8 +139,8 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Monty on the Run (monty_on_the_run): `monty_on_the_run.nex` 86c30493dbd683b5076dfa43098180bb, `monty_on_the_run_sprites.nex` 7fdb25d99b58c4413042f4b7a7f919c8; verified 2026-11-22
 - Auf Wiedersehen Monty (auf_wiedersehen_monty): `auf_wiedersehen_monty.nex` a29cf9b873dec7c71238c90004b8df9c, `auf_wiedersehen_monty_sprites.nex` ad20fe1d69ccc920798b6c1dc5ba89d9; verified 2026-11-22
 - Elite (elite): `elite.nex` e611573d6c45159be56936fc09dfd84d, `elite_sprites.nex` 93c35409631f7682e8e505dcd0284139; verified never
-- Hard Drivin' (hard_drivin): `hard_drivin.nex` d74f75e6995eb0f54eaec2122a5164d0, `hard_drivin_smooth.nex` 9fb23f8e64fa8187ba304c34af9a6016, `hard_drivin_steps.nex` 9cc6f829055ca1f17c491609de22b016, `hard_drivin_steps_loading.nex` 9d1a130d7e723c9395cca8266181da4b, `hard_drivin_smooth_loading.nex` f789a1c70aaa5f889f64c128a67527a0; verified 2026-11-24
-- Elite (standard Firebird release) (elite_std): `elite_std.nex` 4e176c9cf03bb207782221ac05396899; verified 2026-11-24
+- Hard Drivin' (hard_drivin): `hard_drivin.nex` d74f75e6995eb0f54eaec2122a5164d0, `hard_drivin_smooth.nex` e78f5999a362dcf7b3b3ef88bb05c3f4, `hard_drivin_steps.nex` 9cc6f829055ca1f17c491609de22b016, `hard_drivin_steps_loading.nex` 9d1a130d7e723c9395cca8266181da4b, `hard_drivin_smooth_loading.nex` f1e39222cf7c0ed3921f2e5c813d8f62; verified 2026-11-28
+- Elite (standard Firebird release) (elite_std): `elite_std.nex` 4b3cbe16f9839c4746e04f92f1ecbf7e; verified 2026-11-28
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13
