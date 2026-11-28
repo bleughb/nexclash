@@ -677,19 +677,20 @@ Grouped by question; add a new lesson to its group.
 - analyse / recorder / machine.py take 128K (2026-11-26); verify.py, nextboot.check stay 48K.
 - A module restored from an older copy can silently drop another engine's hook (identify() lost
   identify5): selftest after every session that touches shared modules.
-- The recorder writes one RZX segment per episode; per-segment state must reset (new Simulator).
-  Symptom: refusals a few frames after a segment start (stale screen model, stale drawn flag).
-- An uploaded snapshot with the right game but a different MD5 is another snapshot of it
-  (dizzy2.z80 = TID title): check docs/records (inputs.path) before assuming references are complete.
+- The recorder writes one RZX segment per episode; per-segment state must reset (new Simulator):
+  else refusals a few frames into a segment (stale screen model, stale drawn flag).
+- An upload of the right game with another MD5 is another snapshot of it (dizzy2.z80 = TID
+  title): check docs/records (inputs.path) before assuming references are complete.
 - TID altrom hook range 0x386E-0x3A69 (+ register block); the builder refuses a range that is not
   all $FF in the 48K ROM.
-- SkoolKit `Snapshot.get(...).memory[0:0x4000]` is ZEROS for .z80 files: take ROM bytes from
-  `skoolkit.ROM48`. The Dizzy V slot-1 page was built from it -> blank font -> empty dialogue
-  boxes on hardware. Verify the page against ROM48 at every ROM byte the game reads.
+- SkoolKit `Snapshot.get(...).memory[0:0x4000]` is ZEROS for .z80: take ROM bytes from
+  `skoolkit.ROM48` (a Dizzy V slot-1 page built from it: blank font, empty dialogue boxes on
+  hardware). Verify the page against ROM48 at every ROM byte the game reads.
 - SkoolKit's Simulator silently drops writes below 0x4000; on the Next a slot-1 RAM page takes
-  them. Check for ROM writes with dizzy6._rw_simulator() (guards removed).
-- SkoolKit snap.ram() (no argument) is a 48K view even for 128K; snap.ram(-1) returns all 8 banks
-  (0x20000 bytes, bank order 0-7). Test snap.machine or len(snap.ram(-1)).
+  them (ROM writes: dizzy6._rw_simulator()). Store-opcode wrappers must cover every form hooks
+  use (Jack the Nipper II: CALL cc missed).
+- SkoolKit snap.ram() is a 48K view even for 128K; snap.ram(-1) is all 8 banks (0x20000 bytes,
+  banks 0-7). Test snap.machine or len(snap.ram(-1)).
 - 128K Python-sim hooks: in a Simulator subclass set memory.__class__ to a pagingtracer.Memory
   subclass; wrap opcode-table entries for exec hooks; set rzxplay.Simulator, CSimulator=None.
 - Boot simulation needs writes below 0x4000 (alt ROM write mode): dizzy6._rw_simulator();

@@ -1,0 +1,37 @@
+{
+ "id": "lesson.verifier-fails-closed",
+ "kind": "method",
+ "claim": "A verifier must fail on what it does not model: a hook store form outside its memory model, a different return PC, leftover registers it has not proved, a negative control caught by another failure than its own.",
+ "limit": "Found by a code review, not by a failing build; each check now has a unit case or a control.",
+ "evidence": [
+  {
+   "game": "games/jack_the_nipper_2.md",
+   "text": "Before the review the leftover registers were accepted unchecked on 99 of 100 blits; now only the census registers (A, F, B, A', F', IYh), each exit path proved dead.",
+   "quote": "the leftovers allowed only as the census found them",
+   "shown_on": "simulator"
+  },
+  {
+   "game": "games/jack_the_nipper.md",
+   "text": "Added: the return PC, no jump into a replaced instruction, no site rewritten, every executed hook store form modelled, the boot on through the tail's restore; each control by its own failure.",
+   "quote": "no site rewritten, every hook store form modelled",
+   "shown_on": "simulator"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "method",
+ "next_check": "A store-form check over the executed hook PCs (jack_the_nipper.store_form_problems) and NEG_EXPECT per control.",
+ "enforced_by": [
+  "nexclash.jack_the_nipper.store_form_problems",
+  "nexclash.jack_the_nipper.negative_results"
+ ],
+ "words": [
+  "verifier",
+  "fail closed",
+  "store form",
+  "return PC",
+  "negative control",
+  "dead registers"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

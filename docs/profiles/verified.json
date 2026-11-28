@@ -1334,6 +1334,54 @@
     }
    ]
   },
+  "4c5398b8bcfd88ebd83656f01c3aca21": {
+   "game": "Jack the Nipper",
+   "doc": "jack_the_nipper.md",
+   "nex": {
+    "plain": "e16cf411e852104abab355c4757ed0f5",
+    "sprites": "dfee03ae40053a4dcaced7e2b762d3b9",
+    "enhanced": "645fdaf327d95fc2b7591ef99af5d423"
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "jack_the_nipper",
+     "game": "Jack the Nipper",
+     "doc": "jack_the_nipper.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "e16cf411e852104abab355c4757ed0f5",
+      "sprites": "dfee03ae40053a4dcaced7e2b762d3b9",
+      "enhanced": "645fdaf327d95fc2b7591ef99af5d423"
+     }
+    }
+   ]
+  },
+  "6f5d708c439f3356a930ea4f176a0c8f": {
+   "game": "Jack the Nipper II - In Coconut Capers",
+   "doc": "jack_the_nipper_2.md",
+   "nex": {
+    "plain": "e63f00da62e1ac853765bf7825f2241a",
+    "sprites": "24d8b204ec3948616bd372dbc2e497f2",
+    "enhanced": "bc99c10512829195519e0179f19847bb"
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "jack_the_nipper_2",
+     "game": "Jack the Nipper II - In Coconut Capers",
+     "doc": "jack_the_nipper_2.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "e63f00da62e1ac853765bf7825f2241a",
+      "sprites": "24d8b204ec3948616bd372dbc2e497f2",
+      "enhanced": "bc99c10512829195519e0179f19847bb"
+     }
+    }
+   ]
+  },
   "a4963e747af1145fe0f2710da592abc6": {
    "game": "Jet Set Willy",
    "doc": "jet_set_willy.md",
