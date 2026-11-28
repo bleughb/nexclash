@@ -30,14 +30,16 @@ The next experiment is to compare a host decoder against the actual 0x8931 write
 
 ## Cheats and patch target
 
-The collection has one trainer, Infinite Lives, with two zero writes. Both sites immediately follow a load of HL with the life counter at 0x810C. The Z80, SNA, archive start and TAP all contain NOP at 38302 and DEC (HL) at 38352. The tape has four blocks, with one 40,960-byte code payload named `pokebyrudy` and zero standalone SCREEN$ blocks. Its MD5 is `c9456d09021802a7f409de4c96c8ca83`. No independent clean master was established.
+The collection has one trainer, Infinite Lives, with two zero writes. Both sites immediately follow a load of HL with the life counter at 0x810C: 38302 (the ordinary death) and 38352 (traps). The first copies used (the Z80, SNA, archive start and a TAP whose code block is named `pokebyrudy`, MD5 `c9456d09021802a7f409de4c96c8ca83`) were poked: NOP at 38302, so an ordinary death never cost a life even with the cheat off. The TOSEC covertape snapshot `Moley Christmas (1987)(Gremlin Graphics Software - Your Sinclair).z80` (MD5 `3a40c5f27fb88a7f36553d75e059d732`) is clean: DEC (HL) at both sites, the same machine state, and only two other game bytes differ (0x838E-0x838F). The patch targets that file (2026-11-28).
 
-| Machine-played branch | Frames per run | Trainer off | Trainer on |
+The three trainer-off recordings were made on the poked copy. Their start snapshots are corrected to the clean byte at 38302 (`*-clean.rzx`, input frames unchanged); the two trainer-on recordings already start with both sites zeroed.
+
+| Machine-played branch | Frames per run | Trainer off (clean) | Trainer on |
 |---|---:|---|---|
-| No input from archive frame 1,050, ordinary death | 366 | 5 lives → 5 | 5 lives → 5 |
+| No input from archive frame 1,050, ordinary death | 366 | 5 lives → 4 | 5 lives → 5 |
 | Hold X from archive frame 5,823, room 3 trap | 116 | 5 lives → 4 | 5 lives → 5 |
 
-All four recordings replayed through the death routine's exit, with zero desyncs. Retain Infinite Lives as one candidate toggle. On these files only the write at 38352 changes a byte. Omit the redundant write at 38302 for this target. Zero trainers shipped. Before claiming stock trainer-off behaviour, establish the ordinary-death byte from an independent original. Do not invent a replacement opcode.
+All recordings replay through the death routine's exit with zero desyncs (the poked starts gave 5 → 5 on the ordinary death with the trainer off). The shipped trainer writes both sites.
 
 ## Owner design and hardware checklist
 

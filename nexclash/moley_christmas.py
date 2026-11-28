@@ -71,8 +71,9 @@ class Patch:
             if b[i:i + len(old)] != old:
                 raise ValueError('Unexpected original bytes at %04X' % a)
             b[i:i + len(old)] = new
-        if snap.read(38302) != 0 or snap.read(38352) != 0x35:
-            raise ValueError('Unexpected life-counter instruction')
+        if snap.read(38302) != 0x35 or snap.read(38352) != 0x35:
+            # both DEC (HL) on the life counter, as on the clean covertape (a poked copy has NOP at 38302)
+            raise ValueError('Unexpected life-counter instruction (build from the clean TOSEC snapshot)')
         snap.banks[2] = bytes(b)
         self.raw = {}
         self.patterns = {}
@@ -444,7 +445,7 @@ def auto(a, z80, name, out, say):
         a.publisher = 'Gremlin Graphics / Your Sinclair'
     if not getattr(a, 'pok', None):
         trainer = Path(out) / (name + '_checked.pok')
-        trainer.write_text('NInfinite Lives\nZ 8 38352 0 53\nY\n')
+        trainer.write_text('NInfinite Lives\nM 8 38302 0 53\nZ 8 38352 0 53\nY\n')
         a.pok = str(trainer)
     ok, patch = build(z80, out, name, say)
     patch.alt = nextboot.alt_image(patch)

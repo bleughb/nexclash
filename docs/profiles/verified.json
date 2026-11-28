@@ -1713,13 +1713,13 @@
     }
    ]
   },
-  "0560f105031c108b56687a7d2613d9f0": {
+  "3a40c5f27fb88a7f36553d75e059d732": {
    "game": "Moley Christmas",
    "doc": "moley_christmas.md",
    "nex": {
-    "plain": "647e50f38a27f8540dc33cce59538b91",
-    "sprites": "92df32d43fbb39cf61236dc3c27663a3",
-    "loading": "ea13bb79cf105a2ab438228d766616ab"
+    "plain": "ef9cbf7fca2de1b4c142ad34e7b5bf5a",
+    "sprites": "d9d24db1042374a3647a28c55a787774",
+    "loading": "b58e8005fbfd2ea5ce4af169cf90e32e"
    },
    "proof": "differential",
    "variants": [
@@ -1730,9 +1730,9 @@
      "args": [],
      "proof": "differential",
      "nex": {
-      "plain": "647e50f38a27f8540dc33cce59538b91",
-      "sprites": "92df32d43fbb39cf61236dc3c27663a3",
-      "loading": "ea13bb79cf105a2ab438228d766616ab"
+      "plain": "ef9cbf7fca2de1b4c142ad34e7b5bf5a",
+      "sprites": "d9d24db1042374a3647a28c55a787774",
+      "loading": "b58e8005fbfd2ea5ce4af169cf90e32e"
      }
     }
    ]

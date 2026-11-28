@@ -9,25 +9,29 @@
  "version": "1.0",
  "inputs": {
   "snapshot": {
-   "name": "Moley Christmas (1987)(Your Sinclair).z80",
-   "md5": "0560f105031c108b56687a7d2613d9f0",
-   "path": "moley_christmas/Moley Christmas (1987)(Your Sinclair).z80"
+   "name": "Moley Christmas (1987)(Gremlin Graphics Software - Your Sinclair).z80",
+   "md5": "3a40c5f27fb88a7f36553d75e059d732",
+   "path": "moley_christmas/Moley Christmas (1987)(Gremlin Graphics Software - Your Sinclair).z80",
+   "note": "TOSEC covertape snapshot (clean: DEC (HL) at 38302 and 38352). The earlier copy was a poked tape (\"pokebyrudy\", NOP at 38302)."
   },
   "recordings": [
    {
-    "name": "moley.rzx",
-    "md5": "112442ee33259dbbf9cec3e11e499d30",
-    "path": "moley_christmas/moley.rzx"
+    "name": "moley-clean.rzx",
+    "md5": "e8d8c72bee4d869561bb63ef8d8e09af",
+    "path": "moley_christmas/moley-clean.rzx",
+    "role": "the original recording with its start snapshot corrected to the clean byte at 38302; input frames unchanged"
    },
    {
-    "name": "ordinary-trainer-0.rzx",
-    "md5": "8882c60fea68fdd8812f5c1ac81abb07",
-    "path": "moley_christmas/ordinary-trainer-0.rzx"
+    "name": "ordinary-trainer-0-clean.rzx",
+    "md5": "2954db387a88ccb170a17cf105aff726",
+    "path": "moley_christmas/ordinary-trainer-0-clean.rzx",
+    "role": "the original recording with its start snapshot corrected to the clean byte at 38302; input frames unchanged"
    },
    {
-    "name": "trap-trainer-0.rzx",
-    "md5": "cfa3de705f9b07106f66af24c20213a9",
-    "path": "moley_christmas/trap-trainer-0.rzx"
+    "name": "trap-trainer-0-clean.rzx",
+    "md5": "20b19e49ba27f8902ee33e6e32e7d6f4",
+    "path": "moley_christmas/trap-trainer-0-clean.rzx",
+    "role": "the original recording with its start snapshot corrected to the clean byte at 38302; input frames unchanged"
    },
    {
     "name": "ordinary-trainer-1.rzx",
@@ -48,11 +52,6 @@
     "name": "Moley Christmas.pok",
     "md5": "f4826f24d48f3844275f3522735d873f",
     "path": "moley_christmas/Moley Christmas.pok"
-   },
-   {
-    "name": "Moley Christmas (1987)(Your Sinclair).Tap",
-    "md5": "c9456d09021802a7f409de4c96c8ca83",
-    "path": "moley_christmas/Moley Christmas (1987)(Your Sinclair).Tap"
    }
   ]
  },
@@ -91,9 +90,9 @@
    "--no-record"
   ],
   "rzx": [
-   "moley.rzx",
-   "ordinary-trainer-0.rzx",
-   "trap-trainer-0.rzx",
+   "moley-clean.rzx",
+   "ordinary-trainer-0-clean.rzx",
+   "trap-trainer-0-clean.rzx",
    "ordinary-trainer-1.rzx",
    "trap-trainer-1.rzx"
   ],
@@ -103,16 +102,16 @@
  },
  "outputs": {
   "plain": {
-   "file": "Moley Christmas (1987)(Your Sinclair).nex",
-   "md5": "647e50f38a27f8540dc33cce59538b91"
+   "file": "Moley Christmas (1987)(Gremlin Graphics Software - Your Sinclair).nex",
+   "md5": "ef9cbf7fca2de1b4c142ad34e7b5bf5a"
   },
   "sprites": {
-   "file": "Moley Christmas (1987)(Your Sinclair)_sprites.nex",
-   "md5": "92df32d43fbb39cf61236dc3c27663a3"
+   "file": "Moley Christmas (1987)(Gremlin Graphics Software - Your Sinclair)_sprites.nex",
+   "md5": "d9d24db1042374a3647a28c55a787774"
   },
   "loading": {
-   "file": "Moley Christmas (1987)(Your Sinclair)_sprites_loading.nex",
-   "md5": "ea13bb79cf105a2ab438228d766616ab"
+   "file": "Moley Christmas (1987)(Gremlin Graphics Software - Your Sinclair)_sprites_loading.nex",
+   "md5": "b58e8005fbfd2ea5ce4af169cf90e32e"
   }
  },
  "repro": [],
@@ -163,7 +162,7 @@
    "application": "moley_christmas.figures",
    "check": "state.rzx-differential",
    "status": "pass",
-   "build": "92df32d4",
+   "build": "d9d24db1",
    "scope": "5 recordings, 35,472 plot entries, 1,702,560 back-buffer bytes, 1,564 units and 10 negatives.",
    "evidence": "games/moley_christmas.md \"Verification\""
   }
@@ -189,8 +188,8 @@
  "checked": {
   "deps": {
    "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
-   "asm/moley_christmas_hooks.asm": "2dcf2127bac8507b",
-   "docs/profiles/moley_christmas.json": "9fed5793b726ff39",
+   "asm/moley_christmas_hooks.asm": "ce4f7208f03d80bc",
+   "docs/profiles/moley_christmas.json": "1ed372366710cc97",
    "nexclash.py": "2ac99cf4fa2917e5",
    "nexclash/analyse.py": "6f5b53f1eef456ac",
    "nexclash/auf_wiedersehen_monty.py": "f2121b537432a359",
@@ -207,7 +206,7 @@
    "nexclash/identify.py": "578e73ef2ca90c6a",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
    "nexclash/machine.py": "f681f6d4710f2169",
-   "nexclash/moley_christmas.py": "a3f53d1a01386986",
+   "nexclash/moley_christmas.py": "bb558eb08bc18762",
    "nexclash/nextboot.py": "f67deed5c0603d2a",
    "nexclash/nxc.py": "085c53b25bb6b406",
    "nexclash/nxcout.py": "30fce34750b0313b",
@@ -225,7 +224,7 @@
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "59c9ce430ec9bf6c",
+   "recipe": "c1a333d8878cd865",
    "rom": "e50ee485fb4a21d2"
   },
   "date": "2026-11-28"
@@ -233,8 +232,8 @@
  "verified": {
   "deps": {
    "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
-   "asm/moley_christmas_hooks.asm": "2dcf2127bac8507b",
-   "docs/profiles/moley_christmas.json": "9fed5793b726ff39",
+   "asm/moley_christmas_hooks.asm": "ce4f7208f03d80bc",
+   "docs/profiles/moley_christmas.json": "1ed372366710cc97",
    "nexclash.py": "2ac99cf4fa2917e5",
    "nexclash/analyse.py": "6f5b53f1eef456ac",
    "nexclash/auf_wiedersehen_monty.py": "f2121b537432a359",
@@ -251,7 +250,7 @@
    "nexclash/identify.py": "578e73ef2ca90c6a",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
    "nexclash/machine.py": "f681f6d4710f2169",
-   "nexclash/moley_christmas.py": "a3f53d1a01386986",
+   "nexclash/moley_christmas.py": "bb558eb08bc18762",
    "nexclash/nextboot.py": "f67deed5c0603d2a",
    "nexclash/nxc.py": "085c53b25bb6b406",
    "nexclash/nxcout.py": "30fce34750b0313b",
@@ -269,7 +268,7 @@
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "59c9ce430ec9bf6c",
+   "recipe": "c1a333d8878cd865",
    "rom": "e50ee485fb4a21d2"
   },
   "date": "2026-11-28"
