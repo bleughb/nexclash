@@ -16,7 +16,8 @@ smooth_bl:
         sub (hl)
         jr nc,.phase
         xor a
-.phase: ld (V_OFFSET),a
+.phase: and 0xFE                    ; even steps: a 1-pixel checkerboard moved 2 pixels lands on itself
+        ld (V_OFFSET),a
         ld c,a
         ld a,(V_NS)
         ld b,a

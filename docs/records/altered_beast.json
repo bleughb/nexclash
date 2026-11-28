@@ -86,11 +86,11 @@
   },
   "smooth": {
    "file": "altered_beast_smooth.nex",
-   "md5": "74c308766ad80bda3ab2416b59160fe5"
+   "md5": "08bc442d7dbf0fddadb85daeab12c253"
   },
   "enhanced_smooth": {
    "file": "altered_beast_enhanced_smooth.nex",
-   "md5": "1d378d7256807c1a11aa9299765acc74"
+   "md5": "d4e5be69790599be0f8c84c19f13b39b"
   }
  },
  "repro": [],
@@ -120,12 +120,12 @@
   "deps": {
    "asm/altered_beast_build.asm": "150f74d1113fecbe",
    "asm/altered_beast_hooks.asm": "32bded2f359f72bb",
-   "asm/altered_beast_smooth.asm": "95f47c4c244e8729",
+   "asm/altered_beast_smooth.asm": "bb7b0da87a8f32b4",
    "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
-   "docs/profiles/altered_beast.json": "71260c469557756a",
+   "docs/profiles/altered_beast.json": "e54f58758a883cac",
    "docs/profiles/altered_beast_enhanced.json": "13d91a293a7605ee",
    "nexclash.py": "2ac99cf4fa2917e5",
-   "nexclash/altered_beast.py": "35046cfa428a569e",
+   "nexclash/altered_beast.py": "c8dbcb16b4593174",
    "nexclash/analyse.py": "6f5b53f1eef456ac",
    "nexclash/build.py": "e632a2f1f49c8be6",
    "nexclash/coloursheet.py": "485b2bb1d7e30784",
@@ -157,8 +157,8 @@
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "880d265396aab716",
-   "rom": "8c34d957fb2cbbd0"
+   "recipe": "2f81131222fd28e0",
+   "rom": "e50ee485fb4a21d2"
   },
   "date": "2026-11-28"
  },
@@ -166,12 +166,12 @@
   "deps": {
    "asm/altered_beast_build.asm": "150f74d1113fecbe",
    "asm/altered_beast_hooks.asm": "32bded2f359f72bb",
-   "asm/altered_beast_smooth.asm": "95f47c4c244e8729",
+   "asm/altered_beast_smooth.asm": "bb7b0da87a8f32b4",
    "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
-   "docs/profiles/altered_beast.json": "71260c469557756a",
+   "docs/profiles/altered_beast.json": "e54f58758a883cac",
    "docs/profiles/altered_beast_enhanced.json": "13d91a293a7605ee",
    "nexclash.py": "2ac99cf4fa2917e5",
-   "nexclash/altered_beast.py": "35046cfa428a569e",
+   "nexclash/altered_beast.py": "c8dbcb16b4593174",
    "nexclash/analyse.py": "6f5b53f1eef456ac",
    "nexclash/build.py": "e632a2f1f49c8be6",
    "nexclash/coloursheet.py": "485b2bb1d7e30784",
@@ -203,8 +203,8 @@
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "880d265396aab716",
-   "rom": "8c34d957fb2cbbd0"
+   "recipe": "2f81131222fd28e0",
+   "rom": "e50ee485fb4a21d2"
   },
   "date": "2026-11-28"
  },

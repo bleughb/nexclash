@@ -135,8 +135,11 @@ private copy of the screen page. At raster line 257 the hook sends 6,912 screen 
 playfield offset and uploads the pending sprite attributes. A cache miss can populate a hidden pattern before
 the beat. Copper keeps rows 152 to 191 stationary. Both layers clip the playfield to x=16..231.
 
-For counter values 9 down to 1 the offset is 0, 0, 1, 2, 3, 4, 5, 6, 7. The game's coarse eight-pixel advance
-and the offset reset coincide. Scenery therefore advances one pixel on eight updates and holds on one. Sprites
+For counter values 9 down to 1 the offset is 0, 0, 0, 2, 2, 4, 4, 6, 6. The game's coarse eight-pixel advance
+and the offset reset coincide. Scenery therefore advances two pixels every second update or so. Steps are even
+because the stonework and ground are one-pixel checkerboards: a one-pixel step inverts every dot (about 25 percent
+of the playfield changed at each step, which the owner saw as heavy flicker on 2026-11-28); a two-pixel step lands
+the pattern on itself. Sprites
 subtract the same offset from their nine-bit X. A stationary counter holds the picture at its current phase.
 Music runs from the original AY interrupt routine. The two busy waits used to flash the power gauge count to
 1,000 instead of 4,000 while Smooth scroll is on, so the flash fits in one scheduled update.

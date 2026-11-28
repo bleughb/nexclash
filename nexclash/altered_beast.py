@@ -1165,7 +1165,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
             # 3. sprites = the plots in plot order, with the build's colours
             exp, code = expected_layer(get, plots, patch.colours, patch.banked)
             if patch.smooth:
-                offset = max(0, 8 - get(0x5DA3))
+                offset = max(0, 8 - get(0x5DA3)) & 0xFE   # even steps (no dither shimmer)
                 if ns.nr.get(0x26) != offset:
                     fail('wrong ULA phase', (ns.nr.get(0x26), offset))
                 exp = {(x-offset, y): v for (x, y), v in exp.items() if 16 <= x-offset <= 231}
