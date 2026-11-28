@@ -1062,7 +1062,15 @@
     "enhanced": "cf5a145118186b702f6b56b76e696e6c",
     "enhanced_loading": "b0a2eb65b2196d81ab26704b7558fb5c",
     "sprites": "ee15439f43bc1cbbe2b87a3ca8856487",
-    "sprites_loading": "3afab68205cb2cf33f9034889ed5d516"
+    "sprites_loading": "3afab68205cb2cf33f9034889ed5d516",
+    "cpu": "6d59598f8664a8256978bd2cac6497b8",
+    "cpu_enhanced": "0e00340b42de04b2241276b4fcc36cc3",
+    "cpu_enhanced_loading": "2625dae7297a996c26d49285c6f34fb9",
+    "cpu_loading": "9400b357cd6454f94f47a3cc03311d8b",
+    "mcqueen": "8681d7ef8491c8a5c71b17ea89f88a31",
+    "mcqueen_enhanced": "23981f529b0a4e6ca57ce359c203a868",
+    "mcqueen_enhanced_loading": "cd20b24059632b6900aa296f71f293a5",
+    "mcqueen_loading": "72dd767a771dcd33690555b63f7f3fe2"
    },
    "proof": "differential",
    "variants": [
@@ -1077,7 +1085,15 @@
       "enhanced": "cf5a145118186b702f6b56b76e696e6c",
       "enhanced_loading": "b0a2eb65b2196d81ab26704b7558fb5c",
       "sprites": "ee15439f43bc1cbbe2b87a3ca8856487",
-      "sprites_loading": "3afab68205cb2cf33f9034889ed5d516"
+      "sprites_loading": "3afab68205cb2cf33f9034889ed5d516",
+      "cpu": "6d59598f8664a8256978bd2cac6497b8",
+      "cpu_enhanced": "0e00340b42de04b2241276b4fcc36cc3",
+      "cpu_enhanced_loading": "2625dae7297a996c26d49285c6f34fb9",
+      "cpu_loading": "9400b357cd6454f94f47a3cc03311d8b",
+      "mcqueen": "8681d7ef8491c8a5c71b17ea89f88a31",
+      "mcqueen_enhanced": "23981f529b0a4e6ca57ce359c203a868",
+      "mcqueen_enhanced_loading": "cd20b24059632b6900aa296f71f293a5",
+      "mcqueen_loading": "72dd767a771dcd33690555b63f7f3fe2"
      }
     }
    ]

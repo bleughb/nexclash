@@ -360,6 +360,7 @@ scroll_table: dw 3263,0xAA01,3264,0xAA22,3072,0xAA44,3072,0xAA68,3072,0xAA89,307
 
 figure_hook:
         call hlib_pace_open
+figure_draw_call:
         call draw_figure
         call redirect_return
         xor a
@@ -1127,6 +1128,7 @@ prepare_figure:
         ENDM
 draw_figure:
         call prepare_figure
+.prepared:
         ld bc,0x243B
         ld a,0x54
         out (c),a
@@ -2273,21 +2275,25 @@ dialog_hook:
 ; McQueen in the cooler: with the outfit on and the hero waiting in solitary (in_solitary A13A = FF, room_index
 ; 68A0 = 24, standing on solitary_pos: map X 3A, Y 2A, low bytes) sprite 0 is a baseball thrown at the wall and caught.
 ; Otherwise sprites are off. Game RAM is only read (slots 3-5 hold it here); the step lives in page 24.
+        MACRO COOLER_LOCATION hidden
+        ld a,(0xA13A)
+        inc a
+        jr nz,hidden
+        ld a,(0x68A0)
+        cp 24
+        jr nz,hidden
+        ld a,(0x800F)           ; room positions are one byte
+        cp 0x3A
+        jr nz,hidden
+        ld a,(0x8011)
+        cp 0x2A
+        ENDM
 cooler_ball:
         ld a,(0x3E18)
         or a
+.outfit_check:
         jr z,.hide
-        ld a,(0xA13A)
-        inc a
-        jr nz,.hide
-        ld a,(0x68A0)
-        cp 24
-        jr nz,.hide
-        ld a,(0x800F)           ; room positions are one byte
-        cp 0x3A
-        jr nz,.hide
-        ld a,(0x8011)
-        cp 0x2A
+        COOLER_LOCATION .hide
 .y_check:
         jr nz,.hide
         ld a,(V_BALL)
@@ -2338,3 +2344,107 @@ halo_reverse_cross: CROSS_KERNEL dec,1
 halo_select: SELECT_PIXELS halo_forward,halo_reverse,halo_forward_cross,halo_reverse_cross
         ASSERT $ == draw_figure.select_end
         SAVEBIN "ge_halo_select.bin",halo_select,$-halo_select
+
+; McQueen-only overlays. The ordinary figure cost is set from its native geometry
+; before changing the private colour blitter inputs. The original plot follows.
+        ORG figure_draw_call
+facing_call:
+        call cooler_figure
+        SAVEBIN "ge_facing_call.bin",facing_call,$-facing_call
+
+        ORG ball_path
+glove_path:
+        db 157,112, 161,109, 165,106, 169,104, 173,102, 177,101, 181,100, 185,101
+        db 181,101, 177,102, 173,104, 169,106, 165,109, 161,111, 157,113, 153,115
+        db 153,115, 153,115, 153,115, 153,115
+        ASSERT $ == resident_end
+        SAVEBIN "ge_glove_path.bin",glove_path,$-glove_path
+
+        ORG 0x1730              ; after the last cache tag and below the library
+cooler_figure:
+        ld a,(V_KIND)
+        cp 9                    ; native 16-pixel actor blit
+        jr nz,.native
+        ld hl,(R_IY)
+        ld de,0x8000            ; only the player
+        or a
+        sbc hl,de
+        jr nz,.native
+        ld hl,(0x8015)          ; ordinary prisoner walk descriptors start at 2
+        ld de,0xCE2E
+        or a
+        sbc hl,de
+        jr nz,.native
+        ld a,(0x8017)
+        and 0x7F
+        cp 8                    ; crawling uses the wide blitter
+        jr nc,.native
+        ld a,(0x3E18)
+        or a
+.outfit_check:
+        jr z,.native
+        COOLER_LOCATION .native
+.y_check:
+        jr nz,.native
+        jr .turn
+.native:
+        jp draw_figure
+.turn:
+        call prepare_figure
+        ; The standing front (6) and back (2) are both 16x27. For other
+        ; walk phases, align the last row and retain native vertical clipping.
+        ld a,(0x8017)
+        and 7
+        ld e,a
+        add a,a
+        add a,e
+        add a,a
+        ld hl,0xCE2E+1
+        add hl,a
+        ld b,(hl)               ; unclipped native height
+        inc hl
+        ld e,(hl)
+        inc hl
+        ld d,(hl)               ; native bitmap at row zero
+        ld hl,(bitmap)
+        or a
+        sbc hl,de
+        srl l                   ; top-clipped rows, 2 bytes each
+        ld a,27
+        sub b
+        add a,l                 ; first corresponding back-view row
+        or a
+        jp p,.source
+        neg
+        ld b,a
+        ld a,(rows_left)
+        sub b
+        ret c
+        ret z
+        ld (rows_left),a
+.skip:  ld hl,(destination)
+        ld de,192
+        add hl,de
+        ld (destination),hl
+        ld hl,(foreground)
+        ld a,l
+        add a,4
+        ld l,a
+        ld (foreground),hl
+        djnz .skip
+        xor a
+.source:
+        add a,a
+        ld e,a
+        ld d,0
+        ld hl,(0xCE30)          ; descriptor 2, mirrored = up-right
+        add hl,de
+        ld (bitmap),hl
+        ld hl,(0xCE32)
+        add hl,de
+        ld (mask),hl
+        ld a,128
+        ld (mirrored),a
+        jp draw_figure.prepared
+        ASSERT $ <= library_start
+        SAVEBIN "ge_cooler_figure.bin",cooler_figure,$-cooler_figure

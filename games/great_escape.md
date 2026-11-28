@@ -19,7 +19,9 @@ drawn into the mess-hall seats (objects 5, 19) and the occupied bed (23) painted
 a baseball thrown at the cell wall and caught while McQueen waits in solitary (in_solitary A13A = FF, room_index
 68A0 = 24, hero map X/Y 3A/2A; cooler_ball in the helper block, ball_path in the resident block, V_BALL 0x3E1A), no
 game memory written; unit cases for every condition, the step wrap and a negative (the Y test removed). 1.1's .nxc
-also gets build_screen=nex. 1.0 published 2026-11-27 (jattree/nxc 5f2c3bd, PR #324). Recolour entry points
+also gets build_screen=nex. The cooler-facing test draws mirrored prisoner frame 2 on Layer 2 while the ball shows.
+The native draw uses frame 6 at the same floor position. McQueen alone carries the new code in the NXC option delta.
+1.0 published 2026-11-27 (jattree/nxc 5f2c3bd, PR #324). Recolour entry points
 (RECOLOUR/recolour) not yet: import_sheets() is this engine's painting route.
 
 ## Source and design
@@ -178,6 +180,8 @@ checked alternate archive snapshots; they are not shipped as separate working ch
 - [local: cooler ball] A sprite over the native screen can add a cosmetic detail with no game-state change: read the
   game's own flags (in_solitary, room_index, the hero's map position) at frame end, write only sprite ports and a
   page-24 counter; the verifier models ports 0x303B / 0x57 and NR 0x15 per hook, so a stray write fails.
+  For a change to the actor underneath, set the pace target from the native frame first. Give the colour blitter
+  the back bitmap, mask and mirror afterwards. Check native ink and colour against their own frames.
 
 - [local: erased halos] Preserve the colour at the destination while still applying the native mask to the
   one-bit canvas. The red-key unit starts with bright 7 and dark 135 under two erased pixels. Removing the
@@ -250,3 +254,8 @@ Source and package are ready for final visual review and upstream integration; n
 - 2026-11-27: full stamp on period-v3-halo with the DMA fix: 4 recordings identical (53158 frames, 457675 hooks),
   units and negatives pass. 1.0 published from these builds.
 - 2026-11-27: 1.1 built: the cooler ball (sprite, unit cases and a negative), McQueen's film look and the mess-hall people (art period-v5-mess); quick replay of play1 + result IDENTICAL, units pass; the owner tests before publish.
+- 2026-11-27: cooler-facing fix. OverSpec shows McQueen throwing with mirrored frame 2 and returning to the native
+  front view when the commandant arrives. Nine NEX files match 1.1 byte for byte. Only the four McQueen files change.
+  The full McQueen replay passed 53,158 frames and 457,675 hooks, including 411 turned draws. All 613 unit and
+  control cases passed. All 13 builds passed the ROM audit. JNext's four 100-update cooler windows differed from
+  the previous McQueen build by at most 0.074%. The owner test and physical Next check remain open.

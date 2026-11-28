@@ -13,9 +13,9 @@ SEE_THROUGH=255  # Source-only marker. All ordinary bright paint uses indices 0.
 # McQueen in the cooler: sprite 0 is a baseball thrown at the cell's right wall and caught (asm cooler_ball,
 # ball_path). Positions are sprite coordinates (the screen's top left is 32,32), one step per game frame.
 BALL_STEPS=20
-BALL_PATH=((162,109),(166,106),(169,103),(172,101),(175,100),(178,100),(182,100),(185,101),
-           (182,101),(178,102),(175,103),(172,104),(169,106),(166,108),(162,110),(159,113),
-           (159,113),(159,113),(159,113),(159,113))
+BALL_PATH=((157,112),(161,109),(165,106),(169,104),(173,102),(177,101),(181,100),(185,101),
+           (181,101),(177,102),(173,104),(169,106),(165,109),(161,111),(157,113),(153,115),
+           (153,115),(153,115),(153,115),(153,115))
 V_BALL=0x3E1A
 
 
@@ -203,6 +203,10 @@ class EnhancedPatch(OriginalPatch):
         private=bytearray(16384);private[8192:]=Z.rom48()[:8192]
         for key,at in (('code',0),('library',0x1800),('extra',0x1A00)):
             blob=bytes.fromhex(self.hooks[key]);private[at:at+len(blob)]=blob
+        # NXC combines the standalone outfit delta with Enhanced at menu time.
+        if mcqueen:
+            self._install_cooler_facing(private,page)
+            self.page=bytes(page)
         private[0x1DC0:0x1E00]=bytes(n//3 for n in range(64))
         # Ordinary DMA on every core (policy 1): the core 3.03 blitter path (policy 2) froze the game in OverSpec
         # (core 3.03.03) right after the key choice and was never run on hardware; it stays in the code, unused.
@@ -242,6 +246,14 @@ class EnhancedPatch(OriginalPatch):
         nr(0x43,0x10);nr(0x14,0xE3);nr(0x69,0x80 if enabled else 0);setup.append(0xC9)
         assert len(setup)<0xFF0, "Setup collides with the stub stack"
         self.setup_call,self.stub_extra=0xD000,bytes(setup)
+
+    def _install_cooler_facing(self,private,page):
+        for block in ('facing_call','cooler_figure'):
+            at=self.syms[block];data=bytes.fromhex(self.hooks[block])
+            private[at:at+len(data)]=data
+        at=self.syms['ball_path']-0x2000
+        path=bytes.fromhex(self.hooks['glove_path'])
+        page[at:at+len(path)]=path
 
     def _prepare_art(self,memory):
         colours=self.colours or bytes(7 if memory[a]&(128>>x) else 0 for a in range(16384,65536) for x in range(8))
@@ -341,8 +353,7 @@ class DrawingMemory:
         pol=self.pages[26][patch.syms["hlib_dma_policy"]]
         self.dma_allowed=bool(pol) and not hwim2
         self.blitter_allowed=core>=0x33 and pol==2         # DDMA only when the build's policy asks for it
-        blob=bytes.fromhex(patch.hooks['resident']);self.data[0x3A80:0x3A80+len(blob)]=blob
-        self.data[0x3E00:0x4000]=list(patch.page[0x1E00:0x2000])
+        self.data[0x3A80:0x4000]=patch.extra_banks[12][0x1A80:0x2000]
         canvas=[7 if memory[a]&(128>>x) else 0 for a in range(0xF290,0xFF51) for x in range(8)]+[0]*6648
         for n in range(4):
             self.pages[34+n]=canvas[n*8192:(n+1)*8192]
@@ -538,21 +549,36 @@ class CanvasOracle:
             if p.page[0x1E19] and pc!=0xE29F and 0xD1EA<=bitmap<0xD455:
                 if 20<=role<=25:base=(role-19)*8
                 elif role==0 and p.page[0x1E18]:base=56
-            for y in range(height):
-                for x in range(width*8):
-                    xx=width*8-1-x if mirrored else x;a=bitmap+y*width+xx//8
-                    bit=(m[a]>>(7-(xx&7)))&1
-                    opaque=bit or not ((m[mask+y*width+xx//8]>>(7-(xx&7)))&1)
-                    dx=x+phase;col=dx//8;fga=(fg&0xFF00)|((fg+y*4+col)&255)
-                    if not enabled[col] or not opaque or not (m[fga]&(128>>(dx&7))):continue
-                    n=(dest+y*24-CANVAS_START)*8+dx
-                    if not 0<=n<len(self.bits):raise AssertionError('Visible native figure outside canvas')
-                    self.bits[n]=bit  # The native mask still clears paper beneath an erased halo.
-                    value=p.colour_data[(a-16384)*8+(xx&7)]
-                    if value != SEE_THROUGH:
-                        self.colours[n] = value | base
-                    elif bit:
-                        raise AssertionError(('See-through on native ink', a, xx&7))
+            turn=(pc==0xE2A2 and iy==0x8000 and _word(m,iy+21)==0xCE2E and
+                  (m[iy+23]&0x7F)<8 and cooler_ball_shown(p.page[0x1E18],m))
+            def plot(bitmap,mask,mirrored,first_row,last_row,dest,fg,native_bits,painted):
+                for y in range(first_row,last_row):
+                    for x in range(width*8):
+                        xx=width*8-1-x if mirrored else x;a=bitmap+y*width+xx//8
+                        bit=(m[a]>>(7-(xx&7)))&1
+                        opaque=bit or not ((m[mask+y*width+xx//8]>>(7-(xx&7)))&1)
+                        dx=x+phase;col=dx//8;fga=(fg&0xFF00)|((fg+y*4+col)&255)
+                        if not enabled[col] or not opaque or not (m[fga]&(128>>(dx&7))):continue
+                        n=(dest+y*24-CANVAS_START)*8+dx
+                        if not 0<=n<len(self.bits):raise AssertionError('Visible native figure outside canvas')
+                        if native_bits:self.bits[n]=bit
+                        if not painted:continue
+                        value=p.colour_data[(a-16384)*8+(xx&7)]
+                        if value != SEE_THROUGH:
+                            self.colours[n] = value | base
+                        elif bit:
+                            raise AssertionError(('See-through on native ink', a, xx&7))
+            plot(bitmap,mask,mirrored,0,height,dest,fg,True,not turn)
+            if turn:
+                # Project the back descriptor from the native feet, then intersect
+                # it with the clipped native draw. Keep the one-bit oracle native.
+                front=0xCE2E+6*(m[iy+23]&7)
+                back=0xCE22+2*6
+                clipped=(bitmap-_word(m,front+2))//2
+                top=m[front+1]-m[back+1]-clipped
+                plot(_word(m,back+2),_word(m,back+4),True,max(0,-top),min(m[back+1],height-top),
+                     dest+24*top,(fg&0xFF00)|((fg+4*top)&255),False,True)
+            return turn
         elif pc==0xEED3:
             for n in range(24*128):
                 value=sum(self.bits[n*8+x]<<(7-x) for x in range(8))
@@ -618,7 +644,9 @@ def verify(patch,rzx_path,stop=None,collect=0,progress=None):
             remaining[pc+3]=SCROLL_COUNT[pc]
         for a,old,_ in patch.entries:
             if m[a:a+len(bytes.fromhex(old))]!=bytes.fromhex(old):failure('native patch-site write',f'{a:04X}')
-        try:oracle.event(pc,m,r)
+        if pc==0x9DC2 and cooler_ball_shown(patch.page[0x1E18],m):counts['cooler ball frames']+=1
+        try:
+            if oracle.event(pc,m,r):counts['turned hero draws']+=1
         except AssertionError as exc:failure('native geometry',(f'{pc:04X}',str(exc)));raise
         bad,_,_=state_trial(patch,m,r,core=0x32,reuse=mem)
         for value in bad:failure('ABI',(f'{pc:04X}',value))
@@ -808,17 +836,20 @@ def unit_tests(patch,states):
                     m=bytearray(s['memory']);a=0xCE22+figure*6;m[iy]=role
                     m[0x81AC:0x81B0]=m[a+2:a+6];m[0xE2C2]=m[0xE363]=m[a+1]
                     check('outfit and disguise',p,dict(s,memory=bytes(m)))
-    if 0x9DC2 in first:counts.update(_cooler_units(patch,first[0x9DC2],check))
+    if 0x9DC2 in first:counts.update(_cooler_units(patch,first[0x9DC2],check,first.get(0xE2A2)))
     else:counts['missing frame end state for the cooler ball!']+=1
     return counts
 
 
-def _cooler_units(patch,state,check):
+def _cooler_units(patch,state,check,figure):
     """The cooler ball: every combination of outfit, in_solitary, room and the hero's spot, the step wrap, and a
     control with the spot's Y test removed (caught by the ball shown off the spot)."""
     counts=collections.Counter()
     def outfit(p,on,step=0):
-        p=copy.deepcopy(p);page=bytearray(p.page);page[0x1E18]=int(on);page[V_BALL-0x2000]=step;p.page=bytes(page)
+        p=copy.deepcopy(p);page=bytearray(p.page);page[0x1E18]=int(on);page[V_BALL-0x2000]=step
+        if on:
+            private=bytearray(p.extra_banks[13]);p._install_cooler_facing(private,page);p.extra_banks[13]=bytes(private)
+        p.page=bytes(page)
         bank=bytearray(p.extra_banks[12]);bank[:8192]=p.page;p.extra_banks[12]=bytes(bank)
         return p
     def place(sol,room,x,y):
@@ -838,6 +869,69 @@ def _cooler_units(patch,state,check):
     except (AssertionError,ValueError,KeyError,IndexError):bad=[]
     counts['cooler ball off-spot negative detected' if any(isinstance(b,tuple) and b[0]=='cooler ball sprite' for b in bad)
            else 'cooler ball off-spot negative missed!']+=1
+    if figure:
+        counts.update(_cooler_figure_units(on,off,figure,check))
+    else:
+        counts['missing cooler figure state!']+=1
+    return counts
+
+
+def _cooler_figure_units(on,off,state,check):
+    """Draw from captured blitter state with controlled native descriptors and visibility."""
+    r=list(state['registers']);r[10:12]=[0x80,0]
+    m=bytearray(state['memory'])
+    m[0x8000]=0
+    m[0x8015:0x8017]=(0xCE2E).to_bytes(2,'little')
+    m[0xA13A],m[0x68A0],m[0x800F],m[0x8011]=0xFF,24,0x3A,0x2A
+    m[0x81A2:0x81A4]=(0xF352).to_bytes(2,'little')
+    m[0x81B0:0x81B2]=(0x8100).to_bytes(2,'little')
+    m[0x8100:0x8180]=bytes([255])*128
+    for at in (0xE319,0xE32A,0xE340,0xE3C5,0xE3D6,0xE3EC):m[at]=0x77
+    def pose(frame,skip=0,trim=0,phase=0):
+        desc=0xCE22+frame*6
+        m[0x81B7]=m[0x8017]=0x80|(frame-2)
+        m[0x8018]=phase
+        for field,at in ((2,0x81AC),(4,0x81AE)):
+            m[at:at+2]=(_word(m,desc+field)+2*skip).to_bytes(2,'little')
+        m[0xE2C2]=m[0xE363]=m[desc+1]-skip-trim
+        return dict(state,registers=r,memory=bytes(m))
+    for frame in range(2,10):
+        for skip,trim,phase in ((0,0,0),(5,3,6)):
+            check('cooler back view and floor anchor',on,pose(frame,skip,trim,phase))
+    active=pose(6)
+    check('cooler original outfit',off,active)
+    def changed(at,value):
+        data=bytearray(active['memory']);data[at]=value
+        return dict(active,memory=bytes(data))
+    for at,value in ((0xA13A,0),(0x68A0,23),(0x800F,0x3B),(0x8011,0x2B)):
+        check('original pose while ball hidden',on,changed(at,value))
+    npc=r[:];npc[11]=32
+    check('other actor in cooler',on,dict(active,registers=npc))
+    disguise=bytearray(active['memory'])
+    guard=0xCE22+30*6
+    disguise[0x8015:0x8018]=guard.to_bytes(2,'little')+b'\x80'
+    disguise[0x81AC:0x81B0]=disguise[guard+2:guard+6]
+    disguise[0xE2C2]=disguise[0xE363]=disguise[guard+1]
+    check('disguise in cooler',on,dict(active,memory=bytes(disguise)))
+
+    counts=collections.Counter()
+    def control(label,p,fixture,at,original,replacement):
+        broken=copy.deepcopy(p);code=bytearray(broken.extra_banks[13])
+        assert code[at:at+len(original)]==original,label
+        code[at:at+len(original)]=replacement;broken.extra_banks[13]=bytes(code)
+        bad=_case(broken,fixture)
+        detected=[b[0] for b in bad]==['canvas','dark canvas']
+        counts[label+(' negative detected' if detected else ' negative missed!')]+=1
+    call=on.syms['facing_call']
+    control('still front-facing in cooler',on,active,call,bytes.fromhex(on.hooks['facing_call']),
+            bytes.fromhex(on.hooks['code'])[call:call+3])
+    # Accept room 23 in place of the cooler (LD A,(68A0) / CP 24).
+    room=on.syms['cooler_figure']+bytes.fromhex(on.hooks['cooler_figure']).index(bytes.fromhex('3AA068FE18'))+4
+    control('turned outside cooler',on,changed(0x68A0,23),room,bytes([24]),bytes([23]))
+    # Model a wrongly active overlay in a build with the outfit switched off.
+    wrongly_on=copy.deepcopy(on);wrongly_on.page=off.page;wrongly_on.extra_banks[12]=off.extra_banks[12]
+    gate=on.syms['cooler_figure.outfit_check']
+    control('turned without outfit',wrongly_on,active,gate,bytes((0x28,on.syms['cooler_figure.native']-gate-2)),bytes(2))
     return counts
 
 
@@ -1056,6 +1150,7 @@ def auto(a,z80,name,out,say):
                 bad=boot_problems(path,z80,p);ok &= not bad;built.append(str(path))
                 if bad:say('Toggle    : '+str(bad))
                 entry['loading' if loaded else 'default']=path.name
+            if enabled and suffix=='mcqueen':mcqueen=p
             if enabled:row['colours']['Enhanced']=entry
             else:row.update(entry)
         if suffix=='mcqueen':toggles[title]=row
@@ -1065,7 +1160,7 @@ def auto(a,z80,name,out,say):
     (out/(name+'_outputs.json')).write_text(json.dumps(manifest,indent=2)+'\n')
     recordings=list(getattr(a,'rzx',None) or []);all_states=[]
     for recording in recordings:
-        counts,examples,states=verify(painted,recording,stop=getattr(a,'quick',None),collect=4)
+        counts,examples,states=verify(mcqueen,recording,stop=getattr(a,'quick',None),collect=4)
         all_states.extend(states);bad={k:v for k,v in counts.items() if k.endswith('!')};ok &= not bad
         say('Verify    : %s %d frames; %d hooks, registers/R/RAM/native pixels/colour pixels: %s'%(
             Path(recording).name,counts['frames'],counts['hooks'],'IDENTICAL' if not bad else bad))

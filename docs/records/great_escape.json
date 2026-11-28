@@ -129,6 +129,38 @@
   "sprites_loading": {
    "file": "great_escape_sprites_loading.nex",
    "md5": "3afab68205cb2cf33f9034889ed5d516"
+  },
+  "cpu": {
+   "file": "great_escape_cpu.nex",
+   "md5": "6d59598f8664a8256978bd2cac6497b8"
+  },
+  "cpu_enhanced": {
+   "file": "great_escape_cpu_enhanced.nex",
+   "md5": "0e00340b42de04b2241276b4fcc36cc3"
+  },
+  "cpu_enhanced_loading": {
+   "file": "great_escape_cpu_enhanced_loading.nex",
+   "md5": "2625dae7297a996c26d49285c6f34fb9"
+  },
+  "cpu_loading": {
+   "file": "great_escape_cpu_loading.nex",
+   "md5": "9400b357cd6454f94f47a3cc03311d8b"
+  },
+  "mcqueen": {
+   "file": "great_escape_mcqueen.nex",
+   "md5": "8681d7ef8491c8a5c71b17ea89f88a31"
+  },
+  "mcqueen_enhanced": {
+   "file": "great_escape_mcqueen_enhanced.nex",
+   "md5": "23981f529b0a4e6ca57ce359c203a868"
+  },
+  "mcqueen_enhanced_loading": {
+   "file": "great_escape_mcqueen_enhanced_loading.nex",
+   "md5": "cd20b24059632b6900aa296f71f293a5"
+  },
+  "mcqueen_loading": {
+   "file": "great_escape_mcqueen_loading.nex",
+   "md5": "72dd767a771dcd33690555b63f7f3fe2"
   }
  },
  "repro": [],
@@ -185,13 +217,13 @@
  "results": [],
  "checked": {
   "deps": {
-   "asm/great_escape_hooks.asm": "a39f575046fe3c69",
+   "asm/great_escape_hooks.asm": "1ce0dc1b8377528e",
    "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
    "asm/lib/hlib_iff.asm": "b63b400926847660",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
-   "docs/profiles/great_escape.json": "af70dcd21cdbdd08",
+   "docs/profiles/great_escape.json": "ae8bf28b49dfd246",
    "nexclash.py": "4a87a4de972a122f",
    "nexclash/analyse.py": "9068c7834f1f1923",
    "nexclash/build.py": "7a7bb03de0547247",
@@ -201,7 +233,7 @@
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
    "nexclash/engines.py": "ce158a77f3104b5b",
-   "nexclash/great_escape.py": "2aac2eee46f1fa48",
+   "nexclash/great_escape.py": "e5e9ec5d45ad8418",
    "nexclash/hooklib.py": "d5cfe5321e8ff038",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/identify.py": "578e73ef2ca90c6a",
@@ -224,20 +256,20 @@
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "3e26e280578839c8",
+   "recipe": "7aed8eb90db68974",
    "rom": "e50ee485fb4a21d2"
   },
   "date": "2026-11-27"
  },
  "verified": {
   "deps": {
-   "asm/great_escape_hooks.asm": "a39f575046fe3c69",
+   "asm/great_escape_hooks.asm": "1ce0dc1b8377528e",
    "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
    "asm/lib/hlib_iff.asm": "b63b400926847660",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
-   "docs/profiles/great_escape.json": "af70dcd21cdbdd08",
+   "docs/profiles/great_escape.json": "ae8bf28b49dfd246",
    "nexclash.py": "4a87a4de972a122f",
    "nexclash/analyse.py": "9068c7834f1f1923",
    "nexclash/build.py": "7a7bb03de0547247",
@@ -247,7 +279,7 @@
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
    "nexclash/engines.py": "ce158a77f3104b5b",
-   "nexclash/great_escape.py": "2aac2eee46f1fa48",
+   "nexclash/great_escape.py": "e5e9ec5d45ad8418",
    "nexclash/hooklib.py": "d5cfe5321e8ff038",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/identify.py": "578e73ef2ca90c6a",
@@ -270,7 +302,7 @@
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "3e26e280578839c8",
+   "recipe": "7aed8eb90db68974",
    "rom": "e50ee485fb4a21d2"
   },
   "date": "2026-11-27"
