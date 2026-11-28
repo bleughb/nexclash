@@ -5,7 +5,9 @@ Stage 4 (hardware). 1.6 Enhanced is ready for a KS3 check. Walk through a doorwa
 its threshold. Check the painted robot, room ink, diagonal HUD and the 1.5 foreground ordering. The default build
 matches 1.5. The measured 1.5 and 1.6 idle and walking windows both exceed the old v27 2% target (Evidence).
 Test copy: ~/nxc-test/Alien 8 1.6 test (nxc 8b1b0bc7: 1.5's fields, key and cheats; Enhanced 185d218f; build_screen=nex;
-512 cheat/option combinations checked, the default identical to 1.5 in each). Publish after the owner's KS3 test.
+512 cheat/option combinations checked, the default identical to 1.5 in each). Owner played it in OverSpec 2026-11-27:
+"alien 8 is good!". Future (owner): speed up the busy rooms (the cold room redraw runs +1.6 to +17.5% over the
+original in the pace trials; walking up to +2.8%).
 
 Earlier v1.5 (2026-11-26, branch knight-lore-clip): jattree/nxc#2 (TomCat, KS3, 1.3 and 1.4) showed
 objects drawn in the wrong order around the player, both modes: draws are now clipped to the rectangles the render pass
