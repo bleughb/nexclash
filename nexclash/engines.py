@@ -15,6 +15,7 @@ import importlib
 
 # (module, detector, extra condition on the auto arguments or None)
 ENGINES = [
+    ('batman', 'is_batman', None),                                      # Batman (Ocean, 48K), original picture
     ('cisco_heat', 'is_cisco_heat', None),                               # Cisco Heat (128K), smooth engine
     ('winter_sports', 'is_winter_sports', None),                        # Winter Sports (48K), six tape events embedded; plain build
     ('stock_car_3d', 'is_stock_car_3d', None),                           # 3D Stock Car Championship (48K)

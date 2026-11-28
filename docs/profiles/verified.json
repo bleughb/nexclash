@@ -270,6 +270,28 @@
     }
    ]
   },
+  "af9f1a6fb79c47bdf9a3ac15a5fef9c7": {
+   "game": "Batman",
+   "doc": "batman.md",
+   "nex": {
+    "plain": "0d606cdd8fddf6d61e7bc5add1c6d0cf",
+    "loading": "b09d9c7fa45c4a25df8102c73dbbc780"
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "batman",
+     "game": "Batman",
+     "doc": "batman.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "0d606cdd8fddf6d61e7bc5add1c6d0cf",
+      "loading": "b09d9c7fa45c4a25df8102c73dbbc780"
+     }
+    }
+   ]
+  },
   "1c1af4775bc0114f7b94edb7de2d4070": {
    "game": "Beyond the Ice Palace (128K)",
    "doc": "beyond_the_ice_palace.md",

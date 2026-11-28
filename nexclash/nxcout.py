@@ -421,6 +421,8 @@ def make(a, z80, out, name, spr, rep, say, colours=None, toggles=None, checks=No
     who, where = patch_by(a)
     tfile, tnote = target(a, z80)
     prf = proof(rep, h, spr_md5, getattr(a, 'quick', None), checks)
+    if getattr(a, 'display_model', None):
+        prf['display_model'] = a.display_model
     for i, n in enumerate([k for k, x in toggles.items() if x[1]], 1):     # nxc.py: a logic toggle's toggle_N line
         prf['toggle_%d' % i] = _ascii('%s; %s' % (toggles[n][2] or n, 'not verified' if prf['replay'] == 'not verified'
                                                   else 'its builds checked with the others (replay%s)' % (
@@ -428,6 +430,8 @@ def make(a, z80, out, name, spr, rep, say, colours=None, toggles=None, checks=No
     ver = version_of(h, spr_md5)
     dst = os.path.join(out, name + '.nxc')
     argv = ['make', spr, z80, '-o', dst, '--file', tfile, '--patch-version', ver]
+    if getattr(a, 'nxc_rom', None):
+        argv += ['--rom', str(a.nxc_rom)]
     for k, f in colours.items():
         argv += ['--colours', '%s=%s' % (k, f)]
     for k, (f, logic, _what, _cs) in toggles.items():

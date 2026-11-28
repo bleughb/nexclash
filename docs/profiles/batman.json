@@ -1,0 +1,13 @@
+{
+ "game": "Batman (Ocean, 1986, 48K)",
+ "engine": "batman",
+ "signature": [
+  {"addr": 36149, "bytes": "ed53d38ccd3d883a"},
+  {"addr": 34468, "bytes": "d90aa6ebb6eb0223"}
+ ],
+ "display_model": "The play area has no colour clash. Each room and its figures share the original ink on black.",
+ "trainers": [
+  {"name": "Infinite lives", "address": 36798, "original": 1, "value": 0},
+  {"name": "Immunity", "address": 39908, "original": 192, "value": 201}
+ ]
+}

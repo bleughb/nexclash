@@ -80,7 +80,8 @@ def match_release(known, got):
 
     def same(v):                                # its sprite build, and every other build it pins (a rework may pin no
         n = v['nex']                            # plain one: Atic Atac v1.3 / v1.4)
-        return n.get('sprites') is not None and n['sprites'] == got.get('sprites') and \
+        default = n.get('sprites', n.get('plain'))  # an original-display engine can declare plain as its default
+        return default is not None and default == got.get('sprites') and \
             all(n[k] == got[k] for k in got if k != 'sprites' and k in n)
     return next((v for v in variants if same(v)), None)
 
