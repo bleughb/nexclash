@@ -106,6 +106,7 @@ ENGINES = [
     ('chase_hq', 'is_chase_hq', None),                                    # Chase H.Q. (128K): Speed, Enhanced in two sets (local art)
     ('auf_wiedersehen_monty', 'is_auf_wiedersehen_monty', None),          # Auf Wiedersehen Monty (128K): figures as sprites
     ('monty_is_innocent', 'is_monty_is_innocent', None),                  # Monty is Innocent (48K): figures as sprites
+    ('moley_christmas', 'is_moley_christmas', None),                      # Moley Christmas (48K)
     ('atom_ant', 'is_atom_ant', None),                                    # Atom Ant (128K tape form): default and Enhanced
     ('silkworm', 'is_silkworm', None),                                    # Silkworm (128K): default and Enhanced
     ('ruff_and_reddy', 'is_ruff_and_reddy', None),                        # Ruff and Reddy (128K): default and Enhanced
