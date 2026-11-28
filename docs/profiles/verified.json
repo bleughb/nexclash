@@ -466,8 +466,8 @@
    "game": "Cisco Heat",
    "doc": "cisco_heat.md",
    "nex": {
-    "plain": "5a30200632338bbbf64c4e60f2174440",
-    "orig_pace": "6ebeabd1a687b6e6ad3f061f87b70037"
+    "plain": "0319b44327eebba269c88f9de9954385",
+    "orig_pace": "95421e2f3ce3534be441a24d07e1f2d5"
    },
    "proof": "differential",
    "variants": [
@@ -478,8 +478,8 @@
      "args": [],
      "proof": "differential",
      "nex": {
-      "plain": "5a30200632338bbbf64c4e60f2174440",
-      "orig_pace": "6ebeabd1a687b6e6ad3f061f87b70037"
+      "plain": "0319b44327eebba269c88f9de9954385",
+      "orig_pace": "95421e2f3ce3534be441a24d07e1f2d5"
      }
     }
    ]
