@@ -1,4 +1,6 @@
-"""Fast 48K machine (SkoolKit C simulator) with keyboard + Kempston input and RZX-exact frames."""
+"""Fast 48K / 128K machine (SkoolKit C simulator) with keyboard + Kempston input and RZX-exact frames. A 128K snapshot
+gets SkoolKit's paged memory (skoolkit.pagingtracer.Memory): 7FFD writes page as on a 128K Spectrum (until bit 5
+locks it), the frame is 70908 T, and the AY registers are kept for the snapshot blocks a recording writes."""
 import tempfile, os
 from skoolkit import CSimulator
 from skoolkit.simulator import Simulator
@@ -6,6 +8,7 @@ from skoolkit.simutils import from_snapshot, get_state, R, T, IFF, PC
 
 FAST = CSimulator is not None
 from skoolkit.snapshot import Snapshot, write_snapshot
+from skoolkit.pagingtracer import Memory
 
 FRAME_T = 69888
 ROWS = {  # port high byte -> keys for bits 0..4
@@ -47,38 +50,104 @@ def refuse_128k_rzx(path, what):
 
 
 def selfcheck():
-    """The 48K-only paths refuse a 128K snapshot and pass a 48K one (made-up snapshots and recordings; selftest
-    --tools). -> failures"""
+    """128K in the shared paths (selftest --tools; made-up snapshots, no game files). -> failures
+    - the recorder takes a 128K snapshot whose code pages banks 1 and 3 through 7FFD and writes into each; its recording
+      replays in SkoolKit's rzxplay to the same eight banks, registers and 7FFD (and the same with a 48K snapshot);
+    - analyse's access scan takes the 128K recording and places the two writes in banks 1 and 3 (rd128 / wr128);
+    - the generic TID verifier still refuses a 128K recording (a 128K engine brings its own verifier);
+    - an engine's own machine class is still taken (Recorder(..., machine=...))."""
     import shutil
-    from .rzx import write_rzx
+    import skoolkit.rzxplay as rp
+    from types import SimpleNamespace
+    from .rzx import write_rzx, parse_rzx
     from .recorder import Recorder
     from .analyse import analyse
     from .verify import verify
     bad, t = [], tempfile.mkdtemp(prefix='nexclash_m128_')
+    # 0x8000: DI; LD BC,7FFD; LD A,0x11; OUT (C),A; LD HL,C000; LD (HL),0x55; LD A,0x10; OUT (C),A; INC (HL);
+    # LD A,0x13; OUT (C),A; LD (HL),0xAA; then INC (HL) forever (bank 3 at C000: it ends on another bank than it began)
+    code = bytes.fromhex('F301FD7F3E11ED7921 00C0 3655 3E10 ED79 34 3E13 ED79 36AA 34 18FD'.replace(' ', ''))
+    per_frame = {}
     try:
         files = {}
-        for mach, ram, state in (('48K', [0] * 49152, ()), ('128K', [[0] * 16384 for _ in range(8)], ('7ffd=16',))):
+        for mach in ('48K', '128K'):
+            if mach == '48K':
+                ram = [0] * 49152
+                ram[0x4000:0x4000 + len(code)] = list(code)
+                state = ()
+            else:
+                ram = [[0] * 16384 for _ in range(8)]
+                ram[2][0:len(code)] = list(code)
+                state = ('7ffd=16',)
             z = os.path.join(t, mach + '.z80')
             write_snapshot(z, ram, ('pc=32768', 'sp=65000'), state, mach)
-            r = os.path.join(t, mach + '.rzx')
-            write_rzx(r, [(open(z, 'rb').read(), [(100, [])])])
-            files[mach] = z, r
-        z48, r48 = files['48K']
-        z128, r128 = files['128K']
-        for label, call in (('recorder', lambda: Recorder(z128, log=None)),
-                            ('analyse', lambda: analyse(None, r128, 65000)),
-                            ('verify', lambda: verify({}, None, r128))):
+            r = Recorder(z, log=None)
+            for _ in range(60):
+                r.first.append(r.m.frame())
+            # the INC (HL) / JR loop (no contention) fills each frame: fetches a frame scale with the frame length
+            per_frame[mach] = sum(f[0] for f in r.first[10:]) / len(r.first[10:])
+            out = os.path.join(t, mach + '.rzx')
+            write_rzx(out, [(r.first_z80, r.first)])
+            files[mach] = z, out, r.m
+            blocks = parse_rzx(out)
+            ctx = rp.RZXContext(None)
+            ctx.total_frames = sum(len(b.obj.frames) for b in blocks if hasattr(b.obj, 'frames'))
+            opts = SimpleNamespace(cmio=False, python=False, quiet=True, stop=0, force=False)
             try:
-                call()
-                bad.append('%s took a 128K snapshot' % label)
-            except Exception as e:              # noqa: BLE001 - only the refusal itself counts
-                if '128K snapshot' not in str(e) or '48K only' not in str(e):
-                    bad.append('%s: %s' % (label, e))
-        try:                                    # negative control: the 48K snapshot and recording pass the same guards
-            Recorder(z48, log=None)
-            refuse_128k_rzx(r48, 'analyse')
-        except ValueError as e:
-            bad.append('48K refused: %s' % e)
+                while blocks:
+                    rp.process_block(blocks.pop(0).obj, opts, 0, ctx)
+            except Exception as e:              # noqa: BLE001 - a desync is the failure reported
+                bad.append('%s recording does not replay: %s' % (mach, e))
+                continue
+            sim, m = ctx.simulator, r.m
+            if ctx.frame_count != 60:
+                bad.append('%s replay ran %d frames, not 60' % (mach, ctx.frame_count))
+            if [sim.registers[i] for i in range(25)] != [m.sim.registers[i] for i in range(25)]:
+                bad.append('%s replay registers differ from the recorder\'s' % mach)
+            if mach == '128K':
+                if [bytes(b) for b in sim.memory.banks] != [bytes(b) for b in m.sim.memory.banks]:
+                    bad.append('128K replay banks differ from the recorder\'s')
+                if sim.memory.o7ffd != m.out7ffd or m.out7ffd != 0x13:
+                    bad.append('128K paging: replay 7FFD %02X, recorder %02X (want 13)' % (sim.memory.o7ffd, m.out7ffd))
+                if m.sim.memory.banks[1][0] != 0x55 or m.sim.memory.banks[0][0] != 1:     # bank 3 counts on: the replay compare covers it
+                    bad.append('128K paging writes not in banks 1 / 3 / 0')
+                if Snapshot.get(_tmp_z80(t, m.z80_bytes())).out7ffd != 0x13:
+                    bad.append('128K snapshot block: 7FFD not the machine\'s')
+            elif bytes(sim.memory[0x4000:]) != m.view(0x4000, 0x10000):
+                bad.append('48K replay memory differs from the recorder\'s')
+        ratio = per_frame['128K'] / per_frame['48K']
+        if abs(ratio - 70908 / 69888) > 0.003:
+            bad.append('128K frame length: %.0f fetches a frame against 48K\'s %.0f (ratio %.4f, want %.4f)' % (
+                per_frame['128K'], per_frame['48K'], ratio, 70908 / 69888))
+        z128, r128, _ = files['128K']
+        # a state saved before a paging lock, restored: the CPU reads the restored bank, not the locked one
+        ram = [[0] * 16384 for _ in range(8)]
+        page = bytes.fromhex('01FD7F3E33ED791807')                         # 0x8000: page bank 3 and lock; JR 0x8010
+        loop = bytes.fromhex('3A00C032009018F8')                           # 0x8010: (9000) = (C000), loop
+        ram[2][0:len(page)] = list(page)
+        ram[2][0x10:0x10 + len(loop)] = list(loop)
+        ram[0][0], ram[3][0] = 0x11, 0x33
+        zl = os.path.join(t, 'lock.z80')
+        write_snapshot(zl, ram, ('pc=32784', 'sp=65000'), ('7ffd=16', 'iff=0'), '128K')
+        m = Machine(zl)
+        st = m.save()
+        m.sim.registers[PC] = 0x8000
+        m.frame()
+        locked = m.view(0x9000, 0x9001)[0]
+        m.load(st)
+        m.frame()
+        if locked != 0x33 or m.view(0x9000, 0x9001)[0] != 0x11 or m.out7ffd != 0x10:
+            bad.append('128K restore: CPU read %02X after load (want 11; before it %02X, want 33), 7FFD %02X' % (
+                m.view(0x9000, 0x9001)[0], locked, m.out7ffd))
+        a = analyse(None, r128, 65000)
+        if a.get('machine') != '128K' or not a['wr128'][0x4000 + 1 * 0x4000] or not a['wr128'][0x4000 + 3 * 0x4000]:
+            bad.append('analyse: 128K writes not placed in banks 1 and 3')
+        try:
+            verify({}, None, r128)
+            bad.append('the generic verifier took a 128K recording')
+        except Exception as e:                  # noqa: BLE001 - only the refusal itself counts
+            if '128K snapshot' not in str(e) or '48K only' not in str(e):
+                bad.append('verify: %s' % e)
 
         class Paged:                            # an engine's own paging model: the recorder takes it
             def __init__(self, snap):
@@ -93,6 +162,12 @@ def selfcheck():
     finally:
         shutil.rmtree(t, ignore_errors=True)
     return bad
+
+
+def _tmp_z80(d, data):
+    p = os.path.join(d, 'block.z80')
+    open(p, 'wb').write(data)
+    return p
 
 
 def parse_inputs(text):
@@ -121,10 +196,30 @@ class Machine:
         self.held = frozenset()
         self.ins = []
         self.cov = set()
+        self.is128 = isinstance(self.sim.memory, Memory)
+        if self.is128 and getattr(snap, 'machine', '128K') not in ('128K', '+2'):
+            raise Refused('%s snapshot: the shared machine models 128K / +2 paging (7FFD) only, not +2A / +3 (1FFD)'
+                          % getattr(snap, 'machine', '?'))
+        self.frame_t = getattr(self.sim, 'frame_duration', FRAME_T)     # 69888 (48K) or 70908 (128K)
+        self.out7ffd = getattr(snap, 'out7ffd', 0) if self.is128 else 0
+        self.outfffd = getattr(snap, 'outfffd', 0) or 0
+        self.ay = list(getattr(snap, 'ay', None) or [0] * 16)
         self.sim.set_tracer(self)
-        m = bytes(self.sim.memory)
-        # LD R,A breaks fetch counting by R deltas: frames that run one are re-run exactly
-        self.ldr = {a for a in range(0x4000, 65535) if m[a] == 0xED and m[a + 1] == 0x4F}
+        # LD R,A breaks fetch counting by R deltas: frames that run one are re-run exactly. 128K: every bank's
+        # LD R,A as it would sit at 0xC000, plus banks 5 and 2 at their fixed addresses
+        if self.is128:
+            mem = self.sim.memory
+            self.ldr = set()
+            for b, base in ((5, 0x4000), (2, 0x8000)) + tuple((b, 0xC000) for b in range(8)):
+                d = bytes(mem.banks[b])
+                self.ldr |= {base + o for o in range(16383) if d[o] == 0xED and d[o + 1] == 0x4F}
+            if mem.banks[5][16383] == 0xED and mem.banks[2][0] == 0x4F:      # ED at 0x7FFF, 4F at 0x8000
+                self.ldr.add(0x7FFF)
+            if mem.banks[2][16383] == 0xED and any(mem.banks[b][0] == 0x4F for b in range(8)):   # 0xBFFF / 0xC000
+                self.ldr.add(0xBFFF)
+        else:
+            m = bytes(self.sim.memory)
+            self.ldr = {a for a in range(0x4000, 65535) if m[a] == 0xED and m[a + 1] == 0x4F}
         self.exact_frames = 0
 
     # --- tracer interface ---
@@ -142,6 +237,8 @@ class Machine:
             v = 0
             for k in self.held:
                 v |= KEMPSTON.get(k, 0)
+        elif self.is128 and port & 0xC002 == 0xC000:     # AY register read-back (0xFFFD)
+            v = self.ay[self.outfffd] if self.outfffd < 16 else 0xFF
         self.ins.append(v)
         return v
 
@@ -149,6 +246,14 @@ class Machine:
         if port & 1 == 0:
             self.outfe = value
             self.border = [(0, value)]
+        if self.is128:
+            if port & 0x8002 == 0 and self.out7ffd & 32 == 0:      # 7FFD paging, as SkoolKit's rzxplay
+                self.sim.memory.out7ffd(value)
+                self.out7ffd = value
+            if port & 0xC002 == 0xC000:
+                self.outfffd = value
+            elif port & 0xC002 == 0x8000 and self.outfffd < 16:
+                self.ay[self.outfffd] = value
 
     # --- frames ---
     def frame(self, held=frozenset()):
@@ -169,7 +274,7 @@ class Machine:
         fset = set()
         fetches = 0
         pc = regs[PC]
-        while regs[T] < FRAME_T:
+        while regs[T] < self.frame_t:
             r0 = regs[R] & 0x7F
             pc = self.sim.exec_frame(100, fset, None)
             fetches += (regs[R] - r0) & 0x7F
@@ -192,7 +297,7 @@ class Machine:
         regs, mem, ops, cov = self.sim.registers, self.sim.memory, self.sim.opcodes, self.cov
         fetches = 0
         pc = regs[PC]
-        while regs[T] < FRAME_T:
+        while regs[T] < self.frame_t:
             pc = regs[PC]
             op = mem[pc]
             cov.add(pc)
@@ -213,7 +318,7 @@ class Machine:
             pass
 
         def tr(fc, pc):
-            if regs[T] >= FRAME_T:
+            if regs[T] >= self.frame_t:
                 left[0], left[1] = fc, pc
                 raise _Stop()
         try:
@@ -222,15 +327,63 @@ class Machine:
             pass
         return 65535 - left[0], left[1]
 
+    def view(self, lo, hi):
+        """bytes lo..hi-1 as the CPU sees them now (the paged bank at 0xC000 on a 128K machine)."""
+        m = self.sim.memory
+        if self.is128:
+            return bytes(m[a] for a in range(lo, hi))
+        return bytes(m[lo:hi])
+
+    def display_view(self, lo, hi):
+        """Screen / attribute bytes lo..hi-1 (0x4000-0x5AFF) as the display shows them: bank 7 when 7FFD bit 3 is set."""
+        if self.is128 and self.out7ffd & 8:
+            b = self.sim.memory.banks[7]
+            return bytes(b[a - 0x4000] for a in range(lo, hi))
+        return self.view(lo, hi)
+
+    def ram_state(self):
+        """Game RAM outside the screens, for telling inputs apart: 48K 0x5B00-0xFFFF; 128K every bank, both screens left out."""
+        if not self.is128:
+            return self.view(0x5B00, 0x10000)
+        banks = self.sim.memory.banks
+        return b''.join(bytes(banks[b][0x1B00:] if b in (5, 7) else banks[b]) for b in range(8))
+
     def save(self):
-        return (bytes(self.sim.memory), list(self.sim.registers), self.outfe)
+        if self.is128:
+            m = self.sim.memory
+            mem = (tuple(bytes(b) for b in m.banks), m.o7ffd, self.out7ffd, self.outfffd, list(self.ay))
+        else:
+            mem = bytes(self.sim.memory)
+        return (mem, list(self.sim.registers), self.outfe)
 
     def load(self, st):
         mem, regs, fe = st
-        self.sim.memory[:] = mem
-        self.sim.registers[:] = type(self.sim.registers)('H' if False else self.sim.registers.typecode, regs)
+        if self.is128:
+            banks, o7ffd, self.out7ffd, self.outfffd, ay = mem
+            m = self.sim.memory
+            for b, d in enumerate(banks):
+                m.banks[b][:] = d
+            m.out7ffd(o7ffd)
+            self.ay = list(ay)
+        else:
+            self.sim.memory[:] = mem
+        r = self.sim.registers
+        if isinstance(r, list):                         # the Python simulator's registers
+            r[:] = regs
+        else:
+            r[:] = type(r)(r.typecode, regs)
         self.outfe = fe
         self.border = [(0, fe)]
+        if self.is128 and CSimulator is not None and isinstance(self.sim, CSimulator):
+            # SkoolKit's C core keeps its own bank pointers and paging lock: start a new one from the restored state
+            fd, path = tempfile.mkstemp(suffix='.z80')
+            os.close(fd)
+            try:
+                open(path, 'wb').write(self.z80_bytes())
+                self.sim = from_snapshot(CSimulator, Snapshot.get(path), config={'int_active': 0})
+            finally:
+                os.remove(path)
+            self.sim.set_tracer(self)
 
     def z80_bytes(self):
         """Current state as .z80 bytes (for an RZX snapshot block)."""

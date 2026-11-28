@@ -33,7 +33,8 @@ sprite build (stage 3); the user can then repaint without rebuilding the engine.
       Report coverage per level (graphics bytes drawn vs the level's data): a gap visible, not guessed.
   - Sheet rules (Dean): 1:1 (one PNG pixel = one Spectrum pixel; an enlarged sheet is too big to
     paint), multi-part figures JOINED as the game draws them, a row of 8x8 swatches of the sprite
-    palette at the top, no text (1-15 for 4bpp; the full declared palette for indexed Layer 2). "Paintable only" (2026-10-14): inside a figure's box only
+    palette at the top, no text. 4bpp uses 1-15. For a wide palette, `all_swatches=True` wraps swatches.
+    "Paintable only": inside a figure's box only
     the pixels the read-back uses are grey (or coloured); a part's gap, paper the engine cannot draw
     and a pixel already shown on an earlier figure keep the background colour (read back as no paint).
   - Read-back: the user paints, keeps the size, sends it back -> the colour map

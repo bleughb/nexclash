@@ -56,7 +56,8 @@ fc_plot:
         ld hl,(fc_src)
         add a,e
         jr c,.wrap
-        call fc_copy
+        ld a,(fc_y)
+        call fc_span
         jr .row_end
 .wrap:
         ld (fc_remainder),a
@@ -66,7 +67,8 @@ fc_plot:
         sub (hl)
         pop hl
         ld c,a
-        call fc_copy
+        ld a,(fc_y)
+        call fc_span
         ld a,(fc_remainder)
         or a
         jr z,.row_end
@@ -96,8 +98,9 @@ fc_plot:
         pop hl
         ld a,(fc_remainder)
         ld c,a
-        ld b,0
-        call fc_copy
+        ld a,(fc_y)
+        inc a
+        call fc_span
 .row_end:
         ld hl,(fc_src)
         ld bc,(fc_stride)
@@ -133,6 +136,73 @@ fc_copy:
         ld (de),a
 .skip:  inc de
         djnz .pixel
+        ret
+; A = the draw-buffer row, then as fc_copy (HL source, DE destination with E = X, C = 1..64). Inside the render
+; pass (v_clip) the original copies only the rectangles it cleared to the screen (D67C): only those parts are copied.
+; -> HL = source + C, as fc_copy leaves it.
+fc_span:
+        ld b,a
+        ld a,(v_clip)
+        or a
+        ld a,b
+        ld b,0
+        jp z,fc_copy
+        ld (fs_row),a
+        ld (fs_src),hl
+        ld (fs_dst),de
+        ld a,c
+        ld (fs_n),a
+        add a,e
+        dec a
+        ld (fs_last),a
+        ld a,(v_nrects)
+        or a
+        jr z,.done
+        ld b,a
+        ld hl,v_rects
+.rect:  push bc
+        push hl
+        ld a,(fs_row)
+        cp (hl)
+        jr c,.next
+        inc hl
+        ld c,a
+        ld a,(hl)
+        cp c
+        jr c,.next
+        inc hl
+        ld a,(fs_dst)
+        cp (hl)
+        jr nc,.lo
+        ld a,(hl)
+.lo:    ld d,a
+        inc hl
+        ld a,(fs_last)
+        cp (hl)
+        jr c,.hi
+        ld a,(hl)
+.hi:    sub d
+        jr c,.next
+        inc a
+        ld c,a
+        ld b,0
+        ld a,(fs_dst)
+        neg
+        add a,d
+        ld hl,(fs_src)
+        add hl,a
+        ld a,(fs_dst+1)
+        ld e,d
+        ld d,a
+        call fc_copy
+.next:  pop hl
+        ld de,4
+        add hl,de
+        pop bc
+        djnz .rect
+.done:  ld hl,(fs_src)
+        ld a,(fs_n)
+        add hl,a
         ret
 fc_map_y:
         ld a,(fc_y)
@@ -196,6 +266,11 @@ fc_clear:
         jr c,.row
         ret
 fc_orient:db 0
+fs_row: db 0
+fs_n:   db 0
+fs_last:db 0
+fs_src: dw 0
+fs_dst: dw 0
 fc_stride:dw 0
 fc_src:dw 0
 fc_remainder:db 0

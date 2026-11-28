@@ -729,6 +729,13 @@ def unit_tests(patch, states, neg=True):
                 c['car sprites = blit ' + ('exact' if not bad else 'differs!')] += 1
                 if bad:
                     patch.unit_failures.append(('car', bad[:4]))
+                bad, mir = t_clear(patch, call)
+                c['car outline clear ' + ('exact' if not bad else 'differs!')] += 1
+                c['car outline clear mirrored'] += bool(mir and not bad)
+                if bad:
+                    patch.unit_failures.append(('clear', bad[:4]))
+                if neg and not c['negative clear caught']:
+                    c['negative clear caught'] += bool(t_clear(negative_clear(patch), call)[0])
     if neg and states:
         st = states[len(states) // 2]
         nb = negative_patch(patch)
@@ -890,6 +897,92 @@ def t_car(patch, call):
     bad += sorted((p, p in ro, p in rf) for p in ro ^ rf)
     t_car.red = len(ro)
     return bad
+
+
+def _call(m, addr, hl=None):
+    """Run the hook routine at addr to its return (pushed 0xFF00), no interrupts."""
+    mem, R = m.mem, m.R
+    if hl is not None:
+        R[6], R[7] = hl >> 8, hl & 0xFF
+    R[12] = (R[12] - 2) & 0xFFFF
+    mem[R[12]], mem[R[12] + 1] = 0x00, 0xFF
+    R[24] = addr
+    while R[24] != 0xFF00:
+        m.sim.opcodes[mem[R[24]]]()
+
+
+def _scr(y, x):
+    return 0x4000 | (y & 0xC0) << 5 | (y & 7) << 8 | (y & 0x38) << 2 | x
+
+
+def t_clear(patch, call, seed=1):
+    """car_clear: the car routine on a random back buffer (attributes paper 5 ink 0), car_present, the back
+    buffer copied to the bank 5 screen, car_clear. Expected, from the game's own drawing: the body as the
+    game blits it (the back buffer at 0x9045 in a run on a clear buffer), and the clip window from the cells
+    the game's code makes red (inside the road view); in each body row from its first to its last pixel,
+    inside the clip window, the screen shows the body's pixels only; everywhere else the copy. The back
+    buffer and BC DE HL unchanged. -> (list of differences, mirrored)"""
+    import random
+    rnd = random.Random(seed)
+    bg = bytes(rnd.randrange(256) for _ in range(0x1800))
+    body, red = [None], set()
+    for q, buf in ((patch.plain(), bytes(0x1800)), (patch, bg)):
+        m = Machine(call, q, smooth=False, ints=[])
+        mem, R = m.mem, m.R
+        for a in range(0x1800):
+            mem[0x6000 + a] = buf[a]
+        for a in range(0x7800, 0x7B00):
+            mem[a] = 0x28
+        if q is patch:
+            mem[V_CAR], mem[V_CAR + 2] = 1, 1
+        else:
+            m.watch = {0x9045}
+
+            class E(list):
+                def append(s, x):
+                    if body[0] is None:
+                        body[0] = bytes(mem[0x6000 + a] for a in range(0x1800))
+            m.events = E()
+        m.run(mem[R[12]] | mem[R[12] + 1] << 8)
+        if q is not patch:
+            red = {(a >> 5, a & 31) for a in range(0x300) if mem[0x7800 + a] & 2}
+    if body[0] is None or not red:
+        return [('no body blit or no red cells',)], 0
+    x1, x2, y1, y2 = CAR_VIEW
+    rows, cols = [r for r, c in red], [c for r, c in red]
+    x1, x2 = max(x1, min(cols) * 8), min(x2, max(cols) * 8 + 7)
+    y1, y2 = max(y1, min(rows) * 8), min(y2, max(rows) * 8 + 7)
+    _call(m, patch.syms['car_present'])
+    bb = bytes(mem[0x6000 + a] for a in range(0x1800))
+    for y in range(192):
+        for x in range(32):
+            mem[_scr(y, x)] = bb[y * 32 + x]
+    R[6], R[7] = 0x40, 0x00
+    regs = [R[i] for i in range(2, 8)]
+    _call(m, patch.syms['car_clear'])
+    bad = []
+    if bytes(mem[0x6000 + a] for a in range(0x1800)) != bb:
+        bad.append(('back buffer changed',))
+    if [R[i] for i in range(2, 8)] != regs:
+        bad.append(('registers', regs, [R[i] for i in range(2, 8)]))
+    for y in range(192):
+        bits = [x for x in range(256) if body[0][y * 32 + x // 8] & 0x80 >> (x & 7)]
+        for x in range(256):
+            got = mem[_scr(y, x // 8)] >> (7 - (x & 7)) & 1
+            inside = bits and bits[0] <= x <= bits[-1] and x1 <= x <= x2 and y1 <= y <= y2
+            want = (body[0] if inside else bb)[y * 32 + x // 8] >> (7 - (x & 7)) & 1
+            if got != want and len(bad) < 12:
+                bad.append((x, y, want, got))
+    return bad, mem[patch.syms['c_bd'] + 4]
+
+
+def negative_clear(patch):
+    """The published v1.2: no car_clear (RET at its entry)."""
+    q = Patch(patch.stages, patch.smooth)
+    page = bytearray(q.page)
+    page[q.syms['car_clear'] - 0x2000] = 0xC9
+    q.page = bytes(page)
+    return q
 
 
 def _t_load(patch, key, st):

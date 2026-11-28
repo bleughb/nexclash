@@ -1,13 +1,10 @@
-# Altered Beast (Activision 1989, 128K) - engine `altered_beast` (pilot game: unattended, no hardware)
+# Altered Beast (Activision 1989, 128K) - engine `altered_beast` (pilot game; 1.1 published)
 
 ## Next session
-Stage: 4 (hardware + colour)    State: stages 0-3 done unattended; never run on a Next or in CSpect; JNext only.
-Inputs: the pilot's run folder (altered_beast.z80 md5 9df49e05, recordings rzx/*.rzx, sheets/)
-Start with: the hardware checklist below; then a human's answers to "Defaults taken".
-Read: this file. Open: everything under "Open".
-Before any Enhanced build (Codex, 2026-11-22; default build unaffected): unit_tests' layer_check expectations use
-the original colours, not the patch's map (a correct painted build fails); a map that clears an opaque pixel drops its
-code entry, so the buffer check compares it as scenery (F86B cleared: 5 false failures by frame 430 of ab_first).
+Stage 4. Version 1.1 was published on 2026-11-27. Enhanced 1.2 (player two and the enemies painted, own palette banks) is stamped (4 recordings, both modes).
+The next hardware check is the two-player palette and the wolf flash on KS3. The scroll options and tape wait remain open.
+The source snapshot and four recordings are in `reference-local/altered_beast`. The 1.2 builds, before/after comparison,
+two gameplay renders and editable sheets are in the pilot's `runs/altered_beast/art-enhanced2/`.
 
 Techniques: `optimise.pattern-cache` (recipe, owns and results: docs/records/altered_beast.json)
 
@@ -49,8 +46,14 @@ Dropped: figure cells in row 19's 7 lines (below y 151), and pixels that wrap ro
 ## Results
 | Output | MD5 | Status |
 |---|---|---|
-| altered_beast.nex (plain, tail 0x5DD3) | 0dc7a02b9d76d52f16e92a29a240cbf8 | boot sim OK, reaches play in JNext |
-| altered_beast_sprites.nex | 91c2b6ba2a09f0c808732caa32a3cec5 | 4 RZX IDENTICAL, unit + 15 negatives; reaches play in JNext; hardware untested |
+| altered_beast.nex (plain, tail 0x5DD3) | 3a40cd83e14bad535b3f147708b2284e | boot sim OK, reaches play in JNext (pilot 0dc7a02b before the interrupt fix and automap off) |
+| altered_beast_sprites.nex | edea9ecd09412d385fc67cb8d28458bb | 1.1: 4 RZX IDENTICAL (32,291 frames); 1.0 was 87afba14 (hook code 6 bytes shorter); KS3 1.0 plays |
+| altered_beast_enhanced.nex (1.1) | a64bc996659bf73a54aba1483e8c435c | 4 RZX IDENTICAL against its map; palette negatives 4/4; 4,870 map entries |
+| altered_beast_enhanced.nex (1.2) | 758514afbb7ba14c315ff682befed834 | 8 palette banks, 7,922 paint entries, 524,800 bytes |
+
+2026-11-27 run (selftest --verify): every recording against both sprite builds IDENTICAL (ab_first 2,727, ab_walk 7,024,
+ab_level 16,526, ab_2p 6,014 frames); broken builds on the recordings 16/16 (1,500 frames: the hit flash first comes at ~610;
+600 missed the hit and player-two controls); unit tests on each build, map negative 3/3, mode negative 24/24.
 Tail: 0x5DD3-0x5E02 untouched, 0x5E03-0x5E32 write-first (scan, ab_first and ab_walk). No game ROM use.
 Speed: hook T per game frame 59-120K simulator T at 28 MHz, about 10-20K at 3.5 MHz, against a game frame of ~340K T (4.8 TV frames). JNext, plain against sprites from the same state, cold cache, 400 frames: best match of the game's variables at 13-15 TV frames behind mid level, 19 at the boss: 3-5 %. Level-end head: 5 game frames lost, since its visible rows change each step. Matches are approximate (23-24 of 501 bytes still differ).
 Colours: sheets in sheets/; recolour run on a test painting (Boss group's clear pixels black), 1.3 s, not the default: out/painted/, png/decision_boss_solid_jnext.png.
@@ -78,13 +81,65 @@ each entry both ways from 40 register states: same registers, interrupt state an
 Builds differ from the unfixed ones in those 9 bytes only. Board: unpatched crashes at ~8 s every time; fixed, 45 s of
 attract mode (hi-scores, credits, menu) and the smoke pass (dirty start, intro, play, scroll, enemies) clean.
 
+## Enhanced 1.1 colours (KS3 play test 2026-11-26: "wants Enhanced colours")
+A colour set (NXC "Enhanced"; the default stays the game's colours): docs/profiles/altered_beast_enhanced.json,
+built as altered_beast_enhanced.nex by auto. Colours from Sega's 1988 arcade original (level 1 screenshot):
+the hero skin with a red loincloth, blond hair and brown sandals; zombies in purple robes with grey heads;
+fire-coloured transformation clouds; wolves pale. First pass (pilot runs/altered_beast/art-enhanced1:
+BRIEF.md, REPORT.md, before_after.png), owner to review and clean up.
+- Palette: the map's 'palette' may change only entries no figure's cell colours use (PAL_FREE 1, 9, 12, 13:
+  blue, bright blue, bright green, bright cyan), now skin, skin shade, brown, orange-gold. A figure the map does
+  not paint keeps the game's colours exactly. The setup loads it (boot check: the loaded palette = the map's).
+- Hit flash (wolves, mode 1) and player two (mode 2) draw in the game's colours over a map (bout skips the store
+  when V_MODE is not 0): painted, both would look like the normal figure. Player two in the Enhanced set is
+  therefore the game's colour-swapped centurion (owner to decide if he should be painted too).
+- Verifier: unit tests now expect the build's own map (the review note of 2026-11-22), a pixel the map makes
+  see-through is left out of the buffer check, the map test runs on the Enhanced build too, a negative takes out
+  the mode test, palette negatives (wrong palette loaded, one bit off, a map changing a used entry).
+
+## Enhanced 1.2 colours
+
+Bank zero retains the 1.1 palette and all 63 recorded original-bank poses, including 36 player-one poses.
+Player two shares the centurion graphics and has independently editable cobalt cloth, dark hair and brown sandals.
+The zombies have purple robes and olive-grey skin. The pale wolves have grey-green shadows and flash solid cream
+inside the black silhouette. The sorcerer wears purple. The boss and flying heads use reds, ochre and dark leather tones.
+
+The plot log includes the object type. Sprite attribute 2 selects one of eight 16-colour banks, and the pattern
+cache includes the bank. The map keys include both bank and graphics address. A sparse directory fits 33 used
+colour pages into the existing 40-page allocation. Complete player-two rows upload four packed bytes directly.
+The unbanked assembler output remains the 1.1 default. In the pilot's `art-enhanced2/sheets/`, edit a group's
+`PAINTING_SPRITES.png` at native size. Use `recolour` with its matching layout and the Enhanced NEX and sidecar.
+
+On JNext, the 400-frame comparison against plain found the same best offsets for both Enhanced versions
+at mid-level, at the boss and in two-player play. The 1,000-frame two-player trace matched all 160 update times.
+Holding right for 1,500 TV frames gave 26 eight-pixel scrolls each, every ninth update. Version 1.2 completed
+236 updates to 1.1's 237. Timing fixtures preserve the live printer buffer and patch only the in-play interrupt entry.
+See the pilot's `art-enhanced2/REPORT.md` for the comparisons and hardware limits.
+
+## Scroll (KS3 play test 2026-11-26: "jerky, needs a scroll speed fix")
+Measured on the simulator (work: scratchpad probes beam.py, plots.py, ramcycle.py over ab_level and ab_walk):
+- Everything moves in 8-pixel cells: the scenery one cell every 9 game updates while the player walks at the edge
+  (the game's own 9-step counter at 0x5DA3, 9 down to 1, sets the phase), zombies a cell every 2-3 updates.
+- An update takes 4-7 TV frames (ab_level 4,000 frames: 129 x 4, 294 x 5, 221 x 6, 37 x 7, 2 x 8): the scroll is
+  an 8-pixel jump about once a second, at uneven intervals.
+- The blit takes 1.5 frames at 3.5 MHz from the interrupt: one torn frame per update (rows above ~23 new), as the
+  original. The commit runs after it, so sprites above row ~118 move one frame after the scenery at each step (ours).
+Options put to the owner (none built): a steady pace (the work at 28 MHz, a picture every 5 frames, blit and
+sprites inside the top border: no tear, no lag, steps stay 8 px); a glide (patch.figure-glide: each 8-pixel move
+spread over the next update, scenery by the ULA's hardware scroll split from the panel by the copper); a continuous
+scroll across the 9-update cycle from 0x5DA3.
+
 ## Lessons
+- [local: shared player graphics] Key the stored paint and pattern cache by palette bank as well as graphic. Packing fully painted rows kept the cold two-player uploads within the same update frames as 1.1 on the 1,000-frame JNext trace.
 - [local: speed fix] Every hook latches the caller's speed on its own stack page (V_SPD 0x8062) and gives it back
   before leaving it; fxswap too. The verifier turns the entry speed 0-3 at every hook (each about 51 times in 600
   frames); two negatives: 28 MHz left on, 3.5 MHz given back.
 - [doc BRIEFING A1] A handler that enables interrupts within ~40 T of the acknowledge runs twice per
   frame on the Next core; a 128K's 36 T /INT hides it, and emulators that take one interrupt per frame never show it.
-- [local: coloursheet.choose picks figures by key, so pixels under a second part are on no painting sheet] The painting sheet left pixels of bodies under their head parts unpainted: JNext showed a half-painted standing pose. Painting the whole-figure sheet with `recolour --layout` covers them.
+- [local: coloursheet.choose picks figures by key, so pixels under a second part are on no painting sheet] The painting sheet left pixels of bodies under their head parts unpainted: JNext showed a half-painted standing pose. Painting the whole-figure sheet with `recolour --layout` covers them. Enhanced round 1 (2026-11-27) again left 1,167 hero and zombie pixel positions off the painting sheet (whole heads in game colours): a second pass on the whole-figure sheet, redrawn with round 1's map, is part of every full repaint here.
+- [kb lesson.map-palette-free-entries: a map's palette changes only entries no figure's cell colours use] Counting the sheet's colours first showed four entries no level-1 figure uses (1, 9, 12, 13): the Magic Knight PAL_FREE rule gives an Enhanced palette with no change to any unpainted figure.
+- [local: a painted figure hides the game's colour cues] The wolves' hit flash and player two are attribute changes; painted, both look like the normal figure, so the hook draws modes 1 and 2 in the game's colours over a map (unit negative: the mode test taken out).
+- [local: scroll judder measured before any design] The jerky scroll is the game's own 8-pixel step every 9 updates at 4-7 frames each, plus our commit after a 1.5-frame blit; the game's 9-step counter (0x5DA3) is the phase a continuous scroll would need.
 - [kb lesson.clean-buffer-composers: the blit-from-clean-copy needs a clean copy that exists in memory at blit time and a game that reads neither buffer nor screen] Keeping the back buffer intact and redirecting only the blit's source gave identical game memory with one small hook; check for a clean copy first in any composer.
 - [kb lesson.recorder-128k-not-in-toolkit: 128K recording stays outside the toolkit in this pilot; BRIEFING C2 #15 already lists analyse / recorder as 48K-only] work/m128.py is 90 lines: Machine with 7FFD paging, banks in save / load. Replays cleanly through rzxplay.
 - [kb lesson.snapshot-intake-state: a snapshot's empty banks show the limit of the game before any design] Check which banks are zero at intake: a multiload game on a snapshot is one level.
@@ -111,11 +166,17 @@ attract mode (hi-scores, credits, menu) and the smoke pass (dirty start, intro, 
 3. Scroll: sprites stay aligned to the scenery; a figure at the screen's left and right edge clips cleanly.
 4. Boss scene, flying heads: no missing figures, no slowdown beyond the plain build.
 5. Two players: ENTER at the menu. Game over: banner shows, game stops at the tape loader as the plain build does.
+6. Enhanced 1.2 on KS3: compare player one's red cloth and blond hair with player two's blue cloth and dark hair. Hit a pale wolf and check that its cream flash reads against the stone. Check the purple zombies and red boss.
 
 ## Stage log
 - 2026-11-02 stages 0-3 in one session (pilot, unattended): stage 0-1 25 min, stage 2 30, stage 3 20 (two stamped runs, 7 min each), about 75 tool calls, 0 user rounds.
+- 2026-11-27 stage 4 (KS3 round): scroll measured, options to the owner; Enhanced set: palette and mode rules, verifier fixes, negatives on the recordings run by auto, paint rounds 1-2.
+- 2026-11-27 stage 4, Enhanced 1.2. Added banked paint, whole-pose sheets and a two-player colour and timing check.
 
 ## Open
-- Hardware, CSpect: never run. Speed on a board.
+- Scroll: the owner's choice among the options in "Scroll" (none built).
+- Enhanced 1.2 awaits the owner's colour review and a physical KS3 play test. The 1.1 feedback predates this repaint.
+- Game over waits for the tape for ever (the original's own loader): back to the title instead?
+- Hardware: KS3 1.0 (2026-11-26) and 1.1 (2026-11-27) played. CSpect never run.
 - Levels 2-5: tape data. A tape-based 128K route is out of this pilot.
 - Row 19 and margin-wrap pixels as above.

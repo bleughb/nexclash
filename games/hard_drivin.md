@@ -68,7 +68,7 @@ Open: route 1: the first calibration interrupt's extra ~574 T (0.06 %), sub-unit
 - 2026-11-22: stage 0-1 (route choice, feasibility). 2026-11-23: route 1 stages 2-3 (stamped); route 2 probes, build 2a,
   move-in, loading screen, trainers, .nxc (subagents: harddrivin_work\step\stage1-3_results.md, movein_results.md,
   nxc_results.md). 2026-11-24: phase 1 (opt\phase1_results.md), core 3.03 (opt\core303_results.md), investigations
-  (opt\speed_results.md, feel_results.md, steer_results.md), hardware test 3.
+  (opt\speed_results.md, feel_results.md, steer_results.md), hardware test 3. 2026-11-28: LD A,I read twice.
 
 ## Technique use
 - detect.pacing-structure: helped (no frame wait, 7-21 frame updates, the lap clock counts updates)

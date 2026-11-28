@@ -2,6 +2,9 @@
 
 ## Next session
 
+2026-11-27: 1.3 moves Enhanced's Layer 2 off bank 7 (the KS3 band, nxc#5; layout under Status, lesson below).
+Next: the owner's KS3 test of ~/nxc-test/Highway Encounter 1.3 test, then publish and reply on nxc#5.
+
 Release candidate verified on the normal DMA path; packaging handoff is in the run folder.
 Frozen implementation 1809904 on main dace0cc. Full 22306-frame verification per mode,
 all five exact NEX rebuilds, full hidden ROM and six actual-loader modes pass. No hardware test.
@@ -105,11 +108,11 @@ match the independent mask/colour model. Wrong cached pixels and positions are c
 A grouped/direct-canvas 900-frame replay passed all registers including R, original RAM
 and every changed colour group. This is not the full frozen release proof.
 
-Current layout: visible Layer2 pages 12..17, shifted figure cache pages 25..45,
+Current layout (1.3): visible Layer2 pages 22..27 (banks 11-13), shifted figure cache pages 29..49,
 expanded source/buffer pages 50..91. The final cache page holds its pointer table at
-C200 after 320 bytes of graphics. Code is owned page 24, 2200..3C78; original
+C200 after 320 bytes of graphics. Code is owned page 28, 2200..3C78; original
 font/tail backup 2000..21FF, state 3E00..3EC2, stack 3F00. Monochrome lookup
-is page 45 offset 2048..4095, after the cache/table. Game data ends at bank 45;
+is page 49 offset 2048..4095, after the cache/table. Game data ends at bank 45;
 banks 46/47 remain full hidden-ROM sources. Every mode still fits 1MB.
 
 The room attribute upload at 97DD is separate from its bitmap. New room pixels are
@@ -160,9 +163,10 @@ and whole-hook native measurement. No DMA gain or hardware result is claimed.
 
 ## Lessons
 
-- [local: Highway NXC bank layout] SET3 may add only banks 8+. Reserve unused 48K banks 6/7
-  in the default build so Enhanced can enable its Layer2 pages 12..15 without a format change.
-  The base has zero-filled banks; game-visible RAM and runtime code are unchanged.
+- [doc BRIEFING A1] Enhanced's Layer 2 at banks 6-8 (1.0-1.2) showed a 32-row band of noise on real Nexts
+  (KS3, nxc#5): the CPU's writes to page 14 land in block RAM while Layer 2 scans the SRAM copy (KS3 test D11);
+  emulators hide it, DMA or CPU copies alike. 1.3: Layer 2 banks 11-13, hook page 28, cache 29-49 (SET3 adds
+  banks 8+ only, so the base keeps no reserved banks); a build guard refuses a Layer 2 on banks 5 / 7.
 
 - [local: Highway fixed scene windows] A nested debt counter saturated during room construction.
   Two original memory-only loops have invariant 375864T/247097T budgets in 68 states across
@@ -322,3 +326,4 @@ and whole-hook native measurement. No DMA gain or hardware result is claimed.
 
 - 2026-11-10: full frozen verification stamped, exact NXC and six actual-loader modes passed.
   CPU-only transition limitation measured separately and retained in package/handoff notes.
+- 2026-11-27: KS3 band traced (review + KS3 test D11) to Layer 2 on page 14; Layer 2 moved to banks 11-13, guard, BRIEFING A1.

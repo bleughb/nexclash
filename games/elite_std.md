@@ -3,7 +3,7 @@
 Techniques: `patch.inbetween-views`, `patch.whole-altrom-image`
 
 ## Next session
-Stage: 2 (build)   State: M8 SD save / load 2026-11-24 (## SD save); record MD5s updated, selftest --verify restamped
+Stage: 2 (build)   State: M8 SD save / load 2026-11-24 (## SD save); title speed 2026-11-28
 Inputs: C:\1NEXT\elite_work\tapes\t1.tap ([a]), ejcv.tap (= t8, Joystick), e128.tap (original); work folder C:\1NEXT\elite_work\std    Branch: add-elite
 Checks: verify (full scenario set) a / jcv / e128 all cases PASS + title renders ok + negative controls caught; CSpect: title (frames) -> launch -> flight, all three
 Pending user answers: none
@@ -30,8 +30,9 @@ Open: ## Smooth title ship (M5, 2026-11-23; asm/elite_std_hooks.asm, elite_std.p
 - Verified: lockstep (title CALLs run as replaced, so the game's passes equal the original's); title_render_check: each
   render on a copy of the original put back leaves RAM as the pass left it (a 125, jcv 70, e128 120; all 8 Press Space
   models, rcheck2.py); CSpect: every displayed frame differs from the one before (m5\*_frames.png), Y / N / SPACE / 1.
+- CPU speed (2026-11-28): each pass gives back the caller's speed (was 3.5 MHz); speed_check.
 - Limits: game work at 28 MHz must stay under a frame per segment (measured at most about 0.8); a big model may need two
-  frames (counted). Not tried on hardware (DMA continuous mode, the 28 MHz copy timing are CSpect's).
+  frames (counted). Hardware: ## Open.
 
 ## Owner decisions
 (2026-11-23) rebuild for the standard releases so the game looks and starts as the original; the
