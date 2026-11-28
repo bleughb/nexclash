@@ -73,7 +73,7 @@ dumping emulator's ROM interrupt), so every space prints as two dashes once the 
 original .z80 in OverSpec does the same). Both builds write eight zero bytes there when they find that value; the
 verify replays the original with the same repair (only the two printers read those bytes: scan, 30,000 frames).
 
-Owner, 2026-11-26: Enhanced colours, every figure painted (Codex first pass from the sheet, the owner approved it).
+Owner, 2026-11-26: Enhanced colours, every figure painted (first pass from the sheet, the owner approved it).
 
 ## Enhanced colours (2026-11-26)
 - Sheet: every image the recording draws (68; the one the game builds in the printer buffer at 0x5B00 keeps its
@@ -104,11 +104,11 @@ Owner, 2026-11-26: Enhanced colours, every figure painted (Codex first pass from
   left); sprite order = object order; a pattern cache keyed by graphics address + pair.
 - Depth: NR 0x15 = 0x01 (bit 6 clear: sprite 127 on top, so later objects over earlier); the first build set 0x41
   (sprite 0 on top: the depth reversed) and the verifier, painting later sprites last whatever the setup said,
-  passed it (Codex review). render() now takes the order from the build's setup bytes.
+  passed it (review). render() now takes the order from the build's setup bytes.
 - ATTRTAB holds 102 sprites below the code (0x3400-0x35FF): the attribute writer stops there (18 adults of six
   sprites would have run into the code).
 - Hooks: own stack, the caller's speed back (HLIB_SPEED_IN / OUT), the record at 28 MHz. Builds: plain 496edfe0,
-  sprites 3232643e (record; b836bba4 before the Codex review). The start-up tail at 0x6F00 is put back before the game starts (restore_tail).
+  sprites 3232643e (record; b836bba4 before the review). The start-up tail at 0x6F00 is put back before the game starts (restore_tail).
 
 ## Results
 - 3,000 frames (simulator): zero failures; 860,219 sprite pixels compared against the model of the original's draws,
@@ -116,7 +116,7 @@ Owner, 2026-11-26: Enhanced colours, every figure painted (Codex first pass from
   address proven dead by the lockstep run-on (RUN_ON 400,000 steps; Jack's own draw takes up to ~185,000).
 - auto (2,000 frames): PASSED; units: every site at four speeds, the copy as a hide; negative controls DETECTED: no
   redirect, never mirrored, wrong colour bank, leftover sprites not hidden, the caller's speed not given back.
-- After the Codex review (2026-11-23): the final build verified over 1,000 frames with the added checks (the return
+- After the review (2026-11-23): the final build verified over 1,000 frames with the added checks (the return
   PC, no jump into a replaced instruction, no site rewritten, every hook store form modelled, the boot on through the
   tail's restore to the game start, the stacking order from the setup); six negative controls, each by its own failure.
 - The whole recording (108,043 frames): the stamp on the final build (pending).
@@ -172,7 +172,7 @@ sprites, so patterns are uploaded per figure from a cache (more figure kinds tha
 - 2026-11-23: stage 1 closed: the owner took every default (one round).
 - 2026-11-23: stage 2 (engine, verifier, units, negatives, record, .nxc), ~90 tool calls, no user rounds.
 - 2026-11-26: the owner's test: the dump's dashed spaces repaired (his answer); Enhanced colours (sheet, ovr, recolour,
-  Codex's painting approved); the shown-slot flash fixed; ~90 tool calls, 6 rounds.
+  the painting approved); the shown-slot flash fixed; ~90 tool calls, 6 rounds.
 
 ## Lessons
 - [card optimise.pattern-cache §Failure lookup] demonstrated: "never evict a shown slot" read as "used this update" let
