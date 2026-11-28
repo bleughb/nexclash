@@ -96,8 +96,7 @@ the answers in games/<game>.md.
 ## 1. Plain conversion
 `python nexclash.py convert GAME.z80 [--rzx R]` (survey does it). The user tests it on the Next
 together with the design question (stage 1), not in a round of its own.
-(128K recordings: leave out --rzx - analyse() wraps 48K memory only and stops with "N port
-reading(s) left for frame 0"; prove the tail with `scan --range` instead.)
+(128K recordings work too since 2026-11-26: below 0xC000, where the tail must end, banks 5 and 2 never move.)
 Check where the tail went (the converter prints it). It must be in memory the
 game never touches (step 3 proves this: `scan`); override with `--tail ADDR`.
 

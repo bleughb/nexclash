@@ -195,18 +195,22 @@ def plain(z80, out, an=None, log=print):
         zt.convert(z80, out, None, True, quiet=True)
         return 'default tail (no recording to check it against)'
     rd, wr = an['rd'], an['wr']
+    rbw = an.get('rbw')                 # 128K: bytes the game read before writing (a tail there is live data)
+
+    def live(lo, hi):
+        return rbw is not None and any(rbw[a] for a in range(lo, hi))
     mem = s.memory
     pb_zero = not any(mem[0x5B00:0x5B50])
     pb_free = not any(rd[a] or wr[a] for a in range(0x5B00, 0x5B50))
     default = 0x5B00 if pb_zero else sp - 96
-    if (default == 0x5B00 and pb_free) or (default != 0x5B00 and default >= an['stack_low_water']):
+    if (default == 0x5B00 and pb_free) or (default != 0x5B00 and default >= an['stack_low_water'] and not live(default, default + 96)):
         zt.convert(z80, out, None, True, quiet=True)
         return 'tail at 0x%04X (converter default, checked safe)' % default
     if pb_free:
         zt.convert(z80, out, 0x5B00, True, quiet=True)
         return 'tail at 0x5B00 (printer buffer never used by the game)'
     low = an['stack_low_water']
-    if not an['rom_used'] and sp - low >= 54:
+    if not an['rom_used'] and sp - low >= 54 and not live(low, sp):
         zt.convert(z80, out, None, True, quiet=True, patch=_PlainCompact(low, sp - low))
         return 'compact tail at 0x%04X (dead stack) + register block in RAM page at slot 1' % low
     zt.convert(z80, out, None, True, quiet=True)
