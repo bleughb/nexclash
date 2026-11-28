@@ -152,7 +152,7 @@
    "asm/dynamite_dan_keys.asm": "bc50c100f6ecee5c",
    "docs/profiles/dynamite_dan.json": "cd9aee2ce45dff5e",
    "docs/profiles/dynamite_dan_enhanced.json": "7923d79aa0f0a19f",
-   "docs/profiles/dynamite_dan_enhanced_colours.json": "34db32aa6159e6df",
+   "docs/profiles/dynamite_dan_enhanced_colours.json": "52d84a60576127e0",
    "docs/profiles/dynamite_dan_keys.json": "946c075a9cb80a4c",
    "nexclash.py": "4a87a4de972a122f",
    "nexclash/analyse.py": "9068c7834f1f1923",
@@ -187,8 +187,8 @@
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "743a5ee1734dfffa",
-   "rom": "8c34d957fb2cbbd0"
+   "recipe": "cae9f1588793a528",
+   "rom": "e50ee485fb4a21d2"
   },
   "date": "2026-11-27"
  },
@@ -200,7 +200,7 @@
    "asm/dynamite_dan_keys.asm": "bc50c100f6ecee5c",
    "docs/profiles/dynamite_dan.json": "cd9aee2ce45dff5e",
    "docs/profiles/dynamite_dan_enhanced.json": "7923d79aa0f0a19f",
-   "docs/profiles/dynamite_dan_enhanced_colours.json": "34db32aa6159e6df",
+   "docs/profiles/dynamite_dan_enhanced_colours.json": "52d84a60576127e0",
    "docs/profiles/dynamite_dan_keys.json": "946c075a9cb80a4c",
    "nexclash.py": "4a87a4de972a122f",
    "nexclash/analyse.py": "9068c7834f1f1923",
@@ -235,8 +235,8 @@
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "743a5ee1734dfffa",
-   "rom": "8c34d957fb2cbbd0"
+   "recipe": "cae9f1588793a528",
+   "rom": "e50ee485fb4a21d2"
   },
   "date": "2026-11-27"
  },
