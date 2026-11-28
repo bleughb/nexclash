@@ -23,6 +23,7 @@
 ; (mapped at slot 0, with 0xF3 0xAF at 0x0000: the draw reads 0x0000-0x0001 through its SP trick, as from the ROM).
 
         DEVICE ZXSPECTRUMNEXT
+        INCLUDE "lib/hlib_speed.asm"
 
 GAME_ISR  EQU 0xFEFE        ; the game's IM 2 handler (JR 0xFF25: the ISR body on its own stack 0xFFBF)
 STATE_PG  EQU 26            ; 8K page (bank 13 lower, from the NEX): 0xF3 0xAF, variables, saves, private stack
@@ -55,6 +56,8 @@ V_TC    EQU 0x0019          ; 3 bytes: cur value
 V_K     EQU 0x001C          ; kind (extr1)
 V_LOGI  EQU 0x001D          ; log index
 V_SP    EQU 0x001E          ; the game's SP in pre
+V_UP    EQU 0x0020          ; 1: a pass is open at 28 MHz (p_top), V_SPD holds the speed to give back
+V_SPD   EQU 0x0021          ; the caller's CPU speed (lib/hlib_speed.asm latch)
 V_HALT  EQU 0x0060          ; 1: this title loop HALTs once a pass (h_prej)
 S_PREV  EQU 0x0090          ; 29 bytes: slot 0..26 + blueprint, last pass
 S_CUR   EQU 0x00B0          ; 29 bytes: this pass
@@ -119,8 +122,7 @@ pre:    nextreg 0x50,STATE_PG
 pre_c:  ld (V_HALT),a
         pop af
         jp p_pre
-pre_x:  nextreg 0x50,0xFF
-        nextreg 0x07,0                  ; 3.5 MHz
+pre_x:  nextreg 0x50,0xFF               ; (the speed: p_pre's exit)
         ret
 
 ; ---------------------------------------------------------------------------------------------- SD save / load
@@ -176,7 +178,13 @@ prm_end:
         ds 0x0100 - $, 0
 
 p_top:
-        nextreg 0x07,3                  ; 28 MHz: the game's pass
+        ld a,(V_UP)                     ; (A, F, B, C: h_top saved them)
+        or a
+        jr nz,.up                       ; a pass that never reached its copy: the latch still holds the caller's speed
+        inc a
+        ld (V_UP),a
+        HLIB_SPEED_IN_ABC V_SPD         ; the caller's speed (the player's F8) latched
+.up:    nextreg 0x07,3                  ; 28 MHz: the game's pass
         call phase
         ld (V_P0),hl
         ld hl,(prm.clear)
@@ -348,7 +356,13 @@ p_pre:
         pop hl
         pop de
         pop bc
-        pop af
+        ld a,(V_UP)                     ; the pass's 28 MHz ends here: the caller's speed back, not a fixed 3.5 MHz
+        or a
+        jr z,.ks                        ; no pass open (a prompt alone): the speed is the caller's already
+        xor a
+        ld (V_UP),a
+        HLIB_SPEED_OUT_A V_SPD
+.ks:    pop af
         ld sp,(V_SP)
         jp pre_x
 
@@ -743,7 +757,7 @@ sd_main:
         ld (V_LOAD),a
         ld a,c
         ld (sd_ext+3),a
-        ld a,i
+        ld a,i                          ; I as a value
         ld (V_I),a
         ld a,SD_I
         ld i,a

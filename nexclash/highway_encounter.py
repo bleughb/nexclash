@@ -23,7 +23,11 @@ TRAINERS = {
 GRAPHIC_RANGES = ((0x5b01,0x5bd7),(0x5e60,0x6420),(0x7100,0x7900),(0x9544,0x95e2),
                   (0xa490,0xa4ed),(0xab00,0xb0a0),(0xb8f0,0xd900))
 
-CACHE_PAGES = tuple(range(25,46))
+# 8K pages. Layer 2 (Enhanced) shows 16K banks 11-13 = pages 22-27, clear of banks 5 and 7: on a Next the CPU's
+# writes to pages 10 and 14 go to on-chip block RAM while Layer 2 scans the SRAM twin (KS3 test D11; jattree/nxc#5).
+L2_BANK, L2_PAGE, HOOK_PAGE = 11, 22, 28
+CACHE_PAGES = tuple(range(29,50))
+CACHE_LAST = CACHE_PAGES[-1]
 ENTRY = 0xB0E0
 TAIL_ADDR = 0x5C80
 CMP = tuple(hooklib.CMP_R)
@@ -181,7 +185,7 @@ class Patch:
                 palette += bytes([_opaque(r,g,b),b&1]) if i!=227 else bytes([0xE3,0])
             self.stub_extra += bytes(256-len(self.stub_extra))+bytes.fromhex(h['colour_setup'])+palette
             self.setup_call = 0xD100
-        self.slot1 = (24, self.syms['regblock'])
+        self.slot1 = (HOOK_PAGE, self.syms['regblock'])
         self.altrom = self.altrom0 = (self.syms["rom_start"], 0x3E00)
         self.page = bytearray(zt.rom48()[0x2000:0x4000])
         self.page[self.syms["rom_start"]-0x2000:self.syms["rom_start"]-0x2000+len(self.code)] = self.code
@@ -189,9 +193,11 @@ class Patch:
         self.page[0x1E00:0x1F00] = bytes(256)
         self.sites = [(a,old,b'\xc3'+zt.w16(self.syms[name])+bytes(len(old)-3))
                       for a,(old,name,_) in self.site_map.items()] if enabled else []
-        # SET3 options may add only banks8+. Reserve Layer2 banks6/7 in the
-        # base too;48K gameplay never maps them, and their zero payload is tiny.
-        self.extra_banks = {6:bytearray(16384),7:bytearray(16384)}
+        # Layer 2 lives in banks 11-13 (SET3 may add only banks 8+); the base needs no reserved banks.
+        self.extra_banks = {}
+        l2 = self.stub_extra.find(b'\xed\x91\x12')         # the setup's NEXTREG $12 (Layer 2's first 16K bank)
+        if colour_source and (l2 < 0 or self.stub_extra[l2+3] != L2_BANK or {5, 7} & set(range(L2_BANK, L2_BANK+3))):
+            raise ValueError('Layer 2 must start at bank %d, clear of banks 5 and 7 (block RAM to the CPU)' % L2_BANK)
 
     def apply(self, snap):
         if self.resume:
@@ -219,8 +225,8 @@ class Patch:
             for page,data in self.colours.items():
                 bank=self.extra_banks.setdefault(page//2,bytearray(16384))
                 bank[(page&1)*8192:(page&1)*8192+8192]=data
-        self.extra_banks[12] = bytes(self.page)+bytes(
-            self.colours[25] if self.colour_source else bytes(8192))
+        self.extra_banks[HOOK_PAGE//2] = bytes(self.page)+bytes(
+            self.colours[HOOK_PAGE+1] if self.colour_source else bytes(8192))
         for a,(old,_,_) in self.site_map.items():
             if ram[a-0x4000:a-0x4000+len(old)] != old:
                 raise ValueError('Original patch bytes differ at '+hex(a))
@@ -294,12 +300,12 @@ class HookMemory:
         if isinstance(a,slice):
             return bytes(self[i] for i in range(*a.indices(65536)))
         if 0x2000 <= a < 0x4000:
-            if self.model and self.model.nr.get(0x51,255) == 24:
+            if self.model and self.model.nr.get(0x51,255) == HOOK_PAGE:
                 return self.page[a-0x2000]
             return self.patch.page[a-0x2000]
         return self.ram[a]
     def __setitem__(self,a,v):
-        if 0x2000 <= a < 0x4000 and self.model and self.model.nr.get(0x51,255) == 24:
+        if 0x2000 <= a < 0x4000 and self.model and self.model.nr.get(0x51,255) == HOOK_PAGE:
             self.page[a-0x2000] = v
         elif a >= 0x4000:
             self.ram[a] = v
@@ -327,7 +333,7 @@ def colour_location(address):
         return 50+offset//8192,offset%8192
     y = ((address>>8)&7)|((address>>2)&0x38)|((address>>5)&0xC0)
     offset = y*256+(address&31)*8
-    return 12+offset//8192,offset%8192
+    return L2_PAGE+offset//8192,offset%8192
 
 def painting_frames():
     for i in range(57):yield i,0xB8F0+144*i,(i%8)*32,(i//8)*32
@@ -397,8 +403,8 @@ def colour_assets(path,memory,patch):
         if data[p+8]!=memory[a]:
             raise ValueError('Colour graphics differ at '+hex(a))
         return bytes(sum(((data[p+k]>>(7-b))&1)<<k for k in range(8)) for b in range(8))
-    colours={n:bytearray(8192) for n in (*range(12,18),*range(50,92),*CACHE_PAGES)}
-    for n in range(12,18):colours[n][:]=bytes([227])*8192
+    colours={n:bytearray(8192) for n in (*range(L2_PAGE,L2_PAGE+6),*range(50,92),*CACHE_PAGES)}
+    for n in range(L2_PAGE,L2_PAGE+6):colours[n][:]=bytes([227])*8192
     # F260 changes 5B00 from 68 to 65 before B0E0. That loader byte is not
     # source-matched artwork; leave its mirror monochrome. Text uses the ULA.
     if patch.painting:
@@ -434,10 +440,10 @@ def colour_assets(path,memory,patch):
     for i,page in enumerate(CACHE_PAGES):
         block=cache[i*8192:(i+1)*8192];colours[page][:len(block)]=block
     offset=patch.syms['colour_cache_table']-0xC000
-    colours[45][offset:offset+len(table)]=table
+    colours[CACHE_LAST][offset:offset+len(table)]=table
     if len(cache)>20*8192+2048 or offset+len(table)>2048:
         raise ValueError('Monochrome lookup overlaps figure cache')
-    colours[45][2048:4096]=bytes(255 if value&(128>>bit) else 0
+    colours[CACHE_LAST][2048:4096]=bytes(255 if value&(128>>bit) else 0
                                for value in range(256) for bit in range(8))
     return colours
 
@@ -446,7 +452,7 @@ class ColourMemory(HookMemory):
         super().__init__(memory,patch,page)
         self.colour_writes = set()
         self.colours = colours if colours is not None else {
-            n:bytearray(8192) for n in (*range(12,18),*range(50,92))}
+            n:bytearray(8192) for n in (*range(L2_PAGE,L2_PAGE+6),*range(50,92))}
     def __getitem__(self,a):
         if not isinstance(a,slice) and a>=0xA000 and self.model:
             bank=self.model.nr.get(0x50+(a>>13),(a>>13)-6)
@@ -702,8 +708,8 @@ def verify(patch,rzx_path,stop=None,collect=0,progress=None):
      want=3 if pc in(0x985a,0x9822,0x95ef,0x976d) else 0 if closes else speed
      if model.nr[7]!=want:failure('clock',[hex(pc),model.nr[7],want])
      for pg,group in view.colour_writes:
-      if 12<=pg<18:
-       off=(pg-12)*8192+group*8;y,x=divmod(off,256)
+      if L2_PAGE<=pg<L2_PAGE+6:
+       off=(pg-L2_PAGE)*8192+group*8;y,x=divmod(off,256)
        dirty.add(0x4000+(y&7)*256+(y&0x38)*4+(y&0xc0)*32+x//8)
       elif 50<=pg<92:dirty.add(0x5800+(pg-50)*1024+group)
       else:failure('write to immutable graphics',{'page':pg,'group':group})
@@ -725,7 +731,7 @@ def unit_colour_pixels(p):
     from .dizzy6 import _rw_simulator
     snap=prepared(p.source);mem=bytes(16384)+snap.banks[5]+snap.banks[2]+snap.banks[0]
     view=ColourMemory(mem,p,colours={n:bytearray(v)for n,v in p.colours.items()});sim=simpool.machine(_rw_simulator(),view,[0]*29,'highway-colour-plot')
-    model=HookModel(sim,3);view.model=model;model.nr[0x51]=24
+    model=HookModel(sim,3);view.model=model;model.nr[0x51]=HOOK_PAGE
     rng=random.Random(83);counts=0;times=[]
     oracle=ColourOracle(p);oracle.on_sim(SimpleNamespace(registers=[0]*29,memory=list(mem)))
     for frame in range(57):

@@ -122,29 +122,29 @@
   },
   "sprites": {
    "file": "arc_of_yesod_sprites.nex",
-   "md5": "93c1ac4a53c5d0db83b451ed53d727bb"
+   "md5": "409421e631796f8c5d4c250103abb22f"
   },
   "enhanced": {
    "file": "arc_of_yesod_enhanced.nex",
-   "md5": "dcbc7fa189c093aa4d728f358546a9ba"
+   "md5": "fd94d49792885b3d23b06889b039f479"
   },
   "sprites_loading": {
    "file": "arc_of_yesod_sprites_loading.nex",
-   "md5": "858ec5cda7dc2782664ed2247310589c"
+   "md5": "71f9d93964c723c65568a8b2a2559d67"
   },
   "enhanced_loading": {
    "file": "arc_of_yesod_enhanced_loading.nex",
-   "md5": "62b922d83ab47c6abf8f895c7a7af110"
+   "md5": "bfa951c58d234fdc36335c9bb56523d8"
   }
  },
  "repro": [],
  "status": {
   "title": "The Arc of Yesod (128K)",
   "engine_col": "arc_of_yesod (arc_of_yesod.md)",
-  "build": "arc_of_yesod_sprites.nex 97828809 (every figure a sprite in its own colour, scenery on the ULA; a port of the Nodes of Yesod engine) + Enhanced d183181a (the painted colours of 36 graphics carried over from Nodes of Yesod; Arc's own figures not painted yet); with the 128K tape's loading screen beside the snapshot the two _loading builds (fda37475, 49b7ac9d) are what the .nxc holds",
-  "software": "Verify IDENTICAL on 11 recordings, 30,837 frames (R compared): the owner's play in Fuse (arc_h1, 7,880 frames, 37 rooms, autosaves stripped) and 10 scripted (8 from the archive snapshot through the hatch; a teleporter and the out-of-time screen from poked states); unit PASS (1,254 positions, 114 graphics); 30 of 30 broken builds detected",
+  "build": "arc_of_yesod_sprites.nex 409421e6 (every figure a sprite in its own colour, scenery on the ULA; a port of the Nodes of Yesod engine) + Enhanced fd94d497 (the owner's painting of every figure, 2026-11-26: Arc's own figures, the 36 carried from Nodes of Yesod, front-facing Charlie's live tiles); with the 128K tape's loading screen beside the snapshot the two _loading builds (71f9d939, bfa951c5) are what the .nxc holds",
+  "software": "Verify IDENTICAL on 11 recordings, 30,837 frames (R compared): the owner's play in Fuse (arc_h1, 7,880 frames, 37 rooms, autosaves stripped) and 10 scripted (8 from the archive snapshot through the hatch; a teleporter and the out-of-time screen from poked states); unit PASS (1,254 positions, 114 graphics); 31 of 31 broken builds detected (one: front-facing Charlie's live tiles without the painted colours)",
   "hardware": "untested (starts and plays in OverSpec)",
-  "next": "pace measurement; hardware test; the owner paints Arc's own figures"
+  "next": "pace measurement; hardware test"
  },
  "checks": [
   "asm2profile:arc_of_yesod"
@@ -566,62 +566,82 @@
  },
  "checked": {
   "deps": {
-   "asm/arc_of_yesod_hooks.asm": "9e3d19b59ba4f32e",
+   "asm/arc_of_yesod_hooks.asm": "bcfb20eb3bfc1cc6",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
-   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "docs/profiles/arc_of_yesod.json": "9f0ee3574e652915",
-   "docs/profiles/arc_of_yesod_colours.json": "494b8cf0008aaffa",
+   "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
+   "docs/profiles/arc_of_yesod.json": "5797fa24a8458f86",
+   "docs/profiles/arc_of_yesod_colours.json": "fe47943e1beb307c",
    "docs/profiles/arc_of_yesod_palette.json": "8f5ea9221fdfab94",
-   "nexclash.py": "04157df11540c17d",
-   "nexclash/arc_of_yesod.py": "d4cb08645b69c50c",
+   "nexclash.py": "4a87a4de972a122f",
+   "nexclash/analyse.py": "9068c7834f1f1923",
+   "nexclash/arc_of_yesod.py": "5ec6e09783d55bc2",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "b22123bdf2572c9b",
+   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
-   "nexclash/engines.py": "2abd23b537c0b5d4",
-   "nexclash/nextboot.py": "9272cb3a8c980c98",
-   "nexclash/recolour.py": "6f27e87ef0c47a17",
-   "nexclash/records.py": "a8919d2869b77132",
-   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/engines.py": "9666a7f032696532",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/machine.py": "9c057372f6e27d70",
+   "nexclash/nextboot.py": "f67deed5c0603d2a",
+   "nexclash/nxc.py": "d4c135babd8cd53e",
+   "nexclash/nxcout.py": "f1bf468312cb5367",
+   "nexclash/recolour.py": "28ecc65866678e42",
+   "nexclash/recorder.py": "e5b5892fa1da208b",
+   "nexclash/records.py": "6401367eddcf12a0",
+   "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
+   "nexclash/rzx.py": "90008c9ca09c51bc",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
-   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
    "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/userflow.py": "6779aabcf5d969cf",
+   "nexclash/verify.py": "e49b2afbdf721760",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "50684436558662bd",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "73a12a626c137158",
-   "rom": "8c34d957fb2cbbd0"
+   "recipe": "ad30dc1cc1ec455f",
+   "rom": "sinclair"
   },
-  "date": "2026-11-20"
+  "date": "2026-11-26"
  },
  "verified": {
   "deps": {
-   "asm/arc_of_yesod_hooks.asm": "9e3d19b59ba4f32e",
+   "asm/arc_of_yesod_hooks.asm": "bcfb20eb3bfc1cc6",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
-   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "docs/profiles/arc_of_yesod.json": "9f0ee3574e652915",
-   "docs/profiles/arc_of_yesod_colours.json": "494b8cf0008aaffa",
+   "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
+   "docs/profiles/arc_of_yesod.json": "5797fa24a8458f86",
+   "docs/profiles/arc_of_yesod_colours.json": "fe47943e1beb307c",
    "docs/profiles/arc_of_yesod_palette.json": "8f5ea9221fdfab94",
-   "nexclash.py": "04157df11540c17d",
-   "nexclash/arc_of_yesod.py": "d4cb08645b69c50c",
+   "nexclash.py": "4a87a4de972a122f",
+   "nexclash/analyse.py": "9068c7834f1f1923",
+   "nexclash/arc_of_yesod.py": "5ec6e09783d55bc2",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "b22123bdf2572c9b",
+   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
-   "nexclash/engines.py": "2abd23b537c0b5d4",
-   "nexclash/nextboot.py": "9272cb3a8c980c98",
-   "nexclash/recolour.py": "6f27e87ef0c47a17",
-   "nexclash/records.py": "a8919d2869b77132",
-   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/engines.py": "9666a7f032696532",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/machine.py": "9c057372f6e27d70",
+   "nexclash/nextboot.py": "f67deed5c0603d2a",
+   "nexclash/nxc.py": "d4c135babd8cd53e",
+   "nexclash/nxcout.py": "f1bf468312cb5367",
+   "nexclash/recolour.py": "28ecc65866678e42",
+   "nexclash/recorder.py": "e5b5892fa1da208b",
+   "nexclash/records.py": "6401367eddcf12a0",
+   "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
+   "nexclash/rzx.py": "90008c9ca09c51bc",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
-   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
    "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/userflow.py": "6779aabcf5d969cf",
+   "nexclash/verify.py": "e49b2afbdf721760",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "50684436558662bd",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "73a12a626c137158",
-   "rom": "8c34d957fb2cbbd0"
+   "recipe": "ad30dc1cc1ec455f",
+   "rom": "sinclair"
   },
-  "date": "2026-11-20"
+  "date": "2026-11-26"
  }
 }

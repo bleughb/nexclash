@@ -1441,7 +1441,7 @@ h_copy: push af
 .go:    call .cp
         pop af
         ret
-.cp:    call car_present
+.cp:    call cc_pre                     ; car_present; car_clear after the copy
         ld a,(v_fast)
         or a
         jp z,G_COPY
@@ -2014,7 +2014,9 @@ c_cl    EQU c_al+2                      ; this frame's clip window: x1, x2, y1, 
 c_cpd   EQU c_cl+4                      ; the presented frame's
 c_pre   EQU c_cpd+4                     ; 1: the car's images are in the cache (car_pre)
 c_tf    EQU c_pre+1                     ; 1: car_t0 read the clock
-CAR_END EQU c_tf+1
+c_bd    EQU c_tf+1                      ; this frame's body blit (car_clear): c_tmp's first 8 bytes at car_note0
+                                        ; (source, rows, width, mirrored, row, leftmost column, skip)
+CAR_END EQU c_bd+8
         ASSERT CAR >= v_prof+P_LEN
         ASSERT CAR_END <= 0x7D7D
 
@@ -2264,7 +2266,7 @@ car_note0:
         call car_add
         call car_t1
 .fd:    ld e,a                          ; A = entry: the part's record
-        ld a,(c_pcar)
+        call cn_bd                      ; A = c_pcar (the body's blit noted for car_clear)
         ld hl,c_fr
         dec a
         jr z,.p1
@@ -2831,6 +2833,255 @@ mirt:                                   ; a byte's bits reversed (h_spr)
         EDUP
 regblock:
         ds 32
+
+; ================================================================== the car's outline (v1.3, after the tables: no
+; earlier address moves, so the game's site bytes and the stub stay as v1.2's)
+; cc_pre: from h_copy's copy (CALL at its start; HL the back buffer, DE the hidden screen): car_present, then
+; the copy runs on and returns into cc_post, which clears the car's outline on that screen (car_clear) and
+; returns to h_copy. Registers as the copy leaves them; AF lost (h_copy keeps A).
+cc_pre: call car_present
+        ex (sp),hl                      ; HL = the copy's next instruction; (SP) = the back buffer
+        ld (CC_RB),hl
+        pop hl
+        push de                         ; the screen, for cc_post
+        push hl
+        ld hl,cc_post
+        ex (sp),hl                      ; [cc_post][screen]
+        push hl
+        ld hl,(CC_RB)
+        ex (sp),hl                      ; HL = the back buffer again
+        ret                             ; on with the copy
+cc_post:
+        ex (sp),hl                      ; H = the screen's high byte; (SP) = the copy's HL
+        call car_clear
+        pop hl
+        ret
+
+; cn_bd: from car_note0 with a part's record due: the body's blit (c_tmp's first 8 bytes) into c_bd. A = c_pcar.
+cn_bd:  ld a,(c_pcar)
+        dec a
+        jr nz,.x
+        push bc
+        push de
+        push hl
+        ld hl,c_tmp
+        ld de,c_bd
+        ld bc,8
+        ldir
+        pop hl
+        pop de
+        pop bc
+.x:     ld a,(c_pcar)
+        ret
+
+; car_clear: from h_copy after the copy (H = the hidden screen's high byte, 0x40 or 0xC0). The game ORs the
+; car's body over what it drew there (no mask), so road lines, posts and other cars showed through the car:
+; red in the original's red cells, black between the car's red sprites. In the presented frame's body blit
+; (c_bd), each row from its first to its last pixel and inside the clip window (c_cpd), the screen keeps
+; only the car's pixels: the paper shows there, as in the original where nothing is behind the car. The
+; back buffer is not touched. Registers kept but AF; c_tmp is scratch.
+CC_HI   EQU c_tmp+0                     ; 0x00 / 0x80: the screen at 0x4000 / 0xC000
+CC_ST   EQU c_tmp+1                     ; source stride (width + skip)
+CC_Y    EQU c_tmp+2                     ; the row's screen y
+CC_IF   EQU c_tmp+3                     ; the row's first and last source byte with pixels
+CC_IL   EQU c_tmp+4
+CC_X1   EQU c_tmp+5                     ; the clip window's columns
+CC_X2   EQU c_tmp+6
+CC_RB   EQU c_tmp+7                     ; the row's screen address (2 bytes)
+car_clear:
+        ld a,(c_race)
+        or a
+        ret z
+        ld a,(c_pd)                     ; the body is in the presented frame
+        or a
+        ret z
+        push bc
+        push de
+        push hl
+        push ix
+        ld a,h
+        and 0x80
+        ld (CC_HI),a
+        ld ix,c_bd
+        ld a,(ix+3)
+        add a,(ix+7)
+        ld (CC_ST),a
+        ld a,(c_cpd+0)
+        rrca
+        rrca
+        rrca
+        and 31
+        ld (CC_X1),a
+        ld a,(c_cpd+1)
+        rrca
+        rrca
+        rrca
+        and 31
+        ld (CC_X2),a
+        ld a,(ix+5)
+        ld (CC_Y),a
+        ld l,(ix+0)
+        ld h,(ix+1)
+        ld b,(ix+2)
+.r:     push bc
+        push hl
+        ld a,(c_cpd+2)                  ; y1 <= y <= y2
+        ld c,a
+        ld a,(CC_Y)
+        cp c
+        jr c,.n
+        ld c,a
+        ld a,(c_cpd+3)
+        cp c
+        call nc,cc_row
+.n:     pop hl
+        ld a,(CC_ST)
+        add hl,a
+        ld a,(CC_Y)
+        inc a
+        ld (CC_Y),a
+        pop bc
+        djnz .r
+        pop ix
+        pop hl
+        pop de
+        pop bc
+        ret
+
+; cc_row: HL = a body row's source, C = its screen y (IX = c_bd). AF BC DE HL lost.
+cc_row: ld b,(ix+3)                     ; the first source byte with pixels
+        ld e,0
+        push hl
+.f:     ld a,(hl)
+        or a
+        jr nz,.ff
+        inc hl
+        inc e
+        djnz .f
+        pop hl
+        ret                             ; no pixels in this row
+.ff:    ld a,e
+        ld (CC_IF),a
+        pop hl
+        push hl
+        ld a,(ix+3)                     ; ... and the last
+        dec a
+        ld d,a
+        add hl,a
+.l:     ld a,(hl)
+        or a
+        jr nz,.lf
+        dec hl
+        dec d
+        jr .l
+.lf:    ld a,d
+        ld (CC_IL),a
+        ld d,c                          ; the row's screen address (PIXELAD: D = y, E = x)
+        ld e,0
+        pixelad
+        ld a,(CC_HI)
+        or h
+        ld h,a
+        ld (CC_RB),hl
+        pop hl
+        ld a,(CC_IF)
+        ld b,a                          ; B = the source byte
+        add hl,a
+.b:     ld c,(hl)                       ; C = the byte as shown, E = its column
+        ld a,(ix+4)
+        or a
+        jr z,.nm
+        ld e,c
+        ld d,high mirt
+        ld a,(de)
+        ld c,a
+        ld a,(ix+3)                     ; mirrored: leftmost + width - 1 - B
+        dec a
+        sub b
+        jr .cd
+.nm:    ld a,b
+.cd:    add a,(ix+6)
+        ld e,a
+        ld a,(CC_X1)
+        ld d,a
+        ld a,e
+        cp d
+        jr c,.sk                        ; left of the clip window
+        ld a,(CC_X2)
+        cp e
+        jr c,.sk                        ; right of it
+        ld d,0xFF                       ; D = the span's pixels in this byte
+        ld a,(CC_IF)
+        cp b
+        jr nz,.e1
+        ld a,(ix+4)                     ; the first source byte: the span starts at its first pixel
+        or a                            ; (mirrored: ends at its last)
+        ld a,c
+        jr nz,.m1
+        call sm_r
+        jr .a1
+.m1:    call sm_l
+.a1:    and d
+        ld d,a
+.e1:    ld a,(CC_IL)
+        cp b
+        jr nz,.e2
+        ld a,(ix+4)                     ; the last source byte: the span ends at its last pixel
+        or a                            ; (mirrored: starts at its first)
+        ld a,c
+        jr nz,.m2
+        call sm_l
+        jr .a2
+.m2:    call sm_r
+.a2:    and d
+        ld d,a
+.e2:    push hl
+        ld hl,(CC_RB)
+        ld a,e
+        add hl,a
+        ld a,d                          ; the span: the car's pixels only
+        cpl
+        and (hl)
+        or c
+        ld (hl),a
+        pop hl
+.sk:    inc hl
+        inc b
+        ld a,(CC_IL)
+        cp b
+        jr nc,.b
+        ret
+
+; sm_r: A's pixels from its first set one rightwards; sm_l: from its last set one leftwards. Flags lost.
+sm_r:   push hl
+        ld l,a
+        srl a
+        or l
+        ld l,a
+        srl a
+        srl a
+        or l
+        ld l,a
+        swapnib
+        and 0x0F
+        or l
+        pop hl
+        ret
+sm_l:   push hl
+        ld l,a
+        add a,a
+        or l
+        ld l,a
+        add a,a
+        add a,a
+        or l
+        ld l,a
+        swapnib
+        and 0xF0
+        or l
+        pop hl
+        ret
+
 rom_end:
         ASSERT rom_end <= 0x3D00
         SAVEBIN "ch_rom.bin",rom_start,$-rom_start

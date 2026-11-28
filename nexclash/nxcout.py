@@ -38,8 +38,8 @@ import time
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ZX0_SRC = os.path.join(ROOT, 'tools', 'zx0')
 NXC_PIN = {'repo': 'https://github.com/jattree/nxc', 'path': 'tools/nxc.py',
-           'commit': 'fa58ed1a97c84c3dbee833c27c1bbcebb0d84cb7',
-           'sha256': 'd4c135babd8cd53ec7e4efa5d1fda18488acb126251c79c169f24d22c3deecca'}
+           'commit': 'dc3c04146a57ca4ad6290b8afc07333d07326405',
+           'sha256': '085c53b25bb6b406a589a8765eff50c46534adfceffa147f07ec2ccf0895a8de'}
 VERSION = '1.0'
 SHARE = 'github.com/jattree/nxc'
 NAME_MAX = 32                   # what a loader keeps of a credit name (nxc.CREDIT_NAME)
@@ -453,6 +453,14 @@ def make(a, z80, out, name, spr, rep, say, colours=None, toggles=None, checks=No
         raise ValueError('--pok %s: no such file' % a.pok)
     f = open(dst, 'rb').read()
     game = open(z80, 'rb').read()
+    # The owner's default (2026-11-27): a patch with a ULA loading screen shows it on the Next while it patches.
+    try:
+        nxc.check_ula_screen(nxc.blocks(f)[1])
+        f = nxc.set_field(f, game, 'build_screen', 'nex')
+        open(dst, 'wb').write(f)
+        screen = 'its loading screen while patching (build_screen=nex)'
+    except nxc.Wrong:
+        screen = None
     if nxc.apply(f, game=game) != open(spr, 'rb').read():
         os.remove(dst)
         raise ValueError('applied to %s it does not give %s' % (os.path.basename(z80), os.path.basename(spr)))
@@ -493,6 +501,8 @@ def make(a, z80, out, name, spr, rep, say, colours=None, toggles=None, checks=No
         say('            PRF1 %s=%s' % (QUALIFY, prf[QUALIFY][:150]))
     if cheats:
         say('            cheats: %s' % cheats)
+    if screen:
+        say('            shows ' + screen)
     if tnote:
         say('            note: ' + tnote)
     return dst

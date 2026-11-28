@@ -56,7 +56,8 @@
    "doc": "altered_beast.md",
    "nex": {
     "plain": "3a40cd83e14bad535b3f147708b2284e",
-    "sprites": "87afba14d9243c82397ab0c201bfac8c"
+    "sprites": "edea9ecd09412d385fc67cb8d28458bb",
+    "enhanced": "758514afbb7ba14c315ff682befed834"
    },
    "proof": "differential",
    "variants": [
@@ -68,7 +69,8 @@
      "proof": "differential",
      "nex": {
       "plain": "3a40cd83e14bad535b3f147708b2284e",
-      "sprites": "87afba14d9243c82397ab0c201bfac8c"
+      "sprites": "edea9ecd09412d385fc67cb8d28458bb",
+      "enhanced": "758514afbb7ba14c315ff682befed834"
      }
     }
    ]
@@ -78,10 +80,10 @@
    "doc": "arc_of_yesod.md",
    "nex": {
     "plain": "cf3ad5b7ab250bd9e0400febd046990c",
-    "sprites": "93c1ac4a53c5d0db83b451ed53d727bb",
-    "enhanced": "dcbc7fa189c093aa4d728f358546a9ba",
-    "sprites_loading": "858ec5cda7dc2782664ed2247310589c",
-    "enhanced_loading": "62b922d83ab47c6abf8f895c7a7af110"
+    "sprites": "409421e631796f8c5d4c250103abb22f",
+    "enhanced": "fd94d49792885b3d23b06889b039f479",
+    "sprites_loading": "71f9d93964c723c65568a8b2a2559d67",
+    "enhanced_loading": "bfa951c58d234fdc36335c9bb56523d8"
    },
    "proof": "differential",
    "variants": [
@@ -93,10 +95,10 @@
      "proof": "differential",
      "nex": {
       "plain": "cf3ad5b7ab250bd9e0400febd046990c",
-      "sprites": "93c1ac4a53c5d0db83b451ed53d727bb",
-      "enhanced": "dcbc7fa189c093aa4d728f358546a9ba",
-      "sprites_loading": "858ec5cda7dc2782664ed2247310589c",
-      "enhanced_loading": "62b922d83ab47c6abf8f895c7a7af110"
+      "sprites": "409421e631796f8c5d4c250103abb22f",
+      "enhanced": "fd94d49792885b3d23b06889b039f479",
+      "sprites_loading": "71f9d93964c723c65568a8b2a2559d67",
+      "enhanced_loading": "bfa951c58d234fdc36335c9bb56523d8"
      }
     }
    ]
@@ -466,8 +468,8 @@
    "game": "Cisco Heat",
    "doc": "cisco_heat.md",
    "nex": {
-    "plain": "5a30200632338bbbf64c4e60f2174440",
-    "orig_pace": "6ebeabd1a687b6e6ad3f061f87b70037"
+    "plain": "0319b44327eebba269c88f9de9954385",
+    "orig_pace": "95421e2f3ce3534be441a24d07e1f2d5"
    },
    "proof": "differential",
    "variants": [
@@ -478,8 +480,8 @@
      "args": [],
      "proof": "differential",
      "nex": {
-      "plain": "5a30200632338bbbf64c4e60f2174440",
-      "orig_pace": "6ebeabd1a687b6e6ad3f061f87b70037"
+      "plain": "0319b44327eebba269c88f9de9954385",
+      "orig_pace": "95421e2f3ce3534be441a24d07e1f2d5"
      }
     }
    ]
@@ -733,7 +735,7 @@
      "game": "Dynamite Dan",
      "doc": "dynamite_dan.md",
      "args": [],
-     "proof": "rebuild only",
+     "proof": "differential",
      "nex": {
       "plain": "772dc3336f75dc8ba1f28ac62871cb18",
       "sprites": "b4aa27d5f08f28e59fca5566173c68cd"
@@ -741,6 +743,21 @@
      "rework": true,
      "env": {
       "NEXCLASH_REWORK": "dynamite_dan_v11"
+     }
+    },
+    {
+     "record": "dynamite_dan rework v14",
+     "game": "Dynamite Dan",
+     "doc": "dynamite_dan.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "772dc3336f75dc8ba1f28ac62871cb18",
+      "sprites": "583dc54a4ab073d9d2141c9abb2fb236"
+     },
+     "rework": true,
+     "env": {
+      "NEXCLASH_REWORK": "dynamite_dan_v14"
      }
     }
    ]
@@ -771,7 +788,7 @@
    "game": "Elite (standard Firebird release)",
    "doc": "elite_std.md",
    "nex": {
-    "plain": "4e176c9cf03bb207782221ac05396899"
+    "plain": "4b3cbe16f9839c4746e04f92f1ecbf7e"
    },
    "proof": "differential",
    "variants": [
@@ -782,7 +799,7 @@
      "args": [],
      "proof": "differential",
      "nex": {
-      "plain": "4e176c9cf03bb207782221ac05396899"
+      "plain": "4b3cbe16f9839c4746e04f92f1ecbf7e"
      }
     }
    ]
@@ -1058,8 +1075,9 @@
    "game": "Green Beret",
    "doc": "green_beret.md",
    "nex": {
-    "plain": "0679156534b3372bfb2280262b39bcb1",
-    "sprites": "bdfaa782be7651d631fb1eabd2b51598"
+    "plain": "283484a93a6eda05a4ecc5c7a9d1447b",
+    "sprites": "dd0badb0eb4a2d81fbc51fec7e6c7a19",
+    "sprites_loading": "b65abbdf8cb470307ee527b69a2f0205"
    },
    "proof": "differential",
    "variants": [
@@ -1070,8 +1088,9 @@
      "args": [],
      "proof": "differential",
      "nex": {
-      "plain": "0679156534b3372bfb2280262b39bcb1",
-      "sprites": "bdfaa782be7651d631fb1eabd2b51598"
+      "plain": "283484a93a6eda05a4ecc5c7a9d1447b",
+      "sprites": "dd0badb0eb4a2d81fbc51fec7e6c7a19",
+      "sprites_loading": "b65abbdf8cb470307ee527b69a2f0205"
      }
     }
    ]
@@ -1155,10 +1174,10 @@
    "doc": "hard_drivin.md",
    "nex": {
     "plain": "d74f75e6995eb0f54eaec2122a5164d0",
-    "smooth": "9fb23f8e64fa8187ba304c34af9a6016",
+    "smooth": "e78f5999a362dcf7b3b3ef88bb05c3f4",
     "steps": "9cc6f829055ca1f17c491609de22b016",
     "loading": "9d1a130d7e723c9395cca8266181da4b",
-    "smooth_loading": "f789a1c70aaa5f889f64c128a67527a0"
+    "smooth_loading": "f1e39222cf7c0ed3921f2e5c813d8f62"
    },
    "proof": "differential",
    "variants": [
@@ -1170,10 +1189,10 @@
      "proof": "differential",
      "nex": {
       "plain": "d74f75e6995eb0f54eaec2122a5164d0",
-      "smooth": "9fb23f8e64fa8187ba304c34af9a6016",
+      "smooth": "e78f5999a362dcf7b3b3ef88bb05c3f4",
       "steps": "9cc6f829055ca1f17c491609de22b016",
       "loading": "9d1a130d7e723c9395cca8266181da4b",
-      "smooth_loading": "f789a1c70aaa5f889f64c128a67527a0"
+      "smooth_loading": "f1e39222cf7c0ed3921f2e5c813d8f62"
      }
     }
    ]
@@ -1206,11 +1225,11 @@
    "game": "Highway Encounter",
    "doc": "highway_encounter.md",
    "nex": {
-    "plain": "4f605db1f8aa398cdb857af572a06687",
-    "sprites": "0f217be33787446e8ec645802cb25b75",
-    "enhanced": "9f6bb5d11bfab37a8f6fdde76b88c9f3",
-    "loading": "b8dc556e720a634df900dd84f80efbea",
-    "enhanced_loading": "7d8cbc58efffb6a8b2c5cfaab12e7dff"
+    "plain": "6756618c9be463425332270e5692ee0f",
+    "sprites": "d87bf6c4b7d2d5a7ab9c476c662975d5",
+    "enhanced": "120660f84965bfedc4d9c55df33a7bc7",
+    "loading": "d67f82c483459c4c10b94b4d7730cea0",
+    "enhanced_loading": "fccadbf8626aed9c9c92778f84a3a2ec"
    },
    "proof": "differential",
    "variants": [
@@ -1223,11 +1242,11 @@
      ],
      "proof": "differential",
      "nex": {
-      "plain": "4f605db1f8aa398cdb857af572a06687",
-      "sprites": "0f217be33787446e8ec645802cb25b75",
-      "enhanced": "9f6bb5d11bfab37a8f6fdde76b88c9f3",
-      "loading": "b8dc556e720a634df900dd84f80efbea",
-      "enhanced_loading": "7d8cbc58efffb6a8b2c5cfaab12e7dff"
+      "plain": "6756618c9be463425332270e5692ee0f",
+      "sprites": "d87bf6c4b7d2d5a7ab9c476c662975d5",
+      "enhanced": "120660f84965bfedc4d9c55df33a7bc7",
+      "loading": "d67f82c483459c4c10b94b4d7730cea0",
+      "enhanced_loading": "fccadbf8626aed9c9c92778f84a3a2ec"
      }
     }
    ]

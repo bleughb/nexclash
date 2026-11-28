@@ -4,7 +4,7 @@
 Stage: 4 (hardware + colour)    State: imported into the repo 2026-11-05 (record dynamite_dan); JNext only, never on a Next.
 Inputs: specnext/reference/dynamite_dan/ (dynamite_dan.z80 md5 3470d12b = TOSEC "Dynamite Dan (1985)(Mirrorsoft).z80";
 t1, n1; the pilot's census r00-r47, a1, c1 beside them). Verify with NEXCLASH_NEXT_ROM = enNextZX.rom from the card.
-Start with: the hardware checklist below. Open: "Open" below.
+Start with the hardware checklist below. The optional 1.4 Enhanced build and its evidence are described below.
 
 Techniques: `patch.xor-overlay-keep-ula`, `patch.whole-altrom-image`, `patch.restore-speed`, `patch.preserve-r`, `verify.update-locked-pace`
 (recipe and results: docs/records/dynamite_dan.json)
@@ -89,6 +89,28 @@ attribute change, also in the approved build: warnings. Soak 15 minutes against 
   the 52 recordings (192,925 IN reads, 22,425 main-loop passes, R included): IDENTICAL with Q / P and with QUIT X /
   PAUSE H set by the build's own routine; 3 broken builds detected; 6,290 unit cases.
 
+## v1.4 Enhanced (2026-11-27)
+
+Select `NEXCLASH_REWORK=dynamite_dan_v14` for the define-keys build with the painting.
+The published default remains b4aa27d5. Original keys remains 8125daa9. Enhanced is 8587e047.
+Its sheet shows all eight poses of Dan and 182 source frames for 61 enemy designs.
+The owner's 219 magenta pixels become 164 skin and 55 skin shadow. The rest of his painting is retained.
+Indices 16 through 25 add skin, shadow, leather, orange, steel, navy, olive, brass, ice and jade.
+The Enhanced map is `docs/profiles/dynamite_dan_enhanced_colours.json`.
+
+- E54D uploads unshifted tiles from one 8K page for this room or the menu. E96B follows the actual IY
+  record and phase, including the horizontal mirror. D2E7 hides the instance on collision. The original ULA code still runs.
+- Each room needs at most 26 enemy patterns. Slots 11 to 50 cover ten records. The maximum occupied by enemies is 24.
+  A partial Dan tile uses pattern 26 while sinking, so the rest of the sprite layer stays visible.
+- C837 repays the added plot time from the existing tick delay in multiples of 32 iterations to preserve R.
+  The No enemies trainer skips repayment. The lift at CD24/CD2B is a 3 by 2 byte moving platform with no attribute writes.
+  It remains part of the ULA scenery.
+- On t1 and n1, 18,182 frames, 54,231 enemy plot calls, 5,231,662 enemy pixels, 766,560 painted Dan pixels,
+  43 room/menu loads and 12 collision erases. All four tables matched. The 49-scene unit sweep includes every source frame.
+- JNext, ten trials per scene, mean tick-time changes: quiet +0.12%, busy +0.20%, sound +0.02%.
+  All 64 option combinations matched. Bare NEX fits 1 MiB. The archive tool puts its menu in banks 48 and 49 (2 MiB).
+  OverSpec reached the menu and airship room. Physical Next play remains open.
+
 ## Open
 Ending (needs all 8 dynamite, airship) not reached: hide covered by unit case only. Lifts stay ULA, not measured.
 Never run on hardware or in CSpect.
@@ -96,9 +118,11 @@ The sprites move at the plot hook's entry, before the plotter's own ULA pixels: 
 sprite a frame ahead (1 frame in 300 in JNext). A hook at the plotter's end would close it.
 
 ## Hardware checklist
+Enhanced: check enemy motion across a room change, a collision erase, Dan sinking with enemies below him, and the four cheats.
 Dan solid cyan in room 43, cables in front of him, legs hidden in the basket; hull unchanged when he is elsewhere; sinking in water clips cleanly; sprite off during room change, menu, game over; end of game.
 
 ## Lessons
+- [local: only the sinking player needs the partial tile] The sprite clip window is global. Crop only the sinking player tile when other actors share the layer.
 - [local: pilot, docs not edited] A per-room census found Dan's sinking (0xDBED); the no-cheat recording never drowned. Poke the start room to reach every room cheaply.
 - [kb lesson.reach-states-by-poke: pilot, docs not edited] the room census counts Dan spawned inside scenery: use play recordings for the clash numbers, census for coverage.
 - [local: this game] bot rollouts get stuck in room 6 (the lives cheat keeps them alive): 49,000 frames of nothing.
@@ -123,3 +147,5 @@ Dan solid cyan in room 43, cables in front of him, legs hidden in the basket; hu
 2026-11-03 stages 0-3, about 30 minutes wall time by clock, unattended, no user rounds.
 - 2026-11-05 import (pilot runs/dynamite_dan/nexclash2 on refactor-final f6b8ac0): whole alt ROM image, BASIC start, R,
   every-site matrix, a recording from the TOSEC start, cheats, pace / flicker / soak in JNext, .nxc v1.0.
+
+- 2026-11-27 stage 4: optional Enhanced enemy overlays and 25-colour painting, two full replays, all-room units and OverSpec captures.

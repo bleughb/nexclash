@@ -28,24 +28,25 @@
 ```
 
 ## Use / do not use
-Every game is paintable, recolour needs no rebuild (docs/COLOURS.md). When hooks convert graphics
+Recolour needs no rebuild (docs/COLOURS.md). When hooks convert graphics
 at the draw, the build stores the painting as per-image
-OVERRIDE TABLES in Next pages the game never reads, and the upload applies them. Use for run-time
+OVERRIDE TABLES in pages the game never reads; the upload applies them. Use for run-time
 pattern builders (overlay engines, outlines made at the draw). Do not use when patterns are built
 at build time: colour them there (Dizzy 1 plane, Midnight Resistance commit pages).
 
 **Assumptions.** The image list is known (whole-recording capture, kept in the profile); graphics
-are never written (else a run-time check per entry); an MMU slot is free at the upload.
+are never written (else a run-time check per entry; Arc of Yesod's rewritten figure: a pixel-position table ANDed
+with its live ink); an MMU slot is free at the upload.
 
-**Validation gap.** Cauldron, Nemesis: unit cases per image geometry and screen edge,
-synthetic painting via read-back, recolour, quick verify; none on hardware.
+**Validation gap.** Cauldron, Nemesis: unit cases per geometry and screen edge, synthetic
+painting, recolour, quick verify; none on hardware.
 
 ## Recognise
 - Patterns built by the hook from the graphic at each draw (Cauldron `upload`).
 - Outlines or rings beyond the graphic's bytes: those pixels need keys of their own.
 
 ## Probe and stop
-1. Capture every image the plotter draws over the whole recording (Cauldron `capture`, C simulator, ~70 s for 90K frames): geometry, first frame, inks. Store the list in the profile.
+1. Capture every image the plotter draws over the whole recording (Cauldron `capture`, ~70 s for 90K frames): geometry, first frame, inks. Store the list in the profile.
 2. Size the worst case (every image painted) against the pages you can give it.
 Stop when both are known.
 
@@ -75,7 +76,7 @@ Colour pages + one slot during the upload (Cauldron: pages 28-35 at slot 6, KEEP
 ## Verification
 The verify model applies the map per canvas pixel; unit cases with a synthetic map per image
 geometry, shifted and at the screen edges; a wrong check byte must be ignored; negative controls
-(map left out of the build, transparent mask ignored, check byte not checked); recolour both ways
+(map left out, transparent mask ignored, check byte not checked); recolour both ways
 equals a full build (selftest guard).
 
 ## Evidence

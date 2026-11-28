@@ -1,8 +1,8 @@
 nexclash is GPL-3.0-or-later (LICENSE). It bundles these, each unmodified, under its own licence:
 
 nexclash/nxc.py - the .nxc packager
-    tools/nxc.py of https://github.com/jattree/nxc at commit fa58ed1a97c84c3dbee833c27c1bbcebb0d84cb7
-    (SHA-256 d4c135babd8cd53ec7e4efa5d1fda18488acb126251c79c169f24d22c3deecca; selftest --tools checks it).
+    tools/nxc.py of https://github.com/jattree/nxc at commit dc3c04146a57ca4ad6290b8afc07333d07326405
+    (SHA-256 085c53b25bb6b406a589a8765eff50c46534adfceffa147f07ec2ccf0895a8de; selftest --tools checks it).
     GPL-3.0 (that repository's LICENSE). Format: spec/NXC-FORMAT.md there. Its .z80 reader follows
     nexclash's own (nexclash/z80tonex.py), as that repository's THIRD-PARTY-NOTICES says.
     To update: copy the new tools/nxc.py, put its commit and SHA-256 here and in nexclash/nxcout.py
