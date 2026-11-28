@@ -27,7 +27,7 @@
   "tail": "tail at 0x5B00 (converter default, checked safe)",
   "boot": "OK (registers, RAM, ROM view, paging)"
  },
- "outcome": "Stage 1 feasibility. Both whole-figure publication times leave visible figure pixels outside the selected sprites during the copy.",
+ "outcome": "Stage 2 diagnostic build. All 10817 mirrored copies and sprite uploads passed in the border. Death-wipe colours and native interrupt and beeper timing remain open.",
  "routines": [
   {
    "routine": 51139,
