@@ -1,0 +1,242 @@
+{
+ "game": "trantor",
+ "schema": 1,
+ "machine": "48K",
+ "engine": "unknown",
+ "inputs": {
+  "z80": "ac8f34429915e545ad645a649d3f20b9",
+  "rzx": [
+   "461910bb5981b584e8818d67ee5e5f22"
+  ],
+  "args": [
+   null,
+   null,
+   null,
+   6,
+   false
+  ]
+ },
+ "frames": 24840,
+ "model": "back buffer, block copy to the screen",
+ "pacing": "interrupts on",
+ "interrupts_accepted": 23126,
+ "source_buffers": {
+  "52912": [
+   [
+    25600,
+    29695,
+    16394469
+   ],
+   [
+    24832,
+    25343,
+    2047718
+   ]
+  ],
+  "54586": [
+   [
+    64320,
+    64383,
+    40439
+   ]
+  ]
+ },
+ "coverage_gaps": 0,
+ "plain": {
+  "file": "trantor.nex",
+  "tail": "FAILED: snapshot with SP=0xFA19 in the paged top 16K: no automatic place for the start-up tail; use --tail ADDR in 0x5B00-0xBFFF on memory the game never reads before writing (access scan: e.g. a zeroed printer buffer, dead stack, or a back buffer the game redraws; Rainbow Islands: 0x9F00)",
+  "boot": "not run"
+ },
+ "outcome": "Stage 1 feasibility. Direct screen copies during the ending defeat a single gameplay background capture.",
+ "routines": [
+  {
+   "routine": 52912,
+   "role": "screen copier",
+   "pixel_bytes": 10523392,
+   "attr_bytes": 1315296,
+   "block_copy_bytes": 11838688,
+   "calls": 576407,
+   "T_median": 522,
+   "fingerprint": {
+    "n": 33,
+    "full": "46850a5b23",
+    "win": [
+     "4e6f8b860b",
+     "ac51fc0330"
+    ]
+   },
+   "callers": 4
+  },
+  {
+   "routine": 52934,
+   "role": "plotter",
+   "pixel_bytes": 430080,
+   "attr_bytes": 0,
+   "block_copy_bytes": 430080,
+   "calls": 20480,
+   "T_median": 346,
+   "fingerprint": {
+    "n": 22,
+    "full": "f91c0a0dce",
+    "win": [
+     "4e6f8b860b",
+     "ac51fc0330"
+    ]
+   },
+   "callers": 1
+  },
+  {
+   "routine": 27715,
+   "role": "plotter",
+   "pixel_bytes": 313344,
+   "attr_bytes": 0,
+   "block_copy_bytes": 313344,
+   "calls": 816,
+   "T_median": 28660,
+   "fingerprint": {
+    "n": 96,
+    "full": "54ef813a42",
+    "win": [
+     "881887346a"
+    ]
+   },
+   "callers": 4
+  },
+  {
+   "routine": 28217,
+   "role": "plotter",
+   "pixel_bytes": 252560,
+   "attr_bytes": 0,
+   "block_copy_bytes": 252560,
+   "calls": 21688,
+   "T_median": 330,
+   "fingerprint": {
+    "n": 96,
+    "full": "54ef813a42",
+    "win": [
+     "881887346a"
+    ]
+   },
+   "callers": 1
+  },
+  {
+   "routine": 56077,
+   "role": "plotter",
+   "pixel_bytes": 217074,
+   "attr_bytes": 0,
+   "block_copy_bytes": 210930,
+   "calls": 3072,
+   "T_median": 5176,
+   "fingerprint": {
+    "n": 86,
+    "full": "c13c7db28a",
+    "win": [
+     "026e7dc037",
+     "0b3961cdb4",
+     "0c6896845a",
+     "1492dfad81",
+     "15ad441929",
+     "1868de34ba",
+     "1c3c221d94",
+     "1c55393e6d",
+     "2298cb4520",
+     "25af83898c",
+     "2941877fa0",
+     "29bb7cacb8",
+     "2cff6f0764",
+     "2e1e0741d0",
+     "31c7998eb7",
+     "33d10b0c19",
+     "34e06b6d54",
+     "35e805eeab",
+     "3788ca4c40",
+     "380da5810a",
+     "3d57e0c690",
+     "402ec0c876",
+     "4c27f2b42e",
+     "52d77a2fb0",
+     "52eda90869",
+     "59179113ef",
+     "5d7a3426ec",
+     "5e241d0237",
+     "65066d620a",
+     "70acf6c370",
+     "71092bcf55",
+     "71fddaa02e",
+     "72963d83c0",
+     "777938badb",
+     "7d5e31a677",
+     "7de3a0dd77",
+     "8208e6fa0e",
+     "87fbc80406",
+     "89482ad711",
+     "8b37fe86ef",
+     "8eccff1abc",
+     "99a7729971",
+     "9d61773ec7",
+     "9f0ac9da2f",
+     "a12f416b6c",
+     "a2c9182ce3",
+     "a38c9b709a",
+     "a4ceac00ef",
+     "a5e2b8fb9b",
+     "a82afd5c9a",
+     "acf7b4d0fd",
+     "b22c10fc7b",
+     "b2ced7f612",
+     "b4db446876",
+     "bfae915887",
+     "c29cd89ef2",
+     "c986d26496",
+     "c995821681",
+     "cfe5bb9da8",
+     "d7592c599d",
+     "da7b784eef",
+     "dbc4fad672",
+     "de68e01919",
+     "e1f2b73d1c",
+     "e6c12a44fd",
+     "e7d45bd1c7",
+     "e84153369f",
+     "e9e5221e03",
+     "ea2c5745bd",
+     "f327016d78",
+     "f5d4a5bc1d",
+     "f695dab6d5",
+     "f821bc5e5c",
+     "fb92487d3d"
+    ]
+   },
+   "callers": 4
+  },
+  {
+   "routine": 59211,
+   "role": "plotter",
+   "pixel_bytes": 207360,
+   "attr_bytes": 0,
+   "block_copy_bytes": 0,
+   "calls": 435,
+   "T_median": 138077,
+   "fingerprint": {
+    "n": 14,
+    "full": "77fcfd6f71",
+    "win": [
+     "8c97f7d6fe",
+     "af0d384c67",
+     "cb23a0c9f3",
+     "d10da8df3c",
+     "d4800f4d09",
+     "d99e4eb9d2",
+     "db3e67bc24",
+     "e47f581477",
+     "e86e400817"
+    ]
+   },
+   "callers": 5
+  }
+ ],
+ "title": "Trantor - The Last Stormtrooper",
+ "notes": [
+  "0xD53A publishes the 4096-byte playfield and its 512 attribute bytes. The repeated LDI match covers only the copier. Game-specific paths draw masked actors, XOR objects and particles."
+ ]
+}

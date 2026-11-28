@@ -1,0 +1,131 @@
+{
+ "name": "trantor",
+ "order": 280,
+ "game": "Trantor - The Last Stormtrooper",
+ "doc": "trantor.md",
+ "engine": "trantor",
+ "representative": false,
+ "reference": "trantor",
+ "verified_json": false,
+ "inputs": {
+  "snapshot": {
+   "name": "Trantor - The Last Stormtrooper (1987)(Go!).z80",
+   "md5": "50c665e674e5831125889f5e89ff2eec",
+   "path": "trantor/Trantor - The Last Stormtrooper (1987)(Go!).z80"
+  },
+  "recordings": [
+   {
+    "name": "trantor.rzx",
+    "md5": "461910bb5981b584e8818d67ee5e5f22",
+    "path": "trantor/trantor.rzx"
+   },
+   {
+    "name": "trantor_idle.rzx",
+    "md5": "9cc3b62fdbf970c12ff82e9bfd64674e",
+    "path": "trantor/trantor_idle.rzx"
+   },
+   {
+    "name": "trantor_contact.rzx",
+    "md5": "f0c793dd5d65351377e5e4c11e8a196b",
+    "path": "trantor/trantor_contact.rzx"
+   }
+  ]
+ },
+ "paired_starts": {
+  "trantor.rzx": {
+   "name": "trantor_start.z80",
+   "md5": "ac8f34429915e545ad645a649d3f20b9",
+   "path": "trantor/trantor_start.z80"
+  },
+  "trantor_contact.rzx": {
+   "name": "trantor_contact_start.z80",
+   "md5": "792da166ffbbb0cf0a150ebdbde641c9",
+   "path": "trantor/trantor_contact_start.z80"
+  },
+  "trantor_idle.rzx": {
+   "name": "trantor_idle_start.z80",
+   "md5": "d4012c40ee4ef6a7d523a25b1fbd8d74",
+   "path": "trantor/trantor_idle_start.z80"
+  }
+ },
+ "diagnostic_inputs": [
+  {
+   "name": "Trantor - The Last Stormtrooper (1987)(Go!).tap",
+   "md5": "30b91cf0db341b8ae95a00aa0f42df68",
+   "path": "trantor/Trantor - The Last Stormtrooper (1987)(Go!).tap"
+  },
+  {
+   "name": "Trantor - The Last Stormtrooper (1987)(Go!).pok",
+   "md5": "e2ba3f87a39093cea0919aa11b4e1072",
+   "path": "trantor/Trantor - The Last Stormtrooper (1987)(Go!).pok"
+  },
+  {
+   "name": "trantor.scr",
+   "md5": "3bf7fd570e1270535951ae6c4b43dc3b",
+   "path": "trantor/trantor.scr"
+  }
+ ],
+ "modules": [
+  "z80tonex",
+  "nextboot"
+ ],
+ "own_modules": [],
+ "data": [],
+ "rebuild": {
+  "cmd": "convert",
+  "args": [],
+  "rzx": []
+ },
+ "verify": null,
+ "outputs": {
+  "plain": {
+   "file": "trantor.nex",
+   "md5": "f7ddae5e1b4b3b083a1aa0461d15c9dd"
+  }
+ },
+ "repro": [],
+ "checks": [],
+ "status": {
+  "engine_col": "New engine (trantor.md)",
+  "build": "Plain conversion only. Sprite renderer at feasibility.",
+  "software": "24,840 archive frames. Two gameplay continuations. Six trainers tested on the plain diagnostic.",
+  "hardware": "Untested",
+  "next": "Resolve background changes during the ending wipe and group death particles."
+ },
+ "excluded": "Stage 1 feasibility. Only the plain target conversion has a rebuild recipe. No release sprite engine or verifier.",
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/trantor.md#feasibility"
+   ],
+   "coverage": "501 gameplay frames and 24,840 archive frames",
+   "result": "84 copier returns at 84,467 T each. The game takes IM 2 interrupts and drives the beeper."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/trantor.md#feasibility"
+   ],
+   "coverage": "2,432 in-bounds normal copies, 116 ending wipes and 49 death particle copies",
+   "result": "Player save-under leaves figure pixels. A gameplay background capture goes stale during the ending. The death effect peaks at 172 distinct particle positions."
+  },
+  "decision": "Stop at stage 1 for a game-specific compositor design.",
+  "next_experiment": "Compare site-specific scenery and grouped particle masks at all five 0xD53A call sites."
+ },
+ "checked": {
+  "deps": {
+   "nexclash.py": "2ac99cf4fa2917e5",
+   "nexclash/build.py": "e632a2f1f49c8be6",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/engines.py": "b24e01a406607173",
+   "nexclash/nextboot.py": "f67deed5c0603d2a",
+   "nexclash/rzx.py": "90008c9ca09c51bc",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
+   "skoolkit": "10.1",
+   "recipe": "6ed5e11dd7bbbdd8",
+   "rom": "e50ee485fb4a21d2"
+  },
+  "date": "2026-11-28"
+ }
+}
