@@ -1058,8 +1058,9 @@
    "game": "Green Beret",
    "doc": "green_beret.md",
    "nex": {
-    "plain": "0679156534b3372bfb2280262b39bcb1",
-    "sprites": "bdfaa782be7651d631fb1eabd2b51598"
+    "plain": "283484a93a6eda05a4ecc5c7a9d1447b",
+    "sprites": "dd0badb0eb4a2d81fbc51fec7e6c7a19",
+    "sprites_loading": "b65abbdf8cb470307ee527b69a2f0205"
    },
    "proof": "differential",
    "variants": [
@@ -1070,8 +1071,9 @@
      "args": [],
      "proof": "differential",
      "nex": {
-      "plain": "0679156534b3372bfb2280262b39bcb1",
-      "sprites": "bdfaa782be7651d631fb1eabd2b51598"
+      "plain": "283484a93a6eda05a4ecc5c7a9d1447b",
+      "sprites": "dd0badb0eb4a2d81fbc51fec7e6c7a19",
+      "sprites_loading": "b65abbdf8cb470307ee527b69a2f0205"
      }
     }
    ]
@@ -2721,4 +2723,4 @@
    ]
   }
  }
-}
+}
