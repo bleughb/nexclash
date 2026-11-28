@@ -243,7 +243,7 @@ def current_map(nex, mod, nex_path, onto=None):
         return m, '--onto %s%s' % (onto, '' if same else ' (NOTE: it does not reproduce this build\'s colours)')
     side = os.path.splitext(nex_path)[0] + '_colours.json'
     for where, m in (('sidecar %s' % os.path.basename(side), load_map(side, mod) if os.path.exists(side) else None),
-                     ('the build default %s' % mod.RECOLOUR['colours'], build_map(mod)),
+                     ('the build default', mod.default_map_for_nex(nex) if hasattr(mod, 'default_map_for_nex') else build_map(mod)),
                      ('the empty map (unpainted build)', {})):
         if m is not None and mod.recolour(nex, m)[0] == nex:
             return m, where
@@ -331,7 +331,8 @@ def run(nex_path, colours, layout=None, game=None, output=None, say=print, onto=
         files = {}
         cj = ostem + '_colours.json'
         tj = os.path.join(work, 'colours.json')
-        save_map(merged, tj, mod.RECOLOUR.get('note', ''))
+        note = mod.map_note(merged) if hasattr(mod, 'map_note') else mod.RECOLOUR.get('note', '')
+        save_map(merged, tj, note)
         merged = load_map(tj, mod)
         out, info = mod.recolour(nex, merged)
         from .z80tonex import automap_off
