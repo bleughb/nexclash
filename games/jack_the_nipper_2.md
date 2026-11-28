@@ -70,7 +70,7 @@ Owner, 2026-11-26 (OverSpec test: Jack against a bat, the snake, the dummy, an i
 Each figure keeps the colours the game gave its own cells, captured at its blit; a later figure in a shared cell no
 longer recolours it.
 
-Owner, 2026-11-26: Enhanced colours, every figure painted (Codex first pass, "looks good").
+Owner, 2026-11-26: Enhanced colours, every figure painted (first pass, "looks good").
 
 ## Enhanced colours (2026-11-26)
 - Sheet: the 100 images of the recording keyed by graphics byte (in each row the mask bytes come first); the painting
@@ -99,11 +99,11 @@ Owner, 2026-11-26: Enhanced colours, every figure painted (Codex first pass, "lo
   mirror, every covered cell's colour), else rebuilt.
 - Colour list: the recorded figures' boxes; the game's slot counter (0xBDF1) says when a slot lies outside them (a
   rope is drawn another way, overlapping objects orphan slots), and then the whole map.
-- After the Codex review (2026-11-23): NR 0x15 = 0x01 (bit 6 clear: sprite 127 on top; the first build's 0x41 had
+- After the review (2026-11-23): NR 0x15 = 0x01 (bit 6 clear: sprite 127 on top; the first build's 0x41 had
   the depth reversed, 58 pixels at the first copy); a one-colour hit also compares the colour (SLOTCLR: graphics
   + pair + colour << 11 aliased, $CF50/$43 and $C750/$44 both $E750); the signature holds the clipped box's columns
   and rows (a 3 x 2 and a 2 x 3 box gave the same six colours); ATTRTAB stops at 128 sprites.
-- Builds: plain e63f00da, sprites 0080e703 (record; 5e157c09 before the Codex review). Page: state 0x2000-0x28FF, scratch 0x2900-0x2D4F, code
+- Builds: plain e63f00da, sprites 0080e703 (record; 5e157c09 before the review). Page: state 0x2000-0x28FF, scratch 0x2900-0x2D4F, code
   0x3000-0x3B87, the tail's backup 0x3E00, the stub's registers 0x3F00; the start-up tail at 0xBF00 is put back.
 
 ## Results
@@ -143,7 +143,7 @@ Every patch carries them, off by default (checked against the code; the archive'
 held count is safe); Infinite ammo 38306 = 0 (0x95A2 `DEC (HL)` on the weapon's charge, whose zero drops the weapon);
 Immunity 43219 = 201 (ours: 0xA8D3 `LD A,(34879)` to `RET` in the death routine 0xA8C3, after it clears the
 death-animation counter 34924 and the fatal-fall flag 34877, so a death never starts and a long fall lands). The first
-Immunity, a RET at 0xA8CC before those clears, left the fall flag set (Codex review): the landing check 0xA16E
+Immunity, a RET at 0xA8CC before those clears, left the fall flag set (review): the landing check 0xA16E
 re-entered the death routine every update and Jack never landed. Test (a fatal fall made by hand: the flag set at
 0xA16E in a recorded state, then four updates with no keys): the original starts a death; RET at 0xA8CC enters the
 routine four times and never lands; RET at 0xA8D3 enters it once, then lands three times, no death, lives kept. The
@@ -168,7 +168,7 @@ Immunity 1 (34426 = 0 freezes the flashing timer after a hit), Immunity 2 (a RET
 - 2026-11-23: stage 2 (engine, verifier, units, negatives, record, .nxc), ~120 tool calls, no user rounds (design
   as Jack the Nipper).
 - 2026-11-26: the owner's test: figure-on-figure clash removed (capture at each blit), negative 'cell colours not
-  captured'; Enhanced colours (sheet, ovr, REMAP, bank 1, recolour; Codex's painting approved); ~80 tool calls, 5
+  captured'; Enhanced colours (sheet, ovr, REMAP, bank 1, recolour; the painting approved); ~80 tool calls, 5
   rounds.
 
 ## Lessons
