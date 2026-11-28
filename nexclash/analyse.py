@@ -201,3 +201,19 @@ def analyse(prof, rzx_path, z80_sp, stop=None, progress=None):
         'rd': RD, 'wr': WR, 'machine': '128K' if is128 else '48K',
         'rd128': RD128 if is128 else None, 'wr128': WR128 if is128 else None, 'rbw': rbw,
     }
+
+
+SCAN_KEYS = ('rd', 'wr', 'rbw', 'rd128', 'wr128')
+
+
+def merge_scans(c, x):
+    """Fold recording x's access scan into c (both analyse() results of the same game): a byte read, written or
+    read before written in ANY recording counts ('rbw' too: a tail on a byte one recording reads first is live data,
+    whatever another recording does there). A scan one side lacks (48K: None) is the other's."""
+    for k in SCAN_KEYS:
+        p, q = c.get(k), x.get(k)
+        if p is not None and q is not None:
+            c[k] = bytearray(a | b for a, b in zip(p, q))
+        elif q is not None:
+            c[k] = bytearray(q)
+    return c

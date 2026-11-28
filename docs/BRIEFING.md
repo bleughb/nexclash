@@ -333,7 +333,7 @@ Analysis tools
 13. Long passes print nothing (`patch --rzx` on Trueno's 53,542 frames): add progress output.
 14. A key log from a recording (keys held per frame range from the port 0xFE reads; contributor's
    rzx_keys.py) - worth an `rzx keys` command.
-15. Done 2026-11-26: recorder / analyse / survey take 128K; verify.py, nextboot.check stay 48K.
+15. Recorder / analyse / survey take 128K; verify.py, nextboot.check stay 48K.
 16. Treasure Island game snapshot: the auto-recorder finds no start / inputs (needs --start/--keys or
    a user RZX).
 40. `nexclash.py convert GAME.z80 --rzx R` stops with "Port readings exhausted" on a recording with
@@ -517,5 +517,4 @@ as arguments (addresses, ranges, keys).
   ULA loading screen -> build_screen=nex (shown while patching).
 Improving them: keep report lines and arguments (add, don't rename), a golden check in selftest.py
 tools_check, `python selftest.py --tools`.
-47. Recorder (old, 48K too): a C frame overruns by up to 99 instructions; _exact() gives the next PC before a
-   HALT; run-time LD R,A missed; survey strips episode snapshots. One pass + re-verify.
+47. Recorder (48K too): a C frame overruns by up to 99 instructions; run-time LD R,A missed.
