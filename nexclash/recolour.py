@@ -50,7 +50,8 @@ def nex_offsets(d):
     from . import z80tonex as zt
     if bytes(d[0:4]) != b'Next':
         raise ValueError('not a .nex file')
-    off, res = 512, {}
+    from .nextboot import nex_screen_size
+    off, res = 512 + nex_screen_size(d[10]), {}
     for b in zt.BANK_FILE_ORDER:
         if d[18 + b]:
             res[b] = off
@@ -103,14 +104,16 @@ def build_colours_path(default):
     return os.environ.get('NEXCLASH_COLOURS') or default
 
 
-def colours_path(mod):
-    p = mod.RECOLOUR['colours']
+def colours_path(mod, nex=None):
+    p = mod.colours_for_build(nex) if nex is not None and hasattr(mod, 'colours_for_build') else mod.RECOLOUR['colours']
     return p if os.path.isabs(p) else os.path.join(HERE, p)
 
 
-def build_map(mod):
+def build_map(mod, nex=None):
     """The colour map the build uses ({} when the engine has none yet)."""
-    p = colours_path(mod)
+    if nex is not None and hasattr(mod, 'default_map_for_nex'):
+        return mod.default_map_for_nex(nex)
+    p = colours_path(mod, nex)
     return load_map(p, mod) if os.path.exists(p) else {}
 
 
@@ -207,7 +210,11 @@ def check_identity(mod, name, nex, layouts):
     want = build_identity(mod, nex)
     status = []
     for lp in layouts:
-        got = json.load(open(lp)).get('identity')
+        from .coloursheet import load_layout
+        layout = load_layout(lp)
+        if hasattr(mod, 'check_sheet'):
+            mod.check_sheet(nex, layout)
+        got = layout.get('identity')
         n = os.path.basename(lp)
         if want is None:
             status.append('%s: unverified (engine %s has no colour_identity)' % (n, name))
@@ -236,14 +243,16 @@ def current_map(nex, mod, nex_path, onto=None):
     recolouring the build with it gives the build back byte for byte: the .nex's own sidecar
     (<nex>_colours.json, written by recolour), the build's default map, the empty map. --onto names
     it explicitly. None when nothing reproduces the build (the caller refuses)."""
-    from . import coloursheet as cs
     if onto:
         m = load_map(onto, mod)
         same = mod.recolour(nex, m)[0] == nex
         return m, '--onto %s%s' % (onto, '' if same else ' (NOTE: it does not reproduce this build\'s colours)')
     side = os.path.splitext(nex_path)[0] + '_colours.json'
+    default = 'the build default'
+    if hasattr(mod, 'colours_for_build'):
+        default += ' ' + os.path.basename(colours_path(mod, nex))
     for where, m in (('sidecar %s' % os.path.basename(side), load_map(side, mod) if os.path.exists(side) else None),
-                     ('the build default', mod.default_map_for_nex(nex) if hasattr(mod, 'default_map_for_nex') else build_map(mod)),
+                     (default, build_map(mod, nex)),
                      ('the empty map (unpainted build)', {})):
         if m is not None and mod.recolour(nex, m)[0] == nex:
             return m, where
@@ -376,7 +385,8 @@ def run(nex_path, colours, layout=None, game=None, output=None, say=print, onto=
             say('-> %s' % f)
     for m in missing:
         say('NOTE: %s' % m)
-    say('(copy %s to %s to make it the build default; then rebuild + verify)' % (os.path.basename(cj), info.get('colour profile', mod.RECOLOUR['colours'])))
+    profile = info.get('colour profile') or os.path.relpath(colours_path(mod, nex), HERE)
+    say('(copy %s to %s to make it the build default; then rebuild + verify)' % (os.path.basename(cj), profile))
     return output
 
 
@@ -396,7 +406,7 @@ def warn_ignored(rep, say=print):
 def guard(nex, blank, mod):
     """Selftest guard. nex = the build with its colour map, blank = the same build with an empty map.
     -> (ok, info)."""
-    cmap = build_map(mod)
+    cmap = build_map(mod, nex)
     try:
         down, _ = mod.recolour(nex, {})
         up, _ = mod.recolour(blank, cmap)

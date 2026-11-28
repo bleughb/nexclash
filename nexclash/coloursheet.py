@@ -4,8 +4,8 @@ a colour map. Every game from Midnight Resistance on (Dean, 2026-10-13; PLAYBOOK
 The engine supplies PARTS (what one plot draws) grouped into COMPOSITES (the parts drawn together
 as one figure in a game frame: legs + body, the halves of a vehicle). This module joins the plots
 of a frame into composites, picks the fewest composites that show every graphics byte drawn, writes the sheet and reads the painted copy back. Sheet rules (Dean): one PNG pixel = one
-Spectrum pixel, multi-part figures joined, a row of 8x8 swatches of the sprite palette (indices
-1-15, left to right) at the top, no text; the layout JSON beside it says which part, colour-map key
+Spectrum pixel, multi-part figures joined, 8x8 swatches of the sprite palette (by default indices
+1-15, left to right) above the figures or each group, no text; the layout JSON beside it says which part, colour-map key
 and bit each pixel is, so the PNG needs nothing else.
 
 Part dict (engine-built):
@@ -146,7 +146,7 @@ def owners(comp, clear=False):
 
 
 def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH, unique=False, paint_clear=False,
-          identity=None, all_swatches=False):
+          identity=None, group_palettes=None, all_swatches=False):
     """The sheet (png) and its layout (json). colours: an existing map, shown instead of defaults.
     unique (the PAINTING sheet, Dean 2026-10-14): every graphics pixel (key, bit) once - a figure
     sharing graphics with one before it shows only its new pixels (box cropped to them), a figure
@@ -156,9 +156,15 @@ def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH, unique=Fals
     the layout (recolour compares it with the build's; docs/COLOURS.md "Identity").
     paint_clear: the clear pixels (code 0) inside each figure's box are listed too, paintable (the box
     is still the opaque pixels' box).
+    group_palettes: start each group with its own swatches and use its colours for the figures.
+    all_swatches: show every nonzero index of each palette, wrapping at the sheet width.
     Inside a box only the paintable pixels are grey (or coloured); the rest keeps the background
     colour (Dean 2026-10-14: the sheet shows exactly what can be painted)."""
     from PIL import Image
+    # The two published signatures used the slot after identity for a palette collection or a bool.
+    if isinstance(group_palettes, bool):
+        all_swatches = all_swatches or group_palettes
+        group_palettes = None
     cmap = colours or {}
     if unique:
         order = []
@@ -167,10 +173,21 @@ def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH, unique=Fals
                 order.append(c['group'])
         comps = sorted(comps, key=lambda c: (order.index(c['group']), -len(owners(c))))
     shown = set()
-    count = len(rgb16) - 1 if all_swatches else 15
-    columns = max(1, width // (SW + 2))
-    swatches = [[1 + i % columns * (SW + 2), 1 + i // columns * (SW + 2), i + 1] for i in range(count)]
-    boxes, x, y, rowh, last = [], 1, swatches[-1][1] + SW + 3, 0, None
+    swatches = []
+
+    def add_swatches(top, palette, group=None):
+        columns = max(1, width // (SW + 2))
+        count = len(palette) - 1 if all_swatches else 15
+        for i in range(count):
+            row, col = divmod(i, columns)
+            swatch = [1 + col * (SW + 2), top + row * (SW + 2), i + 1]
+            if group is not None:
+                swatch.append(group)
+            swatches.append(swatch)
+        return swatches[-1][1] + SW + 3 if count else top
+
+    boxes, x, rowh, last = [], 1, 0, None
+    y = SW + 4 if group_palettes else add_swatches(1, rgb16)
     for comp in comps:
         own = owners(comp)
         allown = owners(comp, clear=True) if paint_clear else own
@@ -203,6 +220,8 @@ def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH, unique=Fals
                 own = {(px, py): v for (px, py), v in allown.items() if 0 <= px < w and 0 <= py < h}
         if comp['group'] != last and last is not None:
             x, y, rowh = 1, y + rowh + 4, 0            # each group starts a new row
+        if group_palettes and comp['group'] != last:
+            y = add_swatches(1 if last is None else y, group_palettes[comp['group']], comp['group'])
         last = comp['group']
         if x + w > width - 1:
             x, y, rowh = 1, y + rowh + 2, 0
@@ -211,10 +230,10 @@ def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH, unique=Fals
         rowh = max(rowh, h)
     H = y + rowh + 2
     img = Image.new('RGB', (width, H), BG_RGB)
-    for sx, sy, i in swatches:
-        img.paste(rgb16[i], (sx, sy, sx + SW, sy + SW))
+    draw_swatches(img, swatches, rgb16, group_palettes)
     lay = []
     for comp, own, bx, by, w, h, ox, oy in boxes:
+        local = group_palettes[comp['group']] if group_palettes else rgb16
         # grey only where painting is read back: the box's other pixels keep the background colour
         # (a part's gap, a pixel shown on an earlier figure; Dean 2026-10-14: "paintable only")
         for (px, py) in own:
@@ -226,7 +245,7 @@ def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH, unique=Fals
                 continue                                  # painted transparent: stays grey
             v = e[2][bit] or dflt
             if v:                                         # (a clear pixel without a colour: grey)
-                img.putpixel((bx + px, by + py), rgb16[v])
+                img.putpixel((bx + px, by + py), local[v])
         parts = []
         for p in comp['parts']:
             keys = sorted({q[2] for q in p['pixels']})
@@ -241,12 +260,20 @@ def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH, unique=Fals
     out = dict(size=[width, H], palette=[list(c) for c in rgb16],
                colours={k: [v[0], v[1], list(v[2])] + list(v[3:4]) for k, v in cmap.items()},   # the map it shows
                swatches=swatches, composites=lay)
+    if group_palettes:
+        out['group_palettes'] = group_palettes
     if paint_clear:
         out['paint_clear'] = True
     if identity:
         out['identity'] = identity
     json.dump(out, open(layout_path, 'w'))
     return len(lay)
+
+
+def draw_swatches(img, swatches, palette, groups):
+    for x, y, i, *group in swatches:
+        rgb = groups[group[0]][i] if group else palette[i]
+        img.paste(tuple(rgb), (x, y, x + SW, y + SW))
 
 
 def _parts_of(comp):
@@ -297,6 +324,8 @@ def read(png, layout_path, clear=False):
     kept = collections.defaultdict(list)     # (key, bit) -> figures where it was left unpainted
     pclear = bool(lay.get('paint_clear'))
     for ci, comp in enumerate(lay['composites']):
+        if 'group_palettes' in lay:
+            rgb16 = [tuple(c) for c in lay['group_palettes'][comp['group']]]
         parts = _parts_of(comp)
         own = owners(dict(parts=parts), clear=pclear)
         ox, oy = comp.get('ox', 0), comp.get('oy', 0)
@@ -465,6 +494,8 @@ def changes(png, layout_path, clear=False):
     meta = {}
     unchanged = collections.defaultdict(int)
     for ci, comp in enumerate(lay['composites']):
+        if 'group_palettes' in lay:
+            rgb16 = [tuple(c) for c in lay['group_palettes'][comp['group']]]
         parts = _parts_of(comp)
         own = _shown(comp, parts, pclear)
         ox, oy = comp.get('ox', 0), comp.get('oy', 0)
@@ -552,12 +583,11 @@ def redraw(layout_path, cmap, png_out, layout_out, rgb16=None):
         lay['palette'] = [list(c) for c in rgb16]
     rgb16 = [tuple(c) for c in lay['palette']]
     img = Image.new('RGB', tuple(lay['size']), BG_RGB)
-    for x, y, i in lay['swatches']:
-        for yy in range(y, y + SW):
-            for xx in range(x, x + SW):
-                img.putpixel((xx, yy), rgb16[i])
+    draw_swatches(img, lay['swatches'], rgb16, lay.get('group_palettes'))
     pclear = bool(lay.get('paint_clear'))
     for comp in lay['composites']:
+        if 'group_palettes' in lay:
+            rgb16 = [tuple(c) for c in lay['group_palettes'][comp['group']]]
         parts = _parts_of(comp)
         own = _shown(comp, parts, pclear)
         ox, oy = comp.get('ox', 0), comp.get('oy', 0)

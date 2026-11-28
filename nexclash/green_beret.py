@@ -16,6 +16,8 @@ import hashlib
 import json
 import os
 
+from . import green_beret_art as art
+
 ROM_ORG = 0x386E
 ALT_PAGE = 24
 SCRPAGE = 26
@@ -33,6 +35,13 @@ SITES_ORIG = {DRAW_SITE: 'cdfea5', FEND_SITE: 'cd1ac2', PLOT: '3a8ea7', PLOT2: '
 SITE_SYM = {DRAW_SITE: 'e_fs', FEND_SITE: 'e_fe', PLOT: 'e_plot', PLOT2: 'e_plt2', SMALL: 'e_smal',
             0xA82F: 'e_end', 0xA86D: 'e_end', 0xA919: 'e_end', 0xB03A: 'e_end2', WIPE1: 'e_wip1', WIPE2: 'e_wip2',
             MINE: 'e_mine', MINE_END: 'e_end3'}
+# Original entry bytes, comparison PC and hook label. Each site jumps to a cycle-matched replacement.
+INTRO = {0xA21D: ('2182ff', 0xA22A, 'intro_on'), 0xA4AE: ('cdafa9', 0xA4C6, 'intro_off')}
+INTRO_COLUMN = 0x6658
+INTRO_COLUMN_END = 0x666B
+INTRO_ORIG = {INTRO_COLUMN: '2af76d2322f76d3e', 0x6661: '083e09087709083d20f9',
+              0xA21D: '2182ff1183ff0157003600edb0',
+              0xA4AE: 'cdafa9ed5361a1cdafa9ed5363a1cdafa9ed5365a1cdafa9', 0xA9AF: '5e235623c9'}
 SITE_OP = {DRAW_SITE: 0xCD, FEND_SITE: 0xCD}
 INTERIORS = (0xA390, 0xA391, 0xA393, 0xA394, 0xA7E0, 0xA7E1, 0xA8E9, 0xA8EA, 0xA8EB, 0xAFD9, 0xAFDA, 0xAFDB,
              0xA830, 0xA831, 0xA832, 0xA86E, 0xA86F, 0xA870, 0xA91A, 0xA91B, 0xA91C, 0xB03B, 0xB03C, 0xB03D,
@@ -42,7 +51,8 @@ DEAD_STEPS = 12000          # instructions compared after a mine plot (roughly a
 WIN = (16, 239, 0, 191)
 SKY = 104                   # above this line the blit does not restore the screen
 SPECCY = [0x00, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4, 0xB6, 0x00, 0x03, 0xE0, 0xE3, 0x1C, 0x1F, 0xFC, 0xFF]
-PALETTE = [0x00, 0xFF, 0x00, 0x03, 0xE0, 0xE7, 0x1C, 0x1F, 0xFC, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4, 0xB6]   # as asm .pal
+PALETTE = [0x00, 0xFF, 0x00, 0x03, 0xE0, 0xE7, 0x1C, 0x1F, 0xFC, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4]   # slot 15 uses RGB333
+RING_RGB = (109, 109, 109)  # RGB333 333, programmed by the Spectrum setup
 PC, TS, SP, IFF = 24, 25, 12, 26
 CMP = list(range(0, 13)) + [14] + list(range(16, 25)) + [26, 27]   # all but R, T, MEMPTR
 GAME_SP = 41276
@@ -228,18 +238,30 @@ def trim_pixels(get, img):
     if img[3] not in TRIM_KINDS or img[2] < TRIM_MIN_LINES:
         return set()
     px = image_pixels(get, img)
-    out_ = set()
+    return exterior(px).intersection(px)
+
+
+def exterior(px):
+    """Four-connected outside, including a one-pixel margin around the source rectangle."""
     w = 1 + max(x for x, _ in px)
     h = 1 + max(y for _, y in px)
-    todo = [p for p in px if not px[p][0] and (p[0] in (0, w - 1) or p[1] in (0, h - 1))]
-    out_.update(todo)
+    seen = {(-1, -1)}
+    todo = list(seen)
     while todo:
         x, y = todo.pop()
-        for q in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
-            if q in px and q not in out_ and not px[q][0]:
-                out_.add(q)
+        for u, v in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+            q = u, v
+            if -1 <= u <= w and -1 <= v <= h and q not in seen and not px.get(q, (0, 1))[0]:
+                seen.add(q)
                 todo.append(q)
-    return out_
+    return seen
+
+
+def ring_pixels(get, img):
+    px = image_pixels(get, img)
+    neighbours = {(x + dx, y + dy) for (x, y), (ink, _) in px.items() if ink
+                  for dx in (-1, 0, 1) for dy in (-1, 0, 1)}
+    return exterior(px) & neighbours
 
 
 def trims_body(get, img):
@@ -283,10 +305,14 @@ def trimmed_map(get, cmap, prof=None):
     return out, n
 
 
-def load_colours(path=None):
+ARCADE_COLOURS = 'docs/profiles/green_beret_arcade_colours.json'
+
+
+def load_colours(path=None, banked=False):
     from . import coloursheet as cs
     from .recolour import build_colours_path
-    return cs.load(path or build_colours_path(COLOURS))
+    default = os.path.join(_HERE, '..', ARCADE_COLOURS) if banked else COLOURS
+    return cs.load(path or build_colours_path(default))
 
 
 def colour_inputs_md5(get, prof=None):
@@ -376,17 +402,24 @@ class PlainPatch:
 class GreenBeretPatch:
     name = 'Green Beret figures -> hardware sprites (altrom hooks, plots into a scratch page at slot 2)'
 
-    def __init__(self, prof=None, rom_code=None, colours=None, trim=True, screen=None):
+    def __init__(self, prof=None, rom_code=None, colours=None, trim=True, screen=None, enhanced=False):
+        self.enhanced = enhanced
         self.trim = trim
         self.screen = screen
         self.trims = {}
         self.prof = prof or load_profile()
-        self.colours = load_colours() if colours is None else colours
+        if enhanced:
+            self.prof = dict(self.prof, hooks=self.prof['arcade_hooks'])
+        self.colours = load_colours(banked=enhanced) if colours is None else colours
         h = self.prof['hooks']
         self.rom_code = rom_code or bytes.fromhex(h['rom'])
         self.syms = {k: int(v, 16) for k, v in h['syms'].items()}
+        if enhanced:
+            self.rom_code += bytes.fromhex(h['intro'])
         self.stub_extra = bytes.fromhex(h['setup'])
-        self.setup_call = 0xD000
+        self.setup_call = self.syms['intro_setup'] if enhanced else 0xD000
+        if enhanced:
+            self.stub_extra += art.palette_data()
         self.hook_page_data = b''
         self.uses_printer_buffer = True
         self.keep_printer_buffer = True
@@ -409,6 +442,10 @@ class GreenBeretPatch:
             self.sites.append((a, bytes.fromhex(old), bytes([SITE_OP.get(a, 0xC3)]) +
                                self.syms[SITE_SYM[a]].to_bytes(2, 'little')))
         self.extra_banks = {}
+        if enhanced:
+            self.sites.append((INTRO_COLUMN, bytes.fromhex('2af76d'), b'\xc3' + self.syms['intro_column'].to_bytes(2, 'little')))
+            for site, (old, _, label) in INTRO.items():
+                self.sites.append((site, bytes.fromhex(old), b'\xc3' + self.syms[label].to_bytes(2, 'little')))
         self.scratch0 = page_image(prof=self.prof)
         self.index = bytes(8192)
         self.colour_pages = {}
@@ -417,6 +454,12 @@ class GreenBeretPatch:
     def apply(self, snap):
         if snap.is128:
             raise ValueError('Green Beret patch expects the 48K snapshot')
+        if self.enhanced:
+            code = snap.banks[5] + snap.banks[2] + snap.banks[0]
+            for addr, old in INTRO_ORIG.items():
+                data = bytes.fromhex(old)
+                if code[addr - 0x4000:addr - 0x4000 + len(data)] != data:
+                    raise ValueError('unexpected intro routine at %04X' % addr)
         start_screen(snap, self.screen)
         ram = bytearray(snap.banks[5] + snap.banks[2] + snap.banks[0])
         for a, old, new in self.sites:
@@ -429,13 +472,25 @@ class GreenBeretPatch:
         snap.banks[2] = bytes(ram[16384:32768])
         snap.banks[0] = bytes(ram[32768:49152])
         restore_tail(self, snap)
-        self.peek = lambda a: ram[a - 0x4000] if a >= 0x4000 else 0
-        self.prepare(self.peek)
+        self.prepare(lambda a: ram[a - 0x4000] if a >= 0x4000 else 0)
 
     def prepare(self, peek):
-        cmap, n = trimmed_map(peek, self.colours, self.prof) if self.trim else (self.colours, 0)
-        self.index, self.colour_pages, self.cinfo = colour_tables(peek, cmap, self.prof)
-        self.cinfo['graphics bytes with trimmed edge pixels'] = n
+        self.peek = peek
+        if self.enhanced:
+            from .green_beret_intro import palettes, tile_data
+            h = self.prof['hooks']
+            data = tile_data(peek)
+            self.stub_extra = (bytes.fromhex(h['setup']) + art.palette_data() + bytes.fromhex(h['introsetup'])
+                               + palettes() + len(data).to_bytes(2, 'little') + data)
+            cmap, n = trimmed_map(peek, self.colours, self.prof) if self.trim else (self.colours, 0)
+            self.index, self.colour_pages, self.cinfo = colour_tables(peek, cmap, self.prof)
+            table = bytearray(4096)
+            for gfx, _, _, _ in images(self.prof):
+                table[gfx >> 4] = art.group(gfx) << 4
+            self.index = self.index[:4096] + table
+            self.cinfo['graphics bytes with trimmed edge pixels'] = n
+        else:
+            self.index, self.colour_pages, self.cinfo = ring_tables(peek, self.colours, self.prof, self.trim)
         self.trims = {}
         if self.trim:
             for img in images(self.prof):
@@ -457,6 +512,7 @@ class NextState:
         self.pages = dict(getattr(patch, 'colour_pages', {}) or {}) if patch is not None else {}
         if patch is not None:
             self.pages[OVPAGE] = patch.index
+        self.enhanced = bool(getattr(patch, "enhanced", False))
         self.attr = [[0, 0, 0, 0, 0] for _ in range(128)]
         self.pat = bytearray(16384)
         self.scratch = bytearray(8192)
@@ -516,9 +572,9 @@ class NextState:
                     if b:
                         x = x0 + 2 * k
                         if b >> 4 and WIN[0] <= x <= WIN[1]:
-                            out[(x, y)] = b >> 4
+                            out[(x, y)] = (a[2] & 0xF0) | (b >> 4)
                         if b & 15 and WIN[0] <= x + 1 <= WIN[1]:
-                            out[(x + 1, y)] = b & 15
+                            out[(x + 1, y)] = (a[2] & 0xF0) | (b & 15)
         return out
 
 
@@ -628,6 +684,12 @@ def _png(mem_get, ps, ns, path):
     right = ula(lambda a: ps[a - 0x4000])
     rp = right.load()
     for (x, y), c in ns.composite().items():
+        if ns.enhanced:
+            rp[x, y] = art.RGB[c >> 4][c & 15]
+            continue
+        if c == 15:
+            rp[x, y] = RING_RGB
+            continue
         v = PALETTE[c]
         rp[x, y] = ((v >> 5) * 255 // 7, ((v >> 2) & 7) * 255 // 7, (v & 3) * 85)
     sh = Image.new('RGB', (2 * 256 + 8, 192), (64, 64, 64))
@@ -656,6 +718,11 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shots=None):
     owrites = {}
     cnt = collections.Counter()
     WATCH = set(SITES_ORIG) | set(INTERIORS) | {AFTER, 0x64E9, 0x64F7, 0xB03E}
+    if patch.enhanced:
+        WATCH.update((INTRO_COLUMN, INTRO_COLUMN_END, INTRO_COLUMN + 1, INTRO_COLUMN + 2))
+        WATCH.update(INTRO)
+        WATCH.update(target for _, target, _ in INTRO.values())
+        WATCH.update(a + offset for a in INTRO for offset in (1, 2))
     states = []
     shots = dict(shots or {})
     regs_of = {}
@@ -664,6 +731,10 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shots=None):
     trims = set()
     trim_at = getattr(patch, 'trims', {}) or {}
     known0 = {i[0] for i in images(getattr(patch, 'prof', None)) if i[3] == 0}
+
+    catalogue = {img[0]: img for img in images(patch.prof)}
+    reference = {img: expected_pixels(patch.peek, img, patch.colours, patch.enhanced) for img in catalogue.values()}
+    frame_pixels, source_pixels = {}, {}
 
     def fail(k, info=()):
         c[k + '!'] += 1
@@ -714,7 +785,13 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shots=None):
         return m1 == m2 and all(r1[i] == r2[i] for i in CMP if i not in (16, 17))
 
     def picture(get, mem):
-        comp = ns.composite()
+        actual = ns.composite()
+        if actual != frame_pixels:
+            fail('sprite composite differs from figure rasters',
+                 (len(actual.keys() ^ frame_pixels.keys()), next((p for p in frame_pixels if actual.get(p) != frame_pixels[p]), None)))
+        c['figure pixels checked in play'] += len(frame_pixels)
+        # Compare the game's original ink/body classes to the ULA, independently of display colours.
+        comp = source_pixels
         o = bytes(mem[0x4000:0x5800])
         cover = {scr_addr(x >> 3, y) - 0x4000 for x, y in comp}
         diff = [i for i in range(0x1800) if o[i] != ps[i]]
@@ -778,7 +855,31 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shots=None):
                 break
 
     def event(pc, R, mem, get):
+        if patch.enhanced and pc in INTRO:
+            _, target, label = INTRO[pc]
+            rp, writes, ok = hr.run(get, list(R), {target})
+            if not ok:
+                fail(label + ' control flow')
+            expected = (0x22, 0xA0) if label == 'intro_on' else (0x20, 0)
+            if (ns.nr.get(0x43), ns.nr.get(0x6B)) != expected:
+                fail(label + ' display registers')
+            st['intro_regs'] = target, rp, dict(writes)
+            c[label] += 1
+        elif patch.enhanced and pc == INTRO_COLUMN:
+            right = 19 + 4 * ((get(0x6DF7) + 1) & 31)
+            rp, writes, ok = hr.run(get, list(R), {INTRO_COLUMN_END})
+            if not ok or ns.nr.get(0x1B) != right:
+                fail('intro reveal column')
+            st['intro_regs'] = INTRO_COLUMN_END, rp, dict(writes)
+            c['intro columns'] += 1
+        elif patch.enhanced and st.get('intro_regs') and pc == st['intro_regs'][0]:
+            _, rp, writes = st.pop('intro_regs')
+            check_regs('intro transition', R, rp)
+            if R[TS] != rp[TS] or any(get(a) != v for a, v in writes.items()):
+                fail('intro transition timing or memory')
         if pc == DRAW_SITE and pc in has:
+            if patch.enhanced and (ns.nr.get(0x6B, 0) or ns.nr.get(0x43, 0x20) != 0x20):
+                fail('intro colours in gameplay')
             c['draw'] += 1
             if R[IFF]:
                 c['draw with interrupts on'] += 1
@@ -829,6 +930,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shots=None):
                 check_mapped('frame end')
                 picture(get, mem)
                 c['frame end'] += 1
+                frame_pixels.clear()
+                source_pixels.clear()
                 holes.clear()
                 wraps.clear()
                 trims.clear()
@@ -836,6 +939,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shots=None):
             check_regs('frame end', R, st['fe'], st.get('ax') or ())
             st['fe'] = None
         elif pc in (WIPE1, WIPE2) and pc in has:
+            if patch.enhanced and (ns.nr.get(0x6B, 0) or ns.nr.get(0x43, 0x20) != 0x20):
+                fail('intro colours at screen wipe')
             c['wipe'] += 1
             nx = pc + 3
             Rp, ov, ok = hr.run(get, list(R), {nx})
@@ -859,6 +964,23 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shots=None):
         elif pc == 0xB03E and st['small'] is not None:
             check_regs('small', R, st['small'])
             st['small'] = None
+        if st['draw'] is not None and pc in (PLOT, PLOT2, SMALL, MINE):
+            if pc == PLOT:
+                addr, screen = R[SP], R[6] << 8 | R[7]
+            elif pc == PLOT2:
+                addr, screen = R[6] << 8 | R[7], R[4] << 8 | R[5]
+            elif pc == SMALL:
+                addr, screen = R[22] << 8 | R[23], R[20] << 8 | R[21]
+            else:
+                addr, screen = R[6] << 8 | R[7], scr_addr((R[3] >> 3) & 31, 162)
+            img = catalogue.get(addr)
+            if img is None:
+                fail('unlisted plot image', (pc, addr))
+            else:
+                col, y = addr_xy(screen)
+                base, painted = reference[img]
+                source_pixels.update(place(base, col, y))
+                frame_pixels.update(place(painted, col, y))
         if st['draw'] is not None or pc in has:
             if pc == PLOT:
                 c['plot'] += 1
@@ -939,7 +1061,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shots=None):
         pass
     finally:
         rzxplay.RZXTracer.next_frame, rzxplay.Simulator, rzxplay.CSimulator = old
-    for a in INTERIORS:
+    for a in (*INTERIORS, *(a + k for a in (*INTRO, INTRO_COLUMN) if patch.enhanced for k in (1, 2))):
         if cnt[a]:
             c['jump into a patched instruction (%04X)!' % a] += 1
     for k in ('draw', 'plot', 'frame end'):
@@ -978,25 +1100,51 @@ def _case_regs(R0, site, hl=None, de=None, bc=None, sp=None, xa=None, xhl=None, 
     return R
 
 
-def _expect(mem, img, col, y):
-    """{(x, y): class} a figure must show: later cells over none (a single figure)."""
-    out = {}
-    gfx, mask, rows, kind = img
-    cut = trims_body(lambda a: mem[a & 0xFFFF], img)
-    for ln, c, a, m in cells_of(img):
-        g = mem[a]
-        mm = mem[m] if m is not None else 0xFF
-        for b in range(8):
-            gb, mb = g >> (7 - b) & 1, mm >> (7 - b) & 1
-            x = (col + c) * 8 + b
-            if not WIN[0] <= x <= WIN[1]:
-                continue
-            cl = 2 if gb else (0 if mb else 1)
-            if cl and (c * 8 + b, ln) in cut:
-                cl = 0
-            if cl:
-                out[(x, y + ln)] = cl
-    return out
+def expected_pixels(get, img, colours, enhanced):
+    """Reference raster in source coordinates. Flood the padded bitmap from its corner and dilate the ink."""
+    from PIL import Image, ImageDraw, ImageFilter
+    raw = image_pixels(get, img)
+    w, h = max(x for x, _ in raw) + 1, img[2]
+    ink = Image.new('L', (w + 2, h + 2))
+    for (x, y), (black, _) in raw.items():
+        if black:
+            ink.putpixel((x + 1, y + 1), 255)
+    outside = ink.copy()
+    ImageDraw.floodfill(outside, (0, 0), 1)
+    dilated = ink.filter(ImageFilter.MaxFilter(3))
+    base, shown = {}, {}
+    for (x, y), (black, mask) in raw.items():
+        value = 2 if black else 0 if mask else 1
+        if img[3] == 0 and h >= 12 and outside.getpixel((x + 1, y + 1)) == 1:
+            value = 0
+        if value:
+            base[x, y] = value
+    shown.update(base)
+    if not enhanced:
+        for y in range(-1, h + 1):
+            for x in range(-1, w + 1):
+                p = x + 1, y + 1
+                if outside.getpixel(p) == 1 and dilated.getpixel(p):
+                    shown[x, y] = 15
+    def paint(pos, e, bit, check):
+        if e and e[0] == check:
+            if len(e) > 3 and e[3] & (128 >> bit):
+                shown.pop(pos, None)
+            elif e[2][bit]:
+                shown[pos] = e[2][bit]
+    for y, col, a, _ in cells_of(img):
+        for bit in range(8):
+            paint((col*8 + bit, y), colours.get('%04X' % a), bit, get(a))
+    if not enhanced:
+        for x, y in shown.keys() - raw.keys():
+            paint((x, y), colours.get('%04X:rim:%d:%d' % (img[0], y, x//8)), x%8, 0)
+    group = art.group(img[0]) << 4 if enhanced else 0
+    return base, {(x, y): group | value for (x, y), value in shown.items()}
+
+
+def place(raster, col, y):
+    return {(col*8 + x, y + row): value for (x, row), value in raster.items()
+            if WIN[0] <= col*8 + x <= WIN[1] and WIN[2] <= y + row <= WIN[3]}
 
 
 def unit_tests(patch, states, neg=None):
@@ -1024,6 +1172,69 @@ def unit_tests(patch, states, neg=None):
         Rp, ov, ok = hr.run(get, _case_regs(R0, DRAW_SITE), {q.syms['e_fs'] + 0x100000, DRAW_ENTRY})
         return ns, ps, hr, ok
 
+    if patch.enhanced:
+        from skoolkit.simulator import Simulator
+
+        def intro_sequence(q, clock):
+            ns = NextState(q)
+            ps = bytearray(mem[0x4000:0x5800])
+            hr = HookRunner(q, ns, ps)
+            ns.nr.update({7: clock, 0x43: 0x20, 0x6B: 0})
+            for site, (_, target, label) in INTRO.items():
+                r = _case_regs(R0, site)
+                rp, writes, returned = hr.run(get, r, {target}, limit=128)
+                expected = (0x22, 0xA0) if label == 'intro_on' else (0x20, 0)
+                baseline = list(mem)
+                sim = Simulator(baseline, {})
+                sim.registers[:] = type(sim.registers)(sim.registers.typecode, r) if hasattr(sim.registers, 'typecode') else r
+                sim.run(site, target)
+                original = sim.registers
+                if (not returned or (ns.nr[0x43], ns.nr[0x6B]) != expected or ns.nr[7] != clock
+                        or any(rp[i] != original[i] for i in (*CMP, TS))
+                        or any(writes.get(i, mem[i]) != baseline[i] for i in range(0x4000, 0x10000))
+                        or ps != mem[0x4000:0x5800]):
+                    return False
+            return True
+
+        def column_case(q, column):
+            source = list(mem)
+            source[0x6DF7:0x6DF9] = (0x5880 + column - 1).to_bytes(2, 'little')
+            ns = NextState(q)
+            hr = HookRunner(q, ns, bytearray(source[0x4000:0x5800]))
+            regs = _case_regs(R0, INTRO_COLUMN, bc=32, de=0x5B27)
+            regs[17] = (regs[17] & 0xFE) | (column & 1)
+            rp, writes, ok = hr.run(source.__getitem__, regs, {INTRO_COLUMN_END})
+            expected = source.copy()
+            sim = Simulator(expected, {})
+            sim.registers[:] = regs
+            sim.run(INTRO_COLUMN, INTRO_COLUMN_END)
+            return (ok and ns.nr[0x1B] == 19 + 4 * column
+                    and all(rp[i] == sim.registers[i] for i in (*CMP, TS))
+                    and all(writes.get(i, source[i]) == expected[i] for i in range(0x4000, 0x10000)))
+
+        for column in range(2, 30):
+            if not column_case(patch, column):
+                fail('intro reveal column')
+            c['intro reveal columns'] += 1
+        # Same seven T as ADD A,19. A full-width clip exposes old black-on-black bitmap data.
+        clip = bytes.fromhex('c613ed911c08')
+        addr = ROM_ORG + patch.rom_code.index(clip, patch.syms['intro_column'] - ROM_ORG)
+        if column_case(_clone(patch, [(addr, bytes.fromhex('3e9f'))]), 2):
+            fail('missed negative intro clip')
+        c['intro negative full-width clip'] += 1
+
+        for clock in range(4):
+            if not intro_sequence(patch, clock):
+                fail('intro entry/exit state')
+            c['intro clock pairs'] += 1
+        for site, (_, _, label) in INTRO.items():
+            # Keep the actual assembled path, but suppress just the tile enable or disable.
+            address = patch.syms[label] + (5 if label == 'intro_off' else 0)
+            broken = _clone(patch, [(address, bytes(4))])
+            if intro_sequence(broken, 0):
+                fail('missed negative ' + label)
+            c['intro negative ' + label] += 1
+
     def figure(hr, ns, img, col, y, regs=None):
         gfx, mask, rows, kind = img
         scr = scr_addr(col, y)
@@ -1045,6 +1256,11 @@ def unit_tests(patch, states, neg=None):
             stop = {0xAFDC}
         return R, hr.run(get, R, stop)
 
+    rasters = {img: expected_pixels(get, img, patch.colours, patch.enhanced)[1] for img in imgs}
+
+    def expected(img, col, y):
+        return place(rasters[img], col, y)
+
     # geometry
     k3 = [i for i in imgs if i[3] == 3]
     for imgset, n in ((k0[:6], 'plot geometry'), (k1[:4], 'plot2 geometry'), (k2[:2], 'small geometry'), (k3[:2], 'mine geometry')):
@@ -1053,7 +1269,7 @@ def unit_tests(patch, states, neg=None):
                 for y in ((162,) if img[3] == 3 else (56, 82, 104, 142)):
                     ns, ps, hr, ok = start()
                     R, (Rp, ov, ok2) = figure(hr, ns, img, col, y)
-                    want = _expect(mem, img, col, y)
+                    want = expected(img, col, y)
                     got = ns.composite()
                     if got != want:
                         fail(n + ' pixels')
@@ -1068,12 +1284,46 @@ def unit_tests(patch, states, neg=None):
                         fail(n + ' game memory')
                     c[n] += 1
     # the edge rule: every figure image the profile lists, alone on a fresh frame, against the rule
-    for img in k0:
+    for img in imgs:
+        y = 162 if img[3] == 3 else 100
         ns, ps, hr, ok = start()
-        figure(hr, ns, img, 10, 100)
-        if ns.composite() != _expect(mem, img, 10, 100):
+        figure(hr, ns, img, 10, y)
+        want = expected(img, 10, y)
+        if ns.composite() != want:
             fail('edge rule: figure pixels')
         c['edge rule figures'] += 1
+        c['opaque figure pixels'] += len(want)
+        if not patch.enhanced:
+            c['grey ring pixels'] += sum(v == 15 for v in want.values())
+
+    # Change actual pattern RAM or the actual slot palette, then repeat the same comparison.
+    img = next(img for img in k0 if rasters[img] and
+               (patch.enhanced or any(v == 15 for v in rasters[img].values())))
+    for fault in (('wrong group',) if patch.enhanced else ('missing rim pixel', 'extra rim pixel')):
+        ns, _, hr, _ = start()
+        figure(hr, ns, img, 10, 100)
+        if fault == 'wrong group':
+            for attr in ns.attr:
+                if attr[3] & 0x80:
+                    attr[2] ^= 0x10
+        else:
+            for attr in (a for a in ns.attr if a[3] & 0x80):
+                base = (attr[3] & 63)*256 + (128 if attr[4] & 64 else 0)
+                hit = False
+                for offset in range(base, base+128):
+                    for shift in (4, 0):
+                        value = ns.pat[offset] >> shift & 15
+                        if value == (15 if fault == 'missing rim pixel' else 0):
+                            ns.pat[offset] ^= 15 << shift
+                            hit = True
+                            break
+                    if hit:
+                        break
+                if hit:
+                    break
+        if ns.composite() == expected(img, 10, 100):
+            fail('missed negative ' + fault)
+        c['negative ' + fault] += 1
     # the every-site clock matrix (card patch.restore-speed): each hook entered at NR 7 = 0 (3.5 MHz) to 3 (28 MHz)
     # from the same state exits at that clock, with the same registers, game memory and sprites
     def at_clock(k, run):
@@ -1112,10 +1362,10 @@ def unit_tests(patch, states, neg=None):
         fs_ = _case_regs(R0, DRAW_SITE)
         hr.run(get, fs_, {DRAW_ENTRY})
         figure(hr, ns, img, 10, 100)
-        if ns.composite() != _expect(mem, img, 10, 100):
+        hr.run(get, _case_regs(R0, FEND_SITE), {AFTER})
+        if ns.composite() != expected(img, 10, 100):
             fail('cache: wrong picture after eviction')
         c['cache eviction'] += 1
-        hr.run(get, _case_regs(R0, FEND_SITE), {AFTER})
     fs_ = _case_regs(R0, DRAW_SITE)
     hr.run(get, fs_, {DRAW_ENTRY})
     u0 = ns.uploads
@@ -1162,12 +1412,12 @@ def unit_tests(patch, states, neg=None):
         y1, col1, a1, _ = cells_of(img)[1]
         g0 = get(a0)
         cm = {'%04X' % a0: [g0, 'g', [5] * 8], '%04X' % a1: [get(a1), 'g', [0] * 8, 0xFF]}
-        q = GreenBeretPatch(patch.prof, colours=cm)
+        q = GreenBeretPatch(colours=cm, enhanced=patch.enhanced)
         q.prepare(get)
         ns, ps, hr, ok = start(q)
         figure(hr, ns, img, 10, 100)
         got = ns.composite()
-        want = _expect(mem, img, 10, 100)
+        want = place(expected_pixels(get, img, {}, patch.enhanced)[1], 10, 100)
         for b in range(8):
             want[(80 + 8 * col0 + b, 100 + y0)] = 5
             want.pop((80 + 8 * col1 + b, 100 + y1), None)
@@ -1176,11 +1426,11 @@ def unit_tests(patch, states, neg=None):
         if ns.nr[0x56]:
             fail('colour map: slot 6 left mapped')
         c['colour map'] += 1
-        q = GreenBeretPatch(patch.prof, colours={'%04X' % a0: [(g0 + 1) & 255, 'g', [5] * 8]})
+        q = GreenBeretPatch(enhanced=patch.enhanced, colours={'%04X' % a0: [(g0 + 1) & 255, 'g', [5] * 8]})
         q.prepare(get)
         ns, ps, hr, ok = start(q)
         figure(hr, ns, img, 10, 100)
-        if ns.composite() != _expect(mem, img, 10, 100):
+        if ns.composite() != place(expected_pixels(get, img, {}, patch.enhanced)[1], 10, 100):
             fail('colour map: wrong check byte not ignored')
         c['colour check byte'] += 1
     return c
@@ -1215,11 +1465,24 @@ def negative_patches(patch):
     out['no sprites shown'] = _clone(patch, [(s['n_plot'], nop3)])
     out['plot2 sprites not shown'] = _clone(patch, [(s['n_plt2'], nop3)])
     out['small sprites not shown'] = _clone(patch, [(s['n_smal'], nop3)])
-    # sprites one line low
-    out['sprites one line low'] = _clone(patch, [(s['n_y'] + 1, bytes([33]))])
+    # Move the origin in its actual representation (arcade immediate or default descriptors).
+    if patch.enhanced:
+        shifted = _clone(patch, [(s['n_y'] + 1, bytes([33]))])
+    else:
+        shifted = _clone(patch, [])
+        index = bytearray(patch.index)
+        for i in range(len(images(patch.prof))):
+            index[4096 + 8 * (i + 1) + 1] += 1
+        shifted.index = bytes(index)
+    out['sprites one line low'] = shifted
     # body and dark swapped in the class table
     q = _clone(patch, [])
-    q.scratch0 = page_image(a=2, b=1)
+    if patch.enhanced:
+        q.scratch0 = page_image(a=2, b=1, prof=patch.prof)
+    else:
+        remap = (0, 2, 1, *range(3, 16))
+        swap = bytes(remap[n >> 4] << 4 | remap[n & 15] for n in range(256))
+        q.colour_pages = {i: data.translate(swap) for i, data in patch.colour_pages.items()}
     out['pixel classes swapped'] = q
     # stale patterns: the cache key ignores the graphics address
     out['cache key ignores the graphics'] = _clone(patch, [(s['n_k0'], bytes(2)), (s['n_k1'], bytes(2))])
@@ -1238,7 +1501,7 @@ def negative_patches(patch):
     out['mine hook never runs'] = _clone(patch, [], drop=(MINE, MINE_END))
     out['mine sprites not shown'] = _clone(patch, [(s['n_mine'], nop3)])
     # the edge rule left out: the old wide white edges
-    q = GreenBeretPatch(patch.prof, rom_code=patch.rom_code, colours=patch.colours, trim=False)
+    q = GreenBeretPatch(patch.prof, colours=patch.colours, trim=False, enhanced=patch.enhanced)
     q.prepare(patch.peek)
     out['edge rule left out'] = q
     return out
@@ -1247,10 +1510,32 @@ def negative_patches(patch):
 # ---------------------------------------------------------------------------------------------
 # Colour sheets and recolour (docs/COLOURS.md)
 # ---------------------------------------------------------------------------------------------
-NOTE = ('Green Beret colour map (docs/COLOURS.md): key = graphics byte (hex address, one per preshifted phase; check = its '
-        'value), bit = pixel. Body, dark and clear pixels can all be painted; grey = transparent.')
+NOTE = ('Green Beret graphics bytes and rim margin keys. Each bit is one pixel. Swatch 15 is '
+        'dark grey in Spectrum and navy in Enhanced. Canvas grey is transparent. See docs/COLOURS.md.')
 RECOLOUR = {'game': 'green_beret', 'output': 'sprites', 'colours': 'docs/profiles/green_beret_colours.json', 'clear': True,
-            'note': NOTE}
+            'note': NOTE, 'outputs': ('sprites', 'sprites_loading', 'enhanced', 'enhanced_loading')}
+
+
+def banked_page(page, prof):
+    return page[:8192] == page_image(prof=dict(prof, hooks=prof['arcade_hooks']))
+
+
+def colours_for_build(nex):
+    from .recolour import banks
+    return ARCADE_COLOURS if banked_page(banks(nex)[13], load_profile()) else RECOLOUR['colours']
+
+
+def check_sheet(nex, layout):
+    banked = colours_for_build(nex) == ARCADE_COLOURS
+    groups = layout.get('group_palettes')
+    if banked != (groups is not None):
+        raise ValueError('use the sheet issued for the matching Green Beret palette mode')
+    if banked:
+        if groups != [[list(c) for c in row] for row in art.RGB]:
+            raise ValueError('the sheet has different arcade swatches')
+        for comp in layout['composites']:
+            if any(art.group(int(p['id'].split(':')[0], 16)) != comp['group'] for p in comp['parts']):
+                raise ValueError('the figure has a different palette group in this build')
 
 
 def recolour(nex, cmap):
@@ -1265,14 +1550,17 @@ def recolour(nex, cmap):
     got = colour_inputs_md5(peek, prof)
     if [want.get('md5'), want.get('bytes')] != list(got):
         raise ValueError('game graphics differ from the expected snapshot (%s / %d bytes, expected %s)' % (got[0], got[1], want))
-    p = GreenBeretPatch(prof, colours=cmap)
+    banked = banked_page(have[13], prof)
+    p = GreenBeretPatch(prof, colours=cmap, enhanced=banked)
+    if banked and have.get(10, b'')[0x1000:0x1000 + len(p.stub_extra)] != p.stub_extra:
+        raise ValueError('the arcade palette in this build differs from its issued swatches')
     for a, old, new in p.sites:
         if bytes(peek(a + k) for k in range(len(new))) != new:
             raise ValueError('patch site 0x%04X does not hold this build\'s hook' % a)
     img, rb = p.page + bytes(8192), p.regblock + 20 - 0x2000    # restore_tail's bytes (per snapshot) sit in rb..0x3D00
     if have[12][:rb] != img[:rb] or have[12][0x1D00:] != img[0x1D00:]:
         raise ValueError('alt ROM image / hook code differs from this version\'s (rebuild with nexclash.py auto)')
-    if have[13][:8192] != page_image():
+    if have[13][:8192] != p.scratch0:
         raise ValueError('hook page differs from this version\'s (rebuild with nexclash.py auto)')
     p.prepare(peek)
     out, changed = splice(nex, {b: p.extra_banks[b] for b in (13,) + COLOUR_BANKS})
@@ -1281,10 +1569,12 @@ def recolour(nex, cmap):
     return out, info
 
 
-def image_part(get, img):
+def image_part(get, img, banked=False, trim=True):
     """The coloursheet part of one image: body code 1, dark code 2, clear code 0."""
     gfx, mask, rows, kind = img
     px, ent = [], {}
+    cut = trims_body(get, img) if trim else set()
+    ring = ring_pixels(get, img) if trim and not banked else set()
     w = 32 if kind in (0, 3) else 16
     for y, col, a, m in cells_of(img):
         g = get(a)
@@ -1293,9 +1583,59 @@ def image_part(get, img):
         for bit in range(8):
             gb, mb = g >> (7 - bit) & 1, mm >> (7 - bit) & 1
             code, dflt = (2, 2) if gb else ((0, 0) if mb else (1, 1))
-            px.append((col * 8 + bit, y, '%04X' % a, bit, code, dflt))
-    return {'id': '%04X:%d:%d' % (gfx, rows, kind), 'size': 1, 'w': w, 'h': rows, 'x': 0, 'y': 0, 'mir': 0, 'pixels': px,
+            if (col * 8 + bit, y) in cut:
+                dflt = 0
+            pos = col * 8 + bit, y
+            if pos in ring:
+                code = dflt = 15
+            px.append((*pos, '%04X' % a, bit, code, dflt))
+    if not banked:
+        # These extra edge pixels have no source byte. Give each paintable margin byte a stable key.
+        for x, y in sorted(ring - {(q[0], q[1]) for q in px}):
+            key = '%04X:rim:%d:%d' % (gfx, y, x // 8)
+            ent[key] = [0, 'g']
+            px.append((x, y, key, x % 8, 15, 15))
+        px = [(x + 1, y + 1, *rest) for x, y, *rest in px]
+        w, rows = w + 2, rows + 2
+    return {'id': '%04X:%d:%d' % (gfx, img[2], kind), 'size': 1, 'w': w, 'h': rows, 'x': 0, 'y': 0, 'mir': 0, 'pixels': px,
             'entries': ent, 'dx': 0, 'dy': 0, 'dmir': 0, 'vmir': 0, 'group': 0}
+
+
+def ring_tables(get, cmap, prof, trim=True):
+    """Store a padded 4bpp pattern per source frame. A cache entry holds up to four 16x16 tiles."""
+    index = bytearray(8192)
+    pages = {2*b + k: bytearray(8192) for b in COLOUR_BANKS for k in (0, 1)}
+    used, bad = set(), set()
+    for i, img in enumerate(images(prof)):
+        gfx = img[0]
+        part = image_part(get, img, trim=trim)
+        pixels = {}
+        for x, y, key, bit, _, colour in part['pixels']:
+            e = cmap.get(key)
+            if e and e[0] == part['entries'][key][0]:
+                used.add(key)
+                colour = 0 if len(e) > 3 and e[3] & (128 >> bit) else (e[2][bit] or colour)
+            elif e:
+                bad.add(key)
+            if colour:
+                pixels[x - 1, y - 1] = colour
+        xs, ys = zip(*(pixels or {(0, 0): 0}))
+        x0, y0 = min(xs), min(ys)
+        w, h = max(xs) - x0 + 1, max(ys) - y0 + 1
+        if w > 32 or h > 32:
+            raise ValueError('paint at %04X spans %dx%d, exceeding four hardware tiles' % (gfx, w, h))
+        page, offset = 2 * COLOUR_BANKS[0] + i // 16, 512 * (i % 16)
+        for (x, y), colour in pixels.items():
+            xx = x - x0
+            pages[page][offset + 16 * (y - y0) + xx // 2] |= colour << (0 if xx & 1 else 4)
+        slot = (gfx - 0x8000) >> 3
+        if index[slot]:
+            raise ValueError('duplicate graphics lookup at %04X' % gfx)
+        index[slot] = i + 1
+        header = 4096 + 8 * (i + 1)
+        index[header:header+7] = bytes((32+x0, 32+y0, (w+15)//16, h, page, 0xC0 + offset//256, gfx & 255))
+    return bytes(index), pages, {'map entries used': len(used), 'map entries ignored (check byte differs)': len(bad),
+                                 'map entries for no known image': len(set(cmap) - used - bad)}
 
 
 def capture(rzx_paths):
@@ -1319,21 +1659,25 @@ def capture(rzx_paths):
     return seen
 
 
-def sheets(z80, out_dir, prefix='green_beret', colours=None, say=print):
+def sheets(z80, out_dir, prefix='green_beret', colours=None, say=print, banked=False):
     from . import coloursheet as cs
     from skoolkit.snapshot import Snapshot
     mem = Snapshot.get(z80).memory
     get = lambda a: mem[a & 0xFFFF]
     prof = load_profile()
-    comps = [{'count': 1, 'group': 0, 'parts': [image_part(get, i)]} for i in images(prof)]
-    cmap = load_colours() if colours is None else colours
-    rgb = cs.palette_rgb(PALETTE)
+    comps = [{'count': 1, 'group': art.group(i[0]) if banked else 0, 'parts': [image_part(get, i, banked)]} for i in images(prof)]
+    cmap = load_colours(banked=banked) if colours is None else colours
+    rgb = art.RGB[0] if banked else cs.palette_rgb(PALETTE) + [RING_RGB]
+    groups = art.RGB if banked else None
+    if banked:
+        comps.sort(key=lambda c: c['group'])
     pre = os.path.join(out_dir, prefix)
     ident = colour_identity(get, prof)
-    n1 = cs.write(cs.choose(comps, {}), pre + '_PAINTING_SPRITES.png', pre + '_PAINTING_SPRITES_layout.json', rgb,
-                  colours=cmap, paint_clear=True, identity=ident)
+    painting = cs.choose(comps, {}, range(len(art.GROUPS)) if banked else ())
+    n1 = cs.write(painting, pre + '_PAINTING_SPRITES.png', pre + '_PAINTING_SPRITES_layout.json', rgb,
+                  colours=cmap, paint_clear=True, identity=ident, group_palettes=groups)
     n2 = cs.write(comps, pre + '_REFERENCE_ALL_SPRITES.png', pre + '_REFERENCE_ALL_SPRITES_layout.json', rgb,
-                  colours=cmap, paint_clear=True, identity=ident)
+                  colours=cmap, paint_clear=True, identity=ident, group_palettes=groups)
     say('Sheets    : %d images; painting sheet %d figures, reference %d' % (len(comps), n1, n2))
     return n1, n2
 
@@ -1361,13 +1705,31 @@ def auto(a, z80, name, out, say):
     bad2 = check(spr, z80, patch, (conv[1], conv[1] + len(conv[2])))
     say('Sprites   : %s  %s  boot %s' % (os.path.basename(spr), md5(spr),
                                           'OK' if not bad2 else 'MISMATCH %s' % str(bad2[:3])[:200]))
-    if screen:   # the same build with the screen in the .nex (header byte 10 = 2): the .nxc shows it while patching
-        load = os.path.join(out, name + '_sprites_loading.nex')
-        d = open(spr, 'rb').read()
-        head = bytearray(d[:512]); head[10], head[133] = 2, 50
-        open(load, 'wb').write(bytes(head) + screen + d[512:])
-        say('Loading   : %s  %s' % (os.path.basename(load), md5(load)))
-    ok = not bad and not bad2
+    enhanced = GreenBeretPatch(screen=screen, enhanced=True)
+    enh = os.path.join(out, name + '_enhanced.nex')
+    conv = zt.convert(z80, enh, None, True, quiet=True, patch=enhanced, keep_printer_buffer=True)
+    bad3 = check(enh, z80, enhanced, (conv[1], conv[1] + len(conv[2])))
+    say('Enhanced  : %s  %s  boot %s' % (os.path.basename(enh), md5(enh), 'OK' if not bad3 else bad3[:3]))
+    if screen:
+        for src in (spr, enh):
+            load = src[:-4] + '_loading.nex'
+            with open(src, 'rb') as f:
+                head = bytearray(f.read(512))
+                head[10], head[133] = 2, 50
+                with open(load, 'wb') as target:
+                    target.write(head + screen + f.read())
+            say('Loading   : %s  %s' % (os.path.basename(load), md5(load)))
+    ok = not bad and not bad2 and not bad3
+    for variant in (patch, enhanced):
+        if a.rzx:
+            say('Replay    : %s' % ('Enhanced' if variant.enhanced else 'Spectrum with grey ring'))
+            ok = verify_recordings(variant, a, say) and ok
+    say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
+    return ok
+
+
+def verify_recordings(patch, a, say):
+    ok = True
     states = []
     for r in list(a.rzx or []):
         cc, ex, st = verify(patch, r, stop=getattr(a, 'quick', None), collect=3)
@@ -1378,6 +1740,10 @@ def auto(a, z80, name, out, say):
             os.path.basename(r), cc['frames'], cc['draw'], cc['plot'], cc['plot2'], cc['mine'], cc['small'],
             cc['small outside the draw pass'], cc['wipe'], cc['picture pixels compared'],
             'IDENTICAL' if not fails else 'FAILED %s' % fails))
+        say('Figures   : %s  %d visible sprite pixels checked' % (os.path.basename(r), cc['figure pixels checked in play']))
+        if patch.enhanced:
+            say('Intro      : %s entered %d, exited %d, columns %d' % (
+                os.path.basename(r), cc['intro_on'], cc['intro_off'], cc['intro columns']))
         say('Cache     : %s  draws that uploaded %d of %d, pattern bytes %d, T at 28 MHz %d' % (
             os.path.basename(r), cc['draws with uploads'], cc['draw'], cc['pattern bytes uploaded'], cc['T hook 28MHz']))
         say('Clash     : %s  body pixels the original showed in another colour %d, in this colour %d' % (
@@ -1391,5 +1757,4 @@ def auto(a, z80, name, out, say):
         uf = {k: v for k, v in u.items() if k.endswith('!')}
         ok = ok and not uf
         say('Unit      : %s -> %s' % (', '.join('%s %d' % (k, v) for k, v in sorted(u.items())), 'PASS' if not uf else 'FAIL %s' % uf))
-    say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
     return ok

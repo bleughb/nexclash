@@ -43,6 +43,8 @@ vx      EQU 0x5816
 vy      EQU 0x5818
 vp      EQU 0x5819
 vspd    EQU 0x581A          ; the game's clock (NR 7 bits 1:0) at hook entry, written back at exit
+offsets EQU 0x5840          ; default: four bytes per cache entry, x/y with border, columns, rows
+origin  EQU 0x581B          ; default: cached x/y offsets for attrs
 HSTK    EQU 0x5900
 KEYS    EQU 0x5900          ; 32 x 4
 STAMPS  EQU 0x5980          ; 32
@@ -379,7 +381,11 @@ f_hit:   ld a,e
         ld a,(frame)
         ld (hl),a
 ; the sprites: 2 x 2 tiles at most, from the screen address
-attrs:  ld hl,(vscr)
+attrs:
+        IFNDEF GROUP_PALETTES
+        call geometry
+        ENDIF
+        ld hl,(vscr)
         ld a,h
         and 0x18
         add a,a
@@ -395,7 +401,15 @@ attrs:  ld hl,(vscr)
         ld a,h
         and 7
         or b
-n_y:    add a,32
+n_y:
+        IFDEF GROUP_PALETTES
+        add a,32
+        ELSE
+        push hl
+        ld hl,origin+1
+        add a,(hl)
+        pop hl
+        ENDIF
         ld (vy),a
         ld a,l
         and 31
@@ -403,7 +417,13 @@ n_y:    add a,32
         ld d,8
         mul d,e
         ex de,hl
+        IFDEF GROUP_PALETTES
         ld de,32
+        ELSE
+        ld a,(origin)
+        ld e,a
+        ld d,0
+        ENDIF
         add hl,de
         ld (vx),hl
         ld a,(vent)
@@ -437,8 +457,18 @@ n_y:    add a,32
         add a,b
         pop bc
         nextreg 0x36,a
+        IFDEF GROUP_PALETTES
+        push hl
+        ld a,(vent)
+        ld hl,0x5840            ; palette offset remembered for each of the 32 pattern cache entries
+        add hl,a
+        ld a,(hl)
+        pop hl
+        or h                    ; high screen X is 0 or 1
+        ELSE
         ld a,h
         and 1
+        ENDIF
         nextreg 0x37,a
         ld a,c
         srl a
@@ -465,13 +495,93 @@ n_y:    add a,32
         jr nz,.row
         ret
 
+        IFNDEF GROUP_PALETTES
+; Cache hits need the same padded origin and dimensions as the initial upload.
+entry_geometry:
+        ld a,(vent)
+        add a,a
+        add a,a
+        ld hl,offsets
+        add hl,a
+        ret
+geometry:
+        call entry_geometry
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        ld (origin),de
+        inc hl
+        ld a,(hl)
+        ld (vcols),a
+        inc hl
+        ld a,(hl)
+        ld (vrows),a
+        ret
+        ENDIF
 ROM_END:
         SAVEBIN "gb_rom.bin",0x386E,ROM_END-0x386E
 
 ; ---- code in the hook page, mapped with it ----
         ORG 0x59A0
 ; ---- patterns of entry (vent): expand into BUF, colours, then send ----
-upload: ld a,(vkind)
+upload:
+        IFNDEF GROUP_PALETTES
+        ; $C000: one descriptor id per eight graphics addresses above $8000.
+        ; $D000: eight bytes per id (origin, dimensions, page, high address, gfx low).
+        nextreg 0x56,OVPAGE
+        ld hl,(vgfx)
+        ld b,3
+.shift: srl h
+        rr l
+        djnz .shift
+        ld a,h
+        and 15
+        or 0xC0
+        ld h,a
+        ld a,(hl)
+        or a
+        jr z,.unknown
+        ld e,a
+        ld d,8
+        mul d,e
+        ld hl,0xD006
+        add hl,de
+        ld a,(vgfx)
+        cp (hl)
+        jr nz,.unknown
+        ld hl,0xD000
+        add hl,de
+        push hl
+        call entry_geometry
+        ex de,hl
+        pop hl
+        ld bc,4
+        ldir
+        ld a,(hl)
+        inc hl
+        ld h,(hl)
+        ld l,0
+        nextreg 0x56,a
+        push hl
+        call geometry
+        pop hl
+        call send_rows
+        nextreg 0x56,SLOT6
+        ret
+.unknown:
+        nextreg 0x56,SLOT6
+        call entry_geometry
+        ld (hl),32
+        inc hl
+        ld (hl),32
+        inc hl
+        ld a,(vcols)
+        ld (hl),a
+        inc hl
+        ld a,(vrows)
+        ld (hl),a
+        ENDIF
+        ld a,(vkind)
         or a
         jp z,x_plot
         dec a
@@ -653,14 +763,18 @@ conv:   push hl
         pop hl
         ret
 
-send:   call ovapply
+send:
+        IFDEF GROUP_PALETTES
+        call ovapply
+        ENDIF
+        ld hl,BUF
+send_rows:
         ld a,(vent)
         add a,a
         add a,a
         ld e,a                  ; pattern number (half patterns)
         ld a,(vrows)
         ld d,a                  ; lines left
-        ld hl,BUF
 .row:   push de
         push hl
         call .tile
@@ -718,8 +832,24 @@ send:   call ovapply
 
 ; painted colours: index in OVPAGE at slot 6 (count word, then gfx lo, gfx hi, page, plane lo, plane hi)
 ; plane: for each line 16 colour bytes then 16 keep masks. Interrupts are off here and the graphics are read.
+        IFDEF GROUP_PALETTES
 ovapply:
         nextreg 0x56,OVPAGE
+        IFDEF GROUP_PALETTES
+        ld hl,(vgfx)
+        ld b,4                  ; 4K lookup in OVPAGE: graphics address >> 4
+.shift: srl h
+        rr l
+        djnz .shift
+        ld a,h
+        or 0xD0
+        ld h,a
+        ld c,(hl)
+        ld a,(vent)
+        ld hl,0x5840
+        add hl,a
+        ld (hl),c
+        ENDIF
         ld hl,0xC000
         ld c,(hl)
         inc hl
@@ -776,19 +906,37 @@ ovapply:
         djnz .line
 .out:   nextreg 0x56,SLOT6
         ret
+        ENDIF
 PAGE_END:
+        ASSERT PAGE_END <= CLS
         SAVEBIN "gb_page.bin",0x59A0,PAGE_END-0x59A0
 
 ; ---- setup, run once by the NEX stub ----
         ORG 0xD000
 setup:  nextreg 0x43,0x20
+        IFDEF GROUP_PALETTES
+        nextreg 0x40,0
+        ld hl,.pal             ; count, then two NR $44 writes per RGB333 entry
+        ld b,(hl)
+        inc hl
+.pl:    ld a,(hl)
+        nextreg 0x44,a
+        inc hl
+        ld a,(hl)
+        nextreg 0x44,a
+        inc hl
+        djnz .pl
+        ELSE
         nextreg 0x40,1
         ld hl,.pal
-        ld b,15
+        ld b,14
 .pl:    ld a,(hl)
         nextreg 0x41,a
         inc hl
         djnz .pl
+        nextreg 0x44,0x6D       ; slot 15: dark grey ring, RGB333 333 ($0DB)
+        nextreg 0x44,1
+        ENDIF
         nextreg 0x4B,0
         xor a
 .h:     nextreg 0x34,a
@@ -804,6 +952,127 @@ setup:  nextreg 0x43,0x20
         nextreg 0x15,0x01
         ret
 ; 1 body (white), 2 dark (black): the default look. 3-15: paintable, the Spectrum's other colours.
-.pal:   DB 0xFF,0x00,0x03,0xE0,0xE7,0x1C,0x1F,0xFC,0x02,0xA0,0xA2,0x14,0x16,0xB4,0xB6
+.pal:
+        IFNDEF GROUP_PALETTES
+        DB 0xFF,0x00,0x03,0xE0,0xE7,0x1C,0x1F,0xFC,0x02,0xA0,0xA2,0x14,0x16,0xB4
+        ENDIF
 SETUP_END:
         SAVEBIN "gb_setup.bin",0xD000,SETUP_END-0xD000
+
+; Enhanced only. The three replacements take exactly the original number of T-states.
+        ORG ROM_END
+intro_on:
+        nextreg 0x6B,0xA0       ; one-byte map, default attr 1: behind ULA
+        nextreg 0x43,0x22       ; select second ULA palette
+        nextreg 0x1C,8          ; reset tile clip pointer, close X until the first column
+        nextreg 0x1B,0
+        nextreg 0x1B,0
+        ld hl,0xFF82            ; original A21D..A229: clear 88 bytes
+        ld de,0xFF83
+        ld bc,87
+        ld (hl),0
+        DUP 24                  ; save 120 T for two JPs and five NEXTREGs
+        ldi
+        EDUP
+        ldir
+        jp 0xA22A
+intro_off:
+        ; A46A starts the next stage. Its inline text at A4DE wipes the ULA and
+        ; prints the HUD. Restore the display before either operation.
+        push af                 ; PUSH/POP take the remaining 21 T
+        nextreg 0x43,0x20
+        nextreg 0x6B,0
+        pop af
+        ; Inline three CALLs to A9AF: save 81 T, paying for two JPs (20 T),
+        ; the two NEXTREGs (40 T) and the PUSH/POP. The fourth original CALL
+        ; at A4C3 leaves its return address in the original stack slot.
+        MACRO stage_word where
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        inc hl
+        ld (where),de
+        ENDM
+        stage_word 0xA161
+        stage_word 0xA163
+        stage_word 0xA165
+        jp 0xA4C3
+intro_column:
+        ; The original bitmap already contains stale bits to the right of the
+        ; reveal. Black-on-black ULA ink must not expose those tilemap pixels.
+        ld hl,(0x6DF7)
+        inc hl
+        ld (0x6DF7),hl
+        ld a,(0x6660)           ; live colour operand written by the original
+        ex af,af'
+        rl b                    ; B is zero, keep the counter carry in bit 0
+        ld a,l
+        add a,a
+        add a,a
+        add a,19                ; X2 in two-pixel units, including the border
+        nextreg 0x1C,8
+        nextreg 0x1B,0
+        nextreg 0x1B,a
+        rr b                    ; restore BC and the carry for the final DEC
+        ld a,0                  ; 26 T padding
+        ld a,0
+        jr .padded
+.padded:
+        ld a,3
+        ex af,af'
+        DUP 6                   ; six fewer loop-control groups save 144 T
+        ld (hl),a
+        add hl,bc
+        EDUP
+        jp 0x6665               ; do the last three writes in the original loop
+        SAVEBIN "gb_intro.bin",ROM_END,$-ROM_END
+
+        IFDEF GROUP_PALETTES
+        ORG SETUP_END+1+9*16*2  ; count and nine RGB333 sprite palettes supplied by the build
+        ELSE
+        ORG SETUP_END
+        ENDIF
+intro_setup:
+        call setup
+        nextreg 0x6B,0
+        nextreg 0x4C,15         ; tile nibble 15 clear
+        nextreg 0x6C,1
+        nextreg 0x6E,0x80       ; bank 7, map at 0, shapes at 0x500
+        nextreg 0x6F,0x85
+        nextreg 0x2F,0
+        nextreg 0x30,0
+        nextreg 0x31,0
+        nextreg 0x1C,8
+        nextreg 0x1B,0
+        nextreg 0x1B,159
+        nextreg 0x1B,0
+        nextreg 0x1B,255
+        ld hl,intro_data
+        nextreg 0x43,0x30       ; tile palette
+        ld b,15
+        call .palette
+        nextreg 0x43,0x40       ; second ULA palette, leave first displayed
+        ld b,32
+        call .palette
+        nextreg 0x43,0x20
+        nextreg 0x52,14         ; copy map and shapes from the boot bank, before game starts
+        ld de,0x4000
+        ld c,(hl)
+        inc hl
+        ld b,(hl)
+        inc hl
+        ldir
+        nextreg 0x52,ULAPAGE
+        ret
+.palette:
+        nextreg 0x40,0
+.loop:  ld a,(hl)
+        inc hl
+        nextreg 0x44,a
+        ld a,(hl)
+        inc hl
+        nextreg 0x44,a
+        djnz .loop
+        ret
+intro_data:
+        SAVEBIN "gb_introsetup.bin",intro_setup,$-intro_setup
