@@ -6,6 +6,7 @@ import copy
 import hashlib
 import json
 import os
+from pathlib import Path
 
 RECORD = 'yie_ar_kung_fu'
 SIG = (0xB3F9, bytes.fromhex('01fd7f'))
@@ -24,7 +25,7 @@ TAB = 0x1800
 _HERE = os.path.dirname(os.path.abspath(__file__))
 COLOURS = os.path.join(_HERE, '..', 'docs', 'profiles', 'yie_ar_kung_fu_colours.json')
 # Group colours: index 0 transparent, 1 ink, 2 body, 3 outline. 0 hero, 1 opponent, 2 objects and chain, 3 spark.
-# The game's own colours in play: black ink on the lawn's cyan paper (attribute 0x28); the outline is the owner's white.
+# The game's own colours in play: black ink on the lawn's cyan paper (attribute 0x28); the production build leaves the optional outline disabled.
 BLACK, CYAN, WHITE = 0x00, 0x16, 0xFF
 GROUPS_DEFAULT = [[0, BLACK, CYAN, WHITE]] * 3 + [[0, BLACK, CYAN, WHITE]]
 # Overlay (2026-11-26): every pixel store stays, so the screens hold what the original's hold and the thrown-star hit
@@ -34,7 +35,8 @@ NOP_SITES = [(0xB90B, 0x77), (0xB914, 0x77), (0xB91B, 0x77), (0xB948, 0x12)]
 SITES = [(0xB4EC, 'cdd8b5', 'CD', 'e_plot'), (0xB528, 'cdd8b5', 'CD', 'e_plot'), (0xB3F9, '01fd7f', 'CD', 'e_flip'),
          (0xF563, 'cd6cf5', 'CD', 'e_star'), (0xEF25, '22e3bd', 'CD', 'e_chain'), (0xEFAB, '2ae3bd', 'C3', 'e_cwipe'),
          (0xB908, '3ac8b9', 'CD', 'e_spark'), (0xB91C, 'cd90f4', 'CD', 'e_spoff'),
-         (0xAAAF, '21ff5a', 'C3', 'e_wa'), (0xAAE9, '3acfbd', 'C3', 'e_wb'), (0xB547, '3abfbd', 'CD', 'e_cave')]
+         (0xAAAF, '21ff5a', 'C3', 'e_wa'), (0xAAE9, '3acfbd', 'C3', 'e_wb'), (0xB547, '3abfbd', 'CD', 'e_cave'),
+         (0xB9B3, '218da9', 'C3', 'e_rng')]
 L2BANK, L2PG = 30, 60           # Layer 2 over the sprites: the Feedle caves (asm c_cave), transparent elsewhere
 CAVE_X = ((0, 40), (216, 256))
 CAVE_Y = (144, 188)
@@ -66,8 +68,64 @@ def load_profile():
     return json.load(open(_profile_path()))
 
 
+# The first eleven banks follow the opponent overlay. The last two distinguish
+# Oolong from Blues when the game draws both using the resident player frames.
+PAINT_BANK = 33
+FIGHTERS = ('Buchu', 'Star', 'Nuncha', 'Pole', 'Feedle', 'Chain', 'Club', 'Fan', 'Sword', 'Tonfun', 'Blues', 'Oolong', 'Blues resident')
+ARCADE = [0, 0, 191, 250, 214, 173, 255, 19, 192, 242, 252, 89, 188, 212, 182, 254]
+RECOLOUR = dict(game=RECORD, output='sprites', colours=COLOURS, clear=False,
+                note='Arcade fighter colours. Keys are fighter number and unmirrored graphics-byte address.')
+
+
 def load_colours(path=COLOURS):
-    return json.load(open(path)) if os.path.exists(path) else None
+    from . import coloursheet, recolour
+    return coloursheet.load(recolour.build_colours_path(path))
+
+
+def paint_banks(cmap):
+    atlas = {PAINT_BANK + i: bytearray(16384) for i in range(len(FIGHTERS))}
+    for key, entry in cmap.items():
+        fighter, address = (int(v, 16) for v in key.split(':'))
+        if not 0 <= fighter < len(FIGHTERS):
+            raise ValueError('unknown fighter in colour key ' + key)
+        base = 0x8100 if fighter >= 11 else 0x6C80
+        # A pixel key points to the ink byte, one after its mask.
+        offset = 2 * (address - 1 - base)
+        pixels = entry[2]
+        if not 0 <= offset <= 16380 or len(pixels) != 8 or any(not 0 <= n <= 15 for n in pixels):
+            raise ValueError('invalid colour entry ' + key)
+        atlas[PAINT_BANK + fighter][offset:offset + 4] = bytes(
+            pixels[i] * 16 + pixels[i + 1] for i in range(0, 8, 2))
+    return atlas
+
+
+def colour_identity(peek):
+    digest = hashlib.md5(bytes(peek(a) for a in range(0x8100, 0xA100))).hexdigest()
+    return dict(schema=1, game=RECORD, engine=RECORD, keys='fighter:ink-address/v1',
+                inputs={'resident graphics': digest}, geometry=None)
+
+
+def recolour(nex, cmap):
+    from . import recolour as rc
+    banks = rc.banks(nex)
+    patch = YiePatch(colours=cmap)
+    if (banks.get(13, b'')[CODE0:CODE0 + len(patch.page_code)] != patch.page_code
+            or banks.get(12, b'')[ROM_ORG-0x2000:patch.regblock-0x2000] != patch.page[ROM_ORG-0x2000:patch.regblock-0x2000]
+            or hashlib.md5(banks.get(2, b'')[0x100:0x2100]).hexdigest() != '6b125f57dc57b258192311efb9fe3b2c'):
+        raise ValueError('wrong Yie Ar Kung-Fu graphics or hook code')
+    for a, old, new in patch.sites:
+        if banks.get(2 if a < 0xC000 else 7, b'')[a % 16384:a % 16384 + len(new)] != new:
+            raise ValueError('wrong Yie Ar Kung-Fu hook at %04X' % a)
+    hp = bytearray(banks[13])
+    hp[V_GBODY] = patch.hpage[V_GBODY]
+    setup = bytes.fromhex(patch.prof['hooks']['setup'])
+    stub = bytearray(banks[10])
+    if stub[0x1000:0x1000 + len(setup)] != setup:
+        raise ValueError('wrong palette setup')
+    start = 0x1000 + len(setup)
+    stub[start:start+64] = patch.palette()
+    updated, changed = rc.splice(nex, {10: stub, 13: hp, **patch.atlas})
+    return updated, {'banks changed': changed, 'paint entries': len(cmap)}
 
 
 def tab_bytes():
@@ -89,7 +147,10 @@ class YiePatch:
         self.rom_code = rom_code if rom_code is not None else bytes.fromhex(h['rom'])
         self.page_code = page_code if page_code is not None else bytes.fromhex(h['page'])
         self.syms = {k: int(v, 16) for k, v in h['syms'].items()}
-        self.groups = [list(g) for g in (colours or {}).get('groups', GROUPS_DEFAULT)]
+        self.groups = [list(g) for g in GROUPS_DEFAULT]
+        self.atlas = paint_banks(colours or {})
+        if colours:
+            self.groups[:3] = [ARCADE] * 3
         self.stub_extra = bytes.fromhex(h['setup']) + self.palette()
         self.setup_call = 0xD000
         self.hook_page_data = b''
@@ -106,7 +167,7 @@ class YiePatch:
         self.page[ROM_ORG - 0x2000:ROM_ORG - 0x2000 + len(self.rom_code)] = self.rom_code
         self.hpage = bytearray(16384)
         self.hpage[V_RING] = 1 if outline else 0
-        self.hpage[V_GBODY] = 1 if colours is None else 0   # default colours: bodies in the ground's paper (asm ground_body)
+        self.hpage[V_GBODY] = int(not colours)   # default colours: bodies in the ground's paper (asm ground_body)
         self.hpage[V_GROUND] = 0x01                         # no body colour written yet
         self.hpage[CODE0:CODE0 + len(self.page_code)] = self.page_code
         self.hpage[TAB:TAB + 1024] = tab_bytes()
@@ -115,16 +176,23 @@ class YiePatch:
         for a, old, op, sym in (sites if sites is not None else SITES):
             self.sites.append((a, bytes.fromhex(old), bytes.fromhex(op) + self.syms[sym].to_bytes(2, 'little')))
         self.nops = list(nops if nops is not None else NOP_SITES)
+        original = [(a + i, v) for a, old, _ in self.sites for i, v in enumerate(old)] + self.nops
+        table = bytes(v for a, byte in original for v in (a >> 8, a & 255, byte)) + b'\0'
+        table_offset = self.syms['rng_table'] - 0x2000
+        if table_offset + len(table) > self.regblock - 0x2000:
+            raise ValueError('RNG table exceeds its reserved space')
+        self.page[table_offset:table_offset + len(table)] = table
         self._banks()
 
     def palette(self):
         out = bytearray(64)
         for g, cols in enumerate(self.groups[:4]):
-            out[g * 16:g * 16 + 4] = bytes(cols)
+            out[g * 16:g * 16 + len(cols)] = bytes(cols)
         return bytes(out)
 
     def _banks(self):
         self.extra_banks = {12: bytes(self.page) + bytes(8192), 13: bytes(self.hpage)}
+        self.extra_banks.update(self.atlas)
         for b in range(L2BANK, L2BANK + 3):
             self.extra_banks[b] = bytes([0xE3]) * 16384
 
@@ -251,6 +319,10 @@ class _Ports:
         self.bad = 0
 
     def read_port(self, registers, port):
+        if self.ns is not None and port == 0x243B:
+            return self.ns.sel
+        if self.ns is not None and port == 0x253B and self.ns.sel == 0x57:
+            return (self.o7ffd & 7) * 2 + 1
         if self.ns is not None and port == 0x253B:      # a hook reading a NextReg: the Next, not the recording
             return self.ns.read_nr()
         if self.i < len(self.ins):
@@ -313,6 +385,28 @@ def _patched_memory(mem, patch, ns, err):
                     err.append(('slot 6 write', nr[0x56]))
                 return
             MS(self, a, v)
+    if not H[V_GBODY]:
+        # Paint scratch is the unused half of hook bank 13. Only the enhanced
+        # path maps it and the read-only colour atlas while building a tile.
+        scratch = bytearray(8192)
+
+        class PaintedMemory(PM):
+            def __getitem__(self, a):
+                if 0x4000 <= a < 0x6000 and nr.get(0x52) == 27:
+                    return scratch[a - 0x4000]
+                if 0x8000 <= a < 0xC000:
+                    page = nr.get(0x54 + ((a - 0x8000) >> 13), 0)
+                    if page // 2 in patch.atlas:
+                        return patch.atlas[page // 2][(page % 2) * 8192 + a % 8192]
+                return super().__getitem__(a)
+
+            def __setitem__(self, a, v):
+                if 0x4000 <= a < 0x6000 and nr.get(0x52) == 27:
+                    scratch[a - 0x4000] = v
+                else:
+                    super().__setitem__(a, v)
+        mem.__class__ = PaintedMemory
+        return
     mem.__class__ = PM
 
 
@@ -524,13 +618,34 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=4, speed=
         tick = [0]
         ENTRIES = {a: None for a, _, _ in patch.sites}
         code_bytes = {a + k: None for a, old, new in patch.sites for k in range(len(old))}
+        interior = code_bytes.keys() - ENTRIES.keys()
         code_bytes.update({a: None for a, _ in patch.nops})
 
         def in_hook(pc):
             return lo <= pc < hi or (pc >= HB and nr[0x57] == HPG)
 
-        def check_shown(where, _dump=[0]):
-            """figure zone of the shown screen: patched screen clean, sprites = what the original shows"""
+        clear_layer = bytes([0xE3]) * 49152
+        caves = bytearray(clear_layer)
+        for x0, source in ((0, 41500), (216, 41741)):
+            for row in range(44):
+                for dx in range(40):
+                    if row >= 38 or mo[source + row * 6 + dx // 8] & (128 >> (dx % 8)):
+                        caves[(144 + row) * 256 + x0 + dx] = 0
+        cave_pending = cave_visible = False
+        spark_rows = {5: set(), 7: set()}
+
+        def check_shown(where):
+            """Compare the original bitmap, sprite coverage and the entire visible Layer 2 mask."""
+            expected = caves if cave_visible else clear_layer
+            cells = spark_rows[shown_bank(po.o7ffd)]
+            if cave_visible and cells:
+                expected = bytearray(expected)
+                for x, y in cells:
+                    for row in range(y, y + 8):
+                        start = row * 256 + x
+                        expected[start:start + 8] = clear_layer[:8]
+            if ns.l2 != expected:
+                fail('sprite layer differs: cave mask', where, cave_visible)
             c['layer checks'] += 1
             bk = shown_bank(mp.o7ffd)
             if pp.o7ffd != po.o7ffd:
@@ -602,11 +717,11 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=4, speed=
                 for a in range(16384):
                     if bo[a] != bp[a]:
                         addr = a + (0x4000 if b == 5 else 0x8000 if b == 2 else 0xC000)
-                        if b in (5, 7) and a < 0x1B00 and st.get('spark'):
+                        if b in (5, 7) and 0x1800 <= a < 0x1B00 and a == st.get('spark cell'):
                             continue
-                        if b == 2 and 0xBF80 <= addr <= 0xBFFF:
+                        if b == 2 and 0xBF80 <= addr < min(Ro[12], Rp[12], 0xC000):
                             continue
-                        if b in (5, 2) and addr in code_bytes:
+                        if b == 2 and addr in code_bytes:
                             continue
                         if b == 7 and addr in code_bytes:
                             continue
@@ -660,6 +775,9 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=4, speed=
                             if Rp[i] != Ro[i]:
                                 fail('hook changed a register', hex(t), i, Rp[i], Ro[i])
                         c['hook exits checked'] += 1
+                        # The displaced game opcode consumes one recorded fetch.
+                        f -= 1
+                        pco = pcp = t
                         if Rp[24] != Ro[24]:
                             fail('PC after a hook', hex(t), hex(Rp[24]), hex(Ro[24]))
                     continue
@@ -673,6 +791,22 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=4, speed=
                     tick[0] += 1
                     if tick[0] % every == 0 and n > 2:
                         check_shown('HALT')
+                # Observe original game control flow independently of the installed cave hook.
+                if pco == 0xB55A:
+                    cave_pending = True
+                    spark_rows[12 - shown_bank(po.o7ffd)].clear()
+                elif pco == 0xB92D:
+                    dest = Ro[4] * 256 + Ro[5]
+                    bank = 5 if dest < 0x8000 else po.o7ffd & 7
+                    if bank in spark_rows:
+                        spark_rows[bank].add(cell_of(dest & 0xF8FF))
+                elif pco == 0xB3F9:
+                    cave_visible = bool(mo[48575]) and (cave_pending or cave_visible)
+                    cave_pending = False
+                elif pco in (0xAAAF, 0xAAE9):
+                    cave_pending = cave_visible = False
+                    for cells in spark_rows.values():
+                        cells.clear()
                 if pcp in ENTRIES:
                     if collect and pcp in HIDE_SITES and sum(1 for q in states if q[0] == pcp) < collect:
                         states.append((pcp, list(Rp), [bytes(mp.banks[b]) for b in range(8)], pp.o7ffd, snap, bytes(ns.H)))
@@ -689,28 +823,34 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=4, speed=
                         c['chain wipes'] += 1
                     if pcp == 0xB91C:
                         pass
-                    if not Rp[26] and pcp != 0xEFAB:
+                    if not Rp[26] and pcp not in (0xEFAB, 0xB9B3):
                         fail('interrupts off at a site', hex(pcp))
-                    if pp.o7ffd & 7 != 7:
+                    if pcp != 0xB9B3 and pp.o7ffd & 7 != 7:
                         fail('a site with another bank at slot 7', hex(pcp), hex(pp.o7ffd))
                     st['site'] = pcp
                     r15 = Rp[15]
                     o = mp[pcp]
                     op[o]()
-                    Rp[15] = r15
                     continue
                 if pcp == 0xB90C:
                     check_shown('spark')
                     c['spark layer checks'] += 1
+                if pcp == 0xB948:      # first attribute store, before the sprite hook
+                    st['spark cell'] = (Ro[4] * 256 + Ro[5]) & 0x3FFF
+                if pcp == 0xB91F:
+                    st.pop('spark cell', None)
+                if pcp == 0xF622:
+                    c['star hit tests'] += 1
+                if pcp in interior:
+                    fail('execution inside displaced instruction', hex(pcp))
                 if pcp == RNG_READ:
-                    # the generator walks all of memory: where a byte differs (figures, patch sites, stubs) the original's value stands
+                    # the real hook at B9B3 repairs the sampled value; the verifier only observes it
                     hl = Rp[6] * 256 + Rp[7]
                     vo, vp = mo[hl], mp[hl]
                     o = mo[pco]
                     so.opcodes[o]()
                     op[mp[pcp]]()
                     if vo != vp:
-                        Rp[0] = Ro[0]
                         c['generator reads where bytes differ'] += 1
                     c['generator reads'] += 1
                     f -= 1
@@ -737,6 +877,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, every=4, speed=
                 o = mp[Rp[24]]
                 op[o]()
                 Rp[15] = r15
+            if po.i != len(ins) or pp.i != len(ins) or po.bad or pp.bad:
+                fail('recorded input consumption differs', po.i, pp.i, po.bad, pp.bad)
             if n % every == 0:
                 compare_state(Ro[24])
                 compare_ram()
@@ -795,6 +937,8 @@ def boot_check(nex, z80, patch=None):
             bad.append(('$8C', st['nr'].get(0x8C)))
         if (0x15, 0x05) not in st['nrlog']:
             bad.append(('sprites and Layer 2 (LSU) not set up',))
+        if st['ports'].get(0x123B) != 2 or st['nr'].get(0x43) != 0x20:
+            bad.append(('Layer 2 visibility or sprite palette selection',))
         if (0x12, L2BANK) not in st['nrlog']:
             bad.append(('Layer 2 bank not set',))
     return bad
@@ -844,6 +988,7 @@ def hide_run(patch, state, speed):
         ns.H[0x12] = 32
     wipe = pc in (0xAAAF, 0xAAE9)
     if wipe:                                    # caves shown: a wipe must take them off Layer 2
+        ns.H[0x3A] = 1
         ns.H[0x35] = 1
         for y in range(*CAVE_Y):
             for x0, x1 in CAVE_X:
@@ -866,7 +1011,7 @@ def hide_run(patch, state, speed):
         bad.append('speed not restored (%d, entered at %d)' % (nr[0x07], speed))
     if nr[0x57] != 15 or nr[0x56] != 14:
         bad.append('hook page left mapped')
-    if wipe and any(v != 0xE3 for v in ns.l2):
+    if wipe and (any(v != 0xE3 for v in ns.l2) or ns.H[0x3A]):
         bad.append('cave left on Layer 2')
     return bad, [i for i in HIDE_SLOTS[pc] if ns.attr[i][3] & 0x80]
 
@@ -891,7 +1036,7 @@ def _rom_mutated(patch, find, new, after_sym):
     if at < 0:
         raise AssertionError('negative-control site missing: %s' % find)
     rom[at:at + len(bytes.fromhex(new))] = bytes.fromhex(new)
-    return YiePatch(prof=patch.prof, colours={'groups': patch.groups}, rom_code=bytes(rom), outline=patch.outline)
+    return YiePatch(prof=patch.prof, rom_code=bytes(rom), outline=patch.outline)
 
 
 def _page_mutated(patch, find, new):
@@ -900,15 +1045,15 @@ def _page_mutated(patch, find, new):
     if at < 0 or page.find(bytes.fromhex(find), at + 1) >= 0:
         raise AssertionError('negative-control site not unique: %s' % find)
     page[at:at + len(bytes.fromhex(new))] = bytes.fromhex(new)
-    return YiePatch(prof=patch.prof, colours={'groups': patch.groups}, page_code=bytes(page), outline=patch.outline)
+    return YiePatch(prof=patch.prof, page_code=bytes(page), outline=patch.outline)
 
 
 def negative_patches(patch):
     """-> [(name, broken patch, how it must be caught: ('verify', failure key) or ('unit', hide site))]. Each control
     is caught only by its own failure."""
-    no_plot = YiePatch(prof=patch.prof, colours={'groups': patch.groups}, outline=patch.outline,
+    no_plot = YiePatch(prof=patch.prof, outline=patch.outline,
                        sites=[x for x in SITES if x[0] not in (0xB4EC, 0xB528)])
-    no_ink = YiePatch(prof=patch.prof, colours={'groups': patch.groups}, outline=patch.outline)
+    no_ink = YiePatch(prof=patch.prof, outline=patch.outline)
     no_ink.hpage[TAB:TAB + 1024] = bytes(1024)
     no_ink._banks()
     return [
@@ -923,9 +1068,37 @@ def negative_patches(patch):
         ('bodies keep the lawn cyan on every level', _page_mutated(patch, 'ed92404f7bed924179c610', 'ed92404f7b00000079c610'),
          ('verify', 'body colour is not the ground paper')),
         ('cave hook not applied (clones in front of the caves)',
-         YiePatch(prof=patch.prof, colours={'groups': patch.groups}, outline=patch.outline,
+         YiePatch(prof=patch.prof, outline=patch.outline,
                   sites=[x for x in SITES if x[0] != 0xB547]), ('verify', 'sprite layer differs')),
     ]
+
+
+def menu_builds(z80, out, name, sprites, args):
+    """Build the menu choices from the supplied snapshot and the optional arcade paint."""
+    from . import coloursheet, z80tonex
+    source = z80tonex.Z80Snapshot(z80)
+    screen = bytes(source.banks[7][:6912])
+    if hashlib.md5(screen).hexdigest() != 'e402ee0387276c0f8640afc9a321e0df':
+        raise ValueError('unexpected 128K loading screen in bank 7')
+    for address in (44123, 44170):
+        if source.banks[2][address - 0x8000] != 0x35:
+            raise ValueError('trainer expects DEC (HL) at %04X' % address)
+    if not getattr(args, 'pok', None):
+        trainer = Path(out) / (name + '_verified.pok')
+        trainer.write_text('NInfinite energy\nZ 8 44123 0 53\nNInfinite lives\nZ 8 44170 182 53\nY\n')
+        args.pok = str(trainer)
+    plain = Path(sprites).read_bytes()
+    cmap = coloursheet.load(COLOURS.replace('_colours.json', '_enhanced_colours.json'))
+    if not cmap:
+        raise ValueError('missing arcade painting')
+    enhanced, _ = recolour(plain, cmap)
+    for choice, data in [('sprites', plain), ('enhanced', enhanced)]:
+        stem = Path(out) / (name + '_' + choice)
+        if choice == 'enhanced':
+            stem.with_suffix('.nex').write_bytes(data)
+        header = bytearray(data[:512])
+        header[10] = 2
+        Path(str(stem) + '_loading.nex').write_bytes(header + screen + data[512:])
 
 
 def auto(a, z80, name, out, say):
@@ -935,6 +1108,7 @@ def auto(a, z80, name, out, say):
     say('Game      : %s' % name)
     say('Engine    : yie_ar_kung_fu (figures as sprites over the figures the game still draws; spark cell attributes removed)')
     ok, files, patch = build(z80, out, name, say)
+    menu_builds(z80, out, name, files[1], a)
     rz, quick = list(getattr(a, 'rzx', None) or []), getattr(a, 'quick', None)
     if not rz:
         say('Verify    : none (no recording given): builds and boot checks only')
@@ -952,6 +1126,9 @@ def auto(a, z80, name, out, say):
         say('Verify    : %s  %d frames, %d hook returns, %d layer checks (%d pixels), %d RAM compares -> %s' % (
             os.path.basename(r), c['frames'], c['hook returns'], c['layer checks'], c['layer pixels compared'],
             c['RAM compares'], 'IDENTICAL' if not fails else 'FAILED %s' % fails))
+        say('            star tests %d, cave pixels %d, ground palette checks %d, generator raw differences %d/%d' %
+            (c['star hit tests'], c['cave pixels over the sprites (Layer 2)'], c['body colour checks'],
+             c['generator reads where bytes differ'], c['generator reads']))
         for k, v in ex.items():
             say('            %s: %s' % (k, str(v)[:220]))
     missing = ['%04X' % x[0] for x in SITES if not reached['site %04X' % x[0]]]
@@ -971,7 +1148,8 @@ def auto(a, z80, name, out, say):
     for nm, broken, (how, what) in negative_patches(patch):
         hit = False
         if how == 'verify':
-            for r in rz:
+            for r in (sorted(rz, key=lambda path: 't3' not in os.path.basename(path)) if
+                      'cave' in nm or 'cyan' in nm else rz):
                 frames = 4400 if 'cave' in nm else 30000 if 'cyan' in nm else 3000   # Feedle t3 4191-; the courtyard later
                 c, _, _ = verify(broken, r, stop=min(quick or frames, frames))
                 if any(k.endswith('!') and what in k for k in c):

@@ -7,26 +7,14 @@
 ;   Stars     0xF563 CALL 0xF56C: OR plot of 8 lines on the SHOWN screen after the flip, wiped before the next flip by 0xF57A.
 ;   Chain     0xEF36 / 0xEF73: XOR plot of 5 lines, C columns, right or left, on the shown screen; 0xEFAB wipes it.
 ;   Spark     0xB8FC: 8 x 8 on the shown screen with one attribute cell, held 10 HALTs, restored by 0xF490.
-; Method: the game's own code runs, the same instructions in the same order. Only the stores change: each store to a
-; screen is a NOP, so both screens stay clean and the game's restores copy clean bytes over clean bytes.
-;
-; Patch sites (original bytes verified by yie_ar_kung_fu.py):
-;   0xB4EC, 0xB528  CD D8 B5  CALL 0xB5D8 -> CALL e_plot: note the object, then the plot's own bookkeeping runs
-;   0xB632 0xB6AC 0xB6C4 0xB73A 0xB7BA 0xB7D7  12 LD (DE),A -> 00   fighter stores
-;   0xB3F9          01 FD 7F  LD BC,32765 -> CALL e_flip: commit this tick's sprites, then the flip
-;   0xF563          CD 6C F5  CALL 0xF56C -> CALL e_star;   0xF571  12 LD (DE),A -> 00
-;   0xEF25          22 E3 BD  LD (48611),HL -> CALL e_chain;  0xEF39, 0xEF76  77 LD (HL),A -> 00
-;   0xEFAB          2A E3 BD  LD HL,(48611) -> JP e_cwipe (keeps the interrupt state: 0xADDD calls it with DI)
-;   0xB908          3A C8 B9  LD A,(47560) -> CALL e_spark;  0xB90B 0xB914 0xB91B 0xB948  77/12 attribute stores -> 00
-;   0xB92D          12 LD (DE),A -> 00 spark store
-;   0xB91C          CD 90 F4  CALL 0xF490 -> CALL e_spoff
-;   0xAAAF          21 FF 5A  LD HL,23295 -> JP e_wa;  0xAAE9  3A CF BD  LD A,(48591) -> JP e_wb: the two wipes, all sprites off
+; The hooks in Python SITES reproduce their displaced instructions. All bitmap stores stay:
+; both screens must still feed the thrown-star hit test. Only the four spark attribute stores are suppressed.
 ; Hook code: stubs in alt ROM image 1 (0x386E-, free in the 48K ROM), the rest in page H at slot 7, interrupts off.
 
         DEVICE ZXSPECTRUMNEXT
         INCLUDE "lib/hlib_speed.asm"     ; macros only
 
-HPG     EQU 26                  ; hook page, MMU slot 0 while a hook runs
+HPG     EQU 26                  ; hook page, MMU slot 7 while a hook runs
 
 ; ---- page H at 0xE000 (slot 7: nothing a hook reads lives there; the game's stars are below 0xE000) ----
 HB      EQU 0xE000
@@ -76,6 +64,9 @@ V_CF    EQU HB+0x0039       ;   0xFF on the solid fill lines
 V_CAVEP EQU HB+0x003A       ; 1 = the game drew the caves on the hidden screen this tick (0xB547)
 V_GBODY EQU HB+0x003B       ; 1 = default colours: figure bodies take the ground's paper (Python sets it)
 V_GROUND EQU HB+0x003C      ; the body colour last written to the sprite palette
+V_PAINT EQU HB+0x003D       ; paint buffer mapped at slot 2 during fighter tile conversion
+V_CDAM  EQU HB+0x003E       ; a spark erased a cell in the visible cave mask
+PAINTPG EQU 66              ; 16K per opponent, then Oolong and the Oolong poses borrowed by Blues
 GROUND  EQU 0x5800+22*32+2  ; a ground cell's attribute (lawn, courtyard; the caves are pixels only)
 L2BANK  EQU 30              ; Layer 2 (16K banks 30-32, 8K pages 60-65): the Feedle caves over the sprites, else transparent
 L2PG    EQU 60
@@ -226,6 +217,77 @@ e_cave: ENTER
         LEAVE
         ld a,(CAVEF)
         ret
+; The RNG walks through ROM and game code. At B9B3, A holds the sampled byte
+; and HL points one past it. Supply the pristine value for our own edits.
+; No MMU or clock change. Both paths preserve F and reproduce LD HL,$A98D.
+e_rng:  push af
+        dec hl
+        ld a,h
+        cp 0x38
+        jr c,.ordinary
+        cp 0x3D
+        jr nc,.ram
+        cp 0x38
+        jr nz,.ff
+        ld a,l
+        cp 0x6E
+        jr c,.ordinary
+.ff:    pop af
+        ld a,0xFF               ; original 48K ROM, $386E-$3CFF
+        jr .end
+.ram:   cp 0xAA                 ; lowest patched RAM page
+        jr c,.ordinary
+        cp 0xC0
+        jr c,.lookup
+        push bc                 ; top-bank patch sites belong to game bank 7 only
+        ld bc,0x243B
+        in a,(c)
+        push af
+        ld a,0x57
+        out (c),a
+        inc b
+        in a,(c)
+        ld c,a
+        pop af
+        ld b,0x24
+        push hl
+        ld l,c
+        ld c,0x3B
+        out (c),a
+        ld a,l
+        pop hl
+        pop bc
+        cp 15
+        jr nz,.ordinary
+.lookup:
+        push de
+        ld d,h
+        ld e,l
+        ld hl,rng_table
+.entry: ld a,(hl)               ; high, low, original value. Zero terminates.
+        or a
+        jr z,.miss
+        cp d
+        inc hl
+        jr nz,.next
+        ld a,(hl)
+        cp e
+        jr z,.match
+.next:  inc hl
+        inc hl
+        jr .entry
+.match: inc hl
+        pop de
+        pop af
+        ld a,(hl)
+        jr .end
+.miss:  pop de
+.ordinary:
+        pop af
+.end:   ld hl,0xA98D
+        jp 0xB9B6
+rng_table:
+        defs 3*(12*3+4)+1       ; filled from the checked original patch sites
 rom_end:
 
 ; ---- page H ----
@@ -606,7 +668,16 @@ find:   ld a,e
         ld a,(hl)
         cp d
         jr nz,.miss
-        ld a,(V_PG)
+        ld a,(V_GBODY)
+        or a
+        jr nz,.hit
+        ld hl,(V_ENT)
+        ld bc,6
+        add hl,bc
+        ld a,(V_CA)
+        cp (hl)
+        jr nz,.miss
+.hit:   ld a,(V_PG)
         nextreg 0x56,a
         ld hl,(V_ENT)
         ret
@@ -618,7 +689,21 @@ find:   ld a,e
         call convert            ; planes, ring; flags in V_TF; needs the game's bank 7 no more
         ld a,(V_PG)
         nextreg 0x56,a
+        ld a,(V_GBODY)
+        or a
+        jr nz,.default
+        pop de                  ; original frame address
+        push de
+        call prepare_paint
+.default:
         call tiles
+        ld a,(V_PAINT)
+        or a
+        jr z,.unmapped
+        nextreg 0x52,10
+        xor a
+        ld (V_PAINT),a
+.unmapped:
         pop de
         ld hl,(V_ENT)
         inc hl
@@ -632,6 +717,9 @@ find:   ld a,e
         ld (hl),a
         inc hl
         ld a,(V_LN)
+        ld (hl),a
+        inc hl
+        ld a,(V_CA)
         ld (hl),a
         ld hl,(V_ENT)
         ret
@@ -960,6 +1048,130 @@ pix:    ld b,(hl)
         dec h
         dec h
         dec h
+        ld a,(V_PAINT)
+        or a
+        ret z
+        jp paint_four
+
+; Make a 64x64 4bpp canvas aligned with PM, using page 27 as scratch. Each source
+; mask/ink pair occupies four paint bytes. Mapping the read-only atlas at slots 4/5
+; lasts only for the copy. Source bank 2 and the normal screen page are restored.
+prepare_paint:
+        ld a,(48572)            ; current player selects the opponent number
+        and 1
+        ld l,a
+        ld h,0
+        ld bc,48530
+        add hl,bc
+        ld a,(hl)
+        cp 11
+        ret nc
+        ex de,hl
+        ld de,0x6C80
+        bit 7,h
+        jr z,.source
+        ld de,0x8100
+        cp 10
+        ld a,11
+        jr nz,.source
+        ld bc,(V_CA)            ; CACHE + object * 8
+        ld a,c
+        cp 0x48
+        ld a,11
+        jr nz,.source
+        inc a                   ; Blues with Oolong's graphic
+.source:
+        or a
+        sbc hl,de
+        ret c
+        ld de,2                 ; width and height precede the pairs
+        add hl,de
+        bit 5,h
+        ret nz
+        add hl,hl
+        set 7,h
+        add a,a
+        add a,PAINTPG
+        nextreg 0x54,a
+        inc a
+        nextreg 0x55,a
+        nextreg 0x52,27
+        push hl
+        ld hl,0x4000
+        ld de,0x4001
+        ld bc,2047
+        ld (hl),0
+        ldir
+        pop hl
+        ld de,0x4024            ; margin of one line and eight pixels
+        ld a,(V_LN)
+        sub 2
+.row:   push af
+        push de
+        ld a,(V_W)
+        sub 2
+        add a,a
+        add a,a
+        ld c,a
+        ld b,0
+        ldir
+        pop de
+        ex de,hl
+        ld bc,32
+        add hl,bc
+        ex de,hl
+        pop af
+        dec a
+        jr nz,.row
+        nextreg 0x54,4
+        nextreg 0x55,5
+        inc a
+        ld (V_PAINT),a
+        ret
+
+; Paint only opaque nibbles. Transparent margins and unpainted pixels keep the original pattern.
+paint_four:
+        push hl
+        push de
+        ld bc,PM
+        or a
+        sbc hl,bc
+        add hl,hl
+        add hl,hl
+        set 6,h
+        dec de
+        dec de
+        dec de
+        dec de
+        ld b,4
+.pair:  ld a,(de)
+        ld c,a
+        and 0xF0
+        jr z,.low
+        ld a,(hl)
+        and 0xF0
+        jr z,.low
+        xor c
+        and 0xF0
+        xor c
+        ld c,a
+.low:   ld a,c
+        and 15
+        jr z,.write
+        ld a,(hl)
+        and 15
+        jr z,.write
+        xor c
+        and 15
+        xor c
+        ld c,a
+.write: ld a,c
+        ld (de),a
+        inc hl
+        inc de
+        djnz .pair
+        pop de
+        pop hl
         ret
 
 ; the flagged tiles from V_DST to pattern memory from V_PAT
@@ -1036,6 +1248,7 @@ c_star: ld a,(STARI)
 ; ---- spark ----
 ; the game has just stored the shown screen's cell in 47566; the graphic is at 47393; no outline on a spark
 c_spark:
+        call cave_spark
         ld hl,47393
         ld a,(V_RING)                   ; the build's outline setting, given back after the spark
         push af
@@ -1422,6 +1635,7 @@ c_wipe: xor a
         jr nz,.h
         xor a
         ld (V_NP),a
+        ld (V_CAVEP),a
         ld (V_SHOWN),a
         ld (V_CHN),a
         ld (V_SPK),a
@@ -1462,7 +1676,12 @@ cave_flip:
         ld (V_CAVEP),a
         ld a,(V_CAVE)
         or a
-        ret nz
+        jr z,.draw
+        ld a,(V_CDAM)
+        or a
+        ret z
+.draw:  xor a
+        ld (V_CDAM),a
         inc a
         ld (V_CAVE),a
         ld hl,CAVEL
@@ -1528,7 +1747,60 @@ l2_line:                            ; DE = Layer 2 address of (V_CX, V_CY), its 
         ld e,a
         ret
 
+; The spark overwrites one aligned cell on both ULA screens. Its erase
+; copies clean scenery there. The next cave draw on the hidden screen
+; restores the arch above that cell when the screen flips.
+cave_spark:
+        ld a,(V_CAVE)
+        or a
+        ret z
+        ld hl,(47566)
+        ld a,l
+        and 31
+        cp 5
+        jr c,.edge
+        cp 27
+        ret c
+.edge:  add a,a
+        add a,a
+        add a,a
+        ld (V_CX),a
+        ld a,h
+        and 0x18
+        rlca
+        rlca
+        rlca
+        ld b,a
+        ld a,l
+        and 0xE0
+        rrca
+        rrca
+        or b                    ; cell-aligned ULA line
+        cp 144
+        ret c
+        cp 188
+        ret nc
+        ld (V_CY),a
+        call l2_line            ; an aligned 8-line cell stays in this MMU page
+        ld b,8
+.row:   push de
+        ld c,8
+        ld a,0xE3
+.pixel: ld (de),a
+        inc e
+        dec c
+        jr nz,.pixel
+        pop de
+        inc d
+        djnz .row
+        nextreg 0x56,14
+        ld a,1
+        ld (V_CDAM),a
+        ret
+
 cave_off:
+        xor a
+        ld (V_CAVEP),a
         ld a,(V_CAVE)
         or a
         ret z

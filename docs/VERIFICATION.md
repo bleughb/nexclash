@@ -143,7 +143,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Elite (standard Firebird release) (elite_std): `elite_std.nex` 4b3cbe16f9839c4746e04f92f1ecbf7e; verified 2026-11-28
 - Jack the Nipper (jack_the_nipper): `jack_the_nipper.nex` e16cf411e852104abab355c4757ed0f5, `jack_the_nipper_sprites.nex` dfee03ae40053a4dcaced7e2b762d3b9, `jack_the_nipper_enhanced.nex` 645fdaf327d95fc2b7591ef99af5d423; verified 2026-11-26
 - Jack the Nipper II - In Coconut Capers (jack_the_nipper_2): `jack_the_nipper_2.nex` e63f00da62e1ac853765bf7825f2241a, `jack_the_nipper_2_sprites.nex` 24d8b204ec3948616bd372dbc2e497f2, `jack_the_nipper_2_enhanced.nex` bc99c10512829195519e0179f19847bb; verified 2026-11-26
-- Yie Ar Kung-Fu (128K) (yie_ar_kung_fu): `yie_ar_kung_fu.nex` fa391314578494bfd3ec58e784cc8489, `yie_ar_kung_fu_sprites.nex` 0ffc86204a42fa2cd29f07bf2d926439; verified never
+- Yie Ar Kung-Fu (128K) (yie_ar_kung_fu): `yie_ar_kung_fu.nex` fa391314578494bfd3ec58e784cc8489, `yie_ar_kung_fu_sprites.nex` 8e1c14c4ba53051e47157d93d235a753, `yie_ar_kung_fu_enhanced.nex` 08202f53b44b02d0ea78fc34c67191d2, `yie_ar_kung_fu_sprites_loading.nex` eb58ab251db00cd1ea508b41dc08a2b2, `yie_ar_kung_fu_enhanced_loading.nex` 82ff5e89b13f10a27864405403765741; verified 2026-11-28
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13
