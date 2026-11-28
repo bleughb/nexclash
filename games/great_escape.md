@@ -13,13 +13,14 @@ the colour/world/timing pages or the alt ROM view fail; negative controls each b
 changes only R, speed control drops the NR 7 restore); Layer 2 show/hide tested from both states with a control each;
 autosaves stripped; a recording with no hook fails; boot check against the view at F068; the auto package carries
 McQueen with "needs Enhanced" (OPR1 via nxcout `needs`) and no CPU-only option; --allow-60hz refused (312-line pace).
-Art is now great_escape/art/period-v3-halo (Jon's outlines, a first scenery pass). 2026-11-27: stamped
-(4 recordings, 53158 frames, 457675 hooks), Jon played Enhanced and McQueen from the .nxc in OverSpec, 1.0
-published on jattree/nxc. Open: a real Next run; 1.1 = McQueen film look (art Jon approved, pilot
-runs/great_escape/art-round3-mcqueen/art-out) plus the cooler ball (in_solitary A13A, room 24; a sprite only,
-no game memory written), released together. Recolour entry points (RECOLOUR/recolour) not yet: import_sheets()
-is this engine's painting route.
-Set NEXCLASH_GREAT_ESCAPE_ART or place the four painting binaries beside great_escape.z80.
+1.1 (2026-11-27, not published; the owner tests ~/nxc-test/Great Escape 1.1 test first): art period-v5-mess = 1.0's
+art + McQueen's film look (grey cut-off sweatshirt, bare arms in slot 7, khaki 553, a glove in slot 6) + the prisoners
+drawn into the mess-hall seats (objects 5, 19) and the occupied bed (23) painted as people; the cooler ball: sprite 0,
+a baseball thrown at the cell wall and caught while McQueen waits in solitary (in_solitary A13A = FF, room_index
+68A0 = 24, hero map X/Y 3A/2A; cooler_ball in the helper block, ball_path in the resident block, V_BALL 0x3E1A), no
+game memory written; unit cases for every condition, the step wrap and a negative (the Y test removed). 1.1's .nxc
+also gets build_screen=nex. 1.0 published 2026-11-27 (jattree/nxc 5f2c3bd, PR #324). Recolour entry points
+(RECOLOUR/recolour) not yet: import_sheets() is this engine's painting route.
 
 ## Source and design
 
@@ -174,6 +175,9 @@ Historical duplicate A0DE and C421 entries hit instruction operands in this rele
 checked alternate archive snapshots; they are not shipped as separate working cheats.
 
 ## Lessons
+- [local: cooler ball] A sprite over the native screen can add a cosmetic detail with no game-state change: read the
+  game's own flags (in_solitary, room_index, the hero's map position) at frame end, write only sprite ports and a
+  page-24 counter; the verifier models ports 0x303B / 0x57 and NR 0x15 per hook, so a stray write fails.
 
 - [local: erased halos] Preserve the colour at the destination while still applying the native mask to the
   one-bit canvas. The red-key unit starts with bright 7 and dark 135 under two erased pixels. Removing the
@@ -245,3 +249,4 @@ Source and package are ready for final visual review and upstream integration; n
   asserted); a one-byte policy-1 patch of the halo build played past the key choice in both.
 - 2026-11-27: full stamp on period-v3-halo with the DMA fix: 4 recordings identical (53158 frames, 457675 hooks),
   units and negatives pass. 1.0 published from these builds.
+- 2026-11-27: 1.1 built: the cooler ball (sprite, unit cases and a negative), McQueen's film look and the mess-hall people (art period-v5-mess); quick replay of play1 + result IDENTICAL, units pass; the owner tests before publish.

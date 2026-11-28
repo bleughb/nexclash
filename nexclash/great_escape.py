@@ -10,6 +10,18 @@ from . import z80tonex as Z,hooklib
 SOURCE_MD5='ff5eae3b61188cb5095a6177c3c34a06'
 SHEET_GREY=(48,52,58)
 SEE_THROUGH=255  # Source-only marker. All ordinary bright paint uses indices 0..127.
+# McQueen in the cooler: sprite 0 is a baseball thrown at the cell's right wall and caught (asm cooler_ball,
+# ball_path). Positions are sprite coordinates (the screen's top left is 32,32), one step per game frame.
+BALL_STEPS=20
+BALL_PATH=((162,109),(166,106),(169,103),(172,101),(175,100),(178,100),(182,100),(185,101),
+           (182,101),(178,102),(175,103),(172,104),(169,106),(166,108),(162,110),(159,113),
+           (159,113),(159,113),(159,113),(159,113))
+V_BALL=0x3E1A
+
+
+def cooler_ball_shown(mcqueen,memory):
+    """Outfit on, in_solitary (A13A) set, room_index (68A0) 24 and the hero on solitary_pos (map X 3A, Y 2A)."""
+    return bool(mcqueen) and memory[0xA13A]==0xFF and memory[0x68A0]==24 and memory[0x800F]==0x3A and memory[0x8011]==0x2A
 CMP=hooklib.CMP_R
 LOADING_SHA256='7eff616121a684dd0c0e9e7642181129aadb2dc9951c8a4c804c86dd8c55803d'
 TRAINERS={
@@ -216,6 +228,17 @@ class EnhancedPatch(OriginalPatch):
             for value in values:setup.extend((value>>1,value&1))
         upload(palette)
         nr(0x43,0x50);nr(0x40,0);upload(palette_dusk or palette)
+        # The cooler ball: pattern 0 (a 4x4 ball, cream with a red stitch), sprite palette 1-2, sprites clipped to
+        # the play area, transparency E3. NR 0x15 = 0 keeps sprites off until cooler_ball shows one.
+        nr(0x4B,0xE3);nr(0x43,0x20)
+        for index,(high,low) in ((1,(0xFF,0x00)),(2,(0xC4,0x01))):nr(0x40,index);nr(0x44,high);nr(0x44,low)
+        nr(0x1C,2)
+        for v in (56,239,16,143):nr(0x19,v)
+        ball=bytearray([0xE3])*256
+        for y,row in enumerate(((0xE3,1,1,0xE3),(1,1,2,1),(1,2,1,1),(0xE3,1,1,0xE3))):ball[y*16:y*16+4]=bytes(row)
+        at=0xD000+len(setup);data=at+17;end=data+256
+        setup.extend(bytes((0x01,0x3B,0x30,0xAF,0xED,0x79,0x21,data&255,data>>8,0x01,0x5B,0x00,0xED,0xB3,0xC3,end&255,end>>8)))
+        setup.extend(ball)
         nr(0x43,0x10);nr(0x14,0xE3);nr(0x69,0x80 if enabled else 0);setup.append(0xC9)
         assert len(setup)<0xFF0, "Setup collides with the stub stack"
         self.setup_call,self.stub_extra=0xD000,bytes(setup)
@@ -310,6 +333,7 @@ class DrawingMemory:
         from .dma import DMA
         self.core=core;self.hwim2=hwim2;self.violations=[]
         self.data=list(memory);self.nr={7:clock,0x50:27,0x52:10,0x53:11,0x54:4,0x69:128};self.selected=0;self.elapsed=0
+        self.sprite_writes=[]
         self.pages={}
         for bank,data in patch.extra_banks.items():
             for half in (0,1):self.pages[bank*2+half]=list(data[half*8192:(half+1)*8192])
@@ -352,6 +376,8 @@ class DrawingMemory:
         elif p&255==0x6B:
             if not self.dma_allowed:raise AssertionError(('DMA port write in a CPU fallback',p,v))
             self.dma.feed(v)
+        elif p==0x303B:self.sprite_writes.append(('select',v))
+        elif p&255==0x57:self.sprite_writes.append(('attr',v))
         else:raise AssertionError(('Unexpected hook output',p,v))
     def read_port(self,r,p):
         if p!=0x253B:raise AssertionError(('Unexpected hook input',p))
@@ -379,6 +405,7 @@ def state_trial(patch,memory,registers,clock=0,iff=0,core=0x33,policy=None,hwim2
     elapsed=mem.elapsed
     palette_in=mem.nr.get(0x43,0x10)
     display_in=mem.nr[0x69]
+    sprites_in=mem.nr.get(0x15);mem.sprite_writes=[];ball_in=mem.data[V_BALL]
     if reuse is not None:mem.data[16384:]=list(memory[16384:])
     ignore=set()
     for at,old,new in patch.sites:mem.data[at:at+len(new)]=new;ignore.update(range(at,at+len(new)))
@@ -406,6 +433,17 @@ def state_trial(patch,memory,registers,clock=0,iff=0,core=0x33,policy=None,hwim2
         shade=0x14 if memory[0x5847] in (1,5) else 0x10
         if actual.pop(0x43,0x10)!=shade:bad.append(('L2 palette',mem.nr.get(0x43),shade))
     if kind!=13 and actual.pop(0x43,palette_in)!=palette_in:bad.append(('Unexpected palette write',mem.nr))
+    if kind==13:
+        shown=cooler_ball_shown(mem.data[0x3E18],memory)
+        step=(ball_in+1)%BALL_STEPS if shown else ball_in
+        want=[('select',0)]+[('attr',v) for v in BALL_PATH[step]+(0,0x80)] if shown else []
+        if mem.sprite_writes!=want:bad.append(('cooler ball sprite',mem.sprite_writes,want))
+        if mem.data[V_BALL]!=step:bad.append(('cooler ball step',mem.data[V_BALL],step))
+        if actual.pop(0x15,None)!=int(shown):bad.append(('cooler ball sprites on',mem.nr.get(0x15),int(shown)))
+    else:
+        if mem.sprite_writes:bad.append(('unexpected sprite writes',mem.sprite_writes))
+        want=0 if kind==15 else sprites_in
+        if actual.pop(0x15,None)!=want:bad.append(('sprites on/off',mem.nr.get(0x15),want))
     if actual!={7:clock,0x50:27,0x52:10,0x53:11,0x54:4}:bad.append(('NextREG',mem.nr))
     return bad,dict(kind=kind,steps=steps,original_t=original.registers[25]/(1<<clock),hook_t=mem.elapsed-elapsed),mem
 
@@ -770,6 +808,36 @@ def unit_tests(patch,states):
                     m=bytearray(s['memory']);a=0xCE22+figure*6;m[iy]=role
                     m[0x81AC:0x81B0]=m[a+2:a+6];m[0xE2C2]=m[0xE363]=m[a+1]
                     check('outfit and disguise',p,dict(s,memory=bytes(m)))
+    if 0x9DC2 in first:counts.update(_cooler_units(patch,first[0x9DC2],check))
+    else:counts['missing frame end state for the cooler ball!']+=1
+    return counts
+
+
+def _cooler_units(patch,state,check):
+    """The cooler ball: every combination of outfit, in_solitary, room and the hero's spot, the step wrap, and a
+    control with the spot's Y test removed (caught by the ball shown off the spot)."""
+    counts=collections.Counter()
+    def outfit(p,on,step=0):
+        p=copy.deepcopy(p);page=bytearray(p.page);page[0x1E18]=int(on);page[V_BALL-0x2000]=step;p.page=bytes(page)
+        bank=bytearray(p.extra_banks[12]);bank[:8192]=p.page;p.extra_banks[12]=bytes(bank)
+        return p
+    def place(sol,room,x,y):
+        m=bytearray(state['memory']);m[0xA13A]=sol;m[0x68A0]=room;m[0x800F]=x;m[0x8011]=y
+        return dict(state,memory=bytes(m))
+    on,off=outfit(patch,True),outfit(patch,False)
+    for p in (on,off):
+        for sol in (0xFF,0):
+            for room in (24,23):
+                for x in (0x3A,0x3B):
+                    for y in (0x2A,0x2B):check('cooler ball shown or hidden',p,place(sol,room,x,y))
+    for step in (0,BALL_STEPS-2,BALL_STEPS-1):check('cooler ball step',outfit(patch,True,step),place(0xFF,24,0x3A,0x2A))
+    broken=copy.deepcopy(on);bank=bytearray(broken.extra_banks[13]);at=broken.syms['cooler_ball.y_check']
+    if bank[at]!=0x20:raise AssertionError(('cooler ball control site',hex(bank[at])))
+    bank[at:at+2]=bytes(2);broken.extra_banks[13]=bytes(bank)
+    try:bad=_case(broken,place(0xFF,24,0x3A,0x2B))
+    except (AssertionError,ValueError,KeyError,IndexError):bad=[]
+    counts['cooler ball off-spot negative detected' if any(isinstance(b,tuple) and b[0]=='cooler ball sprite' for b in bad)
+           else 'cooler ball off-spot negative missed!']+=1
     return counts
 
 

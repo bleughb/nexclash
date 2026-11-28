@@ -48,27 +48,27 @@
    },
    {
     "name": "colours.bin",
-    "md5": "f3b2117011e002737200e5b78d27c0cf",
-    "path": "great_escape/art/period-v3-halo/colours.bin",
-    "role": "External painting input (Jon's sprite edits of 2026-11-09 and thinner outlines of 2026-11-26, and a first scenery pass of 2026-11-26); not a recording."
+    "md5": "5a370ac41ba0a573bde0315652d66d09",
+    "path": "great_escape/art/period-v5-mess/colours.bin",
+    "role": "External painting input (Jon's sprite edits of 2026-11-09 and thinner outlines of 2026-11-26, a first scenery pass of 2026-11-26, McQueen's film look and the people drawn into the mess-hall seats and beds, 2026-11-27); not a recording."
    },
    {
     "name": "world.bin",
     "md5": "911344b8380ecd217e92669187817dda",
-    "path": "great_escape/art/period-v3-halo/world.bin",
-    "role": "External painting input (Jon's sprite edits of 2026-11-09 and thinner outlines of 2026-11-26, and a first scenery pass of 2026-11-26); not a recording."
+    "path": "great_escape/art/period-v5-mess/world.bin",
+    "role": "External painting input (Jon's sprite edits of 2026-11-09 and thinner outlines of 2026-11-26, a first scenery pass of 2026-11-26, McQueen's film look and the people drawn into the mess-hall seats and beds, 2026-11-27); not a recording."
    },
    {
     "name": "palette.bin",
-    "md5": "e74e3c50fa3703edbc7569ce54e47659",
-    "path": "great_escape/art/period-v3-halo/palette.bin",
-    "role": "External painting input (Jon's sprite edits of 2026-11-09 and thinner outlines of 2026-11-26, and a first scenery pass of 2026-11-26); not a recording."
+    "md5": "95b816890860ca9e9f2b32804d87596e",
+    "path": "great_escape/art/period-v5-mess/palette.bin",
+    "role": "External painting input (Jon's sprite edits of 2026-11-09 and thinner outlines of 2026-11-26, a first scenery pass of 2026-11-26, McQueen's film look and the people drawn into the mess-hall seats and beds, 2026-11-27); not a recording."
    },
    {
     "name": "palette-dusk.bin",
-    "md5": "d8622d3aef1f93abef00c484ae732111",
-    "path": "great_escape/art/period-v3-halo/palette-dusk.bin",
-    "role": "External painting input (Jon's sprite edits of 2026-11-09 and thinner outlines of 2026-11-26, and a first scenery pass of 2026-11-26); not a recording."
+    "md5": "19ff7210d18b3d263c826d6610ee078f",
+    "path": "great_escape/art/period-v5-mess/palette-dusk.bin",
+    "role": "External painting input (Jon's sprite edits of 2026-11-09 and thinner outlines of 2026-11-26, a first scenery pass of 2026-11-26, McQueen's film look and the people drawn into the mess-hall seats and beds, 2026-11-27); not a recording."
    }
   ]
  },
@@ -116,19 +116,19 @@
   },
   "enhanced": {
    "file": "great_escape_enhanced.nex",
-   "md5": "2285fdbf32e7902b6317996910f85de4"
+   "md5": "cf5a145118186b702f6b56b76e696e6c"
   },
   "enhanced_loading": {
    "file": "great_escape_enhanced_loading.nex",
-   "md5": "24d95d637153fa4283f37f3ff2d076aa"
+   "md5": "b0a2eb65b2196d81ab26704b7558fb5c"
   },
   "sprites": {
    "file": "great_escape_sprites.nex",
-   "md5": "ee92da7399d191a4fe6d0a59d219c575"
+   "md5": "ee15439f43bc1cbbe2b87a3ca8856487"
   },
   "sprites_loading": {
    "file": "great_escape_sprites_loading.nex",
-   "md5": "ce8ece40e6cc2ae19b698b4f9fe8bfae"
+   "md5": "3afab68205cb2cf33f9034889ed5d516"
   }
  },
  "repro": [],
@@ -138,7 +138,7 @@
   "build": "Original monochrome default; optional painted companion, McQueen outfit, loading and 1MB.",
   "software": "53158 frames / 457675 hooks; R, pixels, negative controls, ROM audit and 9 real-loader cases pass; pace within 2%.",
   "hardware": "none (JNext and OverSpec only)",
-  "next": "Real Next run; 1.1: McQueen film look plus the cooler ball, released together."
+  "next": "1.1 (McQueen film look, the cooler ball, mess-hall people): the owner's test, then publish; a real Next run."
  },
  "checks": [
   "asm2profile:great_escape"

@@ -17,6 +17,8 @@ V_RETURN        EQU 0x3E12
 V_TARGET        EQU 0x3E14
 V_RDELTA        EQU 0x3E16
 V_NATIVE        EQU 0x3E17
+V_BALL          EQU 0x3E1A          ; cooler ball step (page 24, starts 0)
+BALL_STEPS      EQU 20
 HLIB_V_PACE     EQU 0x1D40
 HLIB_PACE_NL    EQU 312
 R_HL_ALT        EQU 0x3FAC
@@ -167,6 +169,12 @@ launch_jump:
 native_block:
         ldir
         jp native_exit
+; The cooler ball's sprite positions (X, Y; the screen's top left is 32,32): thrown from McQueen's hand at the
+; cell's right wall and caught, 20 steps, the last four in the glove. nexclash/great_escape.py BALL_PATH matches.
+ball_path:
+        db 162,109, 166,106, 169,103, 172,101, 175,100, 178,100, 182,100, 185,101
+        db 182,101, 178,102, 175,103, 172,104, 169,106, 166,108, 162,110, 159,113
+        db 159,113, 159,113, 159,113, 159,113
 resident_end:
         ASSERT resident_end <= 0x3D00
         SAVEBIN "ge_resident.bin",resident_start,resident_end-resident_start
@@ -406,6 +414,7 @@ publish_hook:
 
 frame_end_hook:
         call hlib_debt_open
+        call cooler_ball
         call publish_canvas
         nextreg 0x69,0x80
         call overhead
@@ -2249,6 +2258,7 @@ prepare_foreground:
 ; composed play frame, above. Reproduce CALL 6A27, including its return word.
 dialog_hook:
         nextreg 0x69,0
+        nextreg 0x15,0
         ld hl,(V_SP)
         dec hl
         ld (hl),0xA5
@@ -2259,6 +2269,54 @@ dialog_hook:
         ld (V_RDELTA),a
         ld hl,0x6A27
         jp set_finish
+
+; McQueen in the cooler: with the outfit on and the hero waiting in solitary (in_solitary A13A = FF, room_index
+; 68A0 = 24, standing on solitary_pos: map X 3A, Y 2A, low bytes) sprite 0 is a baseball thrown at the wall and caught.
+; Otherwise sprites are off. Game RAM is only read (slots 3-5 hold it here); the step lives in page 24.
+cooler_ball:
+        ld a,(0x3E18)
+        or a
+        jr z,.hide
+        ld a,(0xA13A)
+        inc a
+        jr nz,.hide
+        ld a,(0x68A0)
+        cp 24
+        jr nz,.hide
+        ld a,(0x800F)           ; room positions are one byte
+        cp 0x3A
+        jr nz,.hide
+        ld a,(0x8011)
+        cp 0x2A
+.y_check:
+        jr nz,.hide
+        ld a,(V_BALL)
+        inc a
+        cp BALL_STEPS
+        jr c,.step
+        xor a
+.step:  ld (V_BALL),a
+        add a,a
+        ld e,a
+        ld d,0
+        ld hl,ball_path
+        add hl,de
+        ld bc,0x303B
+        xor a
+        out (c),a               ; sprite 0
+        ld bc,0x0057
+        ld a,(hl)
+        out (c),a               ; X
+        inc hl
+        ld a,(hl)
+        out (c),a               ; Y
+        out (c),d               ; no palette offset, mirror or X bit 8
+        ld a,0x80
+        out (c),a               ; visible, pattern 0
+        nextreg 0x15,1          ; sprites on, over Layer 2
+        ret
+.hide:  nextreg 0x15,0
+        ret
 
 extra_end:
         ASSERT extra_end <= 0x1C00
