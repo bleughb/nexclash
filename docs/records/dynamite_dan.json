@@ -305,7 +305,7 @@
     },
     "sprites": {
      "file": "dynamite_dan_sprites.nex",
-     "md5": "8587e047eb0248765b5f334a6e0efbea"
+     "md5": "583dc54a4ab073d9d2141c9abb2fb236"
     }
    },
    "proof": "Registers including R and live RAM at each hook. Each enemy compared with its ULA plot and paint map. Every room and phase exercised in units. See games/dynamite_dan.md.",
