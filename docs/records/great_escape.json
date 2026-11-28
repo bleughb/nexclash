@@ -1,0 +1,297 @@
+{
+ "name": "great_escape",
+ "order": 280,
+ "game": "The Great Escape",
+ "doc": "great_escape.md",
+ "engine": "great_escape",
+ "representative": true,
+ "reference": "great_escape",
+ "inputs": {
+  "snapshot": {
+   "name": "great_escape.z80",
+   "md5": "ff5eae3b61188cb5095a6177c3c34a06",
+   "path": "great_escape/great_escape.z80"
+  },
+  "recordings": [
+   {
+    "name": "great_escape_play1.rzx",
+    "md5": "a620b9acd1a3cb40e99d1b934a831712",
+    "path": "great_escape/recordings/great_escape_play1.rzx"
+   },
+   {
+    "name": "great_escape_play2.rzx",
+    "md5": "671be60eff313f3bd5c2749ddea66ca0",
+    "path": "great_escape/recordings/great_escape_play2.rzx"
+   },
+   {
+    "name": "great_escape_restart.rzx",
+    "md5": "616fb43369de50f27a1eb8dbf55a4afd",
+    "path": "great_escape/recordings/great_escape_restart.rzx"
+   },
+   {
+    "name": "great_escape_result.rzx",
+    "md5": "23055077eb67b146c63c380791e891e7",
+    "path": "great_escape/recordings/great_escape_result.rzx",
+    "role": "Controlled native result fixture; not natural completion."
+   },
+   {
+    "name": "great_escape-loading.scr",
+    "md5": "6261b45324944deeea455a48a126444c",
+    "path": "great_escape/input/great_escape-loading.scr",
+    "role": "Original loading picture; not a recording."
+   },
+   {
+    "name": "great_escape.pok",
+    "md5": "7f61c780cc1d94e0fc2407c4e34206a4",
+    "path": "great_escape/input/great_escape.pok",
+    "role": "Original archive trainers; not a recording."
+   },
+   {
+    "name": "colours.bin",
+    "md5": "5a370ac41ba0a573bde0315652d66d09",
+    "path": "great_escape/art/period-v5-mess/colours.bin",
+    "role": "External painting input (Jon's sprite edits of 2026-11-09 and thinner outlines of 2026-11-26, a first scenery pass of 2026-11-26, McQueen's film look and the people drawn into the mess-hall seats and beds, 2026-11-27); not a recording."
+   },
+   {
+    "name": "world.bin",
+    "md5": "911344b8380ecd217e92669187817dda",
+    "path": "great_escape/art/period-v5-mess/world.bin",
+    "role": "External painting input (Jon's sprite edits of 2026-11-09 and thinner outlines of 2026-11-26, a first scenery pass of 2026-11-26, McQueen's film look and the people drawn into the mess-hall seats and beds, 2026-11-27); not a recording."
+   },
+   {
+    "name": "palette.bin",
+    "md5": "95b816890860ca9e9f2b32804d87596e",
+    "path": "great_escape/art/period-v5-mess/palette.bin",
+    "role": "External painting input (Jon's sprite edits of 2026-11-09 and thinner outlines of 2026-11-26, a first scenery pass of 2026-11-26, McQueen's film look and the people drawn into the mess-hall seats and beds, 2026-11-27); not a recording."
+   },
+   {
+    "name": "palette-dusk.bin",
+    "md5": "19ff7210d18b3d263c826d6610ee078f",
+    "path": "great_escape/art/period-v5-mess/palette-dusk.bin",
+    "role": "External painting input (Jon's sprite edits of 2026-11-09 and thinner outlines of 2026-11-26, a first scenery pass of 2026-11-26, McQueen's film look and the people drawn into the mess-hall seats and beds, 2026-11-27); not a recording."
+   }
+  ]
+ },
+ "modules": [
+  "great_escape"
+ ],
+ "own_modules": [
+  "great_escape"
+ ],
+ "data": [
+  "asm/great_escape_hooks.asm",
+  "docs/profiles/great_escape.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_iff.asm",
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_pace.asm",
+  "asm/lib/hlib_dma.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": []
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "great_escape_play1.rzx",
+   "great_escape_play2.rzx",
+   "great_escape_restart.rzx",
+   "great_escape_result.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 35,
+  "note": "Full native state/colour replay, ABI and deliberate negatives; result fixture is not natural completion."
+ },
+ "outputs": {
+  "plain": {
+   "file": "great_escape.nex",
+   "md5": "326a79986f348693816f6a7d6b6bf535"
+  },
+  "enhanced": {
+   "file": "great_escape_enhanced.nex",
+   "md5": "cf5a145118186b702f6b56b76e696e6c"
+  },
+  "enhanced_loading": {
+   "file": "great_escape_enhanced_loading.nex",
+   "md5": "b0a2eb65b2196d81ab26704b7558fb5c"
+  },
+  "sprites": {
+   "file": "great_escape_sprites.nex",
+   "md5": "ee15439f43bc1cbbe2b87a3ca8856487"
+  },
+  "sprites_loading": {
+   "file": "great_escape_sprites_loading.nex",
+   "md5": "3afab68205cb2cf33f9034889ed5d516"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "The Great Escape",
+  "engine_col": "great_escape (great_escape.md)",
+  "build": "Original monochrome default; optional painted companion, McQueen outfit, loading and 1MB.",
+  "software": "53158 frames / 457675 hooks; R, pixels, negative controls, ROM audit and 9 real-loader cases pass; pace within 2%.",
+  "hardware": "none (JNext and OverSpec only)",
+  "next": "1.1 (McQueen film look, the cooler ball, mess-hall people): the owner's test, then publish; a real Next run."
+ },
+ "checks": [
+  "asm2profile:great_escape"
+ ],
+ "techniques": [
+  {
+   "application": "great_escape.pace",
+   "id": "patch.pace-limiter",
+   "revision": 3,
+   "target": "Native drawing windows and outside-work debt.",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "great_escape.speed",
+   "id": "patch.restore-speed",
+   "revision": 1,
+   "target": "Incoming speed restored on every rejoin.",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "great_escape.r",
+   "id": "patch.preserve-r",
+   "revision": 1,
+   "target": "Native M1 delta at every hook.",
+   "phases": [
+    "entry",
+    "exit"
+   ]
+  },
+  {
+   "application": "great_escape.measure",
+   "id": "verify.update-locked-pace",
+   "revision": 1,
+   "target": "B5D4 IY8000 player update.",
+   "phases": []
+  }
+ ],
+ "results": [],
+ "checked": {
+  "deps": {
+   "asm/great_escape_hooks.asm": "a39f575046fe3c69",
+   "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
+   "docs/profiles/great_escape.json": "af70dcd21cdbdd08",
+   "nexclash.py": "4a87a4de972a122f",
+   "nexclash/analyse.py": "9068c7834f1f1923",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "ce158a77f3104b5b",
+   "nexclash/great_escape.py": "2aac2eee46f1fa48",
+   "nexclash/hooklib.py": "d5cfe5321e8ff038",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/machine.py": "9c057372f6e27d70",
+   "nexclash/nextboot.py": "f67deed5c0603d2a",
+   "nexclash/nxc.py": "d4c135babd8cd53e",
+   "nexclash/nxcout.py": "de8a9ea484b90d7e",
+   "nexclash/recolour.py": "28ecc65866678e42",
+   "nexclash/recorder.py": "e5b5892fa1da208b",
+   "nexclash/records.py": "6401367eddcf12a0",
+   "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
+   "nexclash/rzx.py": "90008c9ca09c51bc",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/userflow.py": "6779aabcf5d969cf",
+   "nexclash/verify.py": "e49b2afbdf721760",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "3e26e280578839c8",
+   "rom": "e50ee485fb4a21d2"
+  },
+  "date": "2026-11-27"
+ },
+ "verified": {
+  "deps": {
+   "asm/great_escape_hooks.asm": "a39f575046fe3c69",
+   "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
+   "docs/profiles/great_escape.json": "af70dcd21cdbdd08",
+   "nexclash.py": "4a87a4de972a122f",
+   "nexclash/analyse.py": "9068c7834f1f1923",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "ce158a77f3104b5b",
+   "nexclash/great_escape.py": "2aac2eee46f1fa48",
+   "nexclash/hooklib.py": "d5cfe5321e8ff038",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/machine.py": "9c057372f6e27d70",
+   "nexclash/nextboot.py": "f67deed5c0603d2a",
+   "nexclash/nxc.py": "d4c135babd8cd53e",
+   "nexclash/nxcout.py": "de8a9ea484b90d7e",
+   "nexclash/recolour.py": "28ecc65866678e42",
+   "nexclash/recorder.py": "e5b5892fa1da208b",
+   "nexclash/records.py": "6401367eddcf12a0",
+   "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
+   "nexclash/rzx.py": "90008c9ca09c51bc",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/userflow.py": "6779aabcf5d969cf",
+   "nexclash/verify.py": "e49b2afbdf721760",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "3e26e280578839c8",
+   "rom": "e50ee485fb4a21d2"
+  },
+  "date": "2026-11-27"
+ },
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/great_escape.md#performance-and-dma"
+   ],
+   "coverage": "Player update B5D4/IY8000 in quiet, busy and searchlight scenes: three 100-update automatic-walk windows and three stationary trials each (JNext 1.1.104, core 0x32 path); no hardware timing.",
+   "result": "No frame sync of its own beyond the player update; drawing hooks at 28 MHz under hlib_pace original-cost windows; all 18 windows within 2 % (worst +1.812 %); beeper stays native at 3.5 MHz."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/great_escape.md#hooks-and-memory",
+    "games/great_escape.md#proof-and-coverage"
+   ],
+   "coverage": "Four recordings (53,158 frames, all 16 hooks), 536 unit cases, ROM-path audit of all 13 builds; tunnels, escape and natural completion not reached.",
+   "result": "Logic, input, morale, searchlight movement and beeper read only native state: the native canvas, bitmap, registers and R stay exact; colour lives in Layer 2 and the bright/dark canvases only."
+  },
+  "decision": "Default keeps the original monochrome (no clash to fix: one attribute per window); Enhanced is a Layer 2 companion of the native composed buffer, off by default, McQueen outfit needs Enhanced (OPR1).",
+  "next_experiment": "Real Next (1MB, core 3.03): default and Enhanced start, play and keep pace within 2 % of the original at B5D4."
+ }
+}
