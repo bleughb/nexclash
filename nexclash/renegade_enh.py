@@ -397,6 +397,8 @@ def enh_unit_tests(patch, states, later, words, sigs, palette):
     p = EnhPatch(words, sigs, palette)
     code = bytearray(p.rom_code)
     i = code.find(bytes.fromhex('3A5240'))          # emit's LD A,(V_CLS) -> XOR A, NOP, NOP: class ignored
+    if i < 0:
+        raise ValueError("negative control: emit's LD A,(V_CLS) not found")
     code[i:i + 3] = bytes.fromhex('AF0000')
     neg('palette class ignored (P1 / P2 / enemies on one palette)', EnhPatch(words, sigs, palette, rom_code=bytes(code)))
     shifted = {L: {a + 2: w for a, w in ws.items() if a + 2 < HI} for L, ws in words.items()}

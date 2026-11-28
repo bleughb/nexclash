@@ -84,6 +84,7 @@ h_clear:
         djnz .shift
         ld a,l
         ld (fc_y),a
+        call clip_add
         call hold_plot
         ld a,(fc_w)
         push af
@@ -115,6 +116,8 @@ h_fullclear:
         HLIB_SPEED_IN v_speed
         HLIB_IFF_DI
         push af
+        xor a
+        ld (v_clip),a
         call hold_plot
         nextreg 0x15,0
         call fg_reset_live
@@ -167,6 +170,7 @@ h_hide:
         HLIB_SPEED_IN v_speed
         xor a
         ld (v_active),a
+        ld (v_clip),a
         nextreg 0x69,0
         nextreg 0x15,0
         HLIB_SPEED_OUT v_speed
@@ -195,6 +199,13 @@ h_render:
         ld a,1
         ld (v_active),a
         ld (v_pace_active),a
+        xor a
+        ld (v_nrects),a
+        ld a,(23479)
+        sub 1
+        sbc a,a
+        and 1
+        ld (v_clip),a
         RESTORE
         ld (v_hl),hl
         ld hl,h_render_after
@@ -207,6 +218,8 @@ h_render_after:
         nextreg 0x51,26
         HLIB_R_IN
         SAVE
+        xor a
+        ld (v_clip),a
         ld a,(v_render_speed)
         call pace_original_end
         ld a,(23479)
@@ -392,12 +405,68 @@ capture_plot:
 .dynamic:
         push de
         push bc
-        call mark_grid
+        ld a,(v_clip)
+        or a
+        call z,mark_grid
         pop bc
         pop hl
         ld a,c
         nextreg 0x50,a
         jp fc_plot
+
+; h_clear inside the render pass: the cleared draw-buffer rectangle is one the original copies to the screen.
+; More than the original can clear in a pass, or a width it never uses: the rest of the pass draws unclipped.
+clip_add:
+        ld a,(v_clip)
+        or a
+        ret z
+        ld a,(fc_w)
+        dec a
+        cp 32
+        jr nc,.full
+        ld a,(v_nrects)
+        cp CLIP_MAX
+        jr c,.room
+.full:  xor a
+        ld (v_clip),a
+        ld hl,v_clip_full
+        inc (hl)
+        ret
+.room:  inc a
+        ld (v_nrects),a
+        dec a
+        add a,a
+        add a,a
+        ld hl,v_rects
+        add hl,a
+        ld a,(fc_y)
+        ld (hl),a
+        inc hl
+        ld b,a
+        ld a,(fc_h)
+        dec a
+        add a,b
+        jr c,.ycap
+        cp 192
+        jr c,.y1
+.ycap:  ld a,191
+.y1:    ld (hl),a
+        inc hl
+        ld a,(fc_x)
+        ld (hl),a
+        inc hl
+        ld b,a
+        ld a,(fc_w)
+        dec a
+        add a,a
+        add a,a
+        add a,a
+        add a,7
+        add a,b
+        jr nc,.x1
+        ld a,255
+.x1:    ld (hl),a
+        ret
 
 restore_maps:
         nextreg 0x50,0xFF
@@ -452,7 +521,13 @@ v_front: db 58
 v_back: db 70
 v_copy_src: db 0
 v_copy_dst: db 0
+CLIP_MAX EQU 48               ; the original clears at most 40 objects' rectangles and 4 HUD boxes in a pass
+v_clip: db 0                  ; 1 inside the render pass (D59F with 5BB7 = 0)
+v_clip_full: db 0             ; passes that fell back to drawing unclipped (never in the recordings)
+v_nrects: db 0
 floor_table EQU 0x3F00
+v_rects EQU 0x3C40             ; CLIP_MAX x (first row, last row, first X, last X): above the stub's 20-byte
+        ASSERT v_rects >= 0x3C14 && v_rects+CLIP_MAX*4 <= fg_patterns   ; register block at 0x3C00
         ASSERT $ <= 0x3400
         ds 0x3C00-$,0
 code_end:

@@ -89,23 +89,23 @@
  "outputs": {
   "plain": {
    "file": "highway_encounter.nex",
-   "md5": "4f605db1f8aa398cdb857af572a06687"
+   "md5": "6756618c9be463425332270e5692ee0f"
   },
   "sprites": {
    "file": "highway_encounter_sprites.nex",
-   "md5": "0f217be33787446e8ec645802cb25b75"
+   "md5": "d87bf6c4b7d2d5a7ab9c476c662975d5"
   },
   "enhanced": {
    "file": "highway_encounter_enhanced.nex",
-   "md5": "9f6bb5d11bfab37a8f6fdde76b88c9f3"
+   "md5": "120660f84965bfedc4d9c55df33a7bc7"
   },
   "loading": {
    "file": "highway_encounter_sprites_loading.nex",
-   "md5": "b8dc556e720a634df900dd84f80efbea"
+   "md5": "d67f82c483459c4c10b94b4d7730cea0"
   },
   "enhanced_loading": {
    "file": "highway_encounter_enhanced_loading.nex",
-   "md5": "7d8cbc58efffb6a8b2c5cfaab12e7dff"
+   "md5": "fccadbf8626aed9c9c92778f84a3a2ec"
   }
  },
  "repro": [],
@@ -114,8 +114,8 @@
   "engine_col": "highway_encounter (highway_encounter.md)",
   "build": "Exact 48K archive; original monochrome default, optional approved Enhanced; original loading screen, full hidden ROM, 1MB.",
   "software": "Frozen full proof, five exact rebuilds and six real-loader modes pass. Normal DMA pace within 0.7%; CPU fallback has slower transitions.",
-  "hardware": "none (JNext only)",
-  "next": "Packaging review; preserve CPU-only transition limitation. Owner playtest and hardware remain."
+  "hardware": "KS3 (System/Next 26.11a): 1.2 played by the owner 2026-11-26 and 2026-11-27: Enhanced showed a 32-row band of noise (Layer 2 on page 14, block RAM to the CPU); 1.3 moves Layer 2 to banks 11-13, not yet played",
+  "next": "owner's KS3 test of 1.3 (~/nxc-test), then publish and reply on jattree/nxc#5; preserve the CPU-only transition limitation"
  },
  "checks": [
   "asm2profile:highway_encounter"
@@ -141,78 +141,94 @@
  },
  "checked": {
   "deps": {
-   "asm/highway_encounter_hooks.asm": "95e72509f89c8271",
+   "asm/highway_encounter_hooks.asm": "a089d78422843d17",
    "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
    "asm/lib/hlib_iff.asm": "b63b400926847660",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
-   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "docs/profiles/highway_encounter.json": "a4eaf4f9e6ce8835",
-   "nexclash.py": "04157df11540c17d",
+   "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
+   "docs/profiles/highway_encounter.json": "3fffbd56305e3a52",
+   "nexclash.py": "4a87a4de972a122f",
+   "nexclash/analyse.py": "9068c7834f1f1923",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "b22123bdf2572c9b",
+   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "2abd23b537c0b5d4",
-   "nexclash/highway_encounter.py": "125a569f99519324",
-   "nexclash/hooklib.py": "24241497925658d6",
+   "nexclash/engines.py": "9666a7f032696532",
+   "nexclash/highway_encounter.py": "3bf7208ed8f6c414",
+   "nexclash/hooklib.py": "d5cfe5321e8ff038",
    "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
-   "nexclash/machine.py": "659903f13de0fcee",
-   "nexclash/nextboot.py": "9272cb3a8c980c98",
-   "nexclash/recolour.py": "6f27e87ef0c47a17",
-   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/machine.py": "9c057372f6e27d70",
+   "nexclash/nextboot.py": "f67deed5c0603d2a",
+   "nexclash/nxc.py": "d4c135babd8cd53e",
+   "nexclash/nxcout.py": "f1bf468312cb5367",
+   "nexclash/recolour.py": "28ecc65866678e42",
+   "nexclash/recorder.py": "e5b5892fa1da208b",
+   "nexclash/records.py": "6401367eddcf12a0",
    "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
-   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/rzx.py": "90008c9ca09c51bc",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
-   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
    "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/userflow.py": "6779aabcf5d969cf",
+   "nexclash/verify.py": "e49b2afbdf721760",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "50684436558662bd",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "26e0cb219caec16e",
-   "rom": "8c34d957fb2cbbd0"
+   "recipe": "f56b546769907bb0",
+   "rom": "sinclair"
   },
-  "date": "2026-11-21"
+  "date": "2026-11-27"
  },
  "verified": {
   "deps": {
-   "asm/highway_encounter_hooks.asm": "95e72509f89c8271",
+   "asm/highway_encounter_hooks.asm": "a089d78422843d17",
    "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
    "asm/lib/hlib_iff.asm": "b63b400926847660",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
-   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "docs/profiles/highway_encounter.json": "a4eaf4f9e6ce8835",
-   "nexclash.py": "04157df11540c17d",
+   "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
+   "docs/profiles/highway_encounter.json": "3fffbd56305e3a52",
+   "nexclash.py": "4a87a4de972a122f",
+   "nexclash/analyse.py": "9068c7834f1f1923",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "b22123bdf2572c9b",
+   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "2abd23b537c0b5d4",
-   "nexclash/highway_encounter.py": "125a569f99519324",
-   "nexclash/hooklib.py": "24241497925658d6",
+   "nexclash/engines.py": "9666a7f032696532",
+   "nexclash/highway_encounter.py": "3bf7208ed8f6c414",
+   "nexclash/hooklib.py": "d5cfe5321e8ff038",
    "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
-   "nexclash/machine.py": "659903f13de0fcee",
-   "nexclash/nextboot.py": "9272cb3a8c980c98",
-   "nexclash/recolour.py": "6f27e87ef0c47a17",
-   "nexclash/records.py": "a8919d2869b77132",
+   "nexclash/machine.py": "9c057372f6e27d70",
+   "nexclash/nextboot.py": "f67deed5c0603d2a",
+   "nexclash/nxc.py": "d4c135babd8cd53e",
+   "nexclash/nxcout.py": "f1bf468312cb5367",
+   "nexclash/recolour.py": "28ecc65866678e42",
+   "nexclash/recorder.py": "e5b5892fa1da208b",
+   "nexclash/records.py": "6401367eddcf12a0",
    "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
-   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/rzx.py": "90008c9ca09c51bc",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
-   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
    "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/userflow.py": "6779aabcf5d969cf",
+   "nexclash/verify.py": "e49b2afbdf721760",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "50684436558662bd",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "26e0cb219caec16e",
-   "rom": "8c34d957fb2cbbd0"
+   "recipe": "f56b546769907bb0",
+   "rom": "sinclair"
   },
-  "date": "2026-11-21"
+  "date": "2026-11-27"
  }
 }

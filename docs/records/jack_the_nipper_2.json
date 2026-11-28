@@ -1,0 +1,252 @@
+{
+ "name": "jack_the_nipper_2",
+ "order": 279,
+ "game": "Jack the Nipper II - In Coconut Capers",
+ "doc": "jack_the_nipper_2.md",
+ "engine": "jack_the_nipper_2",
+ "representative": true,
+ "reference": "jack_the_nipper_2",
+ "inputs": {
+  "snapshot": {
+   "name": "jack_the_nipper_2.z80",
+   "md5": "6f5d708c439f3356a930ea4f176a0c8f",
+   "path": "jack_the_nipper_2/jack_the_nipper_2.z80",
+   "note": "TOSEC Jack the Nipper II - In Coconut Capers (1987)(Gremlin Graphics Software)[a].z80: 48K, in game"
+  },
+  "recordings": [
+   {
+    "name": "jacknipper2.rzx",
+    "md5": "5b8cd64db568ec3bccd77e7efbacd6b9",
+    "path": "jack_the_nipper_2/jacknipper2.rzx",
+    "role": "rzxarchive j/jacknipper2.rzx: 158,593 frames (52 min), human play on a 128K machine running the 48K game, from its own start snapshot"
+   },
+   {
+    "name": "jack_the_nipper_2.pok",
+    "md5": "3fa5c8d8a023a216fc5f89a93fdb680f",
+    "path": "jack_the_nipper_2/jack_the_nipper_2.pok",
+    "note": "the cheats checked against the code: Infinite lives 43251 = 0, Infinite ammo 38306 = 0 (the archive's); Immunity 43219 = 201 (ours: RET after the death routine clears the fall flags; the archive's two immunity sets are not used: games/jack_the_nipper_2.md)"
+   }
+  ]
+ },
+ "modules": [
+  "jack_the_nipper_2",
+  "jack_the_nipper"
+ ],
+ "own_modules": [
+  "jack_the_nipper_2"
+ ],
+ "data": [
+  "docs/profiles/jack_the_nipper_2.json",
+  "asm/jack_the_nipper_2_hooks.asm",
+  "docs/profiles/jack_the_nipper_2_colours.json",
+  "docs/profiles/jack_the_nipper_2_palette.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_pcache.asm",
+  "asm/lib/hlib_dma.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "jacknipper2.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 240,
+  "note": "Blit sites: original and patched blit from one state (registers incl. the return PC, every write outside the cell buffer, the scratch writes = the buffer writes moved by 0xC000; A, F, B, A', F' and IYh, and the copier's E', proven dead on every new exit path, the first 300 events and every 100th); no jump into a replaced instruction, no site rewritten, no hook store the slot-1 model leaves out. Copier entry: the commit (every slot's colour list entry the scenery's), then the figures blitted since the last copy, modelled from their graphics and masks, against the original's buffer slots and the visible sprites pixel for pixel (each pixel in its cell's colour from the original's list, the stacking order the setup sets). Boot: on through the tail's restore to the game start. Units: every site at four speeds (a full run reaches all), the copy as a hide, the figure table full, the store-form check; nine negative controls, each by its own failure."
+ },
+ "outputs": {
+  "plain": {
+   "file": "jack_the_nipper_2.nex",
+   "md5": "e63f00da62e1ac853765bf7825f2241a"
+  },
+  "sprites": {
+   "file": "jack_the_nipper_2_sprites.nex",
+   "md5": "24d8b204ec3948616bd372dbc2e497f2"
+  },
+  "enhanced": {
+   "file": "jack_the_nipper_2_enhanced.nex",
+   "md5": "bc99c10512829195519e0179f19847bb"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Jack the Nipper II",
+  "engine_col": "jack_the_nipper_2 (jack_the_nipper_2.md)",
+  "build": "jack_the_nipper_2_sprites.nex: every figure (pickups and effects too) a 4-bit sprite in its cells' colours from the game's own colour list; + Enhanced (bc99c105): every figure painted (the owner approved Codex's first pass, 2026-11-26)",
+  "software": "RZX replay verify of 3,000 frames (blits, copies, picture; the whole recording: the stamp, pending), units + 9 negative controls; JNext: figures show as sprites",
+  "hardware": "untested",
+  "next": "the whole-recording stamp; colour sheets and recolour (stage 3); the owner tests in JNext / on a Next"
+ },
+ "checks": [
+  "asm2profile:jack_the_nipper_2"
+ ],
+ "techniques": [
+  {
+   "application": "jack_the_nipper_2.scratch-redirect",
+   "id": "patch.scratch-redirect",
+   "revision": 1,
+   "target": "the game's own blits land in a scratch copy of the cell buffer at slot 1 (IY high byte AND 0x3F at the 16 blit sites)",
+   "phases": []
+  },
+  {
+   "application": "jack_the_nipper_2.pattern-cache",
+   "id": "optimise.pattern-cache",
+   "revision": 4,
+   "target": "4-bit tile pairs keyed by graphics address + pair + colour (one colour), or by an exact cell-colour signature (several); the oldest slot of the window on a miss",
+   "phases": []
+  },
+  {
+   "application": "jack_the_nipper_2.restore-speed",
+   "id": "patch.restore-speed",
+   "revision": 1,
+   "target": "every hook gives back the caller's NR 7",
+   "phases": []
+  },
+  {
+   "application": "jack_the_nipper_2.pacing",
+   "id": "detect.pacing-structure",
+   "revision": 2,
+   "target": "no frame sync: the work is the pace; hooks add 4.5 %",
+   "phases": []
+  },
+  {
+   "application": "jack_the_nipper_2.screen-readers",
+   "id": "detect.gameplay-screen-readers",
+   "revision": 2,
+   "target": "no logic reads figure pixels",
+   "phases": []
+  }
+ ],
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/jack_the_nipper_2.md#pacing"
+   ],
+   "coverage": "Simulator over the first 3,000 frames (994 updates); no JNext or hardware timing.",
+   "result": "No frame sync; the hooks add 4.5 % of the time (2.8 % over the first 1,000 frames), so the game runs about 5 % slower."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/jack_the_nipper_2.md#dependencies"
+   ],
+   "coverage": "scan --writers over 40,000 frames; the verifier over the whole recording.",
+   "result": "No logic reads figure pixels; IY, the scratch values read back and E' dead."
+  },
+  "decision": "Scratch cell-buffer redirect at slot 1 + 4-bit sprites committed at the copier's entry, each pixel in its cell's colour.",
+  "next_experiment": "JNext pace against the original (verify.update-locked-pace)."
+ },
+ "results": [
+  {
+   "application": "jack_the_nipper_2.scratch-redirect",
+   "check": "state.rzx-differential",
+   "scope": "1 human recording: 3,000 frames verified (the whole 158,593 in the stamp run, pending); no hardware; JNext start only",
+   "evidence": "games/jack_the_nipper_2.md \"Results\"",
+   "status": "partial",
+   "build": "0080e703"
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/jack_the_nipper_2_hooks.asm": "cf1f46bac372e2d5",
+   "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
+   "asm/lib/hlib_pcache.asm": "e312737f71ce583c",
+   "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
+   "docs/profiles/jack_the_nipper_2.json": "359a03a28dc04871",
+   "docs/profiles/jack_the_nipper_2_colours.json": "cf9eb53bfdb4f16e",
+   "docs/profiles/jack_the_nipper_2_palette.json": "763fa9c17773445f",
+   "nexclash.py": "4a87a4de972a122f",
+   "nexclash/analyse.py": "9068c7834f1f1923",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "b24e01a406607173",
+   "nexclash/hooklib.py": "d5cfe5321e8ff038",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/jack_the_nipper.py": "1e6f5e0afaeb5eb5",
+   "nexclash/jack_the_nipper_2.py": "2de650ae9d931723",
+   "nexclash/machine.py": "9c057372f6e27d70",
+   "nexclash/nextboot.py": "f67deed5c0603d2a",
+   "nexclash/nxc.py": "d4c135babd8cd53e",
+   "nexclash/nxcout.py": "f1bf468312cb5367",
+   "nexclash/recolour.py": "28ecc65866678e42",
+   "nexclash/recorder.py": "e5b5892fa1da208b",
+   "nexclash/records.py": "6401367eddcf12a0",
+   "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
+   "nexclash/rzx.py": "90008c9ca09c51bc",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/userflow.py": "6779aabcf5d969cf",
+   "nexclash/verify.py": "e49b2afbdf721760",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "cb361d2a94e480a3",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-26"
+ },
+ "verified": {
+  "deps": {
+   "asm/jack_the_nipper_2_hooks.asm": "cf1f46bac372e2d5",
+   "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
+   "asm/lib/hlib_pcache.asm": "e312737f71ce583c",
+   "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
+   "docs/profiles/jack_the_nipper_2.json": "359a03a28dc04871",
+   "docs/profiles/jack_the_nipper_2_colours.json": "cf9eb53bfdb4f16e",
+   "docs/profiles/jack_the_nipper_2_palette.json": "763fa9c17773445f",
+   "nexclash.py": "4a87a4de972a122f",
+   "nexclash/analyse.py": "9068c7834f1f1923",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "b24e01a406607173",
+   "nexclash/hooklib.py": "d5cfe5321e8ff038",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/jack_the_nipper.py": "1e6f5e0afaeb5eb5",
+   "nexclash/jack_the_nipper_2.py": "2de650ae9d931723",
+   "nexclash/machine.py": "9c057372f6e27d70",
+   "nexclash/nextboot.py": "f67deed5c0603d2a",
+   "nexclash/nxc.py": "d4c135babd8cd53e",
+   "nexclash/nxcout.py": "f1bf468312cb5367",
+   "nexclash/recolour.py": "28ecc65866678e42",
+   "nexclash/recorder.py": "e5b5892fa1da208b",
+   "nexclash/records.py": "6401367eddcf12a0",
+   "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
+   "nexclash/rzx.py": "90008c9ca09c51bc",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/userflow.py": "6779aabcf5d969cf",
+   "nexclash/verify.py": "e49b2afbdf721760",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "cb361d2a94e480a3",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-26"
+ }
+}

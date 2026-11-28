@@ -738,6 +738,8 @@ def negative_patches(patch):
     b = copy.deepcopy(patch)
     st_ = bytearray(b.stub_extra)
     at_ = bytes(st_).find(bytes((0xED, 0x91, 0x50, SP_PAGE + 1)))
+    if at_ < 0:
+        raise ValueError("negative control: the stub's NEXTREG 0x50 mapping not found")
     st_[at_ + 3] = SP_PAGE
     b.stub_extra = bytes(st_)
     out['upload reads the first page twice'] = b

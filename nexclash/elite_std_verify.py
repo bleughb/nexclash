@@ -470,12 +470,12 @@ def _sd_machine(nex):
     class Mem(list):
         def __getitem__(s, a):
             m = st['mmu'][a >> 13]
-            return alt[a] if m == 0xFF else pages.setdefault(m, bytearray(8192))[a & 0x1FFF]
+            return alt[a] if m == 0xFF else (pages.get(m) or pages.setdefault(m, bytearray(8192)))[a & 0x1FFF]
 
         def __setitem__(s, a, v):
             m = st['mmu'][a >> 13]
             if m != 0xFF:
-                pages.setdefault(m, bytearray(8192))[a & 0x1FFF] = v
+                (pages.get(m) or pages.setdefault(m, bytearray(8192)))[a & 0x1FFF] = v
     return Mem([0] * 65536), st, _rw_simulator(), pages
 
 
@@ -641,6 +641,109 @@ def sd_check(patch, nex, neg=True):
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
     return c, ex
+
+
+# ------------------------------------------------------------------------------------------------ title speed
+
+def _title_run(nex, entry, regs, st_in, limit=400000):
+    """Run a title hook (entry = its CALL's target) on _sd_machine until it leaves the hook code for the game
+    (PC at 0x4000 or above with slot 0 the ROM again). st_in: NextReg values to start from. -> (state, problem)."""
+    mem, st, Sim, pages = _sd_machine(nex)
+    st['nr'].update(st_in.get('nr', {}))
+    for a, v in st_in.get('page', {}).items():
+        pages[E_STATE_PG][a] = v
+    sp = 0xF000
+    mem[sp - 2], mem[sp - 1] = 0x00, 0x80
+    sim = Sim(mem, dict(regs, PC=entry, SP=sp - 2))
+    R, ed = sim.registers, sim.after_ED
+
+    def nn():
+        p = R[24]
+        reg, val = sim.memory[p + 2], sim.memory[p + 3]
+        st['nr'][reg] = val
+        if 0x50 <= reg <= 0x57:
+            st['mmu'][reg - 0x50] = val
+        R[24] = p + 4
+
+    def na():
+        p = R[24]
+        reg = sim.memory[p + 2]
+        st['nr'][reg] = R[0]
+        if 0x50 <= reg <= 0x57:
+            st['mmu'][reg - 0x50] = R[0]
+        R[24] = p + 3
+    ed[0x91], ed[0x92] = nn, na
+
+    class Tr:
+        def read_port(s, regs_, port):
+            return st['nr'].get(st['sel'], 0) if port == 0x253B else 0xFF
+
+        def write_port(s, regs_, port, value, *x):
+            if port == 0x243B:
+                st['sel'] = value
+    sim.set_tracer(Tr())
+    ops, n = sim.opcodes, 0
+    while R[24] < 0x4000:
+        ops[mem[R[24]]]()
+        n += 1
+        if n > limit:
+            return st, 'no return (PC 0x%04X)' % R[24]
+    st['page'] = {a: pages[E_STATE_PG][a] for a in (0x20, 0x21)}
+    return st, None if st['mmu'][0] == 0xFF else 'slot 0 left at page %d' % st['mmu'][0]
+
+
+E_STATE_PG = 26                 # asm STATE_PG
+SPEED_NEG = (bytes.fromhex('3a2100ed9207'), bytes.fromhex('af0000ed9207'))      # the exit's latch read -> a fixed 0
+
+
+def speed_check(patch, nex, neg=True):
+    """The title pass's CPU speed (asm p_top / p_pre; games/elite_std.md "## Smooth title ship"): for each speed the
+    player may have chosen (NextReg 7 = 0-3) the pass must run at 28 MHz from h_top and every exit of it (the three
+    h_pre* hooks) must leave that speed again; a second h_top before any exit (a pass that never reached its copy)
+    must not lose it; a prompt hook with no pass open must not touch the speed. neg: an exit that writes a fixed
+    3.5 MHz must fail. -> Counter (failures end in '!')."""
+    import shutil
+    import tempfile
+    c = collections.Counter()
+    if not patch.tsites:
+        return c
+    sym = {s: int.from_bytes(new[1:3], 'little') for (a, old, new), (_, _, s) in zip(patch.tsites, patch.v['ttl']['sites'])}
+    pres = sorted(s for s in sym if s.startswith('h_pre'))
+
+    def run(nexf):
+        k = collections.Counter()
+
+        def ok(cond, key):
+            k[key if cond else key + '!'] += 1
+        for spd in range(4):
+            for pre in pres:
+                for tops in (1, 2):
+                    st = {'nr': {7: spd}}
+                    for _ in range(tops):
+                        st, bad = _title_run(nexf, sym['h_top'], dict(HL=0x1234), st)
+                        ok(not bad and st['nr'].get(7) == 3, 'title pass at 28 MHz')
+                    st, bad = _title_run(nexf, sym[pre], {}, st)
+                    ok(not bad and st['nr'].get(7) == spd and st['page'][0x20] == 0, 'title speed kept')
+                st, bad = _title_run(nexf, sym[pre], {}, {'nr': {7: spd}})
+                ok(not bad and st['nr'].get(7) == spd, 'prompt alone keeps the speed')
+        return k
+
+    c.update(run(nex))
+    if neg:
+        d = open(nex, 'rb').read()
+        at = d.find(SPEED_NEG[0])
+        if at < 0 or d.find(SPEED_NEG[0], at + 1) >= 0:
+            c['neg title speed not found!'] += 1
+            return c
+        tmp = tempfile.mkdtemp(prefix='elite_spd_')
+        try:
+            p = os.path.join(tmp, 'fixed0.nex')
+            open(p, 'wb').write(d[:at] + SPEED_NEG[1] + d[at + len(SPEED_NEG[1]):])
+            kk = run(p)
+            c['neg title speed caught' if any(x.endswith('!') for x in kk) else 'neg title speed missed!'] += 1
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+    return c
 
 
 # ------------------------------------------------------------------------------------------------ title renders

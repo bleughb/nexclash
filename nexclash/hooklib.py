@@ -768,6 +768,27 @@ SPEED_LEGACY = {             # file: its fixed writes now; a new one in a listed
 _SPEED_RE = re.compile(r'^\s*(?:[A-Za-z_.][\w.]*:?)?\s*nextreg\s+(?:0x0?7|\$0?7|7|07h)\s*,\s*([^\s;]+)', re.I)
 
 
+_SPEED_INSIDE_RE = re.compile(r';.*\bspeed: inside the hook:\s*\S')
+
+
+def _t_speed_audit_rules():
+    """speed_audit's own rules on made-up sources. -> failures"""
+    cases = (('        nextreg 0x07,0\n', 1), ('        nextreg 0x07,a\n        nextreg 7,3\n', 0),
+             ('        nextreg 0x07,0          ; speed: start-up\n', 0),
+             ('        nextreg 0x07,0          ; speed: inside the hook: the render is timed at 3.5 MHz\n', 0),
+             ('        nextreg 0x07,0          ; speed: inside the hook:\n', 1),        # a marker with no reason
+             ('        nextreg 0x07,2          ; inside the hook\n', 1))
+    bad = []
+    with tempfile.TemporaryDirectory() as d:
+        os.mkdir(os.path.join(d, 'asm'))
+        for i, (src, want) in enumerate(cases):
+            open(os.path.join(d, 'asm', 'case_hooks.asm'), 'w').write(src)
+            got = sum(len(v) for v in speed_audit(d).values())
+            if got != want:
+                bad.append('speed audit rule case %d: %d fixed writes found, %d expected!' % (i, got, want))
+    return bad
+
+
 def speed_audit_check(sa=None, legacy=None):
     """-> (title, failures): a fixed NEXTREG 7 write in a file not on SPEED_LEGACY, or more than its pinned count in a
     listed one (the exemption was by file name: another fixed write in a listed file passed); a listed file with
@@ -786,13 +807,17 @@ def speed_audit_check(sa=None, legacy=None):
 def speed_audit(root=ROOT):
     """Every NEXTREG 7 in asm/*.asm (not the library or its harness): a hook may write 3 (28 MHz on the way in) or A
     (the caller's speed, read through 0x243B / 0x253B, on the way out); any other value is a fixed speed that loses
-    the one the player chose. -> {file: [(line, text)]} for each file with a fixed-speed write."""
+    the one the player chose. Not counted: a line marked "; speed: start-up" (before the game runs) or
+    "; speed: inside the hook: <reason>" (held for part of a hook whose exit gives the caller's speed back).
+    -> {file: [(line, text)]} for each file with a fixed-speed write."""
     out = {}
     for path in sorted(glob.glob(os.path.join(root, 'asm', '*.asm'))):
         for n, line in enumerate(open(path, encoding='utf-8', errors='replace'), 1):
             m = _SPEED_RE.match(line)
             if m and '; speed: start-up' in line:   # runs once before the game (set-up, boot resume): no player choice yet
                 continue
+            if m and _SPEED_INSIDE_RE.search(line):   # a speed held for part of the hook (a timed measurement), the
+                continue                              # hook's own exit still gives the caller's back: the reason must follow
             if m and m.group(1).lower() not in ('a', '3', '0x03', '$03', '03h'):
                 out.setdefault(os.path.basename(path), []).append((n, line.strip()[:60]))
     return out
@@ -1140,7 +1165,8 @@ def selfcheck():
                 % (len(au), sum(v == 'twice' for *_, v in au), sum(v == 'value' for *_, v in au),
                    sum(v == 'exempt' for *_, v in au), len(_IFF_AUDIT_CASES)),
                 ['IFF read once: %s!' % x for x in once] + _t_iff_audit_rules()))
-    out.append(speed_audit_check())
+    title, sbad = speed_audit_check()
+    out.append((title, sbad + _t_speed_audit_rules()))
     li = line_isr_cases(code, syms)
     out.append(('hooklib line read under a selection-moving ISR (C7): hlib_line_di exact %s; hlib_line %s'
                 % (li.get('hlib_line_di'), li.get('hlib_line')),

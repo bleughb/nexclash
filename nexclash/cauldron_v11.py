@@ -105,6 +105,7 @@ HOOK_RANGE = (ROM_ORG, 0x3D00)  # FF in the 48K ROM: the original never runs the
 TOUCH = {'clr': ((64, 191, 0, 31), 1), 'scl': ((128, 191, 0, 30), 0), 'scr': ((128, 191, 1, 31), 0),
          'csc': ((0, 191, 0, 31), 0)}
 WHOLE = (0, 191, 0, 31)
+SCROLLS = ('scl', 'scr')                          # the screen scrolls: every pending sprite hidden too (Model.pall)
 ATTR_T, MASK_T, P_FLAG, TILEAT = 23695, 23696, 23697, 45972
 CMP = list(range(0, 13)) + [14] + list(range(16, 25)) + [26, 27]   # all but R, T, MEMPTR
 DECISIONS = {'engine': 'cauldron_v11', 'base': "Dean's cauldron (a copy; his files untouched)",
@@ -745,6 +746,13 @@ class Model:
             p[2] = 2
         self._commit()
 
+    def pall(self):
+        """The screen scrolls (0xDED2 / 0xDEEA): every pending sprite hidden (asm dotall). The original shows no figure
+        through the scroll; a pending one stayed up until the next draw, after the new screen was in."""
+        for p in self.pend:
+            p[2] = 2
+        self._commit()
+
     @staticmethod
     def _meet(a, b):
         return not (a[1] < b[0] or b[1] < a[0] or a[3] < b[2] or b[3] < a[2])
@@ -1163,6 +1171,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shots=None):
                         o = run(pc, label)
                         if tr:
                             model.touch(*tr)
+                        if label in SCROLLS:
+                            model.pall()
                         model.attrs(label, get, R, o.__getitem__)
                         compare(ns, model, fail, label, c, o.__getitem__)
                         st['live'] = model.live_bytes()
@@ -1536,8 +1546,11 @@ def unit_cases(states):
                       ('clear 64-191 with the pending images inside: hidden', erase,
                        at(0xB2A0, model_=lambda R, mem, m: (lower(R, mem, m), pend_all(R, mem, m))), 'run'),
                       ('CL-LINE 24 (CLS) with pending images: all hidden', erase, at(0x0E44, {2: 24}, model_=pend_all), 'run'),
-                      ('scroll left, pending images in column 31 only: kept', erase,
-                       at(0xDED2, model_=lambda R, mem, m: (lowcol(31)(R, mem, m), pend_all(R, mem, m))), 'run')]
+                      ('scroll left, pending images in column 31 only: hidden (the scroll hides every pending one)', erase,
+                       at(0xDED2, model_=lambda R, mem, m: (lowcol(31)(R, mem, m), pend_all(R, mem, m))), 'run'),
+                      ('scroll right, pending images in the sky (lines 40-60): hidden', erase,
+                       at(0xDEEA, model_=lambda R, mem, m: ([e.__setitem__(2, (40, 60, 0, 3)) for e in m.tab],
+                                                            pend_all(R, mem, m))), 'run')]
         cases += [('PR-ALL to the printer buffer: no touch', erase, at(0x0B9B, {6: 0x5B, 7: 0x00}), 'run'),
                   ('PR-ALL off a cell\'s top line: whole screen', erase, at(0x0B9B, {6: 0x43, 7: 0x00}), 'run'),
                   ('tile off the screen: no touch', erase, at(0xB366, {0: 0x41}, {TILEAT: 0, TILEAT + 1: 0x60}), 'run'),
@@ -1655,6 +1668,8 @@ def run_case(pt, stt, mut, mode, fail, c=None):
         if tr:
             m.touch(*tr)
         k_ = SITES[pc][2] if pc in SITES else ROM_SITES[pc][2]
+        if k_ in SCROLLS:
+            m.pall()
         m.attrs(k_, get, R, o.__getitem__)
     for k in fl:
         fail(k[0] if isinstance(k, tuple) else k, k[1:] if isinstance(k, tuple) else ())
@@ -1846,6 +1861,9 @@ def negative_patches(patch):
                 _neg(patch, '1806cd%s' % fs, '0000cd%s' % fs, 'defer', 'p26'),
             'commit without the beam wait (round 2)': _neg(patch, 'cd%scd%s' % (bw, ph), '000000cd%s' % ph, 'bwait', 'p26'),
             'left scroll touches nothing': _neg(patch, '01bf80111e00', '01bfc0111e00', 'scl'),
+            'the scrolls leave pending sprites shown (1.2: bats stayed up through the scroll)':
+                _neg(_neg(patch, 'cd' + _le(y['dotall']), 'cd' + _le(y['dotouch']), 'scroll pending', nth=0),
+                     'cd' + _le(y['dotall']), 'cd' + _le(y['dotouch']), 'scroll pending'),
             'clear 0xB2A0 forgets nothing (taints)': _neg(patch, '01bf40111f003e01', '01bf40111f003e00', 'clr'),
             'PR-ALL hook only for 0x4000-0x40FF': _neg(patch, 'fe5830', 'fe4130', 'char', nth=0),
             'tainted key plotted again gets a sprite': _neg(patch, 'feffca', 'fefdca', 'taint', 'p26'),

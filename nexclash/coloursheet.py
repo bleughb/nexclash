@@ -146,7 +146,7 @@ def owners(comp, clear=False):
 
 
 def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH, unique=False, paint_clear=False,
-          identity=None):
+          identity=None, all_swatches=False):
     """The sheet (png) and its layout (json). colours: an existing map, shown instead of defaults.
     unique (the PAINTING sheet, Dean 2026-10-14): every graphics pixel (key, bit) once - a figure
     sharing graphics with one before it shows only its new pixels (box cropped to them), a figure
@@ -167,7 +167,10 @@ def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH, unique=Fals
                 order.append(c['group'])
         comps = sorted(comps, key=lambda c: (order.index(c['group']), -len(owners(c))))
     shown = set()
-    boxes, x, y, rowh, last = [], 1, SW + 4, 0, None
+    count = len(rgb16) - 1 if all_swatches else 15
+    columns = max(1, width // (SW + 2))
+    swatches = [[1 + i % columns * (SW + 2), 1 + i // columns * (SW + 2), i + 1] for i in range(count)]
+    boxes, x, y, rowh, last = [], 1, swatches[-1][1] + SW + 3, 0, None
     for comp in comps:
         own = owners(comp)
         allown = owners(comp, clear=True) if paint_clear else own
@@ -208,10 +211,8 @@ def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH, unique=Fals
         rowh = max(rowh, h)
     H = y + rowh + 2
     img = Image.new('RGB', (width, H), BG_RGB)
-    for i in range(1, 16):
-        for yy in range(1, 1 + SW):
-            for xx in range(SW):
-                img.putpixel((1 + (i - 1) * (SW + 2) + xx, yy), rgb16[i])
+    for sx, sy, i in swatches:
+        img.paste(rgb16[i], (sx, sy, sx + SW, sy + SW))
     lay = []
     for comp, own, bx, by, w, h, ox, oy in boxes:
         # grey only where painting is read back: the box's other pixels keep the background colour
@@ -239,7 +240,7 @@ def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH, unique=Fals
     img.save(png)
     out = dict(size=[width, H], palette=[list(c) for c in rgb16],
                colours={k: [v[0], v[1], list(v[2])] + list(v[3:4]) for k, v in cmap.items()},   # the map it shows
-               swatches=[[1 + (i - 1) * (SW + 2), 1, i] for i in range(1, 16)], composites=lay)
+               swatches=swatches, composites=lay)
     if paint_clear:
         out['paint_clear'] = True
     if identity:
@@ -389,9 +390,20 @@ def load(path):
     if not os.path.exists(path):
         return {}
     d = json.load(open(path))['entries']
-    return {k: [v[0], v[1], ([int(ch, 16) for ch in v[2]] if isinstance(v[2], str) else list(v[2]))]
-            + ([int(v[3], 16)] if len(v) > 3 else [])
-            for k, v in d.items()}
+    entries = {}
+    for key, row in d.items():
+        encoded = row[2]
+        if isinstance(encoded, str):
+            if len(encoded) != 8:
+                raise ValueError('%s needs eight hex digits or an array of eight indices' % key)
+            indices = [int(ch, 16) for ch in encoded]
+        elif (isinstance(encoded, list) and len(encoded) == 8
+              and all(type(n) is int and n >= 0 for n in encoded)):
+            indices = list(encoded)
+        else:
+            raise ValueError('%s needs eight nonnegative palette indices' % key)
+        entries[key] = [row[0], row[1], indices] + ([int(row[3], 16)] if len(row) > 3 else [])
+    return entries
 
 
 # ---------------------------------------------------------------------------------------------
