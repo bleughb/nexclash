@@ -4,8 +4,8 @@ a colour map. Every game from Midnight Resistance on (Dean, 2026-10-13; PLAYBOOK
 The engine supplies PARTS (what one plot draws) grouped into COMPOSITES (the parts drawn together
 as one figure in a game frame: legs + body, the halves of a vehicle). This module joins the plots
 of a frame into composites, picks the fewest composites that show every graphics byte drawn, writes the sheet and reads the painted copy back. Sheet rules (Dean): one PNG pixel = one
-Spectrum pixel, multi-part figures joined, a row of 8x8 swatches of the sprite palette (indices
-1-15, left to right) at the top, no text; the layout JSON beside it says which part, colour-map key
+Spectrum pixel, multi-part figures joined, 8x8 swatches of the sprite palette (by default indices
+1-15, left to right) above the figures or each group, no text; the layout JSON beside it says which part, colour-map key
 and bit each pixel is, so the PNG needs nothing else.
 
 Part dict (engine-built):
@@ -146,7 +146,7 @@ def owners(comp, clear=False):
 
 
 def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH, unique=False, paint_clear=False,
-          identity=None, group_palettes=None):
+          identity=None, group_palettes=None, all_swatches=False):
     """The sheet (png) and its layout (json). colours: an existing map, shown instead of defaults.
     unique (the PAINTING sheet, Dean 2026-10-14): every graphics pixel (key, bit) once - a figure
     sharing graphics with one before it shows only its new pixels (box cropped to them), a figure
@@ -156,9 +156,15 @@ def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH, unique=Fals
     the layout (recolour compares it with the build's; docs/COLOURS.md "Identity").
     paint_clear: the clear pixels (code 0) inside each figure's box are listed too, paintable (the box
     is still the opaque pixels' box).
+    group_palettes: start each group with its own swatches and use its colours for the figures.
+    all_swatches: show every nonzero index of each palette, wrapping at the sheet width.
     Inside a box only the paintable pixels are grey (or coloured); the rest keeps the background
     colour (Dean 2026-10-14: the sheet shows exactly what can be painted)."""
     from PIL import Image
+    # The two published signatures used the slot after identity for a palette collection or a bool.
+    if isinstance(group_palettes, bool):
+        all_swatches = all_swatches or group_palettes
+        group_palettes = None
     cmap = colours or {}
     if unique:
         order = []
@@ -167,8 +173,21 @@ def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH, unique=Fals
                 order.append(c['group'])
         comps = sorted(comps, key=lambda c: (order.index(c['group']), -len(owners(c))))
     shown = set()
-    boxes, x, y, rowh, last = [], 1, SW + 4, 0, None
     swatches = []
+
+    def add_swatches(top, palette, group=None):
+        columns = max(1, width // (SW + 2))
+        count = len(palette) - 1 if all_swatches else 15
+        for i in range(count):
+            row, col = divmod(i, columns)
+            swatch = [1 + col * (SW + 2), top + row * (SW + 2), i + 1]
+            if group is not None:
+                swatch.append(group)
+            swatches.append(swatch)
+        return swatches[-1][1] + SW + 3 if count else top
+
+    boxes, x, rowh, last = [], 1, 0, None
+    y = SW + 4 if group_palettes else add_swatches(1, rgb16)
     for comp in comps:
         own = owners(comp)
         allown = owners(comp, clear=True) if paint_clear else own
@@ -202,9 +221,7 @@ def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH, unique=Fals
         if comp['group'] != last and last is not None:
             x, y, rowh = 1, y + rowh + 4, 0            # each group starts a new row
         if group_palettes and comp['group'] != last:
-            sy = 1 if last is None else y
-            swatches.extend((1 + (i - 1) * (SW + 2), sy, i, comp['group']) for i in range(1, 16))
-            y = sy + SW + 3
+            y = add_swatches(1 if last is None else y, group_palettes[comp['group']], comp['group'])
         last = comp['group']
         if x + w > width - 1:
             x, y, rowh = 1, y + rowh + 2, 0
@@ -213,8 +230,6 @@ def write(comps, png, layout_path, rgb16, colours=None, width=WIDTH, unique=Fals
         rowh = max(rowh, h)
     H = y + rowh + 2
     img = Image.new('RGB', (width, H), BG_RGB)
-    if not group_palettes:
-        swatches = [(1 + (i - 1) * (SW + 2), 1, i) for i in range(1, 16)]
     draw_swatches(img, swatches, rgb16, group_palettes)
     lay = []
     for comp, own, bx, by, w, h, ox, oy in boxes:
@@ -404,9 +419,20 @@ def load(path):
     if not os.path.exists(path):
         return {}
     d = json.load(open(path))['entries']
-    return {k: [v[0], v[1], ([int(ch, 16) for ch in v[2]] if isinstance(v[2], str) else list(v[2]))]
-            + ([int(v[3], 16)] if len(v) > 3 else [])
-            for k, v in d.items()}
+    entries = {}
+    for key, row in d.items():
+        encoded = row[2]
+        if isinstance(encoded, str):
+            if len(encoded) != 8:
+                raise ValueError('%s needs eight hex digits or an array of eight indices' % key)
+            indices = [int(ch, 16) for ch in encoded]
+        elif (isinstance(encoded, list) and len(encoded) == 8
+              and all(type(n) is int and n >= 0 for n in encoded)):
+            indices = list(encoded)
+        else:
+            raise ValueError('%s needs eight nonnegative palette indices' % key)
+        entries[key] = [row[0], row[1], indices] + ([int(row[3], 16)] if len(row) > 3 else [])
+    return entries
 
 
 # ---------------------------------------------------------------------------------------------

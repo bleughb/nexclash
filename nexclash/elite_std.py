@@ -403,6 +403,9 @@ def unit_tests(patch, states=None, neg=True, nex=None):
         from . import elite_std_verify as V
         sc, _ = V.sd_check(patch, nex, neg=neg)
         c.update(sc)
+    if patch.tsites:                        # the title pass gives back the caller's CPU speed (speed_check)
+        from . import elite_std_verify as V
+        c.update(V.speed_check(patch, nex, neg=neg))
     if neg:
         for name, nb, ne in negative_variants(banks, patch.version):
             c['neg %s caught' % name if _fix_problems(nb, ne, patch.version) else 'neg %s missed!' % name] += 1

@@ -115,6 +115,9 @@ e_dan:  push af
         inc a
         nextreg 0x38,a
         nextreg 0x39,0
+        IFDEF ENHANCED
+        call clip_dan
+        ELSE
         nextreg 0x1C,2          ; the plotter draws DAN_ROWS x 2 rows (Dan sinks in water: 12..1):
         nextreg 0x19,0          ; the sprite clip window ends where the plot ends
         nextreg 0x19,255
@@ -126,6 +129,7 @@ e_dan:  push af
         ld a,(DAN_Y)
         add a,b
         nextreg 0x19,a
+        ENDIF
 .fg:    ld a,(ROOM)
         cp AIRSHIP
         jr nz,.out
@@ -190,7 +194,11 @@ hide:   nextreg 0x34,0
         push af
         push bc
         ld a,FG_SPR
+        IFDEF ENHANCED
+        ld b,FG_N+40            ; four slots per enemy, up to ten records
+        ELSE
         ld b,FG_N
+        ENDIF
 .h:     nextreg 0x34,a
         nextreg 0x38,0
         inc a
@@ -200,6 +208,9 @@ hide:   nextreg 0x34,0
         ret
 
 xoff:   db 4,6,6,8,4,6,8,10
+        IFDEF ENHANCED
+        INCLUDE "dynamite_dan_enemies.inc"
+        ENDIF
 rom_end:
 
 ; --- setup routine (stub bank, 0xD000): patterns from bank 11, palette, sprites off then on ---
@@ -254,5 +265,7 @@ setup:  nextreg 0x57,22             ; bank 11 lower page at 0xE000
         ret
 setup_end:
 
+        IFNDEF ENHANCED
         SAVEBIN "dd_rom.bin",0x386E,rom_end-0x386E
         SAVEBIN "dd_setup.bin",0xD000,setup_end-0xD000
+        ENDIF

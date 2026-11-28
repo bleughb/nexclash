@@ -786,10 +786,11 @@ def tools_check(src):
           'byte refused, a FAIL disproved, one file per board + core, --compare; control: CRC off accepts the damage%s' % (
               'OK' if not ibad else 'FAIL', '' if not ibad else ' (%s)' % str(ibad)[:200]))
     cbad += len(ibad)
-    from nexclash import machine as mach         # the 48K-only recorder / analyse / verify (lesson recorder-128k-not-in-toolkit)
+    from nexclash import machine as mach         # 128K in the shared recorder / analyse (lesson recorder-128k-not-in-toolkit)
     m128 = mach.selfcheck()
-    print('%-4s tools: 48K-only paths - recorder, analyse and verify refuse a made-up 128K snapshot / recording and '
-          'take the 48K one; the recorder takes a 128K one with an engine\'s own paging model%s' % (
+    print('%-4s tools: 128K paths - the recorder pages a made-up 128K snapshot (banks 1, 3) and its recording replays '
+          'in rzxplay to the same state, 128K frame length; analyse places the writes by bank; the TID verifier still '
+          'refuses 128K; an engine\'s own machine class is taken%s' % (
               'OK' if not m128 else 'FAIL', '' if not m128 else ' (%s)' % str(m128)[:200]))
     cbad += len(m128)
     from nexclash import jnext                  # play checks: soak / pace / flicker / looksheet (docs/CHECKS.md)

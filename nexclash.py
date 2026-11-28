@@ -515,10 +515,10 @@ def _learn(fp, name, low, source):
 
 def _combine(ans):
     import copy
+    from nexclash.analyse import merge_scans
     c = dict(ans[0])
     for x in ans[1:]:
-        c['rd'] = bytes(p | q for p, q in zip(c['rd'], x['rd']))
-        c['wr'] = bytes(p | q for p, q in zip(c['wr'], x['wr']))
+        merge_scans(c, x)                       # rd / wr and, 128K, rbw / rd128 / wr128
         c['rom_used'] |= x['rom_used']
         c['printer_buffer_touched'] |= x['printer_buffer_touched']
         c['stack_low_water'] = min(c['stack_low_water'], x['stack_low_water'])

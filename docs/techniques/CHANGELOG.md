@@ -96,3 +96,9 @@ scripts are in specnext reference/castle_master/build (not shared code). No runt
 |---|---|---|
 | - | New: patch.ink-rectangle-sprites (candidate) | The car coloured by an ink rectangle, as sprites clipped to it (Cisco Heat v1.2, on a Next) |
 | verify.update-locked-pace r1 | r2: builds under a percent apart compared each with the original per update, two seeds | One seed's spread hid a 1.2% loss from line-clock reads in JNext |
+
+## Cisco Heat v1.3 (2026-11-27)
+
+| Before | After | Why |
+|---|---|---|
+| patch.ink-rectangle-sprites r1 | r2: the figure's outline cleared on the shown screen after the copy; its test and negative | The owner's KS3 play test: the car see-through (no mask: road lines and other cars showed in its holes) |
