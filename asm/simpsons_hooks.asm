@@ -931,3 +931,294 @@ psetup: ld hl,ppbuf
 ppbuf:  DS 256
 PSETUP_END:
         SAVEBIN "simpsons_plain.bin",0xD000,PSETUP_END-0xD000
+
+; The single-game build adds these blocks only. Ocean's resident loader still
+; selects the name, checks the header, pages the destination and restores its
+; two system variables. Capture R on entry, serve LD-BYTES and install at the final JP.
+        ORG 0x3200
+multi_read:
+        ld a,(0x82DE)           ; digits of "simp-XY" in the requested name
+        sub '1'
+        cp 5
+        jr nc,.bad
+        ld l,a
+        add a,a
+        add a,l
+        add a,a                 ; (level-1)*6
+        ld l,a
+        ld a,(0x82DF)
+        sub '1'
+        cp 6
+        jr nc,.bad
+        add a,l
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld bc,multi_blocks
+        add hl,bc
+        ex af,af'               ; original LD-BYTES flag, 0 header or FF data
+        push ix
+        pop de
+        or a
+        jr nz,.data
+        ld bc,17
+        ldir
+        jr .done
+.data:  ld bc,17
+        add hl,bc
+        ld a,(hl)
+.chunk: nextreg 0x50,a          ; source page in slot 0, game destinations >= 5B15
+        inc hl
+        ld c,(hl)
+        inc hl
+        ld b,(hl)
+        inc hl
+        push bc                 ; offset within source page
+        ld c,(hl)
+        inc hl
+        ld b,(hl)
+        inc hl
+        ex (sp),hl
+        ldir
+        pop hl
+        ; End address may wrap. Compare DE to the end from the original header.
+        ld bc,(0x82F0)
+        ld ix,(0x82EE)
+        add ix,bc
+        ld a,e
+        cp ixl
+        jr nz,.more
+        ld a,d
+        cp ixh
+        jr z,.done
+.more:  ld a,(hl)
+        jr .chunk
+.done:  nextreg 0x50,255
+        push de
+        pop ix
+        ld de,0
+        xor a
+        scf
+        ret
+.bad:   or a                    ; unknown level/block: the loader retries
+        ret
+multi_begin:
+        ld a,r                  ; DI, JP here, LD A,R: 4 M1s from $8190, carry intact
+        nextreg 0x50,27
+        ld (multi_r-0x4000),a
+        nextreg 0x50,255
+        ld a,0x21               ; gameplay can write through an object pointer to $8208
+        ld (0x8208),a           ; restore LD HL,$824E for the fourth block
+        ld sp,0x8180            ; replaced instruction
+        jp 0x8194
+multi_finish:
+        nextreg 0x52,27
+        call multi_install
+        nextreg 0x52,10
+        jp 0x8520
+        ASSERT $ <= 0x3400
+multi_blocks EQU 0x3400         ; 30 records: 17-byte header, up to three page spans
+        SAVEBIN "simpsons_reader.bin",multi_read,$-multi_read
+
+; Private page 27 in slot 2. No stack or live game data in this window.
+        ORG 0x4000
+multi_install:
+        ld (multi_sp),sp
+        ld sp,0x5FFE
+        push af
+        push bc
+        push de
+        push hl
+        push ix
+        push iy
+        ld a,(multi_saved)
+        or a
+        jr nz,.select
+        ld hl,multi_save_pages
+        ld d,28
+        ld b,5
+.save:  push bc
+        ld a,(hl)
+        inc hl
+        push hl
+        nextreg 0x50,a
+        ld a,d
+        nextreg 0x53,a
+        push de
+        ld hl,0x6000
+        ld de,0
+        ld bc,8192
+        ldir
+        pop de
+        inc d
+        pop hl
+        pop bc
+        djnz .save
+        ld a,1
+        ld (multi_saved),a
+.select:
+        ld a,(0x81A3)
+        dec a
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld bc,multi_levels
+        add hl,bc
+        push hl
+        pop iy                  ; one 32-byte descriptor per level
+        ld a,(iy+0)
+        nextreg 0x53,a          ; this level's hook code / palette
+        nextreg 0x50,255
+        nextreg 0x8C,0xC0
+        xor a
+        call .rom
+        ld a,0x10
+        call .rom
+        nextreg 0x8C,0x80
+        nextreg 0x43,0x20
+        nextreg 0x40,0
+        ld hl,0x7800
+        ld b,0
+.pal:   ld a,(hl)
+        nextreg 0x44,a
+        inc hl
+        ld a,(hl)
+        nextreg 0x44,a
+        inc hl
+        djnz .pal
+        push iy
+        pop hl
+        inc hl
+        ld b,(hl)               ; restore active colour pages from immutable sources
+        inc hl
+        ld d,28
+.copy:  push bc
+        ld a,(hl)
+        nextreg 0x53,a
+        inc hl
+        push hl
+        ld a,d
+        nextreg 0x50,a
+        push de
+        ld hl,0x6000
+        ld de,0
+        ld bc,8192
+        ldir
+        pop de
+        inc d
+        pop hl
+        pop bc
+        djnz .copy
+        nextreg 0x50,WORK
+        xor a
+        ld hl,0
+        ld de,1
+        ld bc,TLO-1
+        ld (hl),a
+        ldir
+        ld hl,ATTRS
+        ld (V_ATP),hl
+.hide:  nextreg 0x34,a
+        nextreg 0x38,0
+        inc a
+        cp 128
+        jr nz,.hide
+        ld bc,0x303B
+        xor a
+        out (c),a
+        nextreg 0x50,255
+        nextreg 0x53,11
+        push iy
+        pop hl
+        ld de,8
+        add hl,de
+        ld b,4
+.site:  ld e,(hl)
+        inc hl
+        ld d,(hl)
+        inc hl
+        push bc
+        ld bc,3
+        ldir
+        pop bc
+        djnz .site
+        ld a,(multi_lives)
+        or a                    ; zero = Infinite lives selected on the menu
+        jr nz,.exit
+        ld a,0x13
+        ld bc,0x7FFD
+        out (c),a
+        ld e,(iy+28)
+        ld d,(iy+29)
+        xor a
+        ld (de),a
+        ld e,(iy+30)
+        ld d,(iy+31)
+        ld (de),a
+        ld a,0x10
+        out (c),a
+.exit:  ld hl,0x5E4D            ; successful ROM data read: cassette EAR/flags left in AF'
+        push hl
+        pop af
+        ex af,af'
+        ld a,(0x81A3)
+        dec a
+        ld e,a
+        ld d,0
+        ld hl,multi_refresh
+        add hl,de
+        ld a,(multi_r)
+        ld c,a
+        add a,(hl)
+        xor c
+        and 0x7F
+        xor c
+        ld r,a                  ; 14 M1s from here to entry at $8520
+        pop iy
+        pop ix
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ld sp,(multi_sp)
+        ret
+.rom:   ld bc,0x7FFD
+        out (c),a
+        ld hl,0x6000
+        ld de,0x2000
+        ld bc,ROM_END-rom_start
+        ldir
+        ret
+multi_save_pages: DB 20,21,92,93,94     ; boot stub and ROM sources are free after boot
+multi_sp: DW 0
+; R increments mod 128 for the uninterrupted ROM load of each Ocean TAP
+; level (from $8190 to $8520, ROM EAR pulses). The restart has carry set.
+multi_refresh: DB (114-18)&127,(8-18)&127,(70-18)&127,(47-18)&127,(75-18)&127
+multi_r: DB 0
+multi_saved: DB 0
+multi_lives: DB 1
+multi_levels EQU 0x4200
+        ASSERT $ <= multi_levels
+        SAVEBIN "simpsons_install.bin",multi_install,$-multi_install
+
+; Run once in the boot stub. Remember the actual menu trainer byte before
+; Ocean replaces bank 3. No extra trainer POKE in the original game.
+        ORG 0xD400
+multi_setup:
+        call setup
+        nextreg 0x52,6
+        ld a,(0x4000+6626)
+        nextreg 0x50,27
+        ld (multi_lives-0x4000),a
+        nextreg 0x50,255
+        nextreg 0x52,10
+        ret
+        SAVEBIN "simpsons_multisetup.bin",multi_setup,$-multi_setup

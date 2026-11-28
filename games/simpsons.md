@@ -1,17 +1,14 @@
 # The Simpsons: Bart vs. the Space Mutants (Ocean, 1991; 128K only)
 
 ## Next session
-Stage: 3 (verified and published a level a patch; not one game yet)   State: 2026-11-19: each of the tape's five levels
-builds from its own snapshot (plain, sprites, Enhanced), verifies on its whole recording and is stamped (records
-simpsons_l1..l5); five .nxc patches for the Ocean tape are published (owner: "Publish it"); all five start and play in
-OverSpec from their menus; not on hardware
-Inputs (private, pilot runs/simpsons/reference_files/simpsons): simpsons_l1..l5.z80 and .rzx = the rzxarchive's five
-level recordings (SPIN 0.5), each with its own 128K snapshot; simpsons_colours.json (the painted map); the tape
-(Simpsons - Bart vs the Space Mutants (1991)(Ocean)[128K].tap, md5 8e08c32c3265f6c4a65cf7e5f72b9913) is in the run folder
-Branch: add-simpsons    Checks: `selftest.py --game simpsons_lN --verify --stamp` (one level a run), doccheck
-Pending user answers: see "Open" 1-3
-Start with: "Open" 1 (one game from five loads)
-Read: "Build", "Open"
+The five per-level Ocean patches are published. Version 1.1 is a local test copy on
+`simpsons-single-nex`. One NEX starts in level 1 and serves the rest of the game from RAM.
+The next test is unaided progression through the four endings on a physical Next.
+
+Inputs are the Ocean 128K TAP (MD5 8e08c32c3265f6c4a65cf7e5f72b9913), the level 1 start
+snapshot, and simpsons_colours.json. Verification also uses the five separate RZX recordings.
+Run `python selftest.py REFERENCE --game simpsons_single --verify --stamp` with the inputs in
+`REFERENCE/simpsons`. See “Five-level test copy” and “Hardware checklist” below.
 
 ## Result (2026-11-18)
 Techniques: `patch.xor-overlay-keep-ula`, `patch.runtime-colour-map`, `patch.display-atomic-switch`, `patch.preserve-r`,
@@ -75,14 +72,28 @@ The game's memory and both screens stay the original's; sprites lie on the figur
 - A shape the map does not know is drawn in the plain colours. Rows the original draws past a shape's end (clipped at
   the top it goes one row into the next shape) stay its own drawing on the screen.
 
+## Five-level test copy
+
+Ocean's loader at $8190 increments its level number. A set carry restarts level 1. The
+original loader requests six named CODE files per level. The single build redirects its
+LD-BYTES jump at $82D6 to a reader in both alternate ROMs. It serves 30 original payloads
+(328,967 bytes) from 16K banks 25 through 45. The first destination is $5B15, above the
+score and lives. The jump at $8236 installs the level's four sprite hooks, palette and
+colour pages, clears the sprite list and continues to the game's entry at $8520.
+Infinite lives follows the menu selection across loads.
+
+The default NEX has MD5 `79f7211543ae84a1ec95fcaa08fa6dd2`. Enhanced has MD5
+`5632d621e8974795bf1d36f8ac26517c`. Both are 786,944 bytes. In OverSpec, a scripted
+run from the Enhanced menu reached gameplay in five levels and restarted level 1.
+The game took the first ending itself after a counter cheat. The script entered the
+game's exit or restart instruction for the other four loads. Score and lives survived all five.
+
 ## Hardware checklist
 Each level: starts from the menu; Bart and the other figures visible and animating, in step with the scenery as it
 scrolls; no figure left behind after a screen change; music unchanged; Enhanced: the same with the painted colours.
 
 ## Open
-1. One game: the tape loads each level over the last. The five builds are five separate programs that start in their
-   level. A single .nex that holds all five and changes level from memory needs the game's loader call found and a
-   recording that crosses a level change (the owner's, or scripted with a cheat). Owner's decision how to ship meanwhile.
+1. Play the single build through the four endings without a skip and check it on a physical Next.
 2. The painted map holds the figures' shapes: where it lives for a public patch (the .nxc carries the colour pages
    anyway; the map itself is the question).
 3. Shapes no recording draws stay unpainted; the owner has not seen the painted sheet in the game.
@@ -90,15 +101,19 @@ scrolls; no figure left behind after a screen change; music unchanged; Enhanced:
 5. hlib's shared sprite model still lets NextReg 0x34 select the attribute port
    (this engine's own model refuses it, as Heartland's).
 6. Pace is from the simulator's line clock; nothing has run in JNext or on a board.
-7. A level's build stops at its end, where the game asks for the tape: the player starts the next level's patch.
+7. The five published patches still need a separate launch for each level. The test copy handles the reloads.
 
 ## Decisions
+- 2026-11-23 (owner): build one test copy for the whole tape and retain the five published patches.
 - 2026-11-18 (owner): Enhanced from the cartoon's colours. The plain sprite build's look (graphic black, cleared white)
   was not asked: it is what the game shows on its white pavement.
 - 2026-11-19 (owner): "Publish it": a patch a level for the Ocean tape now, one program from the five loads later.
 - 2026-11-18: the figures stay in the bitmap under their sprites (as Heartland): nothing of the game changes.
 
 ## Lessons
+- [local: this game's loader] After play in level 3, $8208 held $82 where the loader needs the $21
+  opcode for its fourth filename. Scripted advances from level entry missed this. Restore the
+  opcode at loader entry and exercise that value in the transition check.
 - [kb lesson.hook-call-overhead-at-28mhz: this game's hooks] A wait per figure cost about 1,600 T of 3.5 MHz time each (the limiter's own polls and the
   speed changes), more than the 28 MHz saved on a small figure: the first build was slower than the original with no
   wait at all. One window around the whole draw pass, with each figure adding its time to the target, fixed it.
@@ -115,8 +130,8 @@ scrolls; no figure left behind after a screen change; music unchanged; Enhanced:
   syntax, and a bare pattern failed only on the levels whose code differs.
 - [backlog C2 #15] `nexclash.py new` stopped on this 128K snapshot ('Machine' object has no attribute 'ay': the 48K-only
   analysis); the work went on with scan, isr, preview and a trace script.
-- [deferred Open: reconsider when the levels become one program (Open 1)] Sites found by their bytes let one engine build five
-  loads; the timing constants still had to be fitted per load.
+- [local: this game's loader] Each of the five loads selects its own graphics sites and timing constants.
+  The single build switches both together before the new level starts.
 
 ## Friction
 - reuse: [local: this game's module] Heartland's hook runner, model and report shape (that branch is not merged).
@@ -140,3 +155,5 @@ scrolls; no figure left behind after a screen change; music unchanged; Enhanced:
   path, a Codex painting pass), about 6 h, about 150 tool calls, 2 user rounds.
 - 2026-11-19: stage 3: five records, each level's full verify and stamp (builds unchanged after merging main), five
   tape patches made and run in OverSpec, published at the owner's word; about 1.5 h, about 40 tool calls, 1 user round.
+- 2026-11-28: built the five-level test copy. Compared four advances and a restart with the
+  original ROM loading the tape. Played all five levels in one OverSpec menu launch.
