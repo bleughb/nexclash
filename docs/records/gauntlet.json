@@ -76,7 +76,7 @@
   "engine_col": "gauntlet (gauntlet.md)",
   "build": "gauntlet_p1_sprites.nex f33ade47 (nothing of the game changes: each 8 x 8 cell of the play window shown as a painted tile of the tile layer, the status panel painted on Layer 2; the original's pace) + steady 545fdeed (the game at 28 MHz, an update every 3 frames: the original takes 3 to 8); the whole game from the tape: record gauntlet_tape",
   "software": "Verify IDENTICAL on the first block's recording, 15,698 frames, 3,202 updates (R compared): 2,459,136 cells against the painted map, Layer 2 against the painted panel after every pass; the steady build's hooks IDENTICAL on 3,000 frames; unit PASS (28 cases); 6 of 6 broken builds detected; ROM path check pass; the hooks take 0.016% of the recording's time less than the copies and the clear they stand for. Blocks 1, 2 and 10 from the tape prompt PASSED the same way",
-  "hardware": "untested (both builds start and run in OverSpec)",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-27, good",
   "next": "the owner's review of the painting and of the steady speed; the heroes' shots (drawn at pixel positions) are not painted; hardware test"
  },
  "checks": [

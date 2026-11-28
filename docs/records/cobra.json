@@ -86,7 +86,7 @@
   "engine_col": "cobra (cobra.md)",
   "build": "cobra_sprites.nex 00ead70a (figures and bullets as sprites, white body, black dark pixels, no outline; whole alt ROM image; the snapshot's own BASIC start; pace limiter, prepared patterns)",
   "software": "Verify IDENTICAL on 4 random-key recordings (COLOUR + MONO); unit PASS incl. every-site clock matrix; negatives detected; ROM path check pass; JNext 1.1.104 reaches play; pace ORIGINAL",
-  "hardware": "untested",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-26, good",
   "next": "the owner plays the .nxc; hardware test"
  },
  "checks": [

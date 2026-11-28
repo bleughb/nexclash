@@ -95,7 +95,7 @@
   "engine_col": "arkanoid (arkanoid.md)",
   "build": "arkanoid_sprites.nex 5c95f67d",
   "software": "Verify IDENTICAL on 6 bot recordings; unit PASS; 8 negatives detected (no human recording)",
-  "hardware": "untested; floating bus at port 0xFF is load-bearing",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-26, good; floating bus at port 0xFF is load-bearing",
   "next": "owner decision: little clash to remove (see arkanoid.md)"
  },
  "checks": [

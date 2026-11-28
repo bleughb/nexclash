@@ -131,7 +131,7 @@
   "engine_col": "jetpac (jetpac.md)",
   "build": "jetpac_sprites.nex 3cf8fbd2 + opt-in rework v1.1 (`--altrom-fill whole`; rocket / fuel / flames fix, Enhanced, loading screen)",
   "software": "free run IDENTICAL (no RZX), unit PASS (rocket, fuel, flames: round 2)",
-  "hardware": "round 1: rocket / fuel / flames faults (fixed, round 2 untested)",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-27, good; round 1: rocket / fuel / flames faults (fixed)",
   "next": "hardware round 2; a real RZX"
  },
  "checks": [

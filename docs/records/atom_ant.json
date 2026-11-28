@@ -121,7 +121,7 @@
   "engine_col": "atom_ant (atom_ant.md)",
   "build": "v1.0; atom_ant_loading.nex 66d682f8 and atom_ant_enhanced_loading.nex c3d35756 equal the published .nxc 1.0 bare builds, default and Enhanced (without the screen 04460a95, 054ce8f7); default: the tape's 128K form with its AY music, no game byte changed, no hook, no clash to remove and none claimed; Enhanced, off by default: the Spec256 set's colours on a full double-buffered Layer 2 over the unchanged ULA; top banks 10 and 47, both fit a 1MB Next",
   "software": "TBD",
-  "hardware": "untested",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-26, good",
   "next": "hardware checklist; natural play to the end"
  },
  "checks": [

@@ -118,7 +118,7 @@
   "engine_col": "mad_mix_2 (mad_mix_2.md)",
   "build": "v1.0; mad_mix_2_sprites_loading.nex ebbf27c8 and mad_mix_2_enhanced_loading.nex 5b402870 equal the published .nxc 1.0 bare builds, default and Enhanced (without the screen d41ee5de, 4d8b106d); default: no clash to remove, the copy's two port 0xFF writes become reads (Timex hi-colour on a Next), Sinclair's ROM as the whole alt ROM, no hooks; Enhanced (off by default): stages 1 to 3 in the Spec256 set's colours (Jao Paulo) on a double-buffered Layer 2, stages 4 to 9 original; banks to 28; the colour table and loading screen are local inputs",
   "software": "default: 3 recordings, 40,067 frames, R and all eight banks at every frame end, 512 site cases, 5 broken builds; Enhanced: 4 recordings, 70,074 frames, 133,046 hooks with R and all RAM, 4,163 pictures against a model, 402 handler cases, 14 of 14 broken builds; soak, flicker, real loader; pace in JNext: Enhanced whole +0.09 to +0.26%, slowest 20 updates up to +2.95% (over the 2% rule); one flip at line 36 of 710",
-  "hardware": "untested",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-27, good",
   "next": "hardware checklist; owner's play; colours for stages 4 to 9 (new paint, mock-up first)"
  },
  "checks": [

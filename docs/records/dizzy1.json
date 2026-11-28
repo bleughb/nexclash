@@ -98,7 +98,7 @@
   "engine_col": "dizzy1 (dizzy_ultimate_cartoon_adventure.md)",
   "build": "Version 1.2 (published as .nxc 1.2): published default appearance, approved Enhanced option off by default; original loading screen, full hidden ROM, caller-speed restore, per-hook R checks and original-pace drawing windows.",
   "software": "Full 6346-frame replay in both modes; 126/136 unit cases, 15/15 and 22/22 fault controls. Native pace within 2%, sound, five-minute soak and byte-exact real-loader tests in three modes passed.",
-  "hardware": "No hardware claim for version 1.2.",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-27, good",
   "next": "Physical test and later-room/full-game recording remain."
  },
  "checks": [

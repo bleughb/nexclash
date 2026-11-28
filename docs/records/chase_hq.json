@@ -78,7 +78,7 @@
   "engine_col": "chase_hq (chase_hq.md)",
   "build": "v1.3 (1.2 with two interrupt-safe reads of the CPU speed in Enhanced); default chase_hq.nex 2f6628a5 (Speed: road, scenery and screen copy at 28 MHz, capped at the original's quiet-scene pace; original pictures; banks 0-45, 1MB Next); Enhanced colours (Jon Attree's painting, Layer 2, sprites and Copper; 2MB Next) at the Speed pace chase_hq_speed.nex 6729617f and at the original's pace chase_hq_orig_pace.nex 498c2119; all three equal the 1.3 review .nxc reconstructions; the art pages and loading screen are local inputs",
   "software": "pilot run, JNext: 1.0 paired-hook RZX replay (6 recordings, 37,500 frames, the 1.0 Speed hooks); 1.1 native lockstep against the original (57 player-state bytes, every AY and beeper write, briefing and demo registers with R), six tunnel routes, stage 2/4/5, capture and time-out checkpoints identical; 1.2 Orig. pace: 90 game addresses equal in 6 runs, whole runs -3.0 to +0.3%, 20-update stretches up to +13.4%; 1.3: the same lockstep in all three modes, pace within 0.04 points of 1.2; real loader on private cards; auto: boot check with R, all three builds; no RZX verify in this engine",
-  "hardware": "untested",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-26, good (the patch takes a long time to apply on the Next)",
   "next": "hardware checklist; an RZX verifier for the current hooks; art pages from an in-repo colour map; DDMA review; stage 2-5 pace"
  },
  "checks": [

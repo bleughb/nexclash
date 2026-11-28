@@ -105,7 +105,7 @@
   "engine_col": "heartland (heartland.md)",
   "build": "heartland_sprites.nex df3bed3c (every figure a sprite in bright white laid on its own pixels; the game's memory and the screen bitmap stay the original's; only the white paint under large figures is kept off the screen; whole alt ROM image, the snapshot's own BASIC start; pace limiter) + Enhanced 6497de71 (62 painted graphics on 5 palette lines: the hero, two enemies, hats and effects; a first pass, the owner will edit it)",
   "software": "Verify IDENTICAL on 7 recordings, 25,639 frames (R compared), on both builds: the owner's play in Fuse (heart_h1, 12,178 frames) and 6 scripted; on Enhanced 1,642,017 painted sprite pixels equal to the painted map; unit PASS (119 cases, the game's interrupt inside every hook among them); 14 of 14 broken builds detected; ROM path check pass; hooks' time at most +0.73% of a recording's time over the copies they stand for",
-  "hardware": "untested (starts and plays in OverSpec)",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-27, good",
   "next": "the owner sees the Enhanced set and edits it; the hero's other poses and the scenery; hardware test"
  },
  "checks": [

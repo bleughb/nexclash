@@ -83,7 +83,7 @@
   "engine_col": "manic_miner (manic_miner.md)",
   "build": "manic_miner_sprites.nex 2f033d89",
   "software": "Verify + lockstep IDENTICAL on 4 script/search recordings; unit PASS; 6 negatives detected (no human recording)",
-  "hardware": "untested",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-27, good",
   "next": "hardware test; a human's design answers"
  },
  "checks": [

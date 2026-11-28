@@ -92,7 +92,7 @@
   "engine_col": "comando_quatro (comando_quatro.md)",
   "build": "v1.0; comando_quatro_sprites_loading.nex 66563d3e equals the published .nxc 1.0 bare build (without the screen ffcd877f); clash removed: the original bitmap on the ULA, scenery in its own attributes from a clean copy, figures' ink on a double-buffered Layer 2 in plot order; the Kempston port operand at B253 changed from 0xDF to 0x1F, the Next's port; top bank 47, fits a 1MB Next",
   "software": "3 recordings, 51,078 frames (a2 to frame 22,000), 82,842 hooks with R and 48K RAM, 9,638 restores against the clean copy, 9,688 Layer 2 pictures and 4,524,667 pixels against the model and the bitmap; 640 ABI cases, 12 of 12 broken builds; ROM paths complete over all of a1, a2 and a3 (Next ROM 8c34d957); review run: pace in JNext in lockstep over the four zones, whole runs -0.47% to -0.27%, slowest 20 updates up to +1.09%; 15-minute soak, flicker, beam audit, real loader on private cards with each cheat",
-  "hardware": "untested",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-26, good",
   "next": "hardware checklist; the owner's play; Kempston on a real Next (0x1F); Enhanced (no source, rated MODERATE); later rooms and zones"
  },
  "checks": [

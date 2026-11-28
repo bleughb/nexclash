@@ -168,7 +168,7 @@
   "engine_col": "ice_palace (beyond_the_ice_palace.md)",
   "build": "beyond_the_ice_palace_sprites_loading.nex d53ac5f5 (figures as sprites in their original ink, original masks; ULA bitmap and scenery colours kept; no outline; pace ORIGINAL; tape loading screen; five optional cheats in the .nxc)",
   "software": "replay IDENTICAL with R on 3 recordings (105,855 paired calls); pixel oracle; unit PASS (4-clock sites, 298 figure / edge cases); 8 negatives detected; JNext pace within -0.5 %; real loader",
-  "hardware": "none (JNext only)",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-26, good",
   "next": "owner review; hardware test; ported from Jon Attree's .nxc work, 2026-11-06"
  },
  "checked": {

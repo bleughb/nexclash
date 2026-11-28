@@ -135,7 +135,7 @@
   "engine_col": "gng (ghosts_n_goblins.md)",
   "build": "ghosts_n_goblins_sprites.nex 9dc84645 + enhanced 6f9e1906 (2026-11-08: uploads send only the patterns a shape shows, the group unused longest is replaced, the byte check runs four bytes a step); with the tape's loading screen beside the snapshot _sprites_loading 58da1df5 + _enhanced_loading d203e425 = the published .nxc 1.7 --bare; 26742ac4 + c2e6e56f before it (2026-11-07: image cache keyed by address + shape with the checksum only on a miss, bucketed atlas index, plot hooks wholly at 28 MHz); cf933c18 + 34e5d058 before it (the IFF read in e_cls / e_cls2 / e_init made safe, R kept); 34c14267 + 4a76d9bf before it = the published .nxc 1.6 --bare apart from the NEX loading-screen block (cheats live in the .nxc); graphics read from the player's snapshot and recordings",
   "software": "Both sets: 53063 replay frames; intermediate positions, carried-pot ground clipping, owner art; 648 clipping cases, 40 negative controls, 3120 clock/R/IFF cases and 15 pace trials per set; actual-loader targets exact.",
-  "hardware": "untested",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-27, good",
   "next": "hardware test; late-game coverage"
  },
  "checks": [

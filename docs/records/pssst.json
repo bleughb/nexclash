@@ -95,7 +95,7 @@
   "engine_col": "pssst (pssst.md)",
   "build": "pssst_sprites.nex 40ae6ece (the game draws as it does; every figure of the main object table a sprite on the same pixels in its own colour; the colour paint of those objects stores nothing; loading screen) + enhanced 6d14ba48 (44 pictures painted with 13 fixed colours, a first pass; a pixel left unpainted keeps the game's colour)",
   "software": "Verify IDENTICAL on two whole machine-played recordings (40,181 frames, first level), both builds: 111,080 figures as sprites, 13,019,621 sprite pixels against the figure's model and, on Enhanced, every pixel's colour against the painted map; every register with R and all memory at every hook; the IM 1 handler compared at 36,814 interrupts; unit PASS on both builds (2,352 graphic cases over all 49 graphics, negative control 40 of 40); 6 of 6 broken builds detected; ROM path check pass",
-  "hardware": "untested (the patch runs from its menu in OverSpec)",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-27, good",
   "next": "a recording played by hand into later levels; hardware test"
  },
  "checks": [

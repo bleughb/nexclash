@@ -124,7 +124,7 @@
   "engine_col": "movie (movie.md)",
   "build": "Original monochrome default, optional painted noir Layer 2; loading screen, 1MB, complete hidden ROM.",
   "software": "Movie 1.0 release: selftest verified and stamped 2026-11-09 with the noir-hud-v1 art; 61,472 frames / 143,626 plots, registers, R, RAM and pixels identical to the painted model; four negatives per recording; five boot modes and full hidden ROM pass. Pace -1.568% to +1.753%. Real loader on disposable 26.11 cards: default, Enhanced, all five cheats, each cheat and Disable DMA pass, byte exact.",
-  "hardware": "none (JNext only)",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-27, good, DMA left on",
   "next": "Female character Enhanced sprite needs more painting (noted in the .nfo). Hardware, CSpect and natural completion untested."
  },
  "checks": [

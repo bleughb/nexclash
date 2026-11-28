@@ -89,7 +89,7 @@
   "engine_col": "gauntlet (gauntlet.md)",
   "build": "v1.0 (published .nxc, 2026-11-19): gauntlet_start_sprites.nex 377f6e5f + steady c690be8a: the whole game from both sides of the tape, starting at the title picture; the main game and the 31 level blocks answered from memory; all four heroes painted",
   "software": "the front end's recording IDENTICAL (2,153 frames, the tape's own code); the hand-over to the main game: unit PASS, 1 of 1 broken build detected; block 1 from memory equal to a recording's real tape load (record gauntlet's engine, games/gauntlet.md)",
-  "hardware": "untested (starts at the title and plays two players in OverSpec)",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-27, good",
   "next": "a recording across the hand-over and a level change; hardware test"
  },
  "checks": [

@@ -155,7 +155,7 @@
   "engine_col": "bomb_jack (bomb_jack.md)",
   "build": "bomb_jack_sprites.nex 83823fa5",
   "software": "Verify + lockstep IDENTICAL on 16 script/search recordings; unit PASS; 18 negatives detected; both .nex reach gameplay in JNext 1.1.104 (no human recording)",
-  "hardware": "untested",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-26, good",
   "next": "hardware test; a person's painting (arcade match painted by script: 2fc51340)"
  },
  "checks": [

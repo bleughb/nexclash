@@ -101,7 +101,7 @@
   "engine_col": "cyclone (cyclone.md)",
   "build": "cyclone_sprites.nex 49fb6d39 (2026-11-07: original pace - the renderer at 28 MHz in a lib/hlib_pace.asm game-routine window repays the hooks, JNext +0.30 / +0.02 / -0.93% on 3 seeds (main +16.6 / +20.6 / +16.6%); strip and sprites change in one frame (double-buffered patterns, the switch after the renderer): flicker 11 -> 0 out-of-step frames; was ba42f5ce, the caller's speed restored (lib/hlib_speed.asm), and 7db0bdd5; helicopter + aircraft = 4-bit sprites, black with a white 4-neighbour mask, behind scenery as the original; shadows dithered; strip shows its scenery; hooks: alt ROM stubs + page 26 at slot 6, 28 MHz inside hooks)",
   "software": "RZX + 4 whole-game bookmarks IDENTICAL (registers, memory, interrupt safety, screen vs model, sprite pixels vs model), unit cases + negative control PASS",
-  "hardware": "25c1b1e0 loads, runs and plays for a few minutes (user, 2026-10-21; not fully tested)",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-26, good; 25c1b1e0 loads, runs and plays for a few minutes (user, 2026-10-21; not fully tested)",
   "next": "full hardware pass (checklist: aircraft, map screen, crash, game over, speed); user paints the PAINTING_SPRITES sheet; per-pixel colour map + recolour"
  },
  "checks": [

@@ -107,7 +107,7 @@
   "engine_col": "bruce_lee (bruce_lee.md)",
   "build": "48K exact archive, hardware figures, optional Enhanced figures and all 20 room tiles; 1MB and full hidden ROM.",
   "software": "Frozen full verification passed: 66000 frames per mode, exact hook R/RAM, composed pictures, source pixels and complete hidden ROM. Native pace within 0.1% in measured player-update windows; game-over reset fixed. Final NXC12-variant reconstruction and seven actual-loader modes pass.",
-  "hardware": "none (JNext only)",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-26, good",
   "next": "Ready for packaging review; final 1.0 NXC passed seven real-loader modes on disposable 26.11 cards. Preserve documented global-R/input limits."
  },
  "checks": [
