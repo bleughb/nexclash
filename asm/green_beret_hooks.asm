@@ -807,3 +807,117 @@ setup:  nextreg 0x43,0x20
 .pal:   DB 0xFF,0x00,0x03,0xE0,0xE7,0x1C,0x1F,0xFC,0x02,0xA0,0xA2,0x14,0x16,0xB4,0xB6
 SETUP_END:
         SAVEBIN "gb_setup.bin",0xD000,SETUP_END-0xD000
+
+; Enhanced only. The three replacements take exactly the original number of T-states.
+        ORG ROM_END
+intro_on:
+        nextreg 0x6B,0xA0       ; one-byte map, default attr 1: behind ULA
+        nextreg 0x43,0x22       ; select second ULA palette
+        nextreg 0x1C,8          ; reset tile clip pointer, close X until the first column
+        nextreg 0x1B,0
+        nextreg 0x1B,0
+        ld hl,0xFF82            ; original A21D..A229: clear 88 bytes
+        ld de,0xFF83
+        ld bc,87
+        ld (hl),0
+        DUP 24                  ; save 120 T for two JPs and five NEXTREGs
+        ldi
+        EDUP
+        ldir
+        jp 0xA22A
+intro_off:
+        ; A46A starts the next stage. Its inline text at A4DE wipes the ULA and
+        ; prints the HUD. Restore the display before either operation.
+        push af                 ; PUSH/POP take the remaining 21 T
+        nextreg 0x43,0x20
+        nextreg 0x6B,0
+        pop af
+        ; Inline three CALLs to A9AF: save 81 T, paying for two JPs (20 T),
+        ; the two NEXTREGs (40 T) and the PUSH/POP. The fourth original CALL
+        ; at A4C3 leaves its return address in the original stack slot.
+        MACRO stage_word where
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        inc hl
+        ld (where),de
+        ENDM
+        stage_word 0xA161
+        stage_word 0xA163
+        stage_word 0xA165
+        jp 0xA4C3
+intro_column:
+        ; The original bitmap already contains stale bits to the right of the
+        ; reveal. Black-on-black ULA ink must not expose those tilemap pixels.
+        ld hl,(0x6DF7)
+        inc hl
+        ld (0x6DF7),hl
+        ld a,(0x6660)           ; live colour operand written by the original
+        ex af,af'
+        rl b                    ; B is zero, keep the counter carry in bit 0
+        ld a,l
+        add a,a
+        add a,a
+        add a,19                ; X2 in two-pixel units, including the border
+        nextreg 0x1C,8
+        nextreg 0x1B,0
+        nextreg 0x1B,a
+        rr b                    ; restore BC and the carry for the final DEC
+        ld a,0                  ; 26 T padding
+        ld a,0
+        jr .padded
+.padded:
+        ld a,3
+        ex af,af'
+        DUP 6                   ; six fewer loop-control groups save 144 T
+        ld (hl),a
+        add hl,bc
+        EDUP
+        jp 0x6665               ; do the last three writes in the original loop
+        SAVEBIN "gb_intro.bin",ROM_END,$-ROM_END
+
+        ORG SETUP_END
+intro_setup:
+        call setup
+        nextreg 0x6B,0
+        nextreg 0x4C,15         ; tile nibble 15 clear
+        nextreg 0x6C,1
+        nextreg 0x6E,0x80       ; bank 7, map at 0, shapes at 0x500
+        nextreg 0x6F,0x85
+        nextreg 0x2F,0
+        nextreg 0x30,0
+        nextreg 0x31,0
+        nextreg 0x1C,8
+        nextreg 0x1B,0
+        nextreg 0x1B,159
+        nextreg 0x1B,0
+        nextreg 0x1B,255
+        ld hl,intro_data
+        nextreg 0x43,0x30       ; tile palette
+        ld b,15
+        call .palette
+        nextreg 0x43,0x40       ; second ULA palette, leave first displayed
+        ld b,32
+        call .palette
+        nextreg 0x43,0x20
+        nextreg 0x52,14         ; copy map and shapes from the boot bank, before game starts
+        ld de,0x4000
+        ld c,(hl)
+        inc hl
+        ld b,(hl)
+        inc hl
+        ldir
+        nextreg 0x52,ULAPAGE
+        ret
+.palette:
+        nextreg 0x40,0
+.loop:  ld a,(hl)
+        inc hl
+        nextreg 0x44,a
+        ld a,(hl)
+        inc hl
+        nextreg 0x44,a
+        djnz .loop
+        ret
+intro_data:
+        SAVEBIN "gb_introsetup.bin",SETUP_END,$-SETUP_END

@@ -33,6 +33,13 @@ SITES_ORIG = {DRAW_SITE: 'cdfea5', FEND_SITE: 'cd1ac2', PLOT: '3a8ea7', PLOT2: '
 SITE_SYM = {DRAW_SITE: 'e_fs', FEND_SITE: 'e_fe', PLOT: 'e_plot', PLOT2: 'e_plt2', SMALL: 'e_smal',
             0xA82F: 'e_end', 0xA86D: 'e_end', 0xA919: 'e_end', 0xB03A: 'e_end2', WIPE1: 'e_wip1', WIPE2: 'e_wip2',
             MINE: 'e_mine', MINE_END: 'e_end3'}
+# Original entry bytes, comparison PC and hook label. Each site jumps to a cycle-matched replacement.
+INTRO = {0xA21D: ('2182ff', 0xA22A, 'intro_on'), 0xA4AE: ('cdafa9', 0xA4C6, 'intro_off')}
+INTRO_COLUMN = 0x6658
+INTRO_COLUMN_END = 0x666B
+INTRO_ORIG = {INTRO_COLUMN: '2af76d2322f76d3e', 0x6661: '083e09087709083d20f9',
+              0xA21D: '2182ff1183ff0157003600edb0',
+              0xA4AE: 'cdafa9ed5361a1cdafa9ed5363a1cdafa9ed5365a1cdafa9', 0xA9AF: '5e235623c9'}
 SITE_OP = {DRAW_SITE: 0xCD, FEND_SITE: 0xCD}
 INTERIORS = (0xA390, 0xA391, 0xA393, 0xA394, 0xA7E0, 0xA7E1, 0xA8E9, 0xA8EA, 0xA8EB, 0xAFD9, 0xAFDA, 0xAFDB,
              0xA830, 0xA831, 0xA832, 0xA86E, 0xA86F, 0xA870, 0xA91A, 0xA91B, 0xA91C, 0xB03B, 0xB03C, 0xB03D,
@@ -376,7 +383,8 @@ class PlainPatch:
 class GreenBeretPatch:
     name = 'Green Beret figures -> hardware sprites (altrom hooks, plots into a scratch page at slot 2)'
 
-    def __init__(self, prof=None, rom_code=None, colours=None, trim=True, screen=None):
+    def __init__(self, prof=None, rom_code=None, colours=None, trim=True, screen=None, enhanced=False):
+        self.enhanced = enhanced
         self.trim = trim
         self.screen = screen
         self.trims = {}
@@ -385,8 +393,10 @@ class GreenBeretPatch:
         h = self.prof['hooks']
         self.rom_code = rom_code or bytes.fromhex(h['rom'])
         self.syms = {k: int(v, 16) for k, v in h['syms'].items()}
+        if enhanced:
+            self.rom_code += bytes.fromhex(h['intro'])
         self.stub_extra = bytes.fromhex(h['setup'])
-        self.setup_call = 0xD000
+        self.setup_call = self.syms['intro_setup'] if enhanced else 0xD000
         self.hook_page_data = b''
         self.uses_printer_buffer = True
         self.keep_printer_buffer = True
@@ -409,6 +419,10 @@ class GreenBeretPatch:
             self.sites.append((a, bytes.fromhex(old), bytes([SITE_OP.get(a, 0xC3)]) +
                                self.syms[SITE_SYM[a]].to_bytes(2, 'little')))
         self.extra_banks = {}
+        if enhanced:
+            self.sites.append((INTRO_COLUMN, bytes.fromhex('2af76d'), b'\xc3' + self.syms['intro_column'].to_bytes(2, 'little')))
+            for site, (old, _, label) in INTRO.items():
+                self.sites.append((site, bytes.fromhex(old), b'\xc3' + self.syms[label].to_bytes(2, 'little')))
         self.scratch0 = page_image(prof=self.prof)
         self.index = bytes(8192)
         self.colour_pages = {}
@@ -417,6 +431,12 @@ class GreenBeretPatch:
     def apply(self, snap):
         if snap.is128:
             raise ValueError('Green Beret patch expects the 48K snapshot')
+        if self.enhanced:
+            code = snap.banks[5] + snap.banks[2] + snap.banks[0]
+            for addr, old in INTRO_ORIG.items():
+                data = bytes.fromhex(old)
+                if code[addr - 0x4000:addr - 0x4000 + len(data)] != data:
+                    raise ValueError('unexpected intro routine at %04X' % addr)
         start_screen(snap, self.screen)
         ram = bytearray(snap.banks[5] + snap.banks[2] + snap.banks[0])
         for a, old, new in self.sites:
@@ -433,6 +453,11 @@ class GreenBeretPatch:
         self.prepare(self.peek)
 
     def prepare(self, peek):
+        if self.enhanced:
+            from .green_beret_intro import palettes, tile_data
+            h = self.prof['hooks']
+            data = tile_data(peek)
+            self.stub_extra = bytes.fromhex(h['setup'] + h['introsetup']) + palettes() + len(data).to_bytes(2, 'little') + data
         cmap, n = trimmed_map(peek, self.colours, self.prof) if self.trim else (self.colours, 0)
         self.index, self.colour_pages, self.cinfo = colour_tables(peek, cmap, self.prof)
         self.cinfo['graphics bytes with trimmed edge pixels'] = n
@@ -656,6 +681,11 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shots=None):
     owrites = {}
     cnt = collections.Counter()
     WATCH = set(SITES_ORIG) | set(INTERIORS) | {AFTER, 0x64E9, 0x64F7, 0xB03E}
+    if patch.enhanced:
+        WATCH.update((INTRO_COLUMN, INTRO_COLUMN_END, INTRO_COLUMN + 1, INTRO_COLUMN + 2))
+        WATCH.update(INTRO)
+        WATCH.update(target for _, target, _ in INTRO.values())
+        WATCH.update(a + offset for a in INTRO for offset in (1, 2))
     states = []
     shots = dict(shots or {})
     regs_of = {}
@@ -778,7 +808,31 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shots=None):
                 break
 
     def event(pc, R, mem, get):
+        if patch.enhanced and pc in INTRO:
+            _, target, label = INTRO[pc]
+            rp, writes, ok = hr.run(get, list(R), {target})
+            if not ok:
+                fail(label + ' control flow')
+            expected = (0x22, 0xA0) if label == 'intro_on' else (0x20, 0)
+            if (ns.nr.get(0x43), ns.nr.get(0x6B)) != expected:
+                fail(label + ' display registers')
+            st['intro_regs'] = target, rp, dict(writes)
+            c[label] += 1
+        elif patch.enhanced and pc == INTRO_COLUMN:
+            right = 19 + 4 * ((get(0x6DF7) + 1) & 31)
+            rp, writes, ok = hr.run(get, list(R), {INTRO_COLUMN_END})
+            if not ok or ns.nr.get(0x1B) != right:
+                fail('intro reveal column')
+            st['intro_regs'] = INTRO_COLUMN_END, rp, dict(writes)
+            c['intro columns'] += 1
+        elif patch.enhanced and st.get('intro_regs') and pc == st['intro_regs'][0]:
+            _, rp, writes = st.pop('intro_regs')
+            check_regs('intro transition', R, rp)
+            if R[TS] != rp[TS] or any(get(a) != v for a, v in writes.items()):
+                fail('intro transition timing or memory')
         if pc == DRAW_SITE and pc in has:
+            if patch.enhanced and (ns.nr.get(0x6B, 0) or ns.nr.get(0x43, 0x20) != 0x20):
+                fail('intro colours in gameplay')
             c['draw'] += 1
             if R[IFF]:
                 c['draw with interrupts on'] += 1
@@ -836,6 +890,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shots=None):
             check_regs('frame end', R, st['fe'], st.get('ax') or ())
             st['fe'] = None
         elif pc in (WIPE1, WIPE2) and pc in has:
+            if patch.enhanced and (ns.nr.get(0x6B, 0) or ns.nr.get(0x43, 0x20) != 0x20):
+                fail('intro colours at screen wipe')
             c['wipe'] += 1
             nx = pc + 3
             Rp, ov, ok = hr.run(get, list(R), {nx})
@@ -939,7 +995,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, shots=None):
         pass
     finally:
         rzxplay.RZXTracer.next_frame, rzxplay.Simulator, rzxplay.CSimulator = old
-    for a in INTERIORS:
+    for a in (*INTERIORS, *(a + k for a in (*INTRO, INTRO_COLUMN) if patch.enhanced for k in (1, 2))):
         if cnt[a]:
             c['jump into a patched instruction (%04X)!' % a] += 1
     for k in ('draw', 'plot', 'frame end'):
@@ -1023,6 +1079,69 @@ def unit_tests(patch, states, neg=None):
         hr = HookRunner(q, ns, ps)
         Rp, ov, ok = hr.run(get, _case_regs(R0, DRAW_SITE), {q.syms['e_fs'] + 0x100000, DRAW_ENTRY})
         return ns, ps, hr, ok
+
+    if patch.enhanced:
+        from skoolkit.simulator import Simulator
+
+        def intro_sequence(q, clock):
+            ns = NextState(q)
+            ps = bytearray(mem[0x4000:0x5800])
+            hr = HookRunner(q, ns, ps)
+            ns.nr.update({7: clock, 0x43: 0x20, 0x6B: 0})
+            for site, (_, target, label) in INTRO.items():
+                r = _case_regs(R0, site)
+                rp, writes, returned = hr.run(get, r, {target}, limit=128)
+                expected = (0x22, 0xA0) if label == 'intro_on' else (0x20, 0)
+                baseline = list(mem)
+                sim = Simulator(baseline, {})
+                sim.registers[:] = type(sim.registers)(sim.registers.typecode, r) if hasattr(sim.registers, 'typecode') else r
+                sim.run(site, target)
+                original = sim.registers
+                if (not returned or (ns.nr[0x43], ns.nr[0x6B]) != expected or ns.nr[7] != clock
+                        or any(rp[i] != original[i] for i in (*CMP, TS))
+                        or any(writes.get(i, mem[i]) != baseline[i] for i in range(0x4000, 0x10000))
+                        or ps != mem[0x4000:0x5800]):
+                    return False
+            return True
+
+        def column_case(q, column):
+            source = list(mem)
+            source[0x6DF7:0x6DF9] = (0x5880 + column - 1).to_bytes(2, 'little')
+            ns = NextState(q)
+            hr = HookRunner(q, ns, bytearray(source[0x4000:0x5800]))
+            regs = _case_regs(R0, INTRO_COLUMN, bc=32, de=0x5B27)
+            regs[17] = (regs[17] & 0xFE) | (column & 1)
+            rp, writes, ok = hr.run(source.__getitem__, regs, {INTRO_COLUMN_END})
+            expected = source.copy()
+            sim = Simulator(expected, {})
+            sim.registers[:] = regs
+            sim.run(INTRO_COLUMN, INTRO_COLUMN_END)
+            return (ok and ns.nr[0x1B] == 19 + 4 * column
+                    and all(rp[i] == sim.registers[i] for i in (*CMP, TS))
+                    and all(writes.get(i, source[i]) == expected[i] for i in range(0x4000, 0x10000)))
+
+        for column in range(2, 30):
+            if not column_case(patch, column):
+                fail('intro reveal column')
+            c['intro reveal columns'] += 1
+        # Same seven T as ADD A,19. A full-width clip exposes old black-on-black bitmap data.
+        clip = bytes.fromhex('c613ed911c08')
+        addr = ROM_ORG + patch.rom_code.index(clip, patch.syms['intro_column'] - ROM_ORG)
+        if column_case(_clone(patch, [(addr, bytes.fromhex('3e9f'))]), 2):
+            fail('missed negative intro clip')
+        c['intro negative full-width clip'] += 1
+
+        for clock in range(4):
+            if not intro_sequence(patch, clock):
+                fail('intro entry/exit state')
+            c['intro clock pairs'] += 1
+        for site, (_, _, label) in INTRO.items():
+            # Keep the actual assembled path, but suppress just the tile enable or disable.
+            address = patch.syms[label] + (5 if label == 'intro_off' else 0)
+            broken = _clone(patch, [(address, bytes(4))])
+            if intro_sequence(broken, 0):
+                fail('missed negative ' + label)
+            c['intro negative ' + label] += 1
 
     def figure(hr, ns, img, col, y, regs=None):
         gfx, mask, rows, kind = img
@@ -1361,13 +1480,31 @@ def auto(a, z80, name, out, say):
     bad2 = check(spr, z80, patch, (conv[1], conv[1] + len(conv[2])))
     say('Sprites   : %s  %s  boot %s' % (os.path.basename(spr), md5(spr),
                                           'OK' if not bad2 else 'MISMATCH %s' % str(bad2[:3])[:200]))
-    if screen:   # the same build with the screen in the .nex (header byte 10 = 2): the .nxc shows it while patching
-        load = os.path.join(out, name + '_sprites_loading.nex')
-        d = open(spr, 'rb').read()
-        head = bytearray(d[:512]); head[10], head[133] = 2, 50
-        open(load, 'wb').write(bytes(head) + screen + d[512:])
-        say('Loading   : %s  %s' % (os.path.basename(load), md5(load)))
-    ok = not bad and not bad2
+    enhanced = GreenBeretPatch(screen=screen, enhanced=True)
+    enh = os.path.join(out, name + '_enhanced.nex')
+    conv = zt.convert(z80, enh, None, True, quiet=True, patch=enhanced, keep_printer_buffer=True)
+    bad3 = check(enh, z80, enhanced, (conv[1], conv[1] + len(conv[2])))
+    say('Enhanced  : %s  %s  boot %s' % (os.path.basename(enh), md5(enh), 'OK' if not bad3 else bad3[:3]))
+    if screen:
+        for src in (spr, enh):
+            load = src[:-4] + '_loading.nex'
+            with open(src, 'rb') as f:
+                head = bytearray(f.read(512))
+                head[10], head[133] = 2, 50
+                with open(load, 'wb') as target:
+                    target.write(head + screen + f.read())
+            say('Loading   : %s  %s' % (os.path.basename(load), md5(load)))
+    ok = not bad and not bad2 and not bad3
+    for variant in (patch, enhanced):
+        if a.rzx:
+            say('Replay    : %s' % ('Enhanced' if variant.enhanced else '1.3 default'))
+            ok = verify_recordings(variant, a, say) and ok
+    say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
+    return ok
+
+
+def verify_recordings(patch, a, say):
+    ok = True
     states = []
     for r in list(a.rzx or []):
         cc, ex, st = verify(patch, r, stop=getattr(a, 'quick', None), collect=3)
@@ -1378,6 +1515,9 @@ def auto(a, z80, name, out, say):
             os.path.basename(r), cc['frames'], cc['draw'], cc['plot'], cc['plot2'], cc['mine'], cc['small'],
             cc['small outside the draw pass'], cc['wipe'], cc['picture pixels compared'],
             'IDENTICAL' if not fails else 'FAILED %s' % fails))
+        if patch.enhanced:
+            say('Intro      : %s entered %d, exited %d, columns %d' % (
+                os.path.basename(r), cc['intro_on'], cc['intro_off'], cc['intro columns']))
         say('Cache     : %s  draws that uploaded %d of %d, pattern bytes %d, T at 28 MHz %d' % (
             os.path.basename(r), cc['draws with uploads'], cc['draw'], cc['pattern bytes uploaded'], cc['T hook 28MHz']))
         say('Clash     : %s  body pixels the original showed in another colour %d, in this colour %d' % (
@@ -1391,5 +1531,4 @@ def auto(a, z80, name, out, say):
         uf = {k: v for k, v in u.items() if k.endswith('!')}
         ok = ok and not uf
         say('Unit      : %s -> %s' % (', '.join('%s %d' % (k, v) for k, v in sorted(u.items())), 'PASS' if not uf else 'FAIL %s' % uf))
-    say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
     return ok

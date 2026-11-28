@@ -1060,7 +1060,9 @@
    "nex": {
     "plain": "283484a93a6eda05a4ecc5c7a9d1447b",
     "sprites": "dd0badb0eb4a2d81fbc51fec7e6c7a19",
-    "sprites_loading": "b65abbdf8cb470307ee527b69a2f0205"
+    "sprites_loading": "b65abbdf8cb470307ee527b69a2f0205",
+    "enhanced": "6c011b764c43d774c43d8498ae3dfcc6",
+    "enhanced_loading": "915f4ee12d950aaf1961a4030a651261"
    },
    "proof": "differential",
    "variants": [
@@ -1073,7 +1075,9 @@
      "nex": {
       "plain": "283484a93a6eda05a4ecc5c7a9d1447b",
       "sprites": "dd0badb0eb4a2d81fbc51fec7e6c7a19",
-      "sprites_loading": "b65abbdf8cb470307ee527b69a2f0205"
+      "sprites_loading": "b65abbdf8cb470307ee527b69a2f0205",
+      "enhanced": "6c011b764c43d774c43d8498ae3dfcc6",
+      "enhanced_loading": "915f4ee12d950aaf1961a4030a651261"
      }
     }
    ]
@@ -2723,4 +2727,4 @@
    ]
   }
  }
-}
+}

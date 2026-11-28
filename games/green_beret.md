@@ -1,12 +1,20 @@
 # Green Beret (Imagine, 1986; 48K) - engine `green_beret` (pilot game: unattended, no hardware)
 
 ## Next session
-Stage: 4 (hardware + colour)    State: stages 0-3 done unattended; simulation and JNext; never run on a Next.
+Stage 4. The owner played 1.2 on a KS3. The 1.3 default and optional Enhanced intros have emulator coverage. A physical test of this build is open.
 Inputs: pilot run folder (green_beret.z80 md5 c1a76349, work/reference/green_beret/*.rzx)
 Start with: hardware checklist below; then a human's answers to "Defaults taken".
 Read: this file. Open: everything under "Open".
 
 Techniques: `detect.gameplay-screen-readers`, `detect.tracked-unit`, `patch.runtime-colour-map` (recipe and results: docs/records/green_beret.json)
+
+## Optional Enhanced stage intros (1.3 test, 2026-11-27)
+
+Menu option 8 starts off. The default loading build remains `b65abbdf8cb470307ee527b69a2f0205`. Enhanced loading is `915f4ee12d950aaf1961a4030a651261`. Both retain the tape menu and the gameplay sprite treatment from 1.3.
+
+The screen uses scenery tiles. The renderer reads one brick at $77A0 and eight prisoner tiles at $77F0..$782F. The four gameplay plotters had zero hits during the first intro. A bank-7 tilemap holds 1,280 map bytes and eleven 32-byte patterns. The second ULA palette lets the original brick reveal, text masks and four shadow columns show through. The message uses the arcade's teal and stage names use the orange STAGE label. The stage table at $A304 supplies all four names.
+
+The tile clip advances eight pixels at each original attribute-column update. This keeps stale bitmap bits in the unrevealed area black. The entry at $A21D takes 1,862 T. The column at $6658 takes 429 T. The exit at $A4AE through the next table read takes 272 T. All three match the original. The exit restores the normal display before the HUD wipe at $A4DE. In OverSpec, all four stage displays matched the expected 256 × 192 pixels. Six 320 × 240 samples outside the intro matched the 1.3 build. Both colour choices passed the four recordings, each covering 84,810 input frames and 32,810,944 gameplay picture-pixel comparisons. Enhanced also passed the 28 column checks and all three deliberate display faults. Evidence and the playable menu are in the pilot run `green_beret/enhanced-captives`.
 
 ## v1.0 for the .nxc (2026-11-06, pilot runs/green_beret/nexclash2, refactor-final ecabb13)
 Owner, after playing the INF1 build (462c599c) in JNext: "the white edges on the enemy needs to be trimmed back closer to
@@ -84,6 +92,7 @@ Colour route: docs/COLOURS.md. Palette 1 white, 2 black, 3-15 Spectrum colours. 
 ALWAYS-ASK, decided here: solid: follows the mask everywhere, so in the sky (y < 82), where the original has no mask, bodies are opaque white rather than see-through. Bullets and mines: mines as sprites with body; bullets dark only. The weapon shot (0xAB60) stays on the ULA: behind figures here, in front in the original; its body is the cell's paper. CLOSE CALL for a human.
 
 ## Lessons
+- [local: stage intro] The name is selected at $A1FF before the wall is built. The stage-4 recording starts after that selection and retains MISSILE BASE. Set $FFDF to 3 before $A1FF to see PRISON CAMP. The first HUD wipe is inside $A46A. Returning from that routine is too late to switch the display back.
 - [local: start screen] A snapshot saved after the tape's screen was overwritten loses what the original shows behind
   its menu; the build can put the tape's screen back in screen memory at the start (the boot check sees it through the
   patch's apply, the replay never touches it) and the .nxc shows it while patching (build_screen=nex).
@@ -121,7 +130,7 @@ Unit PASS (geometry at the edges for all four plotters, cache, hide, slot guard,
 JNext 1.1.104 headless: both builds reach play, and stage 2 with trainers 1 and 7 (png/green_beret_jnext.png). Sprite-only layer: jn/s3000lay.png. Same schedule: game counter 53 in 400 frames in both builds, cold cache; same scroll at frame 14000. One sample, not a timing proof. Hook cost, modelled: about 47K T at 28 MHz per draw on gb_stage4.
 Colour route: recolour on a throwaway painting 1.3 s; JNext showed it (jn/painted.png). Not the default.
 
-## Hardware checklist (nothing here has run on hardware)
+## Hardware checklist for the 1.3 test build
 1. Boot: control menu; 1, six keys, Y, stab. 2. Figures stay white and black across cyan, white, red scenery; no attribute squares on them. 3. Sky: bodies white above the scenery. 4. Weapon shots behind figures. 5. Stage screens, game over, restart: no stray sprites. 6. Speed against the plain .nex. 7. The first frames of play: no stray pixels in the scenery (the old tail showed there).
 
 ## Open
@@ -130,5 +139,5 @@ Colour route: recolour on a throwaway painting 1.3 s; JNext showed it (jn/painte
   (green_beret-loading.scr in screen memory at the start, and in green_beret_sprites_loading.nex so the .nxc shows it
   while patching). Waiting on the owner's KS3 test. 1.2 played on the KS3 2026-11-27, good.
 - Stage 3's end (helicopters) was reached by cheat, not finished by the bot; the true end of the game unreached. Boss paths of stage 4 not reached.
-- A human's answers to "Defaults taken". An Enhanced colour run (owner's wish, after 1.3).
-- 2026-11-27: 1.3: edge ring removed, tape loading screen at the start + _loading build; quick replay of gb_weap and gb_cheat (3,000 frames each) IDENTICAL, units PASS (106 edge-rule figures); full stamp next.
+- A human's answers to "Defaults taken". Physical KS3 testing of the new Enhanced stage intros is open.
+- 2026-11-27: 1.3: edge ring removed, tape loading screen at the start + _loading build; quick replay of gb_weap and gb_cheat (3,000 frames each) IDENTICAL, units PASS (106 edge-rule figures).
