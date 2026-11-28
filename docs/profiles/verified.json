@@ -1208,11 +1208,11 @@
    "game": "Highway Encounter",
    "doc": "highway_encounter.md",
    "nex": {
-    "plain": "4f605db1f8aa398cdb857af572a06687",
-    "sprites": "0f217be33787446e8ec645802cb25b75",
-    "enhanced": "9f6bb5d11bfab37a8f6fdde76b88c9f3",
-    "loading": "b8dc556e720a634df900dd84f80efbea",
-    "enhanced_loading": "7d8cbc58efffb6a8b2c5cfaab12e7dff"
+    "plain": "6756618c9be463425332270e5692ee0f",
+    "sprites": "d87bf6c4b7d2d5a7ab9c476c662975d5",
+    "enhanced": "120660f84965bfedc4d9c55df33a7bc7",
+    "loading": "d67f82c483459c4c10b94b4d7730cea0",
+    "enhanced_loading": "fccadbf8626aed9c9c92778f84a3a2ec"
    },
    "proof": "differential",
    "variants": [
@@ -1225,11 +1225,11 @@
      ],
      "proof": "differential",
      "nex": {
-      "plain": "4f605db1f8aa398cdb857af572a06687",
-      "sprites": "0f217be33787446e8ec645802cb25b75",
-      "enhanced": "9f6bb5d11bfab37a8f6fdde76b88c9f3",
-      "loading": "b8dc556e720a634df900dd84f80efbea",
-      "enhanced_loading": "7d8cbc58efffb6a8b2c5cfaab12e7dff"
+      "plain": "6756618c9be463425332270e5692ee0f",
+      "sprites": "d87bf6c4b7d2d5a7ab9c476c662975d5",
+      "enhanced": "120660f84965bfedc4d9c55df33a7bc7",
+      "loading": "d67f82c483459c4c10b94b4d7730cea0",
+      "enhanced_loading": "fccadbf8626aed9c9c92778f84a3a2ec"
      }
     }
    ]
