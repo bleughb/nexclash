@@ -1,0 +1,109 @@
+{
+ "name": "bravestarr",
+ "order": 280,
+ "game": "BraveStarr",
+ "doc": "bravestarr.md",
+ "engine": "bravestarr",
+ "representative": false,
+ "reference": "bravestarr",
+ "verified_json": false,
+ "inputs": {
+  "snapshot": {
+   "name": "start.z80",
+   "md5": "86cb9986114e24cd1f2d4e47d0a467c8",
+   "path": "bravestarr/start.z80",
+   "role": "RZX title state. Only used to rebuild the plain diagnostic."
+  },
+  "recordings": [
+   {
+    "name": "bravestarr.rzx",
+    "md5": "ec73d291688ded0ff9545d02a37548da",
+    "path": "bravestarr/bravestarr.rzx",
+    "role": "Original gameplay through victory, 37218 frames."
+   },
+   {
+    "name": "BraveStarr (1987)(Go!)[128K].z80",
+    "md5": "54806bd3eb71452ae2342a5d034ac015",
+    "path": "bravestarr/BraveStarr (1987)(Go!)[128K].z80",
+    "role": "Original packed player target, identified at title interrupt 71."
+   },
+   {
+    "name": "BraveStarr (1987)(Go!).tzx",
+    "md5": "e390b47e8d6ef140b6536baf862deb95",
+    "path": "bravestarr/BraveStarr (1987)(Go!).tzx",
+    "role": "Original tape supplying the loading screen."
+   },
+   {
+    "name": "loading.scr",
+    "md5": "4362c0b070148efa29c4019d4a4a0d78",
+    "path": "bravestarr/loading.scr",
+    "role": "Tape loading screen, matched against the 128K dump."
+   },
+   {
+    "name": "BraveStarr (1987)(Go!).pok",
+    "md5": "700632cb65ce3155ad89d5d68875c30b",
+    "path": "bravestarr/BraveStarr (1987)(Go!).pok",
+    "role": "Archive trainers examined during feasibility."
+   }
+  ]
+ },
+ "modules": [
+  "z80tonex",
+  "analyse",
+  "nextboot"
+ ],
+ "own_modules": [],
+ "data": [],
+ "shared_data": [],
+ "rebuild": {
+  "cmd": "convert",
+  "args": [
+   "--tail",
+   "0x5B00"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": null,
+ "outputs": {
+  "plain": {
+   "file": "bravestarr_plain.nex",
+   "md5": "f28ed7efe28b7087f4d3806c666ee520"
+  }
+ },
+ "repro": [],
+ "checks": [],
+ "status": {
+  "title": "BraveStarr (Go!, 1987)",
+  "engine_col": "New back-buffer engine (bravestarr.md)",
+  "build": "Plain title-state diagnostic only. Sprite build pending.",
+  "software": "Original replay 37,218 frames. Three candidate trainers checked in eight 9,000-frame simulator runs.",
+  "hardware": "Untested",
+  "next": "Install hooks after the original 128K unpacker without carrying game code.",
+  "evidence": {
+   "functional": {
+    "level": "host",
+    "scope": "SkoolKit 10.1, unpatched RZX title and captured live states. Host trainer tests only."
+   }
+  }
+ },
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/bravestarr.md#feasibility"
+   ],
+   "coverage": "First 2,101 frames and 372 update intervals of the original RZX.",
+   "result": "HALT slack ranges from 128 to 70,272 T. Median 30,936 T."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/bravestarr.md#target",
+    "games/bravestarr.md#feasibility"
+   ],
+   "coverage": "Packed-target marker trials, eight title banks, gameplay copier, masked and XOR writers. Screen-read equivalence remains open.",
+   "result": "Direct target-to-start diff carries game code. A marker written at packed F7D8 changes live F355."
+  },
+  "decision": "Stage 1 paused at the packed original. Keep the plain rebuild available as a diagnostic only.",
+  "next_experiment": "Install after unpacking. Compare all eight banks at first title entry against the original and require zero unexplained byte changes for each option."
+ }
+}
