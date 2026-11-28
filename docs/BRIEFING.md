@@ -515,5 +515,6 @@ as arguments (addresses, ranges, keys).
   (freezes), `pace` (penalty, input keyed to game updates), `flicker` (every frame), `looksheet` (flags).
 - .nxc output (2026-11-04): nexclash/nxcout.py runs the vendored nexclash/nxc.py (THIRD-PARTY-NOTICES)
   for patch / new / auto -> GAME.nxc (README); `--nex` keeps the .nex, `--no-nxc` = old output (selftest).
+  ULA loading screen -> build_screen=nex (shown while patching, 2026-11-27); nxc.py = jattree/nxc's.
 Improving them: keep report lines and arguments (add, don't rename), a golden check in selftest.py
 tools_check, `python selftest.py --tools`.
