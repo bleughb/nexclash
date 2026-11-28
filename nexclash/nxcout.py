@@ -515,7 +515,8 @@ def package(a):
     -> the .nxc path or None."""
     if getattr(a, 'no_nxc', False):
         return None
-    if getattr(a, 'tape', None):                # a tape-set build: the .nxc's targets are the tapes, not the start state
+    maker = getattr(a, 'tape_packager', make)
+    if getattr(a, 'tape', None) and maker is make:  # a tape-set build: the .nxc's targets are the tapes, not the start state
         print('.nxc      : not made for a tape-set build (its targets are the tapes): make it with the nxc repository\'s '
               'tools/nxc.py make SPRITES.nex SIDE_A --also SIDE_B --start START.z80 (games/new_zealand_story.md)')
         return None
@@ -542,7 +543,7 @@ def package(a):
         lines.append('NXC       : not made - the build failed its checks (its .nex files are kept)')
     else:
         try:
-            dst = make(a, z80, out, name, os.path.join(out, main), rep, lines.append,
+            dst = maker(a, z80, out, name, os.path.join(out, main), rep, lines.append,
                        {k: os.path.join(out, f) for k, f in sets.items()},
                        {k: (os.path.join(out, f), lg, w, {c: os.path.join(out, g) for c, g in cs.items()})
                         for k, (f, lg, w, cs) in tgl.items()}, ck)
