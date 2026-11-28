@@ -143,6 +143,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Elite (standard Firebird release) (elite_std): `elite_std.nex` 4b3cbe16f9839c4746e04f92f1ecbf7e; verified 2026-11-28
 - Jack the Nipper (jack_the_nipper): `jack_the_nipper.nex` e16cf411e852104abab355c4757ed0f5, `jack_the_nipper_sprites.nex` dfee03ae40053a4dcaced7e2b762d3b9, `jack_the_nipper_enhanced.nex` 645fdaf327d95fc2b7591ef99af5d423; verified 2026-11-26
 - Jack the Nipper II - In Coconut Capers (jack_the_nipper_2): `jack_the_nipper_2.nex` e63f00da62e1ac853765bf7825f2241a, `jack_the_nipper_2_sprites.nex` 24d8b204ec3948616bd372dbc2e497f2, `jack_the_nipper_2_enhanced.nex` bc99c10512829195519e0179f19847bb; verified 2026-11-26
+- Moley Christmas (moley_christmas): `Moley Christmas (1987)(Your Sinclair).nex` 647e50f38a27f8540dc33cce59538b91, `Moley Christmas (1987)(Your Sinclair)_sprites.nex` 92df32d43fbb39cf61236dc3c27663a3, `Moley Christmas (1987)(Your Sinclair)_sprites_loading.nex` ea13bb79cf105a2ab438228d766616ab; verified 2026-11-28
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13

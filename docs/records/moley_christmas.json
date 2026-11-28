@@ -1,0 +1,277 @@
+{
+ "name": "moley_christmas",
+ "order": 280,
+ "game": "Moley Christmas",
+ "doc": "moley_christmas.md",
+ "engine": "moley_christmas",
+ "representative": true,
+ "reference": "moley_christmas",
+ "version": "1.0",
+ "inputs": {
+  "snapshot": {
+   "name": "Moley Christmas (1987)(Your Sinclair).z80",
+   "md5": "0560f105031c108b56687a7d2613d9f0",
+   "path": "moley_christmas/Moley Christmas (1987)(Your Sinclair).z80"
+  },
+  "recordings": [
+   {
+    "name": "moley.rzx",
+    "md5": "112442ee33259dbbf9cec3e11e499d30",
+    "path": "moley_christmas/moley.rzx"
+   },
+   {
+    "name": "ordinary-trainer-0.rzx",
+    "md5": "8882c60fea68fdd8812f5c1ac81abb07",
+    "path": "moley_christmas/ordinary-trainer-0.rzx"
+   },
+   {
+    "name": "trap-trainer-0.rzx",
+    "md5": "cfa3de705f9b07106f66af24c20213a9",
+    "path": "moley_christmas/trap-trainer-0.rzx"
+   },
+   {
+    "name": "ordinary-trainer-1.rzx",
+    "md5": "fdef6415126b1d710719dbe234fc942f",
+    "path": "moley_christmas/ordinary-trainer-1.rzx"
+   },
+   {
+    "name": "trap-trainer-1.rzx",
+    "md5": "7f70d1b69ed31bc687b9ab5452bf8d54",
+    "path": "moley_christmas/trap-trainer-1.rzx"
+   },
+   {
+    "name": "moley_loading.scr",
+    "md5": "b4b6127c7c6a9bdf8a57ad81ff5d686d",
+    "path": "moley_christmas/moley_loading.scr"
+   },
+   {
+    "name": "Moley Christmas.pok",
+    "md5": "f4826f24d48f3844275f3522735d873f",
+    "path": "moley_christmas/Moley Christmas.pok"
+   },
+   {
+    "name": "Moley Christmas (1987)(Your Sinclair).Tap",
+    "md5": "c9456d09021802a7f409de4c96c8ca83",
+    "path": "moley_christmas/Moley Christmas (1987)(Your Sinclair).Tap"
+   }
+  ]
+ },
+ "modules": [
+  "moley_christmas",
+  "auf_wiedersehen_monty",
+  "booty",
+  "hooklib",
+  "dizzy6",
+  "nextboot",
+  "rzx",
+  "simpool",
+  "z80n",
+  "z80tonex",
+  "build"
+ ],
+ "own_modules": [
+  "moley_christmas"
+ ],
+ "data": [
+  "asm/moley_christmas_hooks.asm",
+  "docs/profiles/moley_christmas.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "moley.rzx",
+   "ordinary-trainer-0.rzx",
+   "trap-trainer-0.rzx",
+   "ordinary-trainer-1.rzx",
+   "trap-trainer-1.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 3,
+  "note": "Archive plus the ordinary and trap death branches with each trainer setting."
+ },
+ "outputs": {
+  "plain": {
+   "file": "Moley Christmas (1987)(Your Sinclair).nex",
+   "md5": "647e50f38a27f8540dc33cce59538b91"
+  },
+  "sprites": {
+   "file": "Moley Christmas (1987)(Your Sinclair)_sprites.nex",
+   "md5": "92df32d43fbb39cf61236dc3c27663a3"
+  },
+  "loading": {
+   "file": "Moley Christmas (1987)(Your Sinclair)_sprites_loading.nex",
+   "md5": "ea13bb79cf105a2ab438228d766616ab"
+  }
+ },
+ "repro": [],
+ "checks": [
+  "asm2profile:moley_christmas"
+ ],
+ "status": {
+  "title": "Moley Christmas",
+  "engine_col": "moley_christmas (moley_christmas.md)",
+  "build": "1.0 test, resident figures and colour-cycling pickups",
+  "software": "5 recordings, 9,419 frames. 1,564 units and 10 negatives passed. All 4 menu builds matched.",
+  "hardware": "Awaiting board test",
+  "next": "Owner play and hardware check",
+  "evidence": {
+   "functional": {
+    "level": "assembled",
+    "scope": "Matched hook state and sprite art on the recorded route and death branches."
+   },
+   "integration": {
+    "level": "integrated",
+    "scope": "Title NEX and tape-target NXC. See the game notes for menu checks."
+   },
+   "timing": {
+    "level": "integrated",
+    "scope": "Final JNext build, 700 update-keyed inputs. Elapsed +0.65%, all four state bytes equal."
+   },
+   "display": {
+    "level": "integrated",
+    "scope": "31 native update pairs, 36,353 overlay pixels matched. Independent pickup phases differed in 172 cells. See flicker check in game notes."
+   },
+   "hardware": {
+    "level": "not assessed",
+    "scope": "No board run."
+   }
+  }
+ },
+ "techniques": [
+  {
+   "application": "moley_christmas.figures",
+   "id": "detect.graphics-record-layout",
+   "revision": 1,
+   "target": "Original plotter at 8931, separated 16-byte halves, live image/flags and 8 records.",
+   "phases": []
+  }
+ ],
+ "results": [
+  {
+   "application": "moley_christmas.figures",
+   "check": "state.rzx-differential",
+   "status": "pass",
+   "build": "92df32d4",
+   "scope": "5 recordings, 35,472 plot entries, 1,702,560 back-buffer bytes, 1,564 units and 10 negatives.",
+   "evidence": "games/moley_christmas.md \"Verification\""
+  }
+ ],
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/moley_christmas.md"
+   ],
+   "coverage": "700 JNext updates, same input and four state bytes at each update.",
+   "result": "0.65% additional elapsed time, 50 interrupts/s on both."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/moley_christmas.md"
+   ],
+   "coverage": "Both OR paths, source rows, overlapping back-buffer writes and pickup attributes.",
+   "result": "Keep the ULA intact and publish resident sprites at the plotter."
+  },
+  "decision": "Reuse the caller-speed library and keep 109 patterns resident.",
+  "next_experiment": "Hardware overlap, death, pace and transitions."
+ },
+ "checked": {
+  "deps": {
+   "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
+   "asm/moley_christmas_hooks.asm": "2dcf2127bac8507b",
+   "docs/profiles/moley_christmas.json": "9fed5793b726ff39",
+   "nexclash.py": "2ac99cf4fa2917e5",
+   "nexclash/analyse.py": "6f5b53f1eef456ac",
+   "nexclash/auf_wiedersehen_monty.py": "f2121b537432a359",
+   "nexclash/booty.py": "5e577ba6effb7ddd",
+   "nexclash/build.py": "e632a2f1f49c8be6",
+   "nexclash/coloursheet.py": "485b2bb1d7e30784",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "dece95dc1e86261e",
+   "nexclash/hooklib.py": "2c99cebaa18a206a",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/machine.py": "f681f6d4710f2169",
+   "nexclash/moley_christmas.py": "a3f53d1a01386986",
+   "nexclash/nextboot.py": "f67deed5c0603d2a",
+   "nexclash/nxc.py": "085c53b25bb6b406",
+   "nexclash/nxcout.py": "30fce34750b0313b",
+   "nexclash/recolour.py": "9c26165e33697acc",
+   "nexclash/recorder.py": "beda3d9e2cc08ed3",
+   "nexclash/records.py": "6401367eddcf12a0",
+   "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
+   "nexclash/rzx.py": "90008c9ca09c51bc",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/userflow.py": "6779aabcf5d969cf",
+   "nexclash/verify.py": "e49b2afbdf721760",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "59c9ce430ec9bf6c",
+   "rom": "e50ee485fb4a21d2"
+  },
+  "date": "2026-11-28"
+ },
+ "verified": {
+  "deps": {
+   "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
+   "asm/moley_christmas_hooks.asm": "2dcf2127bac8507b",
+   "docs/profiles/moley_christmas.json": "9fed5793b726ff39",
+   "nexclash.py": "2ac99cf4fa2917e5",
+   "nexclash/analyse.py": "6f5b53f1eef456ac",
+   "nexclash/auf_wiedersehen_monty.py": "f2121b537432a359",
+   "nexclash/booty.py": "5e577ba6effb7ddd",
+   "nexclash/build.py": "e632a2f1f49c8be6",
+   "nexclash/coloursheet.py": "485b2bb1d7e30784",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "dece95dc1e86261e",
+   "nexclash/hooklib.py": "2c99cebaa18a206a",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/machine.py": "f681f6d4710f2169",
+   "nexclash/moley_christmas.py": "a3f53d1a01386986",
+   "nexclash/nextboot.py": "f67deed5c0603d2a",
+   "nexclash/nxc.py": "085c53b25bb6b406",
+   "nexclash/nxcout.py": "30fce34750b0313b",
+   "nexclash/recolour.py": "9c26165e33697acc",
+   "nexclash/recorder.py": "beda3d9e2cc08ed3",
+   "nexclash/records.py": "6401367eddcf12a0",
+   "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
+   "nexclash/rzx.py": "90008c9ca09c51bc",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/userflow.py": "6779aabcf5d969cf",
+   "nexclash/verify.py": "e49b2afbdf721760",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "59c9ce430ec9bf6c",
+   "rom": "e50ee485fb4a21d2"
+  },
+  "date": "2026-11-28"
+ }
+}

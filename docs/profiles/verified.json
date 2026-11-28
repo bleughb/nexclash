@@ -1713,6 +1713,30 @@
     }
    ]
   },
+  "0560f105031c108b56687a7d2613d9f0": {
+   "game": "Moley Christmas",
+   "doc": "moley_christmas.md",
+   "nex": {
+    "plain": "647e50f38a27f8540dc33cce59538b91",
+    "sprites": "92df32d43fbb39cf61236dc3c27663a3",
+    "loading": "ea13bb79cf105a2ab438228d766616ab"
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "moley_christmas",
+     "game": "Moley Christmas",
+     "doc": "moley_christmas.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "647e50f38a27f8540dc33cce59538b91",
+      "sprites": "92df32d43fbb39cf61236dc3c27663a3",
+      "loading": "ea13bb79cf105a2ab438228d766616ab"
+     }
+    }
+   ]
+  },
   "cc90fbe7e7b6568e5f9d00c3226f215b": {
    "game": "Monty is Innocent",
    "doc": "monty_is_innocent.md",
