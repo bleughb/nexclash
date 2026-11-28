@@ -146,7 +146,7 @@
    "check": "loading",
    "status": "pass",
    "scope": "All four trainer combinations from the installed NXC in OverSpec",
-   "note": "All four menu launches showed the 6912-byte tape picture while patching and reached first-room movement. The original display option is on by default.",
+   "note": "All four menu launches showed the 6912-byte tape picture while patching and reached first-room movement. The Next compatibility option is on by default.",
    "evidence": "games/batman.md#cheats-and-package"
   }
  ],
@@ -185,7 +185,7 @@
    "docs/profiles/batman.json": "9ab1923a0f3a0308",
    "nexclash.py": "2ac99cf4fa2917e5",
    "nexclash/analyse.py": "6f5b53f1eef456ac",
-   "nexclash/batman.py": "4af7b0a866f871e4",
+   "nexclash/batman.py": "c56faea9110a233a",
    "nexclash/build.py": "e632a2f1f49c8be6",
    "nexclash/coloursheet.py": "485b2bb1d7e30784",
    "nexclash/dizzy5.py": "1123c301b84e7cbc",
@@ -228,7 +228,7 @@
    "docs/profiles/batman.json": "9ab1923a0f3a0308",
    "nexclash.py": "2ac99cf4fa2917e5",
    "nexclash/analyse.py": "6f5b53f1eef456ac",
-   "nexclash/batman.py": "4af7b0a866f871e4",
+   "nexclash/batman.py": "c56faea9110a233a",
    "nexclash/build.py": "e632a2f1f49c8be6",
    "nexclash/coloursheet.py": "485b2bb1d7e30784",
    "nexclash/dizzy5.py": "1123c301b84e7cbc",

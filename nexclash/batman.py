@@ -264,7 +264,7 @@ def auto(a, z80, name, out, say):
     source, out = Path(z80), Path(out)
     profile = load_profile()
     a.publisher = getattr(a, 'publisher', None) or 'Ocean, 1986'
-    a.fix_label = getattr(a, 'fix_label', None) or 'Original display'
+    a.fix_label = getattr(a, 'fix_label', None) or 'Next compatibility'
     a.display_model = profile['display_model']
     a.nxc_rom = 2
     plain = out / (name + '.nex')
