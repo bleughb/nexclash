@@ -1,10 +1,10 @@
-# Altered Beast (Activision 1989, 128K) - engine `altered_beast` (pilot game; 1.1 published)
+# Altered Beast (Activision 1989, 128K) - engine `altered_beast` (level-one pilot)
 
 ## Next session
-Stage 4. Version 1.1 was published on 2026-11-27. Enhanced 1.2 (player two and the enemies painted, own palette banks) is stamped (4 recordings, both modes).
-The next hardware check is the two-player palette and the wolf flash on KS3. The scroll options and tape wait remain open.
-The source snapshot and four recordings are in `reference-local/altered_beast`. The 1.2 builds, before/after comparison,
-two gameplay renders and editable sheets are in the pilot's `runs/altered_beast/art-enhanced2/`.
+The 1.3 pilot adds game-over restart and the optional Smooth scroll setting. Both colour editions start with it off.
+The source snapshot and four recordings are in `reference-local/altered_beast`. See the pilot's
+`runs/altered_beast/steady-scroll/REPORT.md` for the frame counts, OverSpec capture and restart comparisons.
+The next hardware check is 1.3 on KS3, including playfield edges, the score panel, the Enhanced palette and sound.
 
 Techniques: `optimise.pattern-cache` (recipe, owns and results: docs/records/altered_beast.json)
 
@@ -18,8 +18,11 @@ Recordings (no Fuse, scripted, work/m128.py because `record` is 48K only):
 - ab_2p: two players, same pokes.
 
 ## Hard limit: level 1 only
-Banks 3, 4, 6 are empty in this snapshot and bank 7 nearly so. Game over and level end call the game's own tape loader (0xFF7D -> 0xFE4C; edge loop at 0xFED0 reading port 0x7FFE), which waits for ever: no tape in a .nex. Plain and sprite builds alike (observed in the simulator; screen stays, keys do nothing). Levels 2-5 are not reachable from this file and are unconverted-untested; a level loaded later would run through the same hooks.
-Game over: the GAME OVER banner goes to the ULA, the last sprites stay as they were, and the game stops there. There is no route back to the title.
+Banks 3, 4 and 6 are empty in the title snapshot. Bank 7 is nearly empty. The original game asks the tape loader
+for 40,448 bytes at $5F61 on game over. Gameplay has overwritten title and intro code by then. The level-one branch
+at $75AA now restores the sixteen game pages and sprite working page saved at NEX startup, after the loader applied
+the selected trainers. It then re-enters the original NEX startup. SPACE starts a new game at the restored title.
+The separate requests for levels 2 to 5 still require tape data.
 
 ## Rendering model
 Back-buffer composer. Buffer pixels (23332) (0x7814 up, moves one byte per scroll step), stride 32, attributes (23334); clean copies at (23954) = buffer + 0x18C0, (23956) = attributes + 0x3A0 (constant over every recording). Main loop: AE3F HALT, AE40 CALL 0x60EB blit (rows 0-18 columns 2-29, row 19 7 lines columns 9-26), AE43 CALL 0x6DE4 buffer := clean copy (columns 2-29 only: margins are stale), logic, plots.
@@ -124,12 +127,22 @@ Measured on the simulator (work: scratchpad probes beam.py, plots.py, ramcycle.p
   an 8-pixel jump about once a second, at uneven intervals.
 - The blit takes 1.5 frames at 3.5 MHz from the interrupt: one torn frame per update (rows above ~23 new), as the
   original. The commit runs after it, so sprites above row ~118 move one frame after the scenery at each step (ours).
-Options put to the owner (none built): a steady pace (the work at 28 MHz, a picture every 5 frames, blit and
-sprites inside the top border: no tear, no lag, steps stay 8 px); a glide (patch.figure-glide: each 8-pixel move
-spread over the next update, scenery by the ULA's hardware scroll split from the panel by the copper); a continuous
-scroll across the 9-update cycle from 0x5DA3.
+### Smooth scroll in 1.3
+
+The four recordings contain 5,197 intervals totalling 29,684 TV frames. At 50 Hz the weighted mean is 5.712
+frames per update. A repeating 5, 6, 6 gives 5.667. Each update runs at 28 MHz. The original blit draws into a
+private copy of the screen page. At raster line 257 the hook sends 6,912 screen bytes by DMA, applies the
+playfield offset and uploads the pending sprite attributes. A cache miss can populate a hidden pattern before
+the beat. Copper keeps rows 152 to 191 stationary. Both layers clip the playfield to x=16..231.
+
+For counter values 9 down to 1 the offset is 0, 0, 1, 2, 3, 4, 5, 6, 7. The game's coarse eight-pixel advance
+and the offset reset coincide. Scenery therefore advances one pixel on eight updates and holds on one. Sprites
+subtract the same offset from their nine-bit X. A stationary counter holds the picture at its current phase.
+Music runs from the original AY interrupt routine. The two busy waits used to flash the power gauge count to
+1,000 instead of 4,000 while Smooth scroll is on, so the flash fits in one scheduled update.
 
 ## Lessons
+- [local: playfield timing] Time cold painted cache misses as well as the screen transfer. Three Enhanced boss-scene updates missed their slots until the partial-paint renderer stopped rotating each pixel in a loop.
 - [local: shared player graphics] Key the stored paint and pattern cache by palette bank as well as graphic. Packing fully painted rows kept the cold two-player uploads within the same update frames as 1.1 on the 1,000-frame JNext trace.
 - [local: speed fix] Every hook latches the caller's speed on its own stack page (V_SPD 0x8062) and gives it back
   before leaving it; fxswap too. The verifier turns the entry speed 0-3 at every hook (each about 51 times in 600
@@ -165,7 +178,7 @@ scroll across the 9-update cycle from 0x5DA3.
 2. Stonework stays grey next to the player and zombies; figures have their colours and no block around them; the graves white.
 3. Scroll: sprites stay aligned to the scenery; a figure at the screen's left and right edge clips cleanly.
 4. Boss scene, flying heads: no missing figures, no slowdown beyond the plain build.
-5. Two players: ENTER at the menu. Game over: banner shows, game stops at the tape loader as the plain build does.
+5. Add player two with ENTER. Play to game over, confirm the title returns and start a new game.
 6. Enhanced 1.2 on KS3: compare player one's red cloth and blond hair with player two's blue cloth and dark hair. Hit a pale wolf and check that its cream flash reads against the stone. Check the purple zombies and red boss.
 
 ## Stage log
@@ -173,10 +186,12 @@ scroll across the 9-update cycle from 0x5DA3.
 - 2026-11-27 stage 4 (KS3 round): scroll measured, options to the owner; Enhanced set: palette and mode rules, verifier fixes, negatives on the recordings run by auto, paint rounds 1-2.
 - 2026-11-27 stage 4, Enhanced 1.2. Added banked paint, whole-pose sheets and a two-player colour and timing check.
 
+- 2026-11-27 stage 4, 1.3. Added restart and optional steady scrolling. Measured all four recordings in both colour editions.
+
 ## Open
-- Scroll: the owner's choice among the options in "Scroll" (none built).
+- Play the Smooth scroll option on KS3, including the panel split, sprite alignment, audio and power-gauge flash.
 - Enhanced 1.2 awaits the owner's colour review and a physical KS3 play test. The 1.1 feedback predates this repaint.
-- Game over waits for the tape for ever (the original's own loader): back to the title instead?
+- Confirm game-over restart and a second start on KS3.
 - Hardware: KS3 1.0 (2026-11-26) and 1.1 (2026-11-27) played. CSpect never run.
 - Levels 2-5: tape data. A tape-based 128K route is out of this pilot.
 - Row 19 and margin-wrap pixels as above.

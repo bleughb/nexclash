@@ -45,7 +45,8 @@
   "docs/profiles/altered_beast.json",
   "asm/altered_beast_hooks.asm",
   "docs/profiles/altered_beast_enhanced.json",
-  "asm/altered_beast_build.asm"
+  "asm/altered_beast_build.asm",
+  "asm/altered_beast_smooth.asm"
  ],
  "shared_data": [
   "asm/lib/hlib_speed.asm"
@@ -73,25 +74,33 @@
  "outputs": {
   "plain": {
    "file": "altered_beast.nex",
-   "md5": "3a40cd83e14bad535b3f147708b2284e"
+   "md5": "4c847497065404015f21c481a11183b7"
   },
   "sprites": {
    "file": "altered_beast_sprites.nex",
-   "md5": "edea9ecd09412d385fc67cb8d28458bb"
+   "md5": "8e80296872c6605582742099f5abe4c3"
   },
   "enhanced": {
    "file": "altered_beast_enhanced.nex",
-   "md5": "758514afbb7ba14c315ff682befed834"
+   "md5": "6bd81a4396eb37e0a73f48779b4fa16d"
+  },
+  "smooth": {
+   "file": "altered_beast_smooth.nex",
+   "md5": "74c308766ad80bda3ab2416b59160fe5"
+  },
+  "enhanced_smooth": {
+   "file": "altered_beast_enhanced_smooth.nex",
+   "md5": "1d378d7256807c1a11aa9299765acc74"
   }
  },
  "repro": [],
  "status": {
   "title": "Altered Beast (128K)",
   "engine_col": "altered_beast (altered_beast.md)",
-  "build": "Default edea9ecd draws the game's colours. Enhanced 1.2 758514af uses eight sprite palette banks for level 1, including player two, zombies, wolves, hit flashes and the boss.",
-  "software": "4 RZX per sprite build (32,291 frames), 16 recording negatives, 6 palette negatives, unit checks for every bank and the two player modes.",
+  "build": "1.3 restores the title after game over. Smooth scroll is an off-by-default logic option in both colour editions.",
+  "software": "Four recordings per sprite edition (32,291 frames). OverSpec checked 26,005 updates across all five builds. Both smooth builds met every beat. JNext matched all ten fresh and restarted states.",
   "hardware": "KS3 (System/Next 26.11a): 1.1 played by the owner 2026-11-27: the player and the Enhanced colours look good; the scroll steps 8 pixels (the original's; options asked); game over stops at the tape wait",
-  "next": "Owner review of 1.2 colours and hit flash on KS3. Scroll options and game-over restart remain open."
+  "next": "Play 1.3 on KS3. Check the scroll at both edges, the stationary panel, game-over restart, sound and the Enhanced colours."
  },
  "checks": [
   "asm2profile:altered_beast"
@@ -109,27 +118,33 @@
  ],
  "checked": {
   "deps": {
-   "asm/altered_beast_build.asm": "1e591c0405e28326",
-   "asm/altered_beast_hooks.asm": "f63e6702375bbfc3",
+   "asm/altered_beast_build.asm": "150f74d1113fecbe",
+   "asm/altered_beast_hooks.asm": "32bded2f359f72bb",
+   "asm/altered_beast_smooth.asm": "95f47c4c244e8729",
    "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
-   "docs/profiles/altered_beast.json": "997f658922f804a6",
+   "docs/profiles/altered_beast.json": "71260c469557756a",
    "docs/profiles/altered_beast_enhanced.json": "13d91a293a7605ee",
-   "nexclash.py": "4a87a4de972a122f",
-   "nexclash/altered_beast.py": "2459345f52c8951b",
-   "nexclash/analyse.py": "9068c7834f1f1923",
-   "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
+   "nexclash.py": "2ac99cf4fa2917e5",
+   "nexclash/altered_beast.py": "35046cfa428a569e",
+   "nexclash/analyse.py": "6f5b53f1eef456ac",
+   "nexclash/build.py": "e632a2f1f49c8be6",
+   "nexclash/coloursheet.py": "485b2bb1d7e30784",
    "nexclash/dizzy5.py": "1123c301b84e7cbc",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
-   "nexclash/engines.py": "9666a7f032696532",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "b24e01a406607173",
+   "nexclash/hooklib.py": "2c99cebaa18a206a",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/identify.py": "578e73ef2ca90c6a",
-   "nexclash/machine.py": "9c057372f6e27d70",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/machine.py": "f681f6d4710f2169",
    "nexclash/nextboot.py": "f67deed5c0603d2a",
-   "nexclash/nxc.py": "d4c135babd8cd53e",
-   "nexclash/nxcout.py": "f1bf468312cb5367",
+   "nexclash/nxc.py": "085c53b25bb6b406",
+   "nexclash/nxcout.py": "30fce34750b0313b",
    "nexclash/rainbow.py": "e247f602b7cecb7b",
-   "nexclash/recolour.py": "b1a5e5a8f402f057",
-   "nexclash/recorder.py": "e5b5892fa1da208b",
+   "nexclash/recolour.py": "9c26165e33697acc",
+   "nexclash/recorder.py": "beda3d9e2cc08ed3",
    "nexclash/records.py": "6401367eddcf12a0",
    "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
    "nexclash/rzx.py": "90008c9ca09c51bc",
@@ -138,37 +153,44 @@
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/userflow.py": "6779aabcf5d969cf",
    "nexclash/verify.py": "e49b2afbdf721760",
+   "nexclash/z80n.py": "7843b0da444ced1d",
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "d044e3e0b172cf77",
-   "rom": "e50ee485fb4a21d2"
+   "recipe": "880d265396aab716",
+   "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-27"
+  "date": "2026-11-28"
  },
  "verified": {
   "deps": {
-   "asm/altered_beast_build.asm": "1e591c0405e28326",
-   "asm/altered_beast_hooks.asm": "f63e6702375bbfc3",
+   "asm/altered_beast_build.asm": "150f74d1113fecbe",
+   "asm/altered_beast_hooks.asm": "32bded2f359f72bb",
+   "asm/altered_beast_smooth.asm": "95f47c4c244e8729",
    "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
-   "docs/profiles/altered_beast.json": "997f658922f804a6",
+   "docs/profiles/altered_beast.json": "71260c469557756a",
    "docs/profiles/altered_beast_enhanced.json": "13d91a293a7605ee",
-   "nexclash.py": "4a87a4de972a122f",
-   "nexclash/altered_beast.py": "2459345f52c8951b",
-   "nexclash/analyse.py": "9068c7834f1f1923",
-   "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
+   "nexclash.py": "2ac99cf4fa2917e5",
+   "nexclash/altered_beast.py": "35046cfa428a569e",
+   "nexclash/analyse.py": "6f5b53f1eef456ac",
+   "nexclash/build.py": "e632a2f1f49c8be6",
+   "nexclash/coloursheet.py": "485b2bb1d7e30784",
    "nexclash/dizzy5.py": "1123c301b84e7cbc",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
-   "nexclash/engines.py": "9666a7f032696532",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "b24e01a406607173",
+   "nexclash/hooklib.py": "2c99cebaa18a206a",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/identify.py": "578e73ef2ca90c6a",
-   "nexclash/machine.py": "9c057372f6e27d70",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/machine.py": "f681f6d4710f2169",
    "nexclash/nextboot.py": "f67deed5c0603d2a",
-   "nexclash/nxc.py": "d4c135babd8cd53e",
-   "nexclash/nxcout.py": "f1bf468312cb5367",
+   "nexclash/nxc.py": "085c53b25bb6b406",
+   "nexclash/nxcout.py": "30fce34750b0313b",
    "nexclash/rainbow.py": "e247f602b7cecb7b",
-   "nexclash/recolour.py": "b1a5e5a8f402f057",
-   "nexclash/recorder.py": "e5b5892fa1da208b",
+   "nexclash/recolour.py": "9c26165e33697acc",
+   "nexclash/recorder.py": "beda3d9e2cc08ed3",
    "nexclash/records.py": "6401367eddcf12a0",
    "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
    "nexclash/rzx.py": "90008c9ca09c51bc",
@@ -177,21 +199,22 @@
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/userflow.py": "6779aabcf5d969cf",
    "nexclash/verify.py": "e49b2afbdf721760",
+   "nexclash/z80n.py": "7843b0da444ced1d",
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "d044e3e0b172cf77",
-   "rom": "e50ee485fb4a21d2"
+   "recipe": "880d265396aab716",
+   "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-27"
+  "date": "2026-11-28"
  },
  "results": [
   {
    "application": "altered_beast.commit.pattern-cache",
    "check": "state.rzx-differential",
    "status": "pass",
-   "build": "edea9ecd",
-   "scope": "4 RZX per sprite build, 16 recording negatives, 6 palette negatives, bank-selection, mode and map units.",
+   "build": "8e802968",
+   "scope": "Four recordings per sprite edition. Checks cover the game buffers, sprite layer, palette, cache, player modes and level-end curtain.",
    "evidence": "games/altered_beast.md"
   }
  ],
@@ -201,8 +224,8 @@
     "games/altered_beast.md#rendering-model",
     "games/altered_beast.md#results"
    ],
-   "coverage": "Four recordings of level 1 (menu, intro, play, boss, two players); hook T per game frame on the simulator; JNext plain against sprites from one state over 400 frames. Tang board: menu, intro and play, 45 s of attract mode.",
-   "result": "A game frame is about 4.8 TV frames; the hooks cost about 10-20K T at 3.5 MHz of its ~340K T. The game's interrupt handlers must run once per interrupt: on the Next core they ran twice until EI moved later (INT_SITES)."
+   "coverage": "Original update intervals over all four level-one recordings. Smooth scroll uses the same input reads in OverSpec. JNext exercises restart on all five outputs.",
+   "result": "Original mean 5.712 TV frames across 5,197 intervals. Smooth scroll schedules 5, 6, 6 frames and moves the scenery eight pixels over nine updates. The AY driver stays on the frame interrupt."
   },
   "dependencies": {
    "evidence": [
@@ -212,7 +235,8 @@
    "coverage": "Readers and writers of the buffer and screen over the recordings (scan --writers); the plotters, the blit and the three interrupt handlers; ROM use (none) and the paging writes (bank 1 for the music).",
    "result": "Buffer read only by the plotters and the blit, screen only before the first blit, so the ULA may differ. Game code changed: six hook sites and the three handlers' first three bytes (same state after them, int_fix_check)."
   },
-  "decision": "Every figure a hardware sprite drawn from the game's plot calls; blit from the clean copy; the game's own colours; HUD build optional. The Next interrupt fix in every build.",
-  "next_experiment": "Board: the boss scene and two-player game run without a crash or slowdown beyond the plain build."
- }
+  "decision": "Keep the original pace and scroll with the toggle off. Smooth scroll prepares hidden graphics at 28 MHz and presents the screen and sprite attributes together in the border.",
+  "next_experiment": "Check the 1.3 scroll, sound and restart on KS3."
+ },
+ "version": "1.3"
 }
