@@ -185,13 +185,13 @@
  "results": [],
  "checked": {
   "deps": {
-   "asm/great_escape_hooks.asm": "8a8e7572365b2b6d",
+   "asm/great_escape_hooks.asm": "a39f575046fe3c69",
    "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
    "asm/lib/hlib_iff.asm": "b63b400926847660",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
-   "docs/profiles/great_escape.json": "7860cefd816de839",
+   "docs/profiles/great_escape.json": "af70dcd21cdbdd08",
    "nexclash.py": "4a87a4de972a122f",
    "nexclash/analyse.py": "9068c7834f1f1923",
    "nexclash/build.py": "7a7bb03de0547247",
@@ -201,7 +201,7 @@
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
    "nexclash/engines.py": "ce158a77f3104b5b",
-   "nexclash/great_escape.py": "5713fc5c56189ed8",
+   "nexclash/great_escape.py": "2aac2eee46f1fa48",
    "nexclash/hooklib.py": "d5cfe5321e8ff038",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/identify.py": "578e73ef2ca90c6a",
@@ -224,20 +224,20 @@
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "979368b3b22265a3",
+   "recipe": "3e26e280578839c8",
    "rom": "e50ee485fb4a21d2"
   },
   "date": "2026-11-27"
  },
  "verified": {
   "deps": {
-   "asm/great_escape_hooks.asm": "8a8e7572365b2b6d",
+   "asm/great_escape_hooks.asm": "a39f575046fe3c69",
    "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
    "asm/lib/hlib_iff.asm": "b63b400926847660",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
-   "docs/profiles/great_escape.json": "7860cefd816de839",
+   "docs/profiles/great_escape.json": "af70dcd21cdbdd08",
    "nexclash.py": "4a87a4de972a122f",
    "nexclash/analyse.py": "9068c7834f1f1923",
    "nexclash/build.py": "7a7bb03de0547247",
@@ -247,7 +247,7 @@
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
    "nexclash/engines.py": "ce158a77f3104b5b",
-   "nexclash/great_escape.py": "5713fc5c56189ed8",
+   "nexclash/great_escape.py": "2aac2eee46f1fa48",
    "nexclash/hooklib.py": "d5cfe5321e8ff038",
    "nexclash/hookprofile.py": "cac1335153f15daa",
    "nexclash/identify.py": "578e73ef2ca90c6a",
@@ -270,7 +270,7 @@
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "979368b3b22265a3",
+   "recipe": "3e26e280578839c8",
    "rom": "e50ee485fb4a21d2"
   },
   "date": "2026-11-27"
