@@ -1,0 +1,269 @@
+{
+ "name": "batman",
+ "order": 280,
+ "game": "Batman",
+ "doc": "batman.md",
+ "engine": "batman",
+ "representative": true,
+ "reference": "batman",
+ "inputs": {
+  "snapshot": {
+   "name": "Batman.z80",
+   "path": "batman/Batman (1986)(Ocean Software Ltd).z80",
+   "md5": "af9f1a6fb79c47bdf9a3ac15a5fef9c7"
+  },
+  "recordings": [
+   {
+    "name": "batman-target.rzx",
+    "path": "batman/batman-target.rzx",
+    "md5": "dc2777673dee05ec7591157bebdbd97b",
+    "role": "Scripted play from the exact player target"
+   },
+   {
+    "name": "batman1.rzx",
+    "path": "batman/batman1.rzx",
+    "md5": "68b2492b14d871ea925ba989d2a88bcd",
+    "role": "Archive play from its embedded 48K start"
+   },
+   {
+    "name": "batman.scr",
+    "path": "batman/batman.scr",
+    "md5": "8605b0815d9a3378997df5df8ba843e5",
+    "role": "Original loading screen extracted from the Ocean TAP at byte 111"
+   }
+  ]
+ },
+ "modules": [
+  "batman",
+  "nxcout",
+  "userflow"
+ ],
+ "own_modules": [
+  "batman"
+ ],
+ "data": [
+  "docs/profiles/batman.json"
+ ],
+ "shared_data": [],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "batman-target.rzx",
+   "batman1.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 20,
+  "note": "The archive recording uses its own restored start. The scripted recording uses the packaged game's start."
+ },
+ "outputs": {
+  "plain": {
+   "file": "Batman.nex",
+   "md5": "0d606cdd8fddf6d61e7bc5add1c6d0cf"
+  },
+  "loading": {
+   "file": "Batman_loading.nex",
+   "md5": "b09d9c7fa45c4a25df8102c73dbbc780"
+  }
+ },
+ "repro": [],
+ "techniques": [
+  {
+   "application": "batman.rom",
+   "id": "patch.whole-altrom-image",
+   "revision": 2,
+   "target": "Sinclair 48K ROM and boot restoration before PC 0xFFFF",
+   "phases": [
+    "setup"
+   ]
+  },
+  {
+   "application": "batman.screen",
+   "id": "patch.loader-screen-from-game-file",
+   "revision": 1,
+   "target": "SCR1 loading picture while patching the Ocean snapshot",
+   "phases": [
+    "setup"
+   ]
+  },
+  {
+   "application": "batman.rectangle",
+   "id": "detect.buffer-layout-producer",
+   "revision": 2,
+   "target": "Six-byte-stride masked rectangle at 0xA000",
+   "phases": []
+  },
+  {
+   "application": "batman.nodes",
+   "id": "detect.tracked-unit",
+   "revision": 3,
+   "target": "Player nodes 0x8F1A and 0x8F2C",
+   "phases": []
+  },
+  {
+   "application": "batman.plots",
+   "id": "detect.drawing-parameters",
+   "revision": 2,
+   "target": "Twelve masked blitters dispatched at 0x8E1D",
+   "phases": []
+  }
+ ],
+ "status": {
+  "title": "Batman",
+  "engine_col": "batman (batman.md)",
+  "build": "1.0 original ULA picture, Ocean loading screen and two optional trainers",
+  "software": "Two 48K recordings, 110800 frames. Game RAM and 27 register fields match at 110802 boundaries. All four trainer combinations checked at a collision.",
+  "hardware": "untested",
+  "next": "owner play on a physical Next, then Enhanced colour design"
+ },
+ "results": [
+  {
+   "check": "display",
+   "status": "pass",
+   "scope": "Two 48K recordings, every frame boundary",
+   "note": "The room and its figures share the same ink on black. The original masking, scenery depth and screen reads are preserved.",
+   "application": "batman.plots",
+   "evidence": "games/batman.md#plain-reference-and-checks"
+  },
+  {
+   "application": "batman.rom",
+   "check": "boot",
+   "status": "pass",
+   "scope": "Both game starts",
+   "note": "Boot with and without NEXLOAD workspace damage. Restore 49152 bytes of game RAM, including the 53-byte tail, restore R, use the Sinclair ROM and turn DivMMC automap off. A corrupted tail backup must fail.",
+   "evidence": "games/batman.md#plain-reference-and-checks"
+  },
+  {
+   "application": "batman.screen",
+   "check": "loading",
+   "status": "pass",
+   "scope": "All four trainer combinations from the installed NXC in OverSpec",
+   "note": "All four menu launches showed the 6912-byte tape picture while patching and reached first-room movement. The Next compatibility option is on by default.",
+   "evidence": "games/batman.md#cheats-and-package"
+  }
+ ],
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/batman.md#feasibility"
+   ],
+   "coverage": "A 400-frame cut in archive play, original drawing only.",
+   "result": "The game uses a four-tick wait. The original intersection routine took 35.9% of the cut. Release 1.0 adds no in-game work."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/batman.md#feasibility",
+    "games/batman.md#plain-reference-and-checks"
+   ],
+   "coverage": "Both game starts and the twelve masked blitters in archive play.",
+   "result": "Room and figure share ink and opacity. The masked blitters paint scenery over the player. Empty object links read byte 2 of the Sinclair ROM."
+  },
+  "decision": "Keep the original ULA presentation, ROM and RAM. Supply the loading picture and two individually selectable cheats.",
+  "next_experiment": "Physical Next menu, movement, pace and sound checks. For Enhanced, require zero incorrect visible pixels and zero stale figures over room changes before timing uploads."
+ },
+ "trainers": {
+  "source": "Batman (1986)(Ocean Software)(48-128k).pok",
+  "archive_md5": "c1cbcd956050cdca8f9e6e58cb419f3a",
+  "default": "off",
+  "kept": [
+   "Infinite lives",
+   "Immunity"
+  ],
+  "tested": "Original Ocean archive rows 1 and 4, both off by default. Infinite lives changes 36798 from 1 to 0. Immunity changes 39908 from 192 to 201. The archive collision exercises all four combinations for 200 frames each.",
+  "evidence": "games/batman.md#cheats-and-package"
+ },
+ "checked": {
+  "deps": {
+   "docs/profiles/batman.json": "9ab1923a0f3a0308",
+   "nexclash.py": "2ac99cf4fa2917e5",
+   "nexclash/analyse.py": "6f5b53f1eef456ac",
+   "nexclash/batman.py": "c56faea9110a233a",
+   "nexclash/build.py": "e632a2f1f49c8be6",
+   "nexclash/coloursheet.py": "485b2bb1d7e30784",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "a589726cd754d6a6",
+   "nexclash/green_beret.py": "8cc810ed0aae85ff",
+   "nexclash/hard_drivin.py": "e619062ee0f0ac97",
+   "nexclash/hooklib.py": "2c99cebaa18a206a",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/jack_the_nipper.py": "1e6f5e0afaeb5eb5",
+   "nexclash/machine.py": "f681f6d4710f2169",
+   "nexclash/nextboot.py": "f67deed5c0603d2a",
+   "nexclash/nxc.py": "085c53b25bb6b406",
+   "nexclash/nxcout.py": "d13f8e56222c1d92",
+   "nexclash/recolour.py": "9c26165e33697acc",
+   "nexclash/recorder.py": "beda3d9e2cc08ed3",
+   "nexclash/records.py": "6401367eddcf12a0",
+   "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
+   "nexclash/rzx.py": "90008c9ca09c51bc",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/userflow.py": "540531aa6a56ef80",
+   "nexclash/verify.py": "e49b2afbdf721760",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "03bfee61a4972937",
+   "rom": "e50ee485fb4a21d2"
+  },
+  "date": "2026-11-28"
+ },
+ "verified": {
+  "deps": {
+   "docs/profiles/batman.json": "9ab1923a0f3a0308",
+   "nexclash.py": "2ac99cf4fa2917e5",
+   "nexclash/analyse.py": "6f5b53f1eef456ac",
+   "nexclash/batman.py": "c56faea9110a233a",
+   "nexclash/build.py": "e632a2f1f49c8be6",
+   "nexclash/coloursheet.py": "485b2bb1d7e30784",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "a589726cd754d6a6",
+   "nexclash/green_beret.py": "8cc810ed0aae85ff",
+   "nexclash/hard_drivin.py": "e619062ee0f0ac97",
+   "nexclash/hooklib.py": "2c99cebaa18a206a",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/jack_the_nipper.py": "1e6f5e0afaeb5eb5",
+   "nexclash/machine.py": "f681f6d4710f2169",
+   "nexclash/nextboot.py": "f67deed5c0603d2a",
+   "nexclash/nxc.py": "085c53b25bb6b406",
+   "nexclash/nxcout.py": "d13f8e56222c1d92",
+   "nexclash/recolour.py": "9c26165e33697acc",
+   "nexclash/recorder.py": "beda3d9e2cc08ed3",
+   "nexclash/records.py": "6401367eddcf12a0",
+   "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
+   "nexclash/rzx.py": "90008c9ca09c51bc",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/userflow.py": "540531aa6a56ef80",
+   "nexclash/verify.py": "e49b2afbdf721760",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "03bfee61a4972937",
+   "rom": "e50ee485fb4a21d2"
+  },
+  "date": "2026-11-28"
+ }
+}
