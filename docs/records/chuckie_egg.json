@@ -91,9 +91,9 @@
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "recipe": "ee47cfd1494baa61",
-   "rom": "sinclair"
+   "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-28"
+  "date": "2026-11-29"
  },
  "verified": {
   "deps": {
@@ -112,9 +112,9 @@
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "recipe": "ee47cfd1494baa61",
-   "rom": "sinclair"
+   "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-28"
+  "date": "2026-11-29"
  },
  "canary": 1
 }
