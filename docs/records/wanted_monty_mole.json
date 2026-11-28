@@ -1,0 +1,292 @@
+{
+ "name": "wanted_monty_mole",
+ "order": 280,
+ "game": "Wanted! Monty Mole",
+ "doc": "wanted_monty_mole.md",
+ "engine": "wanted_monty_mole",
+ "representative": false,
+ "reference": "wanted_monty_mole",
+ "verified_json": false,
+ "inputs": {
+  "snapshot": {
+   "name": "wanted_monty_mole.z80",
+   "md5": "2435c5b4870ee326f7ebab0de5efa4c2",
+   "path": "wanted_monty_mole/Wanted! Monty Mole (1984)(Gremlin Graphics Software).z80",
+   "role": "48K start. All 40,960 bytes above 0x5FFF match the unmodified Gremlin tape, including both life initializers and the decrement."
+  },
+  "recordings": [
+   {
+    "name": "wanted.rzx",
+    "md5": "ce1d095fb60fe61819b4954a49a9e3a2",
+    "path": "wanted_monty_mole/wanted.rzx",
+    "role": "archive completion, 32965 frames"
+   },
+   {
+    "name": "wantedold.rzx",
+    "md5": "b000db958867bcd4b873b6cbc18701d1",
+    "path": "wanted_monty_mole/wantedold.rzx",
+    "role": "archive completion with an enemy death, 32088 frames"
+   },
+   {
+    "name": "scripted.rzx",
+    "md5": "99b61ddd5d9e5a2acf8f903c1f662d59",
+    "path": "wanted_monty_mole/scripted.rzx",
+    "role": "keyboard play and death, 2870 frames"
+   },
+   {
+    "name": "options.rzx",
+    "md5": "68d471680d3ff5514e80c6f956568d99",
+    "path": "wanted_monty_mole/options.rzx",
+    "role": "keyboard menu choices, three lost lives and game over, 10969 frames"
+   },
+   {
+    "name": "fall.rzx",
+    "md5": "71a93947aa283ed2d48dcd24c2f25624",
+    "path": "wanted_monty_mole/fall.rzx",
+    "role": "Kempston fall from the state at wanted.rzx frame 2600, 352 frames"
+   },
+   {
+    "name": "Wanted! Monty Mole (1984)(Gremlin Graphics Software).pok",
+    "md5": "d73cc82a028d65513861b279976bbde6",
+    "path": "wanted_monty_mole/Wanted! Monty Mole (1984)(Gremlin Graphics Software).pok",
+    "role": "Archive trainer list used in the original-game tests."
+   },
+   {
+    "name": "Wanted! Monty Mole.pok",
+    "md5": "1a9186a6112976691403565463c4e6eb",
+    "path": "wanted_monty_mole/Wanted! Monty Mole.pok",
+    "role": "Archive trainer list used in the original-game tests."
+   },
+   {
+    "name": "Wanted! Monty Mole (1984)(Gremlin Graphics Software).Tap",
+    "md5": "b0e0ce98a04c2372e679698f25fd56e1",
+    "path": "wanted_monty_mole/Wanted! Monty Mole (1984)(Gremlin Graphics Software).Tap",
+    "role": "Original Gremlin player tape. CRC32 a50a88cc. Loading screen at offset 258."
+   },
+   {
+    "name": "Wanted! Monty Mole.SCR",
+    "md5": "cd97095afb65334ee71ab150bb235981",
+    "path": "wanted_monty_mole/Wanted! Monty Mole.SCR",
+    "role": "Independent 6912-byte loading screen for comparison with the tape."
+   }
+  ]
+ },
+ "modules": [
+  "wanted_monty_mole"
+ ],
+ "own_modules": [
+  "wanted_monty_mole"
+ ],
+ "data": [
+  "docs/profiles/wanted_monty_mole.json",
+  "asm/wanted_monty_mole_hooks.asm"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_iff.asm",
+  "asm/lib/hlib_speed.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "wanted.rzx",
+   "wantedold.rzx",
+   "scripted.rzx",
+   "options.rzx",
+   "fall.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 30,
+  "note": "Execute the actual overlay on recorded game states. Check ULA and live RAM, sprite coverage and erasure at writer exits, room 19 scenery, interrupt delivery and HALT budgets."
+ },
+ "outputs": {
+  "plain": {
+   "file": "wanted_monty_mole.nex",
+   "md5": "0d8d704da79d5220664fa54ff19cc1b4"
+  },
+  "sprites": {
+   "file": "wanted_monty_mole_sprites.nex",
+   "md5": "f4b20f24da434409ae3c9a36b72a3d27"
+  }
+ },
+ "repro": [],
+ "checks": [
+  "asm2profile:wanted_monty_mole"
+ ],
+ "excluded": "Development build. A reproducible off-figure scenery colour change prevents release verification.",
+ "status": {
+  "title": "Wanted! Monty Mole",
+  "engine_col": "wanted_monty_mole (wanted_monty_mole.md)",
+  "build": "Development sprite overlay, five optional trainers",
+  "software": "1,093,053 ULA checks. 0/249,911 figure differences. 137/29,261 intervals over budget. Room 19 scenery differs.",
+  "hardware": "untested",
+  "next": "Resolve scenery outside the figure, remaining frame deficits and the independent crusher timing difference.",
+  "evidence": {
+   "functional": {
+    "level": "assembled",
+    "scope": "249,911 figure comparisons and 1,093,053 ULA comparisons across five recordings. Synthetic coverage of all 30 callers."
+   },
+   "integration": {
+    "level": "integrated",
+    "scope": "Final NXC started from the OverSpec menu. All 32 fix-on and 32 fix-off loader combinations checked."
+   },
+   "timing": {
+    "level": "integrated",
+    "scope": "137/29,261 modelled intervals over budget. JNext crusher Y diverged at update 38."
+   },
+   "display": {
+    "level": "integrated",
+    "scope": "OverSpec outside and mine captures. The replay proves one settled wrong scenery pixel in room 19."
+   },
+   "hardware": {
+    "level": "not assessed",
+    "scope": "No physical Spectrum Next or NextTang run."
+   }
+  }
+ },
+ "techniques": [
+  {
+   "application": "collision",
+   "id": "detect.gameplay-screen-readers",
+   "revision": 2,
+   "target": "0x9228 point collision test",
+   "phases": []
+  },
+  {
+   "application": "pace",
+   "id": "detect.pacing-structure",
+   "revision": 2,
+   "target": "0x943C game loop wait",
+   "phases": []
+  },
+  {
+   "application": "skip",
+   "id": "detect.routine-removal",
+   "revision": 2,
+   "target": "Enemy update CALL at 0x943D",
+   "phases": []
+  },
+  {
+   "application": "overlay",
+   "id": "patch.xor-overlay-keep-ula",
+   "revision": 2,
+   "target": "Apply the retained-ULA concept to an OR plot with destructive rectangle writes. The XOR composition predicate does not hold.",
+   "phases": [
+    "entry",
+    "clear"
+   ]
+  },
+  {
+   "application": "iff",
+   "id": "patch.iff-safe-read",
+   "revision": 1,
+   "target": "Save and restore IFF at all MMU hooks.",
+   "phases": []
+  },
+  {
+   "application": "speed",
+   "id": "patch.restore-speed",
+   "revision": 1,
+   "target": "Return the original programmed clock after all MMU hooks.",
+   "phases": []
+  }
+ ],
+ "results": [
+  {
+   "application": "collision",
+   "status": "pass",
+   "check": "Live versus background-only point reads",
+   "scope": "wantedold.rzx, unpatched game",
+   "evidence": "11 of 84,604 tested bits differed, including a fatal contact."
+  },
+  {
+   "application": "pace",
+   "status": "pass",
+   "check": "HALT slack in original game",
+   "scope": "wanted.rzx, first 2,000 frames",
+   "evidence": "459 updates. Minimum 456 T, median 19,716 T."
+  },
+  {
+   "application": "skip",
+   "status": "fail",
+   "check": "Omit enemy update and compare live RAM",
+   "scope": "wanted.rzx, first 2,000 frames",
+   "evidence": "0 of 459 updates equal. Removing this call changes game state."
+  },
+  {
+   "application": "overlay",
+   "status": "pass",
+   "check": "Final hardware pattern and visibility checks at writer and update exits",
+   "scope": "wanted.rzx, first 2,000 frames",
+   "evidence": "All 29,504 ULA and 6,285 figure comparisons matched. Zero over-budget intervals in 459."
+  },
+  {
+   "application": "overlay",
+   "status": "fail",
+   "check": "Original scenery ink at a settled pixel outside the enemy",
+   "scope": "wantedold.rzx, room 19 frame 26,433",
+   "evidence": "Pixel (134,51) has transparent sprite ink. The enemy changes the underlying attribute from 0x47 to 0x43. 486 cell/update observations in this recording survive until an update."
+  },
+  {
+   "application": "pace",
+   "status": "fail",
+   "check": "Paired JNext execution from the same indoor start",
+   "scope": "35 comparable play updates from the first indoor HALT",
+   "evidence": "1.456849 s original and 1.435597 s patched. Crusher Y first differed at update 38. Longest IRQ gaps 19.97 and 39.94 ms."
+  },
+  {
+   "application": "iff",
+   "status": "pass",
+   "check": "Clock, IFF and slot restoration",
+   "scope": "Synthetic plot contexts",
+   "evidence": "All 8 combinations of four starting speeds and two interrupt states pass."
+  },
+  {
+   "application": "speed",
+   "status": "pass",
+   "check": "Restore programmed speed after plotting",
+   "scope": "Synthetic plot contexts",
+   "evidence": "All 8 speed/IFF cases restore clock and mapping."
+  },
+  {
+   "application": "overlay",
+   "status": "pass",
+   "check": "Hardware sprite patterns, ULA and live state from original recording inputs",
+   "scope": "All five replays, 79,244 frames",
+   "evidence": "1,093,053 ULA checks. 0 of 249,911 figure checks differed. Each recording detected a corrupted upload."
+  },
+  {
+   "application": "pace",
+   "status": "fail",
+   "check": "Hook time versus original HALT slack",
+   "scope": "29,261 measured update intervals across all five recordings",
+   "evidence": "137 intervals over budget. 60 still missed after deducting all transfer time."
+  }
+ ],
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/wanted_monty_mole.md#feasibility"
+   ],
+   "coverage": "Original 2,000-frame benchmark and paired JNext runs from one indoor state.",
+   "result": "The quick run meets 459/459 budgets. Full model exceeds 137/29,261. In independent play the crusher position first differs at update 38."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/wanted_monty_mole.md#feasibility"
+   ],
+   "coverage": "Two completions and three scripted recordings reach 20/30 main caller sites. All 30 sites execute the shared hook in synthetic contexts.",
+   "result": "Replacing the visible screen by scenery changes 11 point tests. Skipping the actor update changes live RAM in 459/459 comparisons."
+  },
+  "decision": "Keep original ULA bitmap and attributes. Colour hardware patterns from plot data. Enemy paint also affects scenery outside the figure.",
+  "next_experiment": "Resolve display correction outside figures. Check the room 19 witness and remaining timing deficits. Re-run live timing from the same indoor HALT before release."
+ }
+}
