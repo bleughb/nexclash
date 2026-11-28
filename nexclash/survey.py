@@ -134,6 +134,13 @@ class Multi:
                 setattr(self, name, (lambda fs: lambda *x: [f(*x) for f in fs])(fs))
 
 
+def _code_ran_near(flags, addr, is128):
+    from .memscan import EXEC
+    # 48K has one flat address space. On 128K only the fixed memory is unambiguous here.
+    limit = 0xC000 if is128 else 0x10000
+    return any(f & EXEC for f in flags[max(0, addr - 24):min(limit, addr + 24)])
+
+
 def static_sites(mem, target, ran):
     """CALL / JP byte patterns to `target` in the 64K view; ran(addr) = code ran near it."""
     lo, hi = target & 0xFF, target >> 8
@@ -248,7 +255,7 @@ def survey(z80, rzx=None, out=None, stop=None, frames=None, keys=None, top=6, lo
     name = os.path.splitext(os.path.basename(z80))[0]
     out = out or os.path.join(os.path.dirname(os.path.abspath(z80)), name + '_survey')
     os.makedirs(out, exist_ok=True)
-    inputs = {'z80': _md5(z80), 'rzx': [_md5(r) for r in rzx or []],
+    inputs = {'z80': _md5(z80), 'rzx': [_md5(r) for r in rzx or []], 'coverage_revision': 2,
               'args': [stop, frames, keys, top, bool(full)]}
     old_js, old_md = os.path.join(out, 'survey.json'), os.path.join(out, 'survey.md')
     if not fresh and os.path.exists(old_js) and os.path.exists(old_md):
@@ -371,7 +378,7 @@ def survey(z80, rzx=None, out=None, stop=None, frames=None, keys=None, top=6, lo
     isr_txt = isrinfo.report(it, n, z80, rz or None, keys)[0]
 
     # plot routines
-    ran = lambda a: any(sc.flags[i] & memscan.EXEC for i in range(max(0, a - 24), min(0xC000, a + 24)) if i < 0xC000)
+    ran = lambda a: _code_ran_near(sc.flags, a, is128)
     rank = sorted(set(pt.pix) | set(pt.attr), key=lambda r: -(pt.pix[r] + pt.attr[r]))
     rows, gaps, routines = [], 0, []
     mem = pt.sim.memory if pt.sim is not None else s.memory

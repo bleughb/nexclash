@@ -926,6 +926,12 @@ def tools_check(src):
             print('SKIP tools: play checks in JNext (no jnext or no $NEXCLASH_JNEXT_CARD)')
         from nexclash import survey
         from types import SimpleNamespace
+        flags = bytearray(0x10000)
+        flags[0xD9D5] = memscan.EXEC
+        flags[0xE37D] = memscan.READ
+        ok('survey: nearby 48K upper RAM execution counts, data reads and ambiguous 128K banks do not',
+           survey._code_ran_near(flags, 0xD9DB, False) and not survey._code_ran_near(flags, 0xE37D, False)
+           and not survey._code_ran_near(flags, 0xD9DB, True), '48K figure call at D9DB')
         tracker = survey.PlotTracker()
         memory, registers = [0] * 65536, [0] * 29
         memory[0x8000:0x8003] = [0xCD, 0, 0x81]
