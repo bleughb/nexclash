@@ -32,6 +32,12 @@
     "name": "gb_stage4.rzx",
     "md5": "215f89d38964f24b0d34881ad1b6469d",
     "path": "green_beret/gb_stage4.rzx"
+   },
+   {
+    "name": "green_beret-loading.scr",
+    "md5": "3338d3e48b286e44d151d0bbee1b9391",
+    "path": "green_beret/green_beret-loading.scr",
+    "role": "The tape's loading screen (Green Beret (1986)(Imagine Software).tzx, as its loader leaves it): the start screen and the _loading build; not a recording."
    }
   ]
  },
@@ -70,11 +76,15 @@
  "outputs": {
   "plain": {
    "file": "green_beret.nex",
-   "md5": "0679156534b3372bfb2280262b39bcb1"
+   "md5": "283484a93a6eda05a4ecc5c7a9d1447b"
   },
   "sprites": {
    "file": "green_beret_sprites.nex",
-   "md5": "bdfaa782be7651d631fb1eabd2b51598"
+   "md5": "dd0badb0eb4a2d81fbc51fec7e6c7a19"
+  },
+  "sprites_loading": {
+   "file": "green_beret_sprites_loading.nex",
+   "md5": "b65abbdf8cb470307ee527b69a2f0205"
   }
  },
  "repro": [],
@@ -83,8 +93,8 @@
   "engine_col": "green_beret (green_beret.md)",
   "build": "green_beret_sprites.nex (pilot, unattended): figures, plot2 objects, small objects and mines sprites, the plot code writes a scratch page; white body, black dark pixels",
   "software": "RZX replay verify on 4 scripted recordings, unit + negative controls; JNext both builds reach play",
-  "hardware": "untested",
-  "next": "hardware test; the owner paints the sheets (recolour)"
+  "hardware": "KS3 (System/Next 26.11a): 1.2 played by the owner 2026-11-27, good; 1.3 (no white edge, menu on the loading screen) not yet",
+  "next": "1.3: the owner's KS3 test, then publish; an Enhanced colour run later."
  },
  "checks": [
   "asm2profile:green_beret"

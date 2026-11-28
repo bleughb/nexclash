@@ -221,14 +221,13 @@ def trim_pixels(get, img):
     """The edge rule (owner, 2026-11-06: "the white edges on the enemy need to be trimmed back closer to the character's
     outline"). The white body a figure shows is the original's mask, which shows the cell's paper; on several enemies
     it reaches 2-4 px past the drawn outline. A pixel that is not dark, lies OUTSIDE the figure (4-connected to the
-    image's edge through pixels that are not dark: the dual of the 8-connected outline) and is more than 1 px (8
-    neighbours) from every dark pixel is made transparent. Body inside the outline and the 1 px ring around it stay.
-    Depends on the graphics bytes only, never the mask: one rule per graphics address, whatever mask a call passes.
-    -> set of (x, line) as image_pixels."""
+    image's edge through pixels that are not dark: the dual of the 8-connected outline) is made transparent. Body
+    inside the outline stays; 1.3 (owner, KS3 2026-11-27, no white outlines) also drops the 1 px white ring 1.0 kept
+    outside it, so the black outline meets the scenery. Depends on the graphics bytes only, never the mask: one rule
+    per graphics address, whatever mask a call passes. -> set of (x, line) as image_pixels."""
     if img[3] not in TRIM_KINDS or img[2] < TRIM_MIN_LINES:
         return set()
     px = image_pixels(get, img)
-    dark = {p for p, (g, _m) in px.items() if g}
     out_ = set()
     w = 1 + max(x for x, _ in px)
     h = 1 + max(y for _, y in px)
@@ -240,8 +239,7 @@ def trim_pixels(get, img):
             if q in px and q not in out_ and not px[q][0]:
                 out_.add(q)
                 todo.append(q)
-    near = {(x + dx, y + dy) for x, y in dark for dx in (-1, 0, 1) for dy in (-1, 0, 1)}
-    return {p for p in out_ if p not in near}
+    return out_
 
 
 def trims_body(get, img):
@@ -336,6 +334,19 @@ def restore_tail(p, s):
     p.original_pc, p.tail_restore_bytes, s.pc = s.pc, len(tail), entry
 
 
+LOADING_SCREEN = 'green_beret-loading.scr'   # the tape's loading screen, beside the snapshot (6912 bytes)
+
+
+def start_screen(snap, screen):
+    """The tape's loading screen in screen memory at the start (owner, KS3 2026-11-27): the original menu shows over
+    it, but the [a2][a2] snapshot was saved with it gone (black, the tape loader's bytes in the top row, never run
+    again: the game starts at 0x8273)."""
+    if screen is not None:
+        if len(screen) != 6912:
+            raise ValueError('the loading screen must be 6912 bytes')
+        snap.banks[5] = bytes(screen) + bytes(snap.banks[5][6912:])
+
+
 class PlainPatch:
     """The plain .nex: no hooks. The game keeps code at 0x5B00, so the stub restores the printer buffer. The alt ROM
     (Sinclair's ROM) holds only the register block and restore_tail's code."""
@@ -348,14 +359,16 @@ class PlainPatch:
     tail_addr = TAIL_ADDR
     sites = []
 
-    def __init__(self):
+    def __init__(self, screen=None):
         from .build import rom48
+        self.screen = screen
         self.page = bytes(rom48()[0x2000:0x4000])
         self.slot1 = (ALT_PAGE, ROM_ORG)
         self.altrom = (ROM_ORG, ROM_ORG + 20)
         self.extra_banks = {12: self.page + bytes(8192)}
 
     def apply(self, snap):
+        start_screen(snap, self.screen)
         restore_tail(self, snap)
         self.extra_banks = {12: self.page + bytes(8192)}
 
@@ -363,8 +376,9 @@ class PlainPatch:
 class GreenBeretPatch:
     name = 'Green Beret figures -> hardware sprites (altrom hooks, plots into a scratch page at slot 2)'
 
-    def __init__(self, prof=None, rom_code=None, colours=None, trim=True):
+    def __init__(self, prof=None, rom_code=None, colours=None, trim=True, screen=None):
         self.trim = trim
+        self.screen = screen
         self.trims = {}
         self.prof = prof or load_profile()
         self.colours = load_colours() if colours is None else colours
@@ -403,6 +417,7 @@ class GreenBeretPatch:
     def apply(self, snap):
         if snap.is128:
             raise ValueError('Green Beret patch expects the 48K snapshot')
+        start_screen(snap, self.screen)
         ram = bytearray(snap.banks[5] + snap.banks[2] + snap.banks[0])
         for a, old, new in self.sites:
             cur = bytes(ram[a - 0x4000:a - 0x4000 + len(old)])
@@ -1330,18 +1345,28 @@ def auto(a, z80, name, out, say):
     say('Game      : %s' % name)
     say('Engine    : green_beret (four plotters -> sprites, their writes into a scratch page; scenery stays on the ULA)')
     md5 = lambda p: H.md5(open(p, 'rb').read()).hexdigest()
+    beside = os.path.join(os.path.dirname(os.path.abspath(z80)), LOADING_SCREEN)
+    screen = open(beside, 'rb').read() if os.path.exists(beside) else None
+    say('Screen    : %s' % ('the tape\'s loading screen at the start and in the _loading builds (%s)' % LOADING_SCREEN
+                            if screen else 'none (%s not beside the snapshot)' % LOADING_SCREEN))
     plain = os.path.join(out, name + '.nex')
-    pp = PlainPatch()
+    pp = PlainPatch(screen)
     conv = zt.convert(z80, plain, TAIL_ADDR, True, quiet=True, patch=pp, keep_printer_buffer=True)
     bad = check(plain, z80, pp, (conv[1], conv[1] + len(conv[2])))
     say('Plain     : %s  %s  boot %s  (tail 0x%04X)' % (os.path.basename(plain), md5(plain),
                                                        'OK' if not bad else 'MISMATCH %s' % str(bad[:3])[:200], TAIL_ADDR))
-    patch = GreenBeretPatch()
+    patch = GreenBeretPatch(screen=screen)
     spr = os.path.join(out, name + '_sprites.nex')
     conv = zt.convert(z80, spr, None, True, quiet=True, patch=patch, keep_printer_buffer=True)
     bad2 = check(spr, z80, patch, (conv[1], conv[1] + len(conv[2])))
     say('Sprites   : %s  %s  boot %s' % (os.path.basename(spr), md5(spr),
                                           'OK' if not bad2 else 'MISMATCH %s' % str(bad2[:3])[:200]))
+    if screen:   # the same build with the screen in the .nex (header byte 10 = 2): the .nxc shows it while patching
+        load = os.path.join(out, name + '_sprites_loading.nex')
+        d = open(spr, 'rb').read()
+        head = bytearray(d[:512]); head[10], head[133] = 2, 50
+        open(load, 'wb').write(bytes(head) + screen + d[512:])
+        say('Loading   : %s  %s' % (os.path.basename(load), md5(load)))
     ok = not bad and not bad2
     states = []
     for r in list(a.rzx or []):
