@@ -124,9 +124,9 @@
    "skoolkit": "10.1",
    "pillow": "13.0.0",
    "recipe": "fcf44a892ed2a72e",
-   "rom": "sinclair"
+   "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-28"
+  "date": "2026-11-29"
  },
  "verified": {
   "deps": {
@@ -163,8 +163,8 @@
    "skoolkit": "10.1",
    "pillow": "13.0.0",
    "recipe": "fcf44a892ed2a72e",
-   "rom": "sinclair"
+   "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-28"
+  "date": "2026-11-29"
  }
 }
