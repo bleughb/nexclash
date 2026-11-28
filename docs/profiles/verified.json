@@ -51,6 +51,28 @@
     }
    ]
   },
+  "cd9b4a722898c9f31f959b5b2767635f": {
+   "game": "Alien Highway",
+   "doc": "alien_highway.md",
+   "nex": {
+    "plain": "5e81768e428adca7fedd571d184e5ee9",
+    "sprites": "4169efbd290b4c136b4023d46ffb68b4"
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "alien_highway",
+     "game": "Alien Highway",
+     "doc": "alien_highway.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "5e81768e428adca7fedd571d184e5ee9",
+      "sprites": "4169efbd290b4c136b4023d46ffb68b4"
+     }
+    }
+   ]
+  },
   "9df49e056fdf38a2f6da21fc4dfbf34f": {
    "game": "Altered Beast (128K)",
    "doc": "altered_beast.md",

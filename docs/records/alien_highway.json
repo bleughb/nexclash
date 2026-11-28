@@ -1,0 +1,254 @@
+{
+ "name": "alien_highway",
+ "order": 280,
+ "game": "Alien Highway",
+ "doc": "alien_highway.md",
+ "engine": "alien_highway",
+ "representative": false,
+ "reference": "alien_highway",
+ "verified_json": true,
+ "inputs": {
+  "snapshot": {
+   "name": "alien_highway.z80",
+   "path": "alien_highway/start.z80",
+   "md5": "cd9b4a722898c9f31f959b5b2767635f"
+  },
+  "recordings": [
+   {
+    "name": "alienhighway.rzx",
+    "path": "alien_highway/alienhighway.rzx",
+    "md5": "4df84e71eea8591dfd981b734ce29a7e"
+   },
+   {
+    "name": "Alien Highway (1986)(Vortex)[aka Encounter 2].tap",
+    "path": "alien_highway/Alien Highway (1986)(Vortex)[aka Encounter 2].tap",
+    "md5": "deb9dc45642681d6e218c08e2f9930f2",
+    "role": "Tape target, loading-screen or archive trainer reference"
+   },
+   {
+    "name": "Alien Highway - Encounter 2 (1986)(Vortex Software).pok",
+    "path": "alien_highway/Alien Highway - Encounter 2 (1986)(Vortex Software).pok",
+    "md5": "4169c19afa59bc954c6d9dbdbf850489",
+    "role": "Tape target, loading-screen or archive trainer reference"
+   },
+   {
+    "name": "Alien Highway.POK",
+    "path": "alien_highway/Alien Highway.POK",
+    "md5": "6a96abedf85384a66c5a80fd4a56b227",
+    "role": "Tape target, loading-screen or archive trainer reference"
+   },
+   {
+    "name": "Alien Highway.SCR",
+    "path": "alien_highway/Alien Highway.SCR",
+    "md5": "57f068fba73d9cca231e7753931289d8",
+    "role": "Tape target, loading-screen or archive trainer reference"
+   },
+   {
+    "name": "overspec-classic.zip",
+    "path": "alien_highway/overspec-classic.zip",
+    "md5": "265294913904e64c16086e0df149ba02",
+    "role": "Pinned OverSpec source used to compile the native replay verifier"
+   }
+  ]
+ },
+ "modules": [
+  "alien_highway"
+ ],
+ "own_modules": [
+  "alien_highway",
+  "alien_highway_replay"
+ ],
+ "data": [
+  "docs/profiles/alien_highway.json",
+  "asm/alien_highway_hooks.asm",
+  "nexclash/alien_highway_replay.c"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_r.asm",
+  "asm/lib/hlib_iff.asm",
+  "asm/lib/hlib_pace.asm",
+  "asm/lib/hlib_dma.asm"
+ ],
+ "rebuild": {
+  "args": [],
+  "rzx": []
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "alienhighway.rzx"
+  ],
+  "minutes": 15
+ },
+ "outputs": {
+  "plain": {
+   "file": "alien_highway.nex",
+   "md5": "5e81768e428adca7fedd571d184e5ee9"
+  },
+  "sprites": {
+   "file": "alien_highway_sprites.nex",
+   "md5": "4169efbd290b4c136b4023d46ffb68b4"
+  }
+ },
+ "repro": [],
+ "checks": [
+  "asm2profile:alien_highway"
+ ],
+ "status": {
+  "title": "Alien Highway",
+  "engine_col": "Highway Encounter family (alien_highway.md)",
+  "build": "Hardware sprites, original colours and two optional trainers",
+  "software": "53,962 frames, 20,092 road copies. Zero wrong pixels in 63,495,697 recorded-boundary and 58,395,736 scanout samples. Elapsed time +0.155%.",
+  "hardware": "Untried",
+  "next": "Test the 1.0 tape patch on a physical Next.",
+  "evidence": {
+   "functional": {
+    "level": "assembled",
+    "scope": "Plain and sprite registers, game RAM CRC32 and I/O hashes matched at 212,111 hook returns and 53,949 comparable frame boundaries. All 1,615,027 original port inputs consumed."
+   },
+   "integration": {
+    "level": "integrated",
+    "scope": "Four trainer selections through the OverSpec NXC menu. Both NEX boot paths simulated."
+   },
+   "timing": {
+    "level": "integrated",
+    "scope": "Three JNext trials, 788 update intervals. Elapsed changes +0.179%, +0.216%, +0.016%. Full-route OverSpec +0.155% for both DMA and forced CPU."
+   },
+   "display": {
+    "level": "integrated",
+    "scope": "OverSpec native scanout and all 53,962 recorded boundaries, plus 326 JNext frames. Forced CPU also passed the full recording. Removing only the copy-entry hide reproduces stale pixels."
+   },
+   "hardware": {
+    "level": "not assessed",
+    "scope": "No physical Next run."
+   }
+  }
+ },
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/alien_highway.md#verification"
+   ],
+   "coverage": "Three JNext seeds and one full-route OverSpec replay.",
+   "result": "The limiter counts plot phases and dirty road cells. Sorting, sound and input stay at the incoming clock."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/alien_highway.md#renderer-and-scope",
+    "games/alien_highway.md#verification"
+   ],
+   "coverage": "18 road strips, 363 cells, 98 tile positions and four plotter phases.",
+   "result": "The ULA supplies all figure pixels while the screen or sprite patterns are being changed."
+  },
+  "decision": "Hide the overlay on entry to the road copier and enable it only after the new pattern and palette writes finish.",
+  "next_experiment": "Compare moving and stationary edges, pace and beeper sound on a physical Next."
+ },
+ "version": "1.0",
+ "checked": {
+  "deps": {
+   "asm/alien_highway_hooks.asm": "bfbfef40d64abf0e",
+   "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
+   "docs/profiles/alien_highway.json": "c97f7692740acd96",
+   "nexclash.py": "2ac99cf4fa2917e5",
+   "nexclash/alien_highway.py": "4e3a80e780ca87c9",
+   "nexclash/alien_highway_replay.c": "8d38e54333981c17",
+   "nexclash/alien_highway_replay.py": "7324e5ce94fde308",
+   "nexclash/analyse.py": "6f5b53f1eef456ac",
+   "nexclash/build.py": "e632a2f1f49c8be6",
+   "nexclash/coloursheet.py": "485b2bb1d7e30784",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "93a96afeb02cc3b1",
+   "nexclash/flicker.py": "acbeab18d2daf133",
+   "nexclash/hooklib.py": "2c99cebaa18a206a",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/jnext.py": "87ee96c9c2477098",
+   "nexclash/looksheet.py": "3336e2e27e444ee9",
+   "nexclash/machine.py": "f681f6d4710f2169",
+   "nexclash/nextboot.py": "f67deed5c0603d2a",
+   "nexclash/nxc.py": "085c53b25bb6b406",
+   "nexclash/nxcout.py": "de8b4a8912d169cb",
+   "nexclash/pace.py": "349f7749a27bce36",
+   "nexclash/recolour.py": "9c26165e33697acc",
+   "nexclash/recorder.py": "beda3d9e2cc08ed3",
+   "nexclash/records.py": "6401367eddcf12a0",
+   "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
+   "nexclash/rzx.py": "90008c9ca09c51bc",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
+   "nexclash/soak.py": "88d45b5832823b43",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/userflow.py": "6779aabcf5d969cf",
+   "nexclash/verify.py": "e49b2afbdf721760",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "d2ee8750f12dfa92",
+   "rom": "e50ee485fb4a21d2"
+  },
+  "date": "2026-11-28"
+ },
+ "verified": {
+  "deps": {
+   "asm/alien_highway_hooks.asm": "bfbfef40d64abf0e",
+   "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
+   "asm/lib/hlib_iff.asm": "b63b400926847660",
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
+   "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
+   "docs/profiles/alien_highway.json": "c97f7692740acd96",
+   "nexclash.py": "2ac99cf4fa2917e5",
+   "nexclash/alien_highway.py": "4e3a80e780ca87c9",
+   "nexclash/alien_highway_replay.c": "8d38e54333981c17",
+   "nexclash/alien_highway_replay.py": "7324e5ce94fde308",
+   "nexclash/analyse.py": "6f5b53f1eef456ac",
+   "nexclash/build.py": "e632a2f1f49c8be6",
+   "nexclash/coloursheet.py": "485b2bb1d7e30784",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "93a96afeb02cc3b1",
+   "nexclash/flicker.py": "acbeab18d2daf133",
+   "nexclash/hooklib.py": "2c99cebaa18a206a",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/jnext.py": "87ee96c9c2477098",
+   "nexclash/looksheet.py": "3336e2e27e444ee9",
+   "nexclash/machine.py": "f681f6d4710f2169",
+   "nexclash/nextboot.py": "f67deed5c0603d2a",
+   "nexclash/nxc.py": "085c53b25bb6b406",
+   "nexclash/nxcout.py": "de8b4a8912d169cb",
+   "nexclash/pace.py": "349f7749a27bce36",
+   "nexclash/recolour.py": "9c26165e33697acc",
+   "nexclash/recorder.py": "beda3d9e2cc08ed3",
+   "nexclash/records.py": "6401367eddcf12a0",
+   "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
+   "nexclash/rzx.py": "90008c9ca09c51bc",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
+   "nexclash/soak.py": "88d45b5832823b43",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/userflow.py": "6779aabcf5d969cf",
+   "nexclash/verify.py": "e49b2afbdf721760",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "d2ee8750f12dfa92",
+   "rom": "e50ee485fb4a21d2"
+  },
+  "date": "2026-11-28"
+ }
+}

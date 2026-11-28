@@ -18,6 +18,7 @@ ENGINES = [
     ('cisco_heat', 'is_cisco_heat', None),                               # Cisco Heat (128K), smooth engine
     ('winter_sports', 'is_winter_sports', None),                        # Winter Sports (48K), six tape events embedded; plain build
     ('stock_car_3d', 'is_stock_car_3d', None),                           # 3D Stock Car Championship (48K)
+    ('alien_highway', 'is_alien_highway', None),                     # Alien Highway (48K), tape target
     ('highway_encounter', 'is_highway_encounter', None),             # Highway Encounter (48K), optional Enhanced
     ('exolon', 'is_exolon', None),                                   # Exolon (128K), optional Enhanced
     ('bruce_lee', 'is_bruce_lee', None),                                # Bruce Lee (48K), optional Enhanced
