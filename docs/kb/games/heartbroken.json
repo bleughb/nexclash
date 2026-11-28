@@ -1,0 +1,201 @@
+{
+ "game": "heartbroken",
+ "schema": 1,
+ "machine": "48K",
+ "engine": "unknown",
+ "inputs": {
+  "z80": "eabd89a2fd007bccfd3dddb7aecf558b",
+  "rzx": [
+   "f211b806481ce52d8acc31d99ea8fb2c"
+  ],
+  "args": [
+   15000,
+   null,
+   null,
+   6,
+   false
+  ]
+ },
+ "frames": 15001,
+ "model": "Masked screen plots using a saved background, plus ROM-printed figures",
+ "pacing": "interrupts on",
+ "interrupts_accepted": 14244,
+ "source_buffers": {
+  "63709": [
+   [
+    23296,
+    23487,
+    4319632
+   ]
+  ],
+  "52384": [
+   [
+    58816,
+    58943,
+    36336
+   ]
+  ]
+ },
+ "coverage_gaps": 0,
+ "plain": {
+  "file": "heartbroken.nex",
+  "tail": "WARNING: no proven-safe tail location; converter default used",
+  "boot": "OK (registers, RAM, ROM view, paging)"
+ },
+ "outcome": "stage 1 feasibility, overlap and saved-figure ownership unresolved",
+ "routines": [
+  {
+   "routine": 63709,
+   "role": "screen copier",
+   "pixel_bytes": 1003524,
+   "attr_bytes": 14516,
+   "block_copy_bytes": 542844,
+   "calls": 6404,
+   "T_median": 68590,
+   "fingerprint": {
+    "n": 4,
+    "full": "aebc09c812",
+    "win": [
+     "aebc09c812"
+    ]
+   },
+   "callers": 16
+  },
+  {
+   "routine": 2852,
+   "role": "plotter",
+   "pixel_bytes": 244664,
+   "attr_bytes": 2,
+   "block_copy_bytes": 0,
+   "calls": 30592,
+   "T_median": 1533,
+   "callers": 1
+  },
+  {
+   "routine": 3035,
+   "role": "attribute writer",
+   "pixel_bytes": 0,
+   "attr_bytes": 30601,
+   "block_copy_bytes": 0,
+   "calls": 30601,
+   "T_median": 154,
+   "callers": 1
+  },
+  {
+   "routine": 64089,
+   "role": "attribute writer",
+   "pixel_bytes": 0,
+   "attr_bytes": 5376,
+   "block_copy_bytes": 0,
+   "calls": 30264,
+   "T_median": 1993,
+   "fingerprint": {
+    "n": 10,
+    "full": "26a4585893",
+    "win": [
+     "522b1445ac",
+     "8b9514611a",
+     "9f883ec038",
+     "cf8edfb1d0",
+     "e4430d4dc4"
+    ]
+   },
+   "callers": 23
+  },
+  {
+   "routine": 64998,
+   "role": "attribute writer",
+   "pixel_bytes": 0,
+   "attr_bytes": 2688,
+   "block_copy_bytes": 0,
+   "calls": 36089,
+   "T_median": 723,
+   "fingerprint": {
+    "n": 8,
+    "full": "d9a7ad0cca",
+    "win": [
+     "0aed8cfcb1",
+     "3cd9cbfefa",
+     "edb5cf566f"
+    ]
+   },
+   "callers": 2
+  },
+  {
+   "routine": 50679,
+   "role": "attribute writer",
+   "pixel_bytes": 0,
+   "attr_bytes": 2352,
+   "block_copy_bytes": 0,
+   "calls": 3182,
+   "T_median": 74469,
+   "fingerprint": {
+    "n": 78,
+    "full": "7bb058fc95",
+    "win": [
+     "06473ab1ed",
+     "11272ec683",
+     "1562430e7c",
+     "16ece27387",
+     "1742d30f9e",
+     "21fa7dfdba",
+     "2713541d4f",
+     "2a6b87a84c",
+     "30f77a7bb7",
+     "3173f3a720",
+     "35b5e4e51e",
+     "3db76ff84e",
+     "3e3fd4def4",
+     "462d1901fd",
+     "46e1d1a17a",
+     "487b24d0c4",
+     "48a714a934",
+     "4910b8cd2e",
+     "4a44851b80",
+     "4afde51f3c",
+     "4b487685ac",
+     "4bd584999e",
+     "4d7c84ccfd",
+     "511e5d9650",
+     "54e50c6491",
+     "576b662e47",
+     "57ba3ea31d",
+     "60ede56b5e",
+     "648e26f1fa",
+     "690fa6c9b9",
+     "6c01f4e1ca",
+     "6e59169d12",
+     "822bee7a97",
+     "84494bf72b",
+     "857ef98596",
+     "8aea9910a2",
+     "8d5c8e554c",
+     "8f2c2685cb",
+     "904c7994df",
+     "9bf3e2a1d9",
+     "9d17858e3b",
+     "9d71f0187d",
+     "9f9c989686",
+     "a4f329a8ff",
+     "a92d77ab36",
+     "ac5c1ee70b",
+     "bf6d42532b",
+     "c1c1a47b52",
+     "c2d05177ac",
+     "c857b215ca",
+     "cdc4eaa6cf",
+     "d1e0167908",
+     "eda6219c32",
+     "f4dc8a19e4",
+     "fc223e6156",
+     "fe77319482"
+    ]
+   },
+   "callers": 1
+  }
+ ],
+ "title": "Heartbroken",
+ "notes": [
+  "F8DD dispatches USR calls. E700 draws the mask. See games/heartbroken.md for the two replay counterexamples."
+ ]
+}
