@@ -60,21 +60,21 @@
  "outputs": {
   "plain": {
    "file": "alien_8.nex",
-   "md5": "2c31bebbe1f00919adfedc0efe61fec3"
+   "md5": "bf107e59d0a9d51820a067b119916a90"
   },
   "enhanced": {
    "file": "alien_8_enhanced.nex",
-   "md5": "10ba4d4da539653d86bce00083247bff"
+   "md5": "185d218f6b0bd77d46ce5e10609ef6dc"
   }
  },
  "repro": [],
  "status": {
   "title": "Alien 8",
   "engine_col": "alien_8 (alien_8.md)",
-  "build": "v1.2; default alien_8.nex e89ed13a (original look, figures as hardware sprites over Layer 2, whole Sinclair alt ROM, original loading screen; 1.2: palette entries are the Next's ULA colours, differs from 1.1 only in those bytes, nothing drawn differently); Enhanced alien_8_enhanced.nex 5c08c856 (the owner's painting of every figure, dark grey floor; unchanged, equals the published .nxc 1.1's)",
-  "software": "pilot release suite (outside selftest): 18,000-frame recording per mode, 57,730 hook comparisons with R and 48K RAM, source-pixel composition; 5 of 5 negatives; 88 ABI, 152 whole-sound, 1,504 IRQ cases; JNext pace 18 paired trials, steady idle and walking within 2%; 20,000-frame native soaks; real loader byte-exact (default, Enhanced, trainers); auto: both builds boot-checked with R",
+  "build": "v1.6 Enhanced 185d218f (opaque play area, live ULA HUD, room ink and sprites held until the first full publication). Default bf107e59 is byte-identical to 1.5. Both keep the 1.5 copy-rectangle clip.",
+  "software": "1.6 pilot: 18,000 recorded frames and 2,877 publications per mode. All 536 native frames around four doorway crossings matched. Three injected display faults caught. Both builds boot-checked. 18 paired pace trials: idle and walking exceed the historical 2% target in both 1.5 and 1.6. See games/alien_8.md for windows and v27 checks.",
   "hardware": "untested",
-  "next": "hardware checklist; a cheaper cold room rebuild (death pause); an in-repository verify"
+  "next": "owner's KS3 test of 1.6 Enhanced at doorways, HUD, foreground order and cold redraw; an in-repository verify"
  },
  "checks": [
   "asm2profile:alien_8"
@@ -89,10 +89,10 @@
  ],
  "checked": {
   "deps": {
-   "asm/alien_8_actor.asm": "d0f5b953aa05b1ec",
+   "asm/alien_8_actor.asm": "29804a589b612561",
    "asm/alien_8_dirty.asm": "55d24e8f9d21c395",
-   "asm/alien_8_hooks.asm": "0f8cc7cd1e965708",
-   "asm/alien_8_primitive.asm": "e9c5a24b92c83be9",
+   "asm/alien_8_hooks.asm": "825e149d283d02e5",
+   "asm/alien_8_primitive.asm": "0c1b0f1a47a97b75",
    "asm/alien_8_queue.asm": "2bc3f31eb968847a",
    "asm/alien_8_sound_targets.asm": "d8ee46ece60ff798",
    "asm/alien_8_sprite_cache.asm": "dc46c0a2dce8d156",
@@ -101,35 +101,45 @@
    "asm/lib/hlib_iff.asm": "b63b400926847660",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
-   "asm/lib/hlib_speed.asm": "573544bd5964af2d",
-   "docs/profiles/alien_8.json": "4b105a25f683b9bb",
+   "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
+   "docs/profiles/alien_8.json": "d4606ce6c0f0eb80",
    "docs/profiles/alien_8_colours.json": "2b39715ca7c9365e",
    "docs/profiles/alien_8_sound_sites.json": "2d3b8fb82f926afa",
-   "nexclash.py": "04157df11540c17d",
-   "nexclash/alien_8.py": "6720ecfe728cf11c",
+   "nexclash.py": "4a87a4de972a122f",
+   "nexclash/alien_8.py": "3ab0afce0e9cb7e8",
+   "nexclash/analyse.py": "9068c7834f1f1923",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "b22123bdf2572c9b",
+   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "2abd23b537c0b5d4",
-   "nexclash/hooklib.py": "24241497925658d6",
+   "nexclash/engines.py": "9666a7f032696532",
+   "nexclash/hooklib.py": "d5cfe5321e8ff038",
    "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
-   "nexclash/machine.py": "659903f13de0fcee",
-   "nexclash/nextboot.py": "9272cb3a8c980c98",
-   "nexclash/recolour.py": "6f27e87ef0c47a17",
-   "nexclash/records.py": "a8919d2869b77132",
-   "nexclash/rzx.py": "e018e000440e0274",
-   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/l2pal.py": "69b5300cc237cda8",
+   "nexclash/machine.py": "9c057372f6e27d70",
+   "nexclash/nextboot.py": "f67deed5c0603d2a",
+   "nexclash/nxc.py": "d4c135babd8cd53e",
+   "nexclash/nxcout.py": "f1bf468312cb5367",
+   "nexclash/recolour.py": "28ecc65866678e42",
+   "nexclash/recorder.py": "e5b5892fa1da208b",
+   "nexclash/records.py": "6401367eddcf12a0",
+   "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
+   "nexclash/rzx.py": "90008c9ca09c51bc",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
    "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/userflow.py": "6779aabcf5d969cf",
+   "nexclash/verify.py": "e49b2afbdf721760",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "50684436558662bd",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "87fa56ec227b08ff",
-   "rom": "8c34d957fb2cbbd0"
+   "recipe": "d26b70ebeebc4587",
+   "rom": "e50ee485fb4a21d2"
   },
-  "date": "2026-11-20"
+  "date": "2026-11-27"
  }
 }

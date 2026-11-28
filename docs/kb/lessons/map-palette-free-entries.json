@@ -1,0 +1,26 @@
+{
+ "id": "lesson.map-palette-free-entries",
+ "kind": "method",
+ "claim": "An Enhanced palette fits a 4-bit sprite engine with Spectrum default colours when the map changes only entries no figure's cell colours use (PAL_FREE): unpainted figures keep the game's colours.",
+ "limit": "As many new colours as unused entries (Altered Beast 4, Spellbound 5); the boot check compares the loaded palette with the map's, and recolour rewrites it.",
+ "evidence": [
+  {
+   "game": "games/altered_beast.md",
+   "text": "Enhanced colours (2026-11-27): the map's palette may change only entries 1, 9, 12, 13 (no level-1 figure uses them), now skin, skin shade, brown and orange-gold; a figure the map does not paint keeps the game's colours exactly.",
+   "quote": "may change only entries no figure's cell colours use",
+   "shown_on": "analysis"
+  }
+ ],
+ "level": "demonstrated",
+ "area": "toolkit",
+ "words": [
+  "palette",
+  "Enhanced",
+  "colour map",
+  "PAL_FREE",
+  "recolour",
+  "unused entries"
+ ],
+ "review": "extracted",
+ "as_of": "0.1.7"
+}

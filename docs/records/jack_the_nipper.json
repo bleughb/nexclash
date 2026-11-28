@@ -1,0 +1,249 @@
+{
+ "name": "jack_the_nipper",
+ "order": 278,
+ "game": "Jack the Nipper",
+ "doc": "jack_the_nipper.md",
+ "engine": "jack_the_nipper",
+ "representative": true,
+ "reference": "jack_the_nipper",
+ "inputs": {
+  "snapshot": {
+   "name": "jack_the_nipper.z80",
+   "md5": "4c5398b8bcfd88ebd83656f01c3aca21",
+   "path": "jack_the_nipper/jack_the_nipper.z80",
+   "note": "TOSEC Jack the Nipper (1986)(Gremlin Graphics Software)[a].z80: 48K, in game"
+  },
+  "recordings": [
+   {
+    "name": "jacknipper.rzx",
+    "md5": "82d55e2ddfb90e988fccc3cfbd94611d",
+    "path": "jack_the_nipper/jacknipper.rzx",
+    "role": "rzxarchive j/jacknipper.rzx: 108,043 frames (36 min), human play from its own start snapshot"
+   },
+   {
+    "name": "jack_the_nipper.pok",
+    "md5": "0ab81024d52ec7f4c108c6788d9239b8",
+    "path": "jack_the_nipper/jack_the_nipper.pok",
+    "note": "the cheats checked against the code: Immunity 44285 = 58 (the archive's); Infinite lives 43516 = 24, 43517 = 35 (ours: JR over the decrement and the lives redraw; the archive's file pairs 44278 with 44285 and has no lives trainer)"
+   }
+  ]
+ },
+ "modules": [
+  "jack_the_nipper"
+ ],
+ "own_modules": [
+  "jack_the_nipper"
+ ],
+ "data": [
+  "docs/profiles/jack_the_nipper.json",
+  "asm/jack_the_nipper_hooks.asm",
+  "docs/profiles/jack_the_nipper_colours.json",
+  "docs/profiles/jack_the_nipper_palette.json"
+ ],
+ "shared_data": [
+  "asm/lib/hlib_speed.asm",
+  "asm/lib/hlib_pcache.asm",
+  "asm/lib/hlib_dma.asm"
+ ],
+ "rebuild": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [],
+  "decisions": null
+ },
+ "verify": {
+  "args": [
+   "--no-record"
+  ],
+  "rzx": [
+   "jacknipper.rzx"
+  ],
+  "auto_record": false,
+  "minutes": 80,
+  "note": "Figure sites: original and patched draw from one state (registers, every write outside the shadow, none to the real shadow, the scratch writes = the shadow writes moved by 0x4000; H' and stack bytes proven dead). Copier entry: the commit, then the figures drawn since the last copy, modelled from their graphics and masks, against the original's shadow bytes and against the visible sprites pixel for pixel. Also the return PC, no jump into a replaced instruction (0x80CA / 0x80CB only after 0x80C9), no site rewritten, no hook store the slot-1 model leaves out; the boot on through the tail's restore to the game start; the stacking order the setup sets. Units: every site at four speeds (a full run reaches all), the copy as a hide, the store-form check; six negative controls, each by its own failure."
+ },
+ "outputs": {
+  "plain": {
+   "file": "jack_the_nipper.nex",
+   "md5": "e16cf411e852104abab355c4757ed0f5"
+  },
+  "sprites": {
+   "file": "jack_the_nipper_sprites.nex",
+   "md5": "dfee03ae40053a4dcaced7e2b762d3b9"
+  },
+  "enhanced": {
+   "file": "jack_the_nipper_enhanced.nex",
+   "md5": "645fdaf327d95fc2b7591ef99af5d423"
+  }
+ },
+ "repro": [],
+ "status": {
+  "title": "Jack the Nipper",
+  "engine_col": "jack_the_nipper (jack_the_nipper.md)",
+  "build": "jack_the_nipper_sprites.nex: every figure (pickups and effects too) a 4-bit sprite, black lines, the body in the paper of the cell under its feet; + Enhanced (645fdaf3): every figure painted (the owner approved Codex's first pass, 2026-11-26)",
+  "software": "RZX replay verify (draws, copies, picture), units + 6 negative controls; the whole recording on the final build: the stamp, pending; JNext: figures show as sprites",
+  "hardware": "untested",
+  "next": "the whole-recording stamp; colour sheets and recolour (stage 3); the owner tests in JNext / on a Next"
+ },
+ "checks": [
+  "asm2profile:jack_the_nipper"
+ ],
+ "techniques": [
+  {
+   "application": "jack_the_nipper.scratch-redirect",
+   "id": "patch.scratch-redirect",
+   "revision": 1,
+   "target": "the game's own figure draws land in a scratch shadow at slot 1 (RES 6,H at the two returns from 0x87BB)",
+   "phases": []
+  },
+  {
+   "application": "jack_the_nipper.pattern-cache",
+   "id": "optimise.pattern-cache",
+   "revision": 4,
+   "target": "4-bit tile pairs keyed by graphics address + pair, never evicted within an update",
+   "phases": []
+  },
+  {
+   "application": "jack_the_nipper.restore-speed",
+   "id": "patch.restore-speed",
+   "revision": 1,
+   "target": "every hook gives back the caller's NR 7",
+   "phases": []
+  },
+  {
+   "application": "jack_the_nipper.pacing",
+   "id": "detect.pacing-structure",
+   "revision": 2,
+   "target": "no frame sync: the work is the pace; hooks add 1.87 %",
+   "phases": []
+  },
+  {
+   "application": "jack_the_nipper.screen-readers",
+   "id": "detect.gameplay-screen-readers",
+   "revision": 2,
+   "target": "no logic reads figure pixels",
+   "phases": []
+  }
+ ],
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/jack_the_nipper.md#pacing"
+   ],
+   "coverage": "Simulator over the first 3,000 frames (653 updates); no JNext or hardware timing.",
+   "result": "No frame sync; the hooks add 1.87 % of the time, so the game runs about 2 % slower."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/jack_the_nipper.md#dependencies"
+   ],
+   "coverage": "scan --writers over 30,000 frames; the verifier over the whole recording.",
+   "result": "No logic reads figure pixels; R never read; H' and the moved stack bytes dead."
+  },
+  "decision": "Scratch-shadow redirect at slot 1 + 4-bit sprites committed at the copier's entry.",
+  "next_experiment": "JNext pace against the original (verify.update-locked-pace): within 3 %."
+ },
+ "results": [
+  {
+   "application": "jack_the_nipper.scratch-redirect",
+   "check": "state.rzx-differential",
+   "scope": "1 human recording (108,043 frames): the final build verified over 1,000 frames, the whole recording in the stamp (pending); no hardware; JNext start only",
+   "evidence": "games/jack_the_nipper.md \"Results\"",
+   "status": "partial",
+   "build": "3232643e"
+  }
+ ],
+ "checked": {
+  "deps": {
+   "asm/jack_the_nipper_hooks.asm": "5b58e553c9cb062c",
+   "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
+   "asm/lib/hlib_pcache.asm": "e312737f71ce583c",
+   "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
+   "docs/profiles/jack_the_nipper.json": "5c42132e8ebf9b5e",
+   "docs/profiles/jack_the_nipper_colours.json": "6660be97a9b1a513",
+   "docs/profiles/jack_the_nipper_palette.json": "d0c251eb4a16b0c1",
+   "nexclash.py": "4a87a4de972a122f",
+   "nexclash/analyse.py": "9068c7834f1f1923",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "b24e01a406607173",
+   "nexclash/hooklib.py": "d5cfe5321e8ff038",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/jack_the_nipper.py": "1e6f5e0afaeb5eb5",
+   "nexclash/machine.py": "9c057372f6e27d70",
+   "nexclash/nextboot.py": "f67deed5c0603d2a",
+   "nexclash/nxc.py": "d4c135babd8cd53e",
+   "nexclash/nxcout.py": "f1bf468312cb5367",
+   "nexclash/recolour.py": "28ecc65866678e42",
+   "nexclash/recorder.py": "e5b5892fa1da208b",
+   "nexclash/records.py": "6401367eddcf12a0",
+   "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
+   "nexclash/rzx.py": "90008c9ca09c51bc",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/userflow.py": "6779aabcf5d969cf",
+   "nexclash/verify.py": "e49b2afbdf721760",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "4e23a14e3c8af9f9",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-26"
+ },
+ "verified": {
+  "deps": {
+   "asm/jack_the_nipper_hooks.asm": "5b58e553c9cb062c",
+   "asm/lib/hlib_dma.asm": "f1e255146cedd75a",
+   "asm/lib/hlib_pcache.asm": "e312737f71ce583c",
+   "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
+   "docs/profiles/jack_the_nipper.json": "5c42132e8ebf9b5e",
+   "docs/profiles/jack_the_nipper_colours.json": "6660be97a9b1a513",
+   "docs/profiles/jack_the_nipper_palette.json": "d0c251eb4a16b0c1",
+   "nexclash.py": "4a87a4de972a122f",
+   "nexclash/analyse.py": "9068c7834f1f1923",
+   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/dma.py": "b2bdb6ac2a1d5981",
+   "nexclash/dma_check.py": "00d9acf9992a2488",
+   "nexclash/engines.py": "b24e01a406607173",
+   "nexclash/hooklib.py": "d5cfe5321e8ff038",
+   "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
+   "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
+   "nexclash/jack_the_nipper.py": "1e6f5e0afaeb5eb5",
+   "nexclash/machine.py": "9c057372f6e27d70",
+   "nexclash/nextboot.py": "f67deed5c0603d2a",
+   "nexclash/nxc.py": "d4c135babd8cd53e",
+   "nexclash/nxcout.py": "f1bf468312cb5367",
+   "nexclash/recolour.py": "28ecc65866678e42",
+   "nexclash/recorder.py": "e5b5892fa1da208b",
+   "nexclash/records.py": "6401367eddcf12a0",
+   "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
+   "nexclash/rzx.py": "90008c9ca09c51bc",
+   "nexclash/simpool.py": "73ed4a6afdf8df3c",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/userflow.py": "6779aabcf5d969cf",
+   "nexclash/verify.py": "e49b2afbdf721760",
+   "nexclash/z80n.py": "7843b0da444ced1d",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
+   "skoolkit": "10.1",
+   "pillow": "13.0.0",
+   "recipe": "4e23a14e3c8af9f9",
+   "rom": "sinclair"
+  },
+  "date": "2026-11-26"
+ }
+}

@@ -67,6 +67,8 @@ h_render:
         push af
         ld a,i
         jp pe,plain_r                   ; interrupts on: the original
+        ld a,i                          ; read again: an interrupt taken during the first read shows off
+        jp pe,plain_r                   ; (hooklib.iff_audit, card patch.iff-safe-read)
         push bc
         push de
         push hl
@@ -176,6 +178,8 @@ h_copy:
         ld sp,STK
         push af
         ld a,i
+        jp pe,plain_c
+        ld a,i                          ; read again (as h_render)
         jp pe,plain_c
         push bc
         push de
@@ -380,7 +384,7 @@ cal_carry:
         ld (43337),a
         xor a
         ld (cal_f),a
-        ld a,i
+        ld a,i                          ; I as a value
         ld (g_i),a
         ld a,high im2t
         ld i,a
@@ -392,7 +396,7 @@ cal_carry:
         cp 240
         jr nc,.wl                       ; lines 240-255: wait (16 lines at most, inside the window)
 .wok:   call hlib_pace_tick             ; the window counted up to here (its next reading: the render's end)
-        nextreg 0x07,0
+        nextreg 0x07,0                  ; speed: inside the hook: the calibration render is timed at 3.5 MHz, 28 MHz again at cal_r1
         call hlib_line
         ld (cal_l0),hl
         ld (cal_sp),sp                  ; the handler's way out of an abandoned render

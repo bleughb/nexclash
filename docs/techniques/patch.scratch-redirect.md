@@ -23,7 +23,7 @@
               "the scratch page is unmapped and the CPU speed restored at every exit"]
   },
   "owns": {"mmu_slots": "param", "memory": "param", "sprite_ids": "param"},
-  "examples": ["midnight_resistance", "smash_tv"],
+  "examples": ["midnight_resistance", "smash_tv", "jack_the_nipper", "jack_the_nipper_2"],
   "sources": []
 }
 ```
@@ -66,13 +66,17 @@ Scratch page(s) and their slots, hook state in the page, sprites; values in the 
 | A figure stuck on screen after level end (Midnight Resistance) | a loop exit (shop / next level) not hiding | list every exit of the game loop | hide all sprites on that exit | - |
 | Plot corrupts game memory | a loop exit not mapped back | static list of exits | FIX table on every exit | - |
 | Commit writes wrong sprites past 51 | 8-bit SPR + N*5 overflow | full-table unit case | 16-bit arithmetic | - |
+| A register differs after a redirected draw (H', IY) | the moved address left behind | run the original on from its end, once with the patched values, in lockstep | dead when every register and memory agree again (same PC each step) | one register's check (EXX / EX DE,HL move it) |
+| The commit misses scenes (Jack the Nipper) | hooked at one caller of the copier | every caller | hook the copier's entry | - |
 
 ## Verification
 Registers and memory at every converted plot and commit; sprite layer = the original plots' bytes;
-interrupt safety after every hook instruction; negative control; full-table and exit unit cases.
+interrupt safety after every hook instruction; negative control; full-table and exit unit cases. Leftover
+differences (the moved address in a register or below SP): the lockstep run-on above.
 
 ## Evidence
-- games/midnight_resistance.md "Patch (phase B)"; games/smash_tv.md (slot 7 scratch); BRIEFING A3
+- games/midnight_resistance.md "Patch (phase B)"; games/smash_tv.md (slot 7 scratch); jack_the_nipper.md and
+  jack_the_nipper_2.md (slot 1, `dead_after` / `dead_regs`); BRIEFING A3
   (slot5 / slot7 rows); PLAYBOOK 4 (back-buffer row).
 - `grep -n 'def model_decide\|def verify\|def _isafe' nexclash/midres.py`; asm labels `decide`,
   `commit`, `x_m`: asm/midres_hooks.asm; `e_s8`, `commit`: asm/smashtv_hooks.asm.

@@ -14,6 +14,12 @@
    "text": "Group cache keyed by address + shape; every hit is still checked byte for byte against the atlas or parent copy, so the checksum runs on a miss only; hits 3,073, misses 747 of 3,820 visible plots.",
    "shown_on": "unknown",
    "quote": "still checked byte for byte against the atlas or parent copy (rewritten images: armour, levels)"
+  },
+  {
+   "game": "games/jack_the_nipper_2.md",
+   "text": "A 16-bit key of graphics + pair + colour << 11 aliased two figures ($CF50/$43 and $C750/$44 both $E750); the hash now only probes and a hit compares the colour too.",
+   "quote": "pair + colour << 11 aliased, $CF50/$43 and $C750/$44 both $E750",
+   "shown_on": "analysis"
   }
  ],
  "level": "observed",

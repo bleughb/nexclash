@@ -51,7 +51,7 @@ BIG_TAG = b'SET3'; BIG_CARRIER_INDEX = 254; BIG_TABLE_INDEX = 253   # an option 
 BIG_KINDS = (KIND_COLOURS, KIND_LANGUAGE); NEXT_1MB = 47; NEXT_2MB = 111   # what a SET3 may be, in this version; the highest 16K bank of each Next
 NEEDS_HELP = 'Needs a 2MB Next'                     # the help a reader shows on the line of an option the machine has too little memory for
 TEXT_READ = 252; CREDIT_NAME = 32  # what a loader reads of INF1, and keeps of a name
-FIX_LABEL = 'Colour clash fix'; FIX_LABEL_MAX = 25; COLOURS_LABEL = 'Enhanced colours'; COLOURS_LABEL_MAX = 16; MENU_KEYS = ('publisher', 'patch_by', 'colours_by', 'fix_label', 'colours_label', 'version', 'game_language_name')   # the main line's name without INF1's fix_label
+FIX_LABEL = 'Colour clash fix'; FIX_LABEL_MAX = 25; COLOURS_LABEL = 'Enhanced colours'; COLOURS_LABEL_MAX = 16; MENU_KEYS = ('publisher', 'patch_by', 'colours_by', 'fix_label', 'colours_label', 'version', 'game_language_name', 'build_screen')   # the main line's name without INF1's fix_label
 VERSION_MAX = 8; DESC_FIXED = 1; DESC_VERSION = 2; DESC_RULES = 4; DESC_LANG = 8   # INF1's version, shown as v and it; the description's flags
 LANGUAGE_NAME_MAX = 12   # INF1's game_language_name: the Language line's value with no language set chosen, as a set's name is cut
 RULES_TAG = b'OPR1'; RULES_MAX = 32; RULE_SIZE = 5; RULE_EXCLUDES = 1; RULE_NEEDS = 2; RULE_MENU_ONLY = 0x80   # OPR1: which options go together
@@ -60,7 +60,7 @@ NO_CAP = 255; OLD_HOLD = 2; STATES_MAX = 65536   # the description's N with OPR1
 CREDIT = "Built with NexClash by Dean Woodyatt (Bleugh.biz, bleughb/nexclash, GPL-3.0-or-later)"
 PROOF_KEYS = ('replay', 'replay_when', 'emulator', 'emulator_when', 'hardware', 'hardware_when', 'coverage', 'coverage_when',
               'display_samples', 'display_exact', 'display_misses', 'display_approved', 'display_model', 'display_when',
-              'timing', 'timing_when', 'pace', 'pace_measured', 'pace_where', 'pace_when')
+              'timing', 'timing_when', 'pace', 'pace_measured', 'pace_where', 'pace_when', 'logic')
 
 class Wrong(ValueError):
     """The file cannot be applied to this snapshot."""
@@ -1988,7 +1988,7 @@ def set_credits(f, game, patch_by=None, colours_by=None):
                    line(b'colours_by', colours_by) if colours_by is not None else old[b'colours_by']]
             rest = [l for l in lines if not l.startswith((b'patch_by=', b'colours_by='))]
             first = [l for l in rest if l.startswith(b'publisher=')]
-            label = [l for l in rest if l.startswith((b'fix_label=', b'colours_label=', b'version=', b'game_language_name='))]   # the menu's lines first, the fix label, version and language name after the names
+            label = [l for l in rest if l.startswith((b'fix_label=', b'colours_label=', b'version=', b'game_language_name=', b'build_screen='))]   # the menu's lines first, the fix label, version and language name after the names
             body = b''.join(first + new + label + [l for l in rest if l not in first and l not in label])
             if len(b''.join(first + new + label)) > TEXT_READ: raise Wrong('the menu lines must end within the first %d bytes of INF1' % TEXT_READ)
         out.append([t, body])
@@ -2012,7 +2012,7 @@ def set_version(f, game, version):
     return seal(f[:CHECK_AT], out, st)
 
 NOTE_MAX = 1024     # INF1's notes, enhanced_N, changes and tested: one line each, for the .nfo
-INFO_KEYS = ('publisher', 'patch_by', 'colours_by', 'fix_label', 'colours_label', 'version', 'game_language_name', 'build', 'nex_md5', 'nexclash', 'credit',
+INFO_KEYS = ('publisher', 'patch_by', 'colours_by', 'fix_label', 'colours_label', 'version', 'game_language_name', 'build_screen', 'build', 'nex_md5', 'nexclash', 'credit',
              'game_language', 'language_codes', 'text_by', 'trainers_played', 'cheats_source', 'notes', 'changes', 'tested')   # and enhanced_N
 NOTE_KEYS = ('notes', 'changes', 'tested')
 PACE_TARGETS = {'ORIGINAL': 'original', 'SLOWDOWN REMOVED': 'slowdown removed', 'TURBO': 'turbo'}
@@ -2061,6 +2061,7 @@ def check_field(key, value):
     if key == 'fix_label': check_fix_label(value)
     elif key == 'colours_label': check_fix_label(value, 'colours label', COLOURS_LABEL_MAX)
     elif key == 'version': check_version(value)
+    elif key == 'build_screen' and value != 'nex' and not (value.isdigit() and len(value) <= 5 and int(value) < 65536): raise Wrong('build_screen is the offset in the game file of a 6912-byte screen, 0 to 65535, or nex (the patch holds a ULA loading screen)')
     elif key == 'game_language_name': check_language_name(value)
     elif key == 'nex_md5' and not re.fullmatch(r'[0-9a-f]{32}', value): raise Wrong('nex_md5 is 32 lower-case hexadecimal digits')
     elif key == 'game_language' and not re.fullmatch(r'[a-z]{2,3}', value): raise Wrong('game_language is an ISO 639 code, such as en')
@@ -2074,6 +2075,14 @@ def check_field(key, value):
     elif key == 'pace_measured' and not pace_entries(value):
         raise Wrong('pace_measured is entries of SCENE: PENALTY, such as "the first room: +0.15%%", separated by %r' % PACE_SEP)
 
+def check_ula_screen(bl):
+    """Wrong unless the patch's loading screen is a ULA screen alone: one SCR1, index 0, of 1 to 6912 bytes, which
+    build_screen=nex has the loader show at ENTER."""
+    pieces = [d for t, d in bl if t == b'SCR1']
+    if len(pieces) != 1 or pieces[0][0] != 0 or not 0 < struct.unpack_from('<H', pieces[0], 1)[0] <= 6912:
+        raise Wrong('build_screen=nex needs a loading screen that is a ULA screen alone (byte 10 of the .nex header is 2)')
+
+
 def set_field(f, game, key, value):
     """The patch with one field of INF1 or PRF1 set, or removed if value is '': the same nonce and encrypted blocks, with a
     new check value, as credit and version do. INF1 keeps the menu's lines (MENU_KEYS) first, and refuses a change that
@@ -2081,6 +2090,7 @@ def set_field(f, game, key, value):
     block_tag, key = field_place(f, key)
     check_field(key, value)
     st, bl = check_key(f, game)[:2]
+    if key == 'build_screen' and value == 'nex': check_ula_screen(bl)
     new = b'%s=%s\n' % (key.encode(), value.encode()) if value else b''
     out = [[t, d] for t, d in bl]
     if block_tag == b'PRF1' and not any(t == b'PRF1' for t, _ in out):

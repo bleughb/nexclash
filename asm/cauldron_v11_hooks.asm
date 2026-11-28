@@ -269,7 +269,7 @@ e_scl:  push af                 ; 0xDED2: rows 128-191, bytes 0-30 <- 1-31
         ld bc,128*256+191
         ld de,30
         xor a
-        call dotouch
+        call dotall
         pop ix
         pop hl
         pop de
@@ -286,7 +286,7 @@ e_scr:  push af                 ; 0xDEEA: rows 128-191, bytes 1-31 <- 0-30
         ld bc,128*256+191
         ld de,1*256+31
         xor a
-        call dotouch
+        call dotall
         pop ix
         pop hl
         pop de
@@ -544,9 +544,14 @@ dotouch:
         nextreg 0x56,PG
         call spin_t             ; v1.1 (page 26): the incoming speed latched, 28 MHz
         call dotch2
-        call spout_t
+dotout: call spout_t
         nextreg 0x56,0
         ret
+dotall: nextreg 0x56,PG         ; the screen scrolls: dotouch, then every pending sprite hidden (the original shows no
+        call spin_t             ; figure through the scroll; a pending one stayed up until the next draw, after the new
+        call dotch2             ; screen was in: Jon's KS3 play test 2026-11-26)
+        call pall
+        jr dotout
 dotch2: ld (KIND),a             ; (page 26 at slot 6, any speed)
         ld a,b
         ld (RECT),a

@@ -134,8 +134,7 @@ def engine_contract():
 AUTO_LEGACY = {'alien_8', 'bruce_lee', 'bubbler', 'chase_hq', 'green_beret', 'head_over_heels', 'highway_encounter',
                'ice_palace', 'ikari_warriors', 'knight_lore', 'lunar_jetman', 'martianoids', 'movie', 'new_zealand_story',
                'pacmania', 'quazatron', 'rainbow', 'rainbow_z80n', 'rainbow_z80n_sky', 'renegade_v12',
-               'robin_of_the_wood', 'winter_sports',
-               'altered_beast'}   # its negative control runs inside unit_tests ('map negative'): not seen by name
+               'robin_of_the_wood', 'winter_sports'}
 
 
 def auto_contract():

@@ -20,6 +20,9 @@ repo's spec/NXC-FORMAT.md; its README covers `nxc.py` commands.
 - Verify each variant's own state on at least one recording (Cisco Heat: V2 with the car's sprites off,
   stage 1; with the 25 cadence, stage 3). Name toggles by what the player sees (at most 25 characters).
 - Options belong in the patch, not as extra builds: one patch, one menu.
+- A fix to a published tape-target patch: keep every earlier hook address (new code after the last table,
+  same-length call swaps). A moved hook changes the game's site bytes, which come from the player's tape,
+  and `automap_fix.rewrite` refuses that bank; otherwise the hook page is rewritten in place (Cisco Heat 1.2).
 - A whole other build of the same length and bank layout can be a toggle too: `auto` packages what the
   engine declares in NAME_outputs.json "toggles" (Hard Drivin': the smooth route, 3 sites, over the steps
   default, 20; the .nxc 28,861 bytes).

@@ -1,7 +1,7 @@
 {
  "id": "lesson.recorder-128k-not-in-toolkit",
  "kind": "fact",
- "claim": "The shared recorder, analyse, new and verify paths are 48K only (machine.py has no paging), so 128K games need their own recorder with 7FFD paging and their own verifier copy.",
+ "claim": "The shared recorder (machine.py) and analyse / survey take 128K snapshots and recordings with 7FFD paging; the generic TID verifier (verify.py) and nextboot.check stay 48K, so a 128K engine brings its own verifier.",
  "evidence": [
   {
    "game": "games/altered_beast.md",
@@ -40,18 +40,19 @@
   "machine": "128K"
  },
  "enforced_by": [
-  "nexclash.machine.refuse_128k"
+  "nexclash.machine.selfcheck",
+  "nexclash.machine.refuse_128k_rzx"
  ],
  "words": [
   "128K",
   "recorder",
-  "m128.py",
   "7FFD",
   "paging",
   "machine.py",
   "verify.py",
-  "analyse"
+  "analyse",
+  "survey"
  ],
  "review": "source-checked",
- "as_of": "0.1.7"
+ "as_of": "0.1.8"
 }
