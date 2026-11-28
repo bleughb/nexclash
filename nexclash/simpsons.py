@@ -964,6 +964,9 @@ def boot_check(nex, z80, patch):
 
 
 def auto(a, z80, name, out, say):
+    if getattr(a, 'tape', None):
+        from . import simpsons_single
+        return simpsons_single.auto(a, z80, out, say)
     from . import z80tonex as zt
     md5 = lambda p: hashlib.md5(open(p, 'rb').read()).hexdigest()
     os.makedirs(out, exist_ok=True)
@@ -979,7 +982,7 @@ def auto(a, z80, name, out, say):
     patch = Patch(z80=z80, blank=len(ep.planes) if ep else 0)
     say('Engine    : simpsons, level %s (the game\'s memory and both screens stay the original\'s; each figure the draw routine clips -> '
         'sprites at the screen flip); sites %s' % (patch.level or '?', ', '.join('%s 0x%04X' % (k, patch.lv[k]) for k in 'ASNP')))
-    builds, ok = [], True
+    ok = True
     for label, suffix, pt in (('Plain', '', PlainPatch(z80)), ('Sprites', '_sprites', patch), ('Enhanced', '_enhanced', ep)):
         if pt is None:
             continue
@@ -992,8 +995,11 @@ def auto(a, z80, name, out, say):
             lines, _ = palette_lines(cmap, patch.level)
             extra = '  (%d painted shapes, %d palette lines, %d colour pages)' % (len(cmap['levels'][str(patch.level)]), len(lines), len(pt.planes))
         say('%-10s: %s  %s  boot %s%s' % (label, os.path.basename(nex), md5(nex), 'OK' if not bad else 'MISMATCH %s' % str(bad[:3])[:200], extra))
-        if label != 'Plain':
-            builds.append(('Verify' if label == 'Sprites' else 'Painted', pt))
+    return verify_builds(a, patch, ep, say, ok)
+
+
+def verify_builds(a, patch, ep, say, ok=True):
+    builds = [('Verify', patch)] + ([('Painted', ep)] if ep else [])
     states = []
     past_at = 0
     quick = getattr(a, 'quick', None)

@@ -121,12 +121,12 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Gauntlet (gauntlet_tape): `gauntlet_start_sprites.nex` 6d5cc48a5cbe39322780d061f4c38bb2, `gauntlet_start_steady.nex` 2f074c37282bcef8ae1c46915590f236; verified 2026-11-22
 - Heartland (heartland): `heartland.nex` 62ee38aed9832c67c07dd3b4e088db2e, `heartland_sprites.nex` 8ffaeb05bd51a15ec871a5c99c4df7d7, `heartland_enhanced.nex` c51b0e80e16ece6b7902f7e36c4bea9e; verified 2026-11-21
 - Cisco Heat (cisco_heat): `cisco_heat.nex` 0319b44327eebba269c88f9de9954385, `cisco_heat_orig_pace.nex` 95421e2f3ce3534be441a24d07e1f2d5; verified 2026-11-27
-- The Simpsons: Bart vs. the Space Mutants (simpsons_l1): `simpsons_l1.nex` 550b5e66e48fea5b86e244400680e146, `simpsons_l1_sprites.nex` 2ca0c918cccacc4de78ced515164f6ff, `simpsons_l1_enhanced.nex` fee0540c463a383b7af513cc6ab5c15d; verified 2026-11-19
+- The Simpsons: Bart vs. the Space Mutants (simpsons_l1): `simpsons_l1.nex` 550b5e66e48fea5b86e244400680e146, `simpsons_l1_sprites.nex` 2ca0c918cccacc4de78ced515164f6ff, `simpsons_l1_enhanced.nex` fee0540c463a383b7af513cc6ab5c15d; verified 2026-11-28
 - Stormbringer (128K) (stormbringer): `stormbringer.nex` 74f64c674eda981e940da907018aa9b2, `stormbringer_sprites.nex` 218f92e530c6c658f37e51d6c24ce641; verified 2026-11-21
-- The Simpsons: Bart vs. the Space Mutants (simpsons_l2): `simpsons_l2.nex` b3a0365e78f6ac5d9b03240b0245646f, `simpsons_l2_sprites.nex` 3479fe6f18c92c31ec8586c8493787f9, `simpsons_l2_enhanced.nex` 27db6520e93230788b7ff1d5bc3f430d; verified 2026-11-19
-- The Simpsons: Bart vs. the Space Mutants (simpsons_l3): `simpsons_l3.nex` b126213428643bd14d968451e33c01df, `simpsons_l3_sprites.nex` 0fd724c79f63ebfdeaff2bba6624de9e, `simpsons_l3_enhanced.nex` 0bb06480bdda67a094328ea483b39db7; verified 2026-11-19
-- The Simpsons: Bart vs. the Space Mutants (simpsons_l4): `simpsons_l4.nex` 0ead1c229f029f4a3233b557665f4787, `simpsons_l4_sprites.nex` 6e0a23e9ea0a3a722f19f9c28da38256, `simpsons_l4_enhanced.nex` dff5e185e031e6b0742de631e1f77dbf; verified 2026-11-19
-- The Simpsons: Bart vs. the Space Mutants (simpsons_l5): `simpsons_l5.nex` 10d969b7422baa73a56d6ca966d5ab1a, `simpsons_l5_sprites.nex` bd94f22adc91666f0f246aa59d6dd14e, `simpsons_l5_enhanced.nex` 05a6527d7607b730667358be7fd2fea5; verified 2026-11-19
+- The Simpsons: Bart vs. the Space Mutants (simpsons_l2): `simpsons_l2.nex` b3a0365e78f6ac5d9b03240b0245646f, `simpsons_l2_sprites.nex` 3479fe6f18c92c31ec8586c8493787f9, `simpsons_l2_enhanced.nex` 27db6520e93230788b7ff1d5bc3f430d; verified 2026-11-28
+- The Simpsons: Bart vs. the Space Mutants (simpsons_l3): `simpsons_l3.nex` b126213428643bd14d968451e33c01df, `simpsons_l3_sprites.nex` 0fd724c79f63ebfdeaff2bba6624de9e, `simpsons_l3_enhanced.nex` 0bb06480bdda67a094328ea483b39db7; verified 2026-11-28
+- The Simpsons: Bart vs. the Space Mutants (simpsons_l4): `simpsons_l4.nex` 0ead1c229f029f4a3233b557665f4787, `simpsons_l4_sprites.nex` 6e0a23e9ea0a3a722f19f9c28da38256, `simpsons_l4_enhanced.nex` dff5e185e031e6b0742de631e1f77dbf; verified 2026-11-28
+- The Simpsons: Bart vs. the Space Mutants (simpsons_l5): `simpsons_l5.nex` 10d969b7422baa73a56d6ca966d5ab1a, `simpsons_l5_sprites.nex` bd94f22adc91666f0f246aa59d6dd14e, `simpsons_l5_enhanced.nex` 05a6527d7607b730667358be7fd2fea5; verified 2026-11-28
 - Olli and Lissa: The Ghost of Shilmoore Castle (olli_and_lissa): `olli_and_lissa.nex` cc6e717b9aa35e6d08d5a772bd5c7310, `olli_and_lissa_sprites.nex` 76d0bbf64039237d7270eb181f7c4919, `olli_and_lissa_enhanced.nex` 75c66a0ddedf6c218b5d55cde3bc51a0; verified 2026-11-20
 - Olli and Lissa III: The Candlelight Adventure (olli_and_lissa_3): `olli_and_lissa_3.nex` bed57f9136b944c575ab52f9f6f8c525, `olli_and_lissa_3_sprites.nex` a536ceb5a6e77b0fcb1b52ec3deddfaf, `olli_and_lissa_3_enhanced.nex` d529d4139e9adbb4a105369533575e9f; verified 2026-11-20
 - Olli and Lissa II: Halloween (olli_and_lissa_2): `olli_and_lissa_2.nex` 2713f076427d909706660b204c27e1a1, `olli_and_lissa_2_sprites.nex` 5b710e071b0623cab32e48c8966863f2, `olli_and_lissa_2_enhanced.nex` ae8c4eaa53adf3286c768cc78e4c3347; verified 2026-11-20
@@ -143,6 +143,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Elite (standard Firebird release) (elite_std): `elite_std.nex` 4b3cbe16f9839c4746e04f92f1ecbf7e; verified 2026-11-28
 - Jack the Nipper (jack_the_nipper): `jack_the_nipper.nex` e16cf411e852104abab355c4757ed0f5, `jack_the_nipper_sprites.nex` dfee03ae40053a4dcaced7e2b762d3b9, `jack_the_nipper_enhanced.nex` 645fdaf327d95fc2b7591ef99af5d423; verified 2026-11-26
 - Jack the Nipper II - In Coconut Capers (jack_the_nipper_2): `jack_the_nipper_2.nex` e63f00da62e1ac853765bf7825f2241a, `jack_the_nipper_2_sprites.nex` 24d8b204ec3948616bd372dbc2e497f2, `jack_the_nipper_2_enhanced.nex` bc99c10512829195519e0179f19847bb; verified 2026-11-26
+- The Simpsons: Bart vs. the Space Mutants (simpsons_single): `simpsons_sprites.nex` 79f7211543ae84a1ec95fcaa08fa6dd2, `simpsons_enhanced.nex` 5632d621e8974795bf1d36f8ac26517c; verified 2026-11-28
 <!-- end generated -->
 
 ## Evidence records + selective selftest - 2026-10-13
