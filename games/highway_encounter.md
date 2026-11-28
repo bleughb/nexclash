@@ -326,4 +326,4 @@ and whole-hook native measurement. No DMA gain or hardware result is claimed.
 
 - 2026-11-10: full frozen verification stamped, exact NXC and six actual-loader modes passed.
   CPU-only transition limitation measured separately and retained in package/handoff notes.
-- 2026-11-27: KS3 band traced (Codex + KS3 test D11) to Layer 2 on page 14; Layer 2 moved to banks 11-13, guard, BRIEFING A1.
+- 2026-11-27: KS3 band traced (review + KS3 test D11) to Layer 2 on page 14; Layer 2 moved to banks 11-13, guard, BRIEFING A1.
