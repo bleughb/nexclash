@@ -16,6 +16,8 @@ import hashlib
 import json
 import os
 
+from . import green_beret_art as art
+
 ROM_ORG = 0x386E
 ALT_PAGE = 24
 SCRPAGE = 26
@@ -283,10 +285,14 @@ def trimmed_map(get, cmap, prof=None):
     return out, n
 
 
-def load_colours(path=None):
+ARCADE_COLOURS = 'docs/profiles/green_beret_arcade_colours.json'
+
+
+def load_colours(path=None, banked=False):
     from . import coloursheet as cs
     from .recolour import build_colours_path
-    return cs.load(path or build_colours_path(COLOURS))
+    default = os.path.join(_HERE, '..', ARCADE_COLOURS) if banked else COLOURS
+    return cs.load(path or build_colours_path(default))
 
 
 def colour_inputs_md5(get, prof=None):
@@ -376,16 +382,21 @@ class PlainPatch:
 class GreenBeretPatch:
     name = 'Green Beret figures -> hardware sprites (altrom hooks, plots into a scratch page at slot 2)'
 
-    def __init__(self, prof=None, rom_code=None, colours=None, trim=True, screen=None):
+    def __init__(self, prof=None, rom_code=None, colours=None, trim=True, screen=None, banked=False):
+        self.banked = banked
         self.trim = trim
         self.screen = screen
         self.trims = {}
         self.prof = prof or load_profile()
-        self.colours = load_colours() if colours is None else colours
+        if banked:
+            self.prof = dict(self.prof, hooks=self.prof['arcade_hooks'])
+        self.colours = load_colours(banked=banked) if colours is None else colours
         h = self.prof['hooks']
         self.rom_code = rom_code or bytes.fromhex(h['rom'])
         self.syms = {k: int(v, 16) for k, v in h['syms'].items()}
         self.stub_extra = bytes.fromhex(h['setup'])
+        if banked:
+            self.stub_extra += art.palette_data()
         self.setup_call = 0xD000
         self.hook_page_data = b''
         self.uses_printer_buffer = True
@@ -435,6 +446,11 @@ class GreenBeretPatch:
     def prepare(self, peek):
         cmap, n = trimmed_map(peek, self.colours, self.prof) if self.trim else (self.colours, 0)
         self.index, self.colour_pages, self.cinfo = colour_tables(peek, cmap, self.prof)
+        if self.banked:
+            table = bytearray(4096)
+            for gfx, _, _, _ in images(self.prof):
+                table[gfx >> 4] = art.group(gfx) << 4
+            self.index = self.index[:4096] + table
         self.cinfo['graphics bytes with trimmed edge pixels'] = n
         self.trims = {}
         if self.trim:
@@ -457,6 +473,7 @@ class NextState:
         self.pages = dict(getattr(patch, 'colour_pages', {}) or {}) if patch is not None else {}
         if patch is not None:
             self.pages[OVPAGE] = patch.index
+        self.banked = bool(getattr(patch, "banked", False))
         self.attr = [[0, 0, 0, 0, 0] for _ in range(128)]
         self.pat = bytearray(16384)
         self.scratch = bytearray(8192)
@@ -516,9 +533,9 @@ class NextState:
                     if b:
                         x = x0 + 2 * k
                         if b >> 4 and WIN[0] <= x <= WIN[1]:
-                            out[(x, y)] = b >> 4
+                            out[(x, y)] = (a[2] & 0xF0) | (b >> 4)
                         if b & 15 and WIN[0] <= x + 1 <= WIN[1]:
-                            out[(x + 1, y)] = b & 15
+                            out[(x + 1, y)] = (a[2] & 0xF0) | (b & 15)
         return out
 
 
@@ -628,6 +645,9 @@ def _png(mem_get, ps, ns, path):
     right = ula(lambda a: ps[a - 0x4000])
     rp = right.load()
     for (x, y), c in ns.composite().items():
+        if ns.banked:
+            rp[x, y] = art.RGB[c >> 4][c & 15]
+            continue
         v = PALETTE[c]
         rp[x, y] = ((v >> 5) * 255 // 7, ((v >> 2) & 7) * 255 // 7, (v & 3) * 85)
     sh = Image.new('RGB', (2 * 256 + 8, 192), (64, 64, 64))
@@ -1253,6 +1273,28 @@ RECOLOUR = {'game': 'green_beret', 'output': 'sprites', 'colours': 'docs/profile
             'note': NOTE}
 
 
+def banked_page(page, prof):
+    return page[:8192] == page_image(prof=dict(prof, hooks=prof['arcade_hooks']))
+
+
+def colours_for_build(nex):
+    from .recolour import banks
+    return ARCADE_COLOURS if banked_page(banks(nex)[13], load_profile()) else RECOLOUR['colours']
+
+
+def check_sheet(nex, layout):
+    banked = colours_for_build(nex) == ARCADE_COLOURS
+    groups = layout.get('group_palettes')
+    if banked != (groups is not None):
+        raise ValueError('use the sheet issued for the matching Green Beret palette mode')
+    if banked:
+        if groups != [[list(c) for c in row] for row in art.RGB]:
+            raise ValueError('the sheet has different arcade swatches')
+        for comp in layout['composites']:
+            if any(art.group(int(p['id'].split(':')[0], 16)) != comp['group'] for p in comp['parts']):
+                raise ValueError('the figure has a different palette group in this build')
+
+
 def recolour(nex, cmap):
     from .recolour import banks, nex_peek, splice
     have = banks(nex)
@@ -1265,14 +1307,17 @@ def recolour(nex, cmap):
     got = colour_inputs_md5(peek, prof)
     if [want.get('md5'), want.get('bytes')] != list(got):
         raise ValueError('game graphics differ from the expected snapshot (%s / %d bytes, expected %s)' % (got[0], got[1], want))
-    p = GreenBeretPatch(prof, colours=cmap)
+    banked = banked_page(have[13], prof)
+    p = GreenBeretPatch(prof, colours=cmap, banked=banked)
+    if banked and have.get(10, b'')[0x1000:0x1000 + len(p.stub_extra)] != p.stub_extra:
+        raise ValueError('the arcade palette in this build differs from its issued swatches')
     for a, old, new in p.sites:
         if bytes(peek(a + k) for k in range(len(new))) != new:
             raise ValueError('patch site 0x%04X does not hold this build\'s hook' % a)
     img, rb = p.page + bytes(8192), p.regblock + 20 - 0x2000    # restore_tail's bytes (per snapshot) sit in rb..0x3D00
     if have[12][:rb] != img[:rb] or have[12][0x1D00:] != img[0x1D00:]:
         raise ValueError('alt ROM image / hook code differs from this version\'s (rebuild with nexclash.py auto)')
-    if have[13][:8192] != page_image():
+    if have[13][:8192] != p.scratch0:
         raise ValueError('hook page differs from this version\'s (rebuild with nexclash.py auto)')
     p.prepare(peek)
     out, changed = splice(nex, {b: p.extra_banks[b] for b in (13,) + COLOUR_BANKS})
@@ -1281,10 +1326,11 @@ def recolour(nex, cmap):
     return out, info
 
 
-def image_part(get, img):
+def image_part(get, img, banked=False):
     """The coloursheet part of one image: body code 1, dark code 2, clear code 0."""
     gfx, mask, rows, kind = img
     px, ent = [], {}
+    cut = trims_body(get, img) if banked else set()
     w = 32 if kind in (0, 3) else 16
     for y, col, a, m in cells_of(img):
         g = get(a)
@@ -1293,6 +1339,8 @@ def image_part(get, img):
         for bit in range(8):
             gb, mb = g >> (7 - bit) & 1, mm >> (7 - bit) & 1
             code, dflt = (2, 2) if gb else ((0, 0) if mb else (1, 1))
+            if (col * 8 + bit, y) in cut:
+                dflt = 0
             px.append((col * 8 + bit, y, '%04X' % a, bit, code, dflt))
     return {'id': '%04X:%d:%d' % (gfx, rows, kind), 'size': 1, 'w': w, 'h': rows, 'x': 0, 'y': 0, 'mir': 0, 'pixels': px,
             'entries': ent, 'dx': 0, 'dy': 0, 'dmir': 0, 'vmir': 0, 'group': 0}
@@ -1319,21 +1367,25 @@ def capture(rzx_paths):
     return seen
 
 
-def sheets(z80, out_dir, prefix='green_beret', colours=None, say=print):
+def sheets(z80, out_dir, prefix='green_beret', colours=None, say=print, banked=False):
     from . import coloursheet as cs
     from skoolkit.snapshot import Snapshot
     mem = Snapshot.get(z80).memory
     get = lambda a: mem[a & 0xFFFF]
     prof = load_profile()
-    comps = [{'count': 1, 'group': 0, 'parts': [image_part(get, i)]} for i in images(prof)]
-    cmap = load_colours() if colours is None else colours
-    rgb = cs.palette_rgb(PALETTE)
+    comps = [{'count': 1, 'group': art.group(i[0]) if banked else 0, 'parts': [image_part(get, i, banked)]} for i in images(prof)]
+    cmap = load_colours(banked=banked) if colours is None else colours
+    rgb = art.RGB[0] if banked else cs.palette_rgb(PALETTE)
+    groups = art.RGB if banked else None
+    if banked:
+        comps.sort(key=lambda c: c['group'])
     pre = os.path.join(out_dir, prefix)
     ident = colour_identity(get, prof)
-    n1 = cs.write(cs.choose(comps, {}), pre + '_PAINTING_SPRITES.png', pre + '_PAINTING_SPRITES_layout.json', rgb,
-                  colours=cmap, paint_clear=True, identity=ident)
+    painting = cs.choose(comps, {}, range(len(art.GROUPS)) if banked else ())
+    n1 = cs.write(painting, pre + '_PAINTING_SPRITES.png', pre + '_PAINTING_SPRITES_layout.json', rgb,
+                  colours=cmap, paint_clear=True, identity=ident, group_palettes=groups)
     n2 = cs.write(comps, pre + '_REFERENCE_ALL_SPRITES.png', pre + '_REFERENCE_ALL_SPRITES_layout.json', rgb,
-                  colours=cmap, paint_clear=True, identity=ident)
+                  colours=cmap, paint_clear=True, identity=ident, group_palettes=groups)
     say('Sheets    : %d images; painting sheet %d figures, reference %d' % (len(comps), n1, n2))
     return n1, n2
 

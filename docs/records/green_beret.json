@@ -42,10 +42,12 @@
   ]
  },
  "modules": [
-  "green_beret"
+  "green_beret",
+  "green_beret_art"
  ],
  "own_modules": [
-  "green_beret"
+  "green_beret",
+  "green_beret_art"
  ],
  "data": [
   "docs/profiles/green_beret.json",

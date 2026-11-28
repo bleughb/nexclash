@@ -1317,6 +1317,28 @@ def coloursheet_check():
     img = Image.open(png).convert('RGB')
     L = json.load(open(lay))
     res = []
+    # Two figures may share a pattern nibble while taking different RGB colours.
+    groups = [pal, list(pal)]
+    groups[1][10] = (212, 111, 19)
+    group_parts = []
+    for bank in range(2):
+        fig = cs.Collector()
+        fig.add_frame([dict(part(str(bank), 0, 0, 0), group=bank)])
+        group_parts.extend(fig.composites())
+    gp, gl = os.path.join(work, 'banks.png'), os.path.join(work, 'banks.json')
+    cs.write(group_parts, gp, gl, pal, group_palettes=groups)
+    layout = cs.load_layout(gl)
+    image = Image.open(gp).convert('RGB')
+    for comp in layout['composites']:
+        image.putpixel((comp['x'] + 1, comp['y']), groups[comp['group']][10])
+    image.save(gp)
+    cmap, _ = cs.read(gp, gl)
+    _, chg, _, conflicts, _ = cs.changes(gp, gl)
+    cs.redraw(gl, cmap, gp, gl)
+    res.append(('4-bit banks: local swatches, nibble imports and exact redraw',
+                chg == {('00', 1): ('C', 10), ('10', 1): ('C', 10)} and not conflicts and
+                image.tobytes() == Image.open(gp).convert('RGB').tobytes() and
+                all(image.getpixel((x, y)) == groups[g][n] for x, y, n, g in layout['swatches'])))
     widepal = pal + [(123, 45, 67), (17, 181, 91)]
     wp = dict(part('wide', 0, 0, 0))
     wp['pixels'] = [(c,r,k,b,code,16 if code else 0) for c,r,k,b,code,d in wp['pixels']]

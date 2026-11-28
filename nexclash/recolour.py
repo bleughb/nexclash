@@ -103,14 +103,14 @@ def build_colours_path(default):
     return os.environ.get('NEXCLASH_COLOURS') or default
 
 
-def colours_path(mod):
-    p = mod.RECOLOUR['colours']
+def colours_path(mod, nex=None):
+    p = mod.colours_for_build(nex) if nex is not None and hasattr(mod, 'colours_for_build') else mod.RECOLOUR['colours']
     return p if os.path.isabs(p) else os.path.join(HERE, p)
 
 
-def build_map(mod):
+def build_map(mod, nex=None):
     """The colour map the build uses ({} when the engine has none yet)."""
-    p = colours_path(mod)
+    p = colours_path(mod, nex)
     return load_map(p, mod) if os.path.exists(p) else {}
 
 
@@ -204,7 +204,11 @@ def check_identity(mod, name, nex, layouts):
     want = build_identity(mod, nex)
     status = []
     for lp in layouts:
-        got = json.load(open(lp)).get('identity')
+        from .coloursheet import load_layout
+        layout = load_layout(lp)
+        if hasattr(mod, 'check_sheet'):
+            mod.check_sheet(nex, layout)
+        got = layout.get('identity')
         n = os.path.basename(lp)
         if want is None:
             status.append('%s: unverified (engine %s has no colour_identity)' % (n, name))
@@ -240,7 +244,7 @@ def current_map(nex, mod, nex_path, onto=None):
         return m, '--onto %s%s' % (onto, '' if same else ' (NOTE: it does not reproduce this build\'s colours)')
     side = os.path.splitext(nex_path)[0] + '_colours.json'
     for where, m in (('sidecar %s' % os.path.basename(side), load_map(side, mod) if os.path.exists(side) else None),
-                     ('the build default %s' % mod.RECOLOUR['colours'], build_map(mod)),
+                     ('the build default %s' % os.path.basename(colours_path(mod, nex)), build_map(mod, nex)),
                      ('the empty map (unpainted build)', {})):
         if m is not None and mod.recolour(nex, m)[0] == nex:
             return m, where
@@ -369,7 +373,7 @@ def run(nex_path, colours, layout=None, game=None, output=None, say=print, onto=
             say('-> %s' % f)
     for m in missing:
         say('NOTE: %s' % m)
-    say('(copy %s to %s to make it the build default; then rebuild + verify)' % (os.path.basename(cj), mod.RECOLOUR['colours']))
+    say('(copy %s to %s to make it the build default; then rebuild + verify)' % (os.path.basename(cj), os.path.relpath(colours_path(mod, nex), HERE)))
     return output
 
 

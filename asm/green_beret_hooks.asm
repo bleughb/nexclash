@@ -437,8 +437,18 @@ n_y:    add a,32
         add a,b
         pop bc
         nextreg 0x36,a
+        IFDEF GROUP_PALETTES
+        push hl
+        ld a,(vent)
+        ld hl,0x5840            ; palette offset remembered for each of the 32 pattern cache entries
+        add hl,a
+        ld a,(hl)
+        pop hl
+        or h                    ; high screen X is 0 or 1
+        ELSE
         ld a,h
         and 1
+        ENDIF
         nextreg 0x37,a
         ld a,c
         srl a
@@ -720,6 +730,21 @@ send:   call ovapply
 ; plane: for each line 16 colour bytes then 16 keep masks. Interrupts are off here and the graphics are read.
 ovapply:
         nextreg 0x56,OVPAGE
+        IFDEF GROUP_PALETTES
+        ld hl,(vgfx)
+        ld b,4                  ; 4K lookup in OVPAGE: graphics address >> 4
+.shift: srl h
+        rr l
+        djnz .shift
+        ld a,h
+        or 0xD0
+        ld h,a
+        ld c,(hl)
+        ld a,(vent)
+        ld hl,0x5840
+        add hl,a
+        ld (hl),c
+        ENDIF
         ld hl,0xC000
         ld c,(hl)
         inc hl
@@ -782,6 +807,19 @@ PAGE_END:
 ; ---- setup, run once by the NEX stub ----
         ORG 0xD000
 setup:  nextreg 0x43,0x20
+        IFDEF GROUP_PALETTES
+        nextreg 0x40,0
+        ld hl,.pal             ; count, then two NR $44 writes per RGB333 entry
+        ld b,(hl)
+        inc hl
+.pl:    ld a,(hl)
+        nextreg 0x44,a
+        inc hl
+        ld a,(hl)
+        nextreg 0x44,a
+        inc hl
+        djnz .pl
+        ELSE
         nextreg 0x40,1
         ld hl,.pal
         ld b,15
@@ -789,6 +827,7 @@ setup:  nextreg 0x43,0x20
         nextreg 0x41,a
         inc hl
         djnz .pl
+        ENDIF
         nextreg 0x4B,0
         xor a
 .h:     nextreg 0x34,a
@@ -804,6 +843,9 @@ setup:  nextreg 0x43,0x20
         nextreg 0x15,0x01
         ret
 ; 1 body (white), 2 dark (black): the default look. 3-15: paintable, the Spectrum's other colours.
-.pal:   DB 0xFF,0x00,0x03,0xE0,0xE7,0x1C,0x1F,0xFC,0x02,0xA0,0xA2,0x14,0x16,0xB4,0xB6
+.pal:
+        IFNDEF GROUP_PALETTES
+        DB 0xFF,0x00,0x03,0xE0,0xE7,0x1C,0x1F,0xFC,0x02,0xA0,0xA2,0x14,0x16,0xB4,0xB6
+        ENDIF
 SETUP_END:
         SAVEBIN "gb_setup.bin",0xD000,SETUP_END-0xD000
