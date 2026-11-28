@@ -55,9 +55,11 @@
    "game": "Altered Beast (128K)",
    "doc": "altered_beast.md",
    "nex": {
-    "plain": "3a40cd83e14bad535b3f147708b2284e",
-    "sprites": "edea9ecd09412d385fc67cb8d28458bb",
-    "enhanced": "758514afbb7ba14c315ff682befed834"
+    "plain": "4c847497065404015f21c481a11183b7",
+    "sprites": "8e80296872c6605582742099f5abe4c3",
+    "enhanced": "6bd81a4396eb37e0a73f48779b4fa16d",
+    "smooth": "08bc442d7dbf0fddadb85daeab12c253",
+    "enhanced_smooth": "d4e5be69790599be0f8c84c19f13b39b"
    },
    "proof": "differential",
    "variants": [
@@ -68,9 +70,11 @@
      "args": [],
      "proof": "differential",
      "nex": {
-      "plain": "3a40cd83e14bad535b3f147708b2284e",
-      "sprites": "edea9ecd09412d385fc67cb8d28458bb",
-      "enhanced": "758514afbb7ba14c315ff682befed834"
+      "plain": "4c847497065404015f21c481a11183b7",
+      "sprites": "8e80296872c6605582742099f5abe4c3",
+      "enhanced": "6bd81a4396eb37e0a73f48779b4fa16d",
+      "smooth": "08bc442d7dbf0fddadb85daeab12c253",
+      "enhanced_smooth": "d4e5be69790599be0f8c84c19f13b39b"
      }
     }
    ]

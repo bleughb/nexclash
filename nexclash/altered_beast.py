@@ -2,7 +2,7 @@
 is_altered_beast(). Game facts and decisions: games/altered_beast.md.
 
   Snapshot: title menu, PC in RAM, 7FFD = 0 (ROM 0, never run or read), IM 2. Level 1 only is in memory;
-  game over and the end of the level call the game's tape loader (0xFE4C), which waits for ever on a Next.
+  the level-one reload at game over restores the title snapshot. Later levels still need the original tape.
   Main loop: HALT, 0xAE40 CALL 0x60EB blit buffer -> screen, 0xAE43 CALL 0x6DE4 buffer := clean copy, logic,
   plots into the buffer. Figures are CELL aligned: a stream of records, flag 0 = empty (1 byte), else flag +
   8 graphics bytes + attribute. Masked plot: (buffer AND table 0x6900[g]) OR g; mirrored through table 0x6A00.
@@ -244,10 +244,58 @@ def hook_page(colours=None):
     return bytes(p)
 
 
+RELOAD = 0x75AA
+RELOAD_ORIGINAL = bytes.fromhex('2114ac2284ff3e0732b9ffcd')
+TICK = 0x75B6
+PRESENT_LINE = 257
+SMOOTH_CLIP = (16, 231, 0, 151)
+
+
+def restart_setup(base, hooks, overlay=b''):
+    # The entry bank is already in every NEX. Save the live pages on cold
+    # boot, after the NXC loader has applied its colour and trainer choices.
+    if len(base) > 0x200:
+        raise ValueError('palette setup overlaps restart')
+    startup = base.ljust(0x200, b'\0') + bytes.fromhex(hooks['restart'])
+    return startup.ljust(0x400, b'\0') + (overlay or b'\xc9')
+
+
+def smooth_edits(hooks, banked):
+    prefix = 'enhanced.' if banked else ''
+    def sym(name):
+        return int(hooks['syms'][prefix + name], 16)
+    def word(v):
+        return v.to_bytes(2, 'little')
+    smooth = bytes.fromhex(hooks['banked_smooth' if banked else 'smooth'])
+    # Existing addresses and the register block survive installation. Split
+    # preparation from upload, and forbid early eviction of visible patterns.
+    return [
+        (sym('smooth_bl'), None, smooth),
+        (sym('pixout'), bytes.fromhex('0e00cd'), b'\xc3' + word(sym('smooth_paint'))),
+        (sym('commit.upl'), b'\xaf', b'\xc9'),
+        (sym('commit_call') + 1, word(sym('commit')), word(sym('smooth_upload'))),
+        (sym('idle') + 6, b'\x16', b'\xc9'),
+        (P_BLIT - 1, b'\x76', b'\x00'),
+        (P_BLIT, b'\xcd' + word(sym('e_bl')), b'\xcd' + word(sym('smooth_bl'))),
+        (0x5F80, bytes.fromhex('d908fb'), b'\xc3' + word(sym('smooth_irq'))),
+        (TICK, b'\x23', b'\0'),
+        *((a, bytes.fromhex('cda364'), b'\xcd' + word(sym('gauge_delay'))) for a in (0xB6D2, 0xB6E1)),
+    ]
+
+
+def smooth_installer(hooks):
+    def table(banked):
+        return b''.join(a.to_bytes(2, 'little') + len(data).to_bytes(2, 'little') + data
+                        for a, _, data in smooth_edits(hooks, banked)) + bytes(2)
+    code = bytes.fromhex(hooks['install'])
+    first = table(False)
+    return code + (0xD402 + len(code) + len(first)).to_bytes(2, 'little') + first + table(True)
+
+
 class AlteredBeastPatch:
     name = 'Altered Beast figures -> hardware sprites (alt ROM images 0 + 1, page 26 at slot 4, blit from the clean copy)'
 
-    def __init__(self, prof=None, colours=None, rom_code=None, tables=None):
+    def __init__(self, prof=None, colours=None, rom_code=None, tables=None, smooth=False):
         self.prof = prof or load_profile()
         h = self.prof['hooks']
         cm = dict(colours) if colours is not None else load_colours_build()
@@ -255,11 +303,13 @@ class AlteredBeastPatch:
         self.banked = len(self.palette) > 16
         block = 'banked_' if self.banked else ''
         self.rom_code = rom_code if rom_code is not None else bytes.fromhex(h[block + 'rom'])
-        self.syms = {k: int(v, 16) for k, v in h['syms'].items() if '.' not in k}
+        self.syms = {k: int(v, 16) for k, v in h['syms'].items() if not k.startswith('enhanced.')}
         if self.banked:
-            self.syms.update({k.split('.')[1]: int(v, 16) for k, v in h['syms'].items() if k.startswith('enhanced.')})
+            self.syms.update({k.removeprefix('enhanced.'): int(v, 16) for k, v in h['syms'].items() if k.startswith('enhanced.')})
         self.stub_extra = bytes.fromhex(h[block + 'setup']) + bytes(self.palette)
-        self.setup_call = 0xD000
+        self.smooth = smooth
+        self.stub_extra = restart_setup(self.stub_extra, h, smooth_installer(h) if smooth else b'')
+        self.setup_call = 0xD200
         self.hook_page_data = b''
         self.uses_printer_buffer = False
         self.tail_addr = TAIL_ADDR
@@ -280,6 +330,18 @@ class AlteredBeastPatch:
         self.sites = [(a, bytes.fromhex(old), bytes.fromhex(SITE_SYM[a][0]) + self.syms[SITE_SYM[a][1]].to_bytes(2, 'little'))
                       for a, old in SITES_ORIG.items()]
         self.sites += [(a, bytes.fromhex(o), bytes.fromhex(n)) for a, o, n in INT_SITES]
+        self.sites.append((RELOAD, RELOAD_ORIGINAL, bytes.fromhex(h['gameover'])))
+        self.runtime_sites = []
+        self.display_page = bytearray(self.page)
+        if smooth:
+            for a, old, new in smooth_edits(h, self.banked):
+                if a >= 0x4000:
+                    self.runtime_sites.append((a, old, new))
+                    continue
+                offset = a - ROM_LO
+                if old and self.page[offset:offset + len(old)] != old:
+                    raise ValueError('unexpected hook instruction at 0x%04X' % a)
+                self.display_page[offset:offset + len(new)] = new
         self._banks()
 
     def _banks(self):
@@ -305,17 +367,24 @@ class AlteredBeastPatch:
                 ram[b][o] = v
         regs = zt.build_tail(snap, 0x8000, self.slot1, True)[3]
         self.page[self.regblock - 0x2000:self.regblock - 0x2000 + len(regs)] = regs
+        self.display_page[self.regblock - ROM_LO:self.regblock - ROM_LO + len(regs)] = regs
+        for a, old, _ in self.runtime_sites:
+            b, o = where(a)
+            if ram[b][o:o + len(old)] != old:
+                raise ValueError('unexpected smooth install site at 0x%04X' % a)
         self._banks()
         snap.banks[5], snap.banks[2], snap.banks[0] = bytes(ram[5]), bytes(ram[2]), bytes(ram[0])
 
     def alt_view(self, rom_get):
         lo, hi = self.altrom
-        pg = self.page
+        pg = self.display_page if self.smooth else self.page
+        if self.smooth:
+            hi = 0x3000 + len(bytes.fromhex(self.prof['hooks']['smooth']))
         return lambda a: pg[a - 0x2000] if lo <= a < hi else rom_get(a)
 
 
 class PlainPatch:
-    """The plain build: no sprites, only the Next interrupt fix (INT_SITES)."""
+    """The plain build includes the Next interrupt and level-one restart fixes."""
     name = 'Altered Beast, Next interrupt fix'
     stub_extra = b''
     setup_call = None
@@ -326,7 +395,11 @@ class PlainPatch:
     altrom = None
 
     def __init__(self):
+        h = load_profile()['hooks']
+        self.setup_call = 0xD200
+        self.stub_extra = restart_setup(b'\xc9', h)
         self.sites = [(a, bytes.fromhex(o), bytes.fromhex(n)) for a, o, n in INT_SITES]
+        self.sites.append((RELOAD, RELOAD_ORIGINAL, bytes.fromhex(h['gameover'])))
 
     def apply(self, snap):
         ram = bytearray(snap.banks[5] + snap.banks[2] + snap.banks[0])
@@ -530,7 +603,9 @@ def boot_check(nex, z80, patch=None, tail=None):
     for b in range(8):
         if bytes(banks[b]) != bytes(s.banks[b]):
             bad.append(('NEX bank differs from the (patched) snapshot', b))
-    ram = s.banks[5] + s.banks[2] + s.banks[0]
+    ram = bytearray(s.banks[5] + s.banks[2] + s.banks[0])
+    for a, _, new in getattr(patch, 'runtime_sites', ()):
+        ram[a - 0x4000:a - 0x4000 + len(new)] = new
     t0, t1 = TAIL_ADDR, TAIL_ADDR + 96
     diffs = [a for a in range(0x4000, 0x10000) if mem[a] != ram[a - 0x4000] and not t0 <= a < t1]
     if diffs:
@@ -545,7 +620,13 @@ def boot_check(nex, z80, patch=None, tail=None):
         img1[lo:hi] = patch.page[lo - 0x2000:hi - 0x2000]
         if bytes(st['alt'][1]) != bytes(img1):
             bad.append(('alt image 1 differs from ROM 3 + hooks',))
-        if bytes(st['alt'][0][lo:hi]) != bytes(patch.page[lo - 0x2000:hi - 0x2000]):
+        if patch.smooth:
+            hi = 0x3000 + len(bytes.fromhex(patch.prof['hooks']['smooth']))
+        # In the gap after the register block the original ROM remains.
+        parts = [(lo, patch.regblock + 20)]
+        if patch.smooth:
+            parts.append((0x3000, hi))
+        if any(bytes(st['alt'][0][a:b]) != bytes(patch.display_page[a-ROM_LO:b-ROM_LO]) for a, b in parts):
             bad.append(('alt image 0 hook bytes differ',))
         if st['nr'].get(0x8C) != 0x80:
             bad.append(('$8C', st['nr'].get(0x8C)))
@@ -641,7 +722,7 @@ class _NS:
         else:
             self.ports += 1
 
-    def sprite_layer(self):
+    def sprite_layer(self, clip=CLIP):
         out = {}
         for i in range(128):
             a0, a1, a2, a3, a4 = self.attr[i]
@@ -656,9 +737,77 @@ class _NS:
                     b = self.pat[base + j * 8 + k // 2]
                     c = (b >> 4) if k % 2 == 0 else (b & 15)
                     x, y = x0 + (15 - k if mir else k), y0 + (15 - j if ymir else j)
-                    if c and CLIP[0] <= x <= CLIP[1] and CLIP[2] <= y <= CLIP[3]:
+                    if c and clip[0] <= x <= clip[1] and clip[2] <= y <= clip[3]:
                         out[(x, y)] = (a2 & 0xF0) | c
         return out
+
+
+class _SmoothVideo(_NS):
+    """128K 50 Hz raster. Clock in 28 MHz T. Advance idle polling to the
+    next relevant hardware edge, then let the Z80 execute its comparison."""
+    LINE = 228 * 8
+    FRAME = 311 * LINE
+
+    def __init__(self, patch):
+        from .dma import DMA
+        super().__init__(patch)
+        self.stage = bytearray(8192)
+        self.clock = self.origin = 0
+        self.shown = None
+        self.patterns_on_screen = set()
+        self.early_writes = 0
+        self.dma = DMA(lambda a: self.mem[a], self.dma_write, self.out,
+                       stall=lambda n: self.advance(8*n))
+        self.tick_pc = patch.syms['wait_beat.tick']
+        self.poll_pc = patch.syms['wait_beat.poll']
+        self.wait_pc = patch.syms['wait_beat']
+        self.first_poll = False
+
+    def advance(self, cycles):
+        self.clock += cycles
+
+    def now(self):
+        return self.clock + self.R[25] - self.origin
+
+    def read(self, port):
+        if port == 0x253B and self.sel in (0x1E, 0x1F):
+            line = (self.now() // self.LINE) % 311
+            return line >> 8 if self.sel == 0x1E else line & 255
+        return super().read(port)
+
+    def tick(self):
+        # Interrupt 64 lines before ULA row zero.
+        return ((self.now() + 64*self.LINE) // self.FRAME) & 255
+
+    def poll(self, pc):
+        if pc == self.wait_pc:
+            self.first_poll = True
+        elif pc == self.tick_pc:
+            remaining = (self.R[2] - self.tick()) & 255
+            if 0 < remaining < 128:
+                self.advance(remaining*self.FRAME - (self.now() + 64*self.LINE) % self.FRAME)
+        elif pc == self.poll_pc and self.first_poll:
+            self.first_poll = False
+            dest = PRESENT_LINE * self.LINE
+            beam = self.now() % self.FRAME
+            if beam // self.LINE != PRESENT_LINE:
+                self.advance((dest - beam) % self.FRAME)
+
+    def nextreg(self, reg, val):
+        if reg == 0x26:
+            self.shown = self.now()
+        super().nextreg(reg, val)
+
+    def dma_write(self, a, v):
+        self.mem[a] = v
+
+    def out(self, port, val):
+        if port & 255 == 0x6B:
+            self.dma.feed(val)
+            return
+        if port & 255 == 0x5B and self.pat_ptr // 128 in self.patterns_on_screen:
+            self.early_writes += 1
+        super().out(port, val)
 
 
 class _OrigView:
@@ -687,6 +836,14 @@ class _PatchedView(_OrigView):
     def __getitem__(self, a):
         if a < 0x4000:
             return self.alt(a)
+        if isinstance(self.ns, _SmoothVideo):
+            if a == TICK:
+                return self.ns.tick()
+            page = self.ns.nr.get(0x50 + (a >> 13))
+            if page == 86:
+                return self.ns.stage[a & 8191]
+            if page == 10 and a >= 0xA000:
+                a = 0x4000 + (a & 8191)
         nr = self.ns.nr
         if 0x8000 <= a < 0xA000:
             if nr[0x54] == HPG:
@@ -706,6 +863,13 @@ class _PatchedView(_OrigView):
 
     def __setitem__(self, a, v):
         nr = self.ns.nr
+        if isinstance(self.ns, _SmoothVideo):
+            page = nr.get(0x50 + (a >> 13))
+            if page == 86:
+                self.ns.stage[a & 8191] = v
+                return
+            if page == 10 and a >= 0xA000:
+                a = 0x4000 + (a & 8191)
         if a < 0x4000:
             self.err.append(('ROM write', a))
             return
@@ -725,7 +889,16 @@ def _sim_class():
 
 def _machine(Sim, mem, regs, ns, slot=None):
     from .rainbow import _machine as m
-    return m(Sim, mem, regs, ns, slot)
+    sim = m(Sim, mem, regs, ns, slot)
+    if isinstance(ns, _SmoothVideo):
+        ns.mem = mem
+        for op, cost in ((0x91, 20), (0x92, 17), (0x23, 8)):
+            f = sim.after_ED[op]
+            def timed(f=f, cost=cost):
+                f()
+                ns.advance(cost)
+            sim.after_ED[op] = timed
+    return sim
 
 
 def _run_until(sim, stop, each=None, limit=4000000):
@@ -783,7 +956,10 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
     ex = collections.defaultdict(list)
     psite = {a + k: v for a, old, new in patch.sites for k, v in enumerate(new)}
     site_bytes = {a + k: old[k] for a, old, new in patch.sites for k in range(len(old))}
-    ns = _NS(patch)
+    ns = _SmoothVideo(patch) if patch.smooth else _NS(patch)
+    if patch.smooth:
+        for a, old, new in patch.runtime_sites:
+            psite.update({a + i: v for i, v in enumerate(new)})
     ns.game_ix_ok = False
     pscreen = {}
     st = {'frame': 0, 'in_blit': False, 'prev': None, 'plots': [], 'hookT': 0, 'gf': 0, 'maxT': 0, 'tog': 0}
@@ -814,15 +990,51 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
         p = _PatchedView(get, ns, patch.alt_view(get), psite, patch.store, err)
         sp_ = _machine(Sim, p, list(regs), ns, 'p')
         spd = st['spd'] = (st.get('spd', 0) + 1) % 4     # every hook entered at all four speeds in turn
+        if patch.smooth:
+            spd = 3
+            ns.origin = sp_.registers[25]
+            if pc == P_BLIT:
+                # Use the original recorded TV intervals as an upper bound on
+                # the game work at turbo, including original blit/ISR time.
+                # The gauge loop removes 3000 iterations of 26 T per call.
+                gap = st['frame'] - st.get('last_frame', st['frame'])
+                ns.advance(max(0, (gap + 1)*70908 - st.pop('gauge', 0)*3000*26))
+                ns.patterns_on_screen = {(a[3] & 63)*2 + ((a[4] >> 6) & 1)
+                                         for a in ns.attr if a[3] & 128}
         ns.nr[0x07] = spd
         c['entry speed %d' % spd] += 1
         t0 = sp_.registers[25]
         ns.game_ix_ok = pc == P_BLIT                 # the blit itself loads IX (game code, same in both)
         base = []
-        if not _run_until(sp_, stop_, each=lambda r: _safe(r, regs, ns, err, base, 22 if pc == P_BLIT else 4)):
+        def step(r):
+            _safe(r, regs, ns, err, base, 22 if pc == P_BLIT else 4)
+            if patch.smooth and pc == P_BLIT:
+                ns.poll(r[24])
+        if not _run_until(sp_, stop_, each=step):
             fail('patched did not return', (pc,))
             return None
         ns.game_ix_ok = False
+        if patch.smooth:
+            ns.clock = ns.now()
+            if pc == P_BLIT:
+                if ns.shown is None or ns.dma.stats['jobs'] != c['commits'] + 1:
+                    fail('missing scheduled screen transfer')
+                else:
+                    shown = ns.shown // ns.FRAME
+                    if 'shown' in st:
+                        delta = shown - st['shown']
+                        want = (5, 6, 6)[(c['commits'] - 1) % 3]
+                        c['shown interval %d' % delta] += 1
+                        if delta != want:
+                            fail('off beat', (delta, want))
+                    st['shown'] = shown
+                    end = ns.clock
+                    if end // ns.FRAME != shown or ns.shown % ns.FRAME < 192 * ns.LINE:
+                        fail('visible transfer', (ns.shown, end))
+                    c['latest finish line'] = max(c['latest finish line'], end % ns.FRAME // ns.LINE)
+                    if ns.early_writes:
+                        fail('early visible pattern writes', (ns.early_writes,))
+                        ns.early_writes = 0
         dt = (sp_.registers[25] - t0) - (so.registers[25] - regs[25])
         st['hookT'] += dt
         st['gfT'] = st.get('gfT', 0) + dt
@@ -839,12 +1051,12 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
         excl = SCREEN if pc == P_BLIT else (0, 0)
         keys = set(o.ov) | set(p.ov)
         dm = [a for a in keys if not excl[0] <= a < excl[1] and not (pc == P_BLIT and sp0 - 24 <= a < sp0) and
-              o.ov.get(a, get(a)) != p.ov.get(a, get(a))]
+              o.ov.get(a, psite.get(a, get(a))) != p.ov.get(a, psite.get(a, get(a)))]
         if dm:
             fail('memory differs', (hex(pc), len(dm), [hex(a) for a in sorted(dm)[:4]]))
         if pc != P_BLIT and any(SCREEN[0] <= a < SCREEN[1] for a in p.ov):
             fail('screen written by a hook', (hex(pc),))
-        if (ns.nr[0x54], ns.nr[0x55], ns.nr[0x07]) != (GP4, GP5, spd):
+        if ns.nr.get(0x52, 10) != 10 or (ns.nr[0x54], ns.nr[0x55], ns.nr[0x07]) != (GP4, GP5, spd):
             fail('MMU / speed not restored', (hex(pc), ns.nr[0x54], ns.nr[0x55], ns.nr[0x07]))
             ns.nr.update({0x54: GP4, 0x55: GP5, 0x07: 0})
         if ns.ports:
@@ -888,6 +1100,9 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
     def commit_checks(get, res):
         st['gf'] += 1
         c['commits'] += 1
+        if 'last_frame' in st:
+            c['original interval frames'] += st['frame'] - st['last_frame']
+        st['last_frame'] = st['frame']
         plots = st['plots']
         w = lambda a: get(a) | get(a + 1) << 8
         base, abase, cl, cla = w(PIX), w(ATT), w(CPIX), w(CATT)
@@ -949,7 +1164,12 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
                 fail('ULA play area is not the scenery', (bad,))
             # 3. sprites = the plots in plot order, with the build's colours
             exp, code = expected_layer(get, plots, patch.colours, patch.banked)
-            lay = ns.sprite_layer()
+            if patch.smooth:
+                offset = max(0, 8 - get(0x5DA3)) & 0xFE   # even steps (no dither shimmer)
+                if ns.nr.get(0x26) != offset:
+                    fail('wrong ULA phase', (ns.nr.get(0x26), offset))
+                exp = {(x-offset, y): v for (x, y), v in exp.items() if 16 <= x-offset <= 231}
+            lay = ns.sprite_layer(SMOOTH_CLIP if patch.smooth else CLIP)
             c['sprite pixels compared'] += len(exp)
             if lay != exp:
                 d = [k for k in set(lay) | set(exp) if lay.get(k) != exp.get(k)]
@@ -1003,6 +1223,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None):
                 def g():
                     pc = R[24]
                     prev, st['prev'] = st['prev'], pc
+                    if patch.smooth and pc in (0xB6D2, 0xB6E1):
+                        st['gauge'] = st.get('gauge', 0) + 1
                     if pc in INTERIOR and not (prev is not None and INTERIOR[pc] <= prev < pc):
                         fail('jump into a patched instruction', (hex(pc), prev))
                     if st['in_blit']:
@@ -1238,7 +1460,8 @@ def _palette_negatives(z80, cm, tmp):
         faults += [('only bank zero loaded', short_load), ('zombie robe entry changed', lambda e: flip(e, 35))]
     for name, f in faults:
         p = AlteredBeastPatch(colours=cm)
-        p.stub_extra = bytes(f(bytearray(p.stub_extra)))
+        end = len(bytes.fromhex(p.prof['hooks']['banked_setup' if p.banked else 'setup'])) + size
+        p.stub_extra = bytes(f(bytearray(p.stub_extra[:end]))) + p.stub_extra[end:]
         zt.convert(z80, T, quiet=True, patch=p)
         res.append((name, bool(boot_check(T, z80, AlteredBeastPatch(colours=cm)))))
     for i, v in ((3, 0x86), (6, 0xD1)):
@@ -1338,24 +1561,101 @@ def negative_patches(patch=None):
 
 
 def run_negatives(rzx, stop=600, say=print, rzx2=None, rzx3=None):
-    n = det = 0
+    jobs = []
     for name, p in negative_patches():
         if 'level-end' in name:
-            c, ex, _ = verify(p, rzx3, stop=16480) if rzx3 else (collections.Counter(), {}, [])
-            if not rzx3:
-                continue
+            if rzx3:
+                jobs.append((name, p, rzx3, 16480))
         else:
-            c, ex, _ = verify(p, rzx2 if rzx2 and 'player two' in name else rzx, stop=stop)
-        f = {k: v for k, v in c.items() if k.endswith('!')}
-        n += 1
-        det += bool(f)
-        say('            %-52s %s' % (name, 'DETECTED %s' % sorted(f)[:2] if f else 'NOT DETECTED'))
-    return n, det
+            jobs.append((name, p, rzx2 if rzx2 and 'player two' in name else rzx, stop))
+    detected = 0
+    for (name, *_), (counts, _, _, _) in zip(jobs, recording_results(jobs)):
+        failures = sorted(k for k in counts if k.endswith('!'))
+        detected += bool(failures)
+        say('            %-52s %s' % (name, 'DETECTED %s' % failures[:2] if failures else 'NOT DETECTED'))
+    return len(jobs), detected
 
 
 # ---------------------------------------------------------------------------------------------
 # auto
 # ---------------------------------------------------------------------------------------------
+
+def scroll_negatives(z80, recording):
+    """Mutate the installed instructions and require the specific detector."""
+    import tempfile
+    from . import z80tonex as zt
+    tests = []
+    for label, symbol, old, new, detector in [
+            ('one frame late', 'wait_beat', '0606fe01', '0607fe01', 'off beat!'),
+            ('DMA crosses visible line zero', 'wait_beat.poll', 'fe0120', 'fe3020', 'visible transfer!')]:
+        p = AlteredBeastPatch(smooth=True)
+        at = p.display_page.index(bytes.fromhex(old), p.syms[symbol] - ROM_LO)
+        p.display_page[at:at+len(old)//2] = bytes.fromhex(new)
+        c, _, _ = verify(p, recording, stop=440)
+        tests.append((label, c[detector] > 0))
+    with tempfile.TemporaryDirectory() as d:
+        file = os.path.join(d, 'leak.nex')
+        zt.convert(z80, file, quiet=True, patch=AlteredBeastPatch(smooth=True))
+        tests.append(('smooth installer leaked into off build', bool(boot_check(file, z80, AlteredBeastPatch()))))
+    return tests
+
+
+def _recording(job):
+    import time
+    name, patch, recording, stop = job
+    start = time.monotonic()
+    result = verify(patch, recording, stop=stop, collect=3 if name == 'default' else 0)
+    return (*result, time.monotonic() - start)
+
+
+def recording_results(jobs):
+    from concurrent.futures import ProcessPoolExecutor
+    from multiprocessing import get_context
+    with ProcessPoolExecutor(max_workers=min(len(jobs), os.cpu_count() or 1), mp_context=get_context('spawn')) as pool:
+        return list(pool.map(_recording, jobs))
+
+
+def scroll_outputs(a, z80, out, name, builds, say):
+    from pathlib import Path
+    from . import z80tonex as zt
+    def path(suffix):
+        return Path(out) / (name + suffix)
+    manifest = dict(default=name + '_sprites.nex', plain=name + '.nex', colours={})
+    toggle = dict(logic=True, what='Smooth scroll, changes the game logic pace to 5/6/6 frames', colours={})
+    checks = []
+    for edition, old in list(builds):
+        enhanced = old.banked
+        suffix = '_enhanced' if enhanced else ''
+        patch = AlteredBeastPatch(colours=load_colours(ENHANCED) if enhanced else None, smooth=True)
+        file = path(suffix + '_smooth.nex')
+        zt.convert(z80, str(file), quiet=True, patch=patch)
+        bad = boot_check(str(file), z80, patch)
+        say('Smooth    : %s boot %s' % (file.name, str(bad[:3]) if bad else 'OK'))
+        checks.append(not bad)
+        if enhanced:
+            manifest['colours']['Enhanced'] = dict(default=name + '_enhanced.nex')
+            toggle['colours']['Enhanced'] = dict(default=file.name)
+        else:
+            toggle['default'] = file.name
+        builds.append((edition + ' smooth', patch))
+    manifest['toggles'] = {'Smooth scroll': toggle}
+    path('_outputs.json').write_text(json.dumps(manifest, indent=1))
+    if not getattr(a, 'pok', None):
+        snap = zt.Z80Snapshot(z80)
+        lines = []
+        for label, addr, bank in [('credits', 0x63F1, 5), ('lives', 61350, 0), ('energy', 61330, 0)]:
+            value = snap.banks[bank][addr & 16383]
+            if value == 0:  # trainer already enabled in this snapshot
+                continue
+            if value != 0x3D:
+                raise ValueError('unexpected trainer instruction at 0x%04X' % addr)
+            lines += ['NInfinite ' + label, 'Z %d %d 0 61' % (8 if bank == 5 else 0, addr)]
+        if lines:
+            pok = path('_verified.pok')
+            pok.write_text('\n'.join(lines + ['Y', '']))
+            a.pok = str(pok)
+    return all(checks)
+
 
 def auto(a, z80, name, out, say):
     """Plain and default sprite builds, and the Enhanced set (NAME_enhanced.nex: the map ENHANCED, its palette) when that
@@ -1386,18 +1686,25 @@ def auto(a, z80, name, out, say):
         for nm, hit in pn:
             say('Negative  : Enhanced palette: %-40s %s' % (nm, 'DETECTED' if hit else 'NOT DETECTED'))
         ok = ok and all(h for _, h in pn)
+    ok = scroll_outputs(a, z80, out, name, builds, say) and ok
     states = []
     stop = getattr(a, 'quick', None)
-    for r in list(a.rzx or []):
-        for bname, bp in builds:
-            t = __import__('time').time()
-            c, ex, st = verify(bp, r, stop=stop, collect=3 if bname == 'default' else 0)
+    jobs = [(label, p, r, stop) for r in (a.rzx or []) for label, p in builds]
+    if jobs:
+        results = recording_results(jobs)
+        for (bname, bp, r, _), (c, ex, st, elapsed) in zip(jobs, results):
             states += st
             fails = {k: v for k, v in c.items() if k.endswith('!')}
             ok = ok and not fails
             say('Verify    : %s %s  %d frames, %d commits (max %d sprites, %d plots), %d sprite pixels, %.0fs -> %s' % (
                 os.path.basename(r), bname, c['frames'], c['commits'], c['max sprites in a frame'], c['max plots in a frame'],
-                c['sprite pixels compared'], __import__('time').time() - t, 'IDENTICAL' if not fails else 'FAILED %s' % fails))
+                c['sprite pixels compared'], elapsed, 'IDENTICAL' if not fails else 'FAILED %s' % fails))
+            if bp.smooth:
+                say('Pace      : %s %s, original %d frames / %d intervals, shown %s, latest completion line %d of 311' %
+                    (os.path.basename(r), bname, c['original interval frames'], max(0, c['commits'] - 1),
+                     {k.split()[-1]: v for k, v in c.items() if k.startswith('shown interval ')}, c['latest finish line']))
+                for k in fails:
+                    say('            %s: %s' % (k, ex[k[:-1]][:2]))
             if bname != 'default':
                 say('            hook T per game frame %d, plots by mode %s' % (c['hook T per game frame'],
                     [c['plots mode %d' % mode] for mode in (0, 1, 2)]))
@@ -1411,6 +1718,9 @@ def auto(a, z80, name, out, say):
                 say('            %s: %s' % (k, str(v)[:300]))
     by = {os.path.basename(r): r for r in (a.rzx or [])}
     if 'ab_first.rzx' in by and not stop:
+        for label, detected in scroll_negatives(z80, by['ab_first.rzx']):
+            say('Negative  : %s: %s' % (label, 'DETECTED' if detected else 'NOT DETECTED'))
+            ok = ok and detected
         say('Negative  : broken builds on the recordings (ab_first 1,500 frames; player two on ab_2p; level end on ab_level):')
         n, d = run_negatives(by['ab_first.rzx'], 1500, say=say, rzx2=by.get('ab_2p.rzx'), rzx3=by.get('ab_level.rzx'))
         say('Negative  : %d/%d DETECTED' % (d, n))
@@ -1418,6 +1728,8 @@ def auto(a, z80, name, out, say):
     if states:
         sel = [s for s in states if any(p['kind'] != 2 and plot_ok(p) for p in s['plots'])][:3] or states[:3]   # masked figures
         for bname, bp in builds:
+            if bp.smooth:
+                continue  # full scheduled blits are exercised by verify
             u, f = unit_tests(bp, sel)
             if bp.banked:
                 say('Unit      : Enhanced palette bank selections %d, wrong bank detected %d/%d' %
@@ -1617,6 +1929,7 @@ def colour_inputs_md5(peek):
     """MD5 of the game bytes the colours belong to: the start state's banks 5 (above the screen), 2, 0, sites
     restored, and the HUD data as the snapshot holds it (the HUD build edits it; it is no sprite graphic)."""
     orig = {a + k: bytes.fromhex(v)[k] for a, v in SITES_ORIG.items() for k in range(3)}
+    orig.update({RELOAD + i: v for i, v in enumerate(RELOAD_ORIGINAL)})
     hud = bytes.fromhex(load_profile().get('hud_orig', ''))
     orig.update({HUD_GLYPHS + i: v for i, v in enumerate(hud)})
     h = hashlib.md5()
@@ -1665,13 +1978,16 @@ def recolour(nex, cmap):
         raise ValueError('painting and build use different numbers of sprite palette banks')
     p0 = AlteredBeastPatch(prof, colours={'palette': loaded})
     for a, old, new in p0.sites:
-        if bytes(peek(a + k) for k in range(len(new))) != new:
+        installed = bytes(peek(a + k) for k in range(len(new)))
+        if a == RELOAD and installed == old:  # published 1.2
+            continue
+        if installed != new:
             raise ValueError('patch site 0x%04X does not hold this build\'s hook' % a)
     b12 = bank(12)
     lo, hi = p0.regblock - 0x2000, p0.regblock - 0x2000 + 20
     if b12[:lo] != bytes(p0.page[:lo]) or b12[hi:8192] != bytes(p0.page[hi:8192]):
         raise ValueError('hook code differs from this version\'s (rebuild with nexclash.py auto)')
-    setup = p0.stub_extra[:-len(loaded)]
+    setup = bytes.fromhex(prof['hooks']['banked_setup' if banked else 'setup'])
     if bytes(b10[0x1000:0x1000 + len(setup)]) != setup:
         raise ValueError('set-up code differs from this version\'s (rebuild with nexclash.py auto)')
     p = AlteredBeastPatch(prof, colours=cmap)
