@@ -228,7 +228,7 @@ nexclash/nodes_of_yesod.py and its .asm with Arc's addresses, seven sites to loc
 - detect.pacing-structure: no help: the pace windows came with the Nodes port; Arc's own pacing was not measured.
 
 ## Stage log
-- 2026-11-26: stage 4 (colour round): the owner's painting of every figure (Codex first pass, his clean-up), front-facing
+- 2026-11-26: stage 4 (colour round): the owner's painting of every figure (first pass, his clean-up), front-facing
   Charlie's live tiles painted (dyn_paint), 31 broken builds; about 2 h, about 70 tool calls, 4 user rounds.
 - 2026-11-17: stage 3 again (loading screen, .nxc, cheats; the owner's recording, the sphere hook, restamp), about 3 h,
   about 60 tool calls, 8 user rounds.
