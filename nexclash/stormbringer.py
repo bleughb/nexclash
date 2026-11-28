@@ -1305,6 +1305,8 @@ def negative_patches():
     # 15 slot 4 left mapped
     rc = bytearray(base.rom_code)
     i = rc.find(bytes.fromhex('ED915404'), rom_at('e_kn2'))
+    if i < 0:
+        raise ValueError('negative control: the slot-4 restore in e_kn2 not found')
     rc[i + 3] = HPG
     out.append(('hook page left mapped', StormbringerPatch(colours={}, rom_code=bytes(rc))))
     # 16 (2026-11-04) the previous build's alt ROM: hooks only, over NextZXOS's ROM3; the lockstep model has no DivMMC
@@ -1321,6 +1323,8 @@ def _ram_writer(base):
     # the c_kn entry's LD HL,(V_SP) (5 bytes) replaced by a store and a shorter load is not possible in place: use the
     # first instruction of unhide's caller test LD A,(V_HID) = 3A 08 80 + OR A + CALL NZ: rewrite as a RAM store
     j = bytes(pc).find(bytes.fromhex('3A0880B7C4'), i)
+    if j < 0:
+        raise ValueError("negative control: unhide's LD A,(V_HID) test after c_kn not found")
     pc[j:j + 3] = bytes.fromhex('22A861')    # LD (25000),HL: HL is the dead stack address here, never zero
     return StormbringerPatch(colours={}, page_code=bytes(pc))
 
