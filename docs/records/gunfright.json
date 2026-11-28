@@ -92,7 +92,7 @@
   "engine_col": "gunfright (gunfright.md)",
   "build": "v1.1; default gunfright.nex f26d0a56 (original look, town and duels on a cached hardware sprite grid, whole Sinclair alt ROM, original loading screen; unchanged from 1.0); Enhanced gunfright_enhanced.nex 4ec70c82 (the owner's painting of the town, figures, street bandits and twenty duel opponents on an ordered double-buffered Layer 2); both equal the published .nxc 1.1 reconstructions",
   "software": "default: 11,500 replay frames with R and live RAM, 5 negatives, 18 native pace trials within 2% (none slower), 17 full-48K/RGB freezes, original-clock sound; Enhanced (pilot): 159 complete updates equal to an independent painting with registers/R/48K/MMU/clock, 7 of 7 negatives, 9 native readbacks, 18 pace trials (steady and duel within 1%), 20,000-frame soaks; real loader 6/6 on two private cards",
-  "hardware": "untested",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-27, good",
   "next": "hardware checklist; wanted-poster portrait (mock-up only); an in-repository Enhanced verify"
  },
  "checks": [

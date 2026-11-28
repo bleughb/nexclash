@@ -80,7 +80,7 @@
   "engine_col": "flying_shark (flying_shark.md)",
   "build": "v1.0; flying_shark_sprites.nex 5e6a49ca equals the published .nxc 1.0 bare build; the original look, no clash to remove and none claimed; a white one-pixel outline on figures on a double-buffered Layer 2, none on bullets; the blit at 28 MHz in its original time; top bank 47, fits a 1MB Next",
   "software": "stamp: s1 and full1, 12,045 frames, 10,925 hooks with R, 48K RAM and 18,726 port writes, 2,463 Layer 2 pictures and 317,512 pixels against the model; 384 ABI cases, 14 of 14 broken builds; ROM paths complete (Next ROM 8c34d957); deep1 (fixture, 24,026 frames, 21,704 hooks) replayed IDENTICAL by hand, outside the stamp; review run: pace in JNext in lockstep, whole runs -0.09% to -0.02%, slowest 20 updates up to +3.28%; 15-minute soak, flicker, beam audit, real loader on private cards",
-  "hardware": "untested",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-27, good",
   "next": "hardware checklist; the owner's play; Enhanced (mock-up only, rated MODERATE); later stages and 2 players"
  },
  "checks": [

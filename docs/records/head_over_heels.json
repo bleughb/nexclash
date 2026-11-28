@@ -111,7 +111,7 @@
   "engine_col": "head_over_heels (head_over_heels.md)",
   "build": "v1.0; head_over_heels.nex 733570c0 and head_over_heels_enhanced.nex 4e8ba81e equal the published .nxc 1.0 bare builds, default and Enhanced (nxc 4a18183); default the original monochrome look, no clash to remove and none claimed; Enhanced, off by default: Anthony Lycett's Spec256 colours on Layer 2; original loading screen; eight trainers; full hidden ROM; highest bank 47, fits a 1MB Next",
   "software": "re-verified on main's tree (2026-11-09, Next ROM 8c34d957): walk, death and game-over recordings, 15,400 frames, 68,515 hook comparisons with R and every game bank, 2,669,808 pixels; 32 reverse-copy units; wrong source, position and refresh builds caught; boot with 128K RAM, R, hidden ROM and NEXLOAD; ROM paths complete. Review run: native pace quiet -0.0111% to +0.0056%, busy -0.4144% to +0.0037%, worst 20 updates +0.0158%; soaks; real loader default, Enhanced and all trainers on disposable 26.11 cards; channel C effect phase differs",
-  "hardware": "untested",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-27, good",
   "next": "hardware review; natural completion; channel C effect phase"
  },
  "results": [

@@ -99,7 +99,7 @@
   "engine_col": "robin_of_the_wood (robin_of_the_wood.md)",
   "build": "robin_of_the_wood_sprites.nex 1d07361f + robin_of_the_wood_enhanced.nex 8cb14933 (every figure a closed solid sprite in its own hues, no outline; Enhanced painted by parts; tape loading screen) = .nxc e0c97d69, not published (owner deferred Enhanced)",
   "software": "replay IDENTICAL on 3 recordings, default and Enhanced; negatives detected (games/robin_of_the_wood.md)",
-  "hardware": "none (JNext only)",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-27, 1.1 good",
   "next": "owner review of Enhanced; ported from Jon Attree's .nxc work, 2026-11-04"
  },
  "checks": [

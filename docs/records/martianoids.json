@@ -85,7 +85,7 @@
   "engine_col": "martianoids (martianoids.md)",
   "build": "Original monochrome default; optional approved owner-painted Layer 2 viewport, off by default; original loading screen, complete hidden ROM, 1MB.",
   "software": "Verified 18k archive replay: default 5,872 and Enhanced 5,875 exact R/RAM hooks, 2,936 exact colour canvases; 448 ABI cases; recolour roundtrip; 18 native pace trials; supplementary game-over/restart and nine real-loader selections on v2.09/v2.10 pass.",
-  "hardware": "none (JNext only)",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-27, good",
   "next": "Physical Next review of frozen default/Enhanced and trainer options; preserve owner painting sheet."
  },
  "checks": [

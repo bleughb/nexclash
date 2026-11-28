@@ -98,7 +98,7 @@
   "engine_col": "knight_tyme (knight_tyme.md)",
   "build": "knight_tyme_sprites.nex 47fe12fb with the tape's loading screen, bc2c840f bare (v1.1 + 2026-11-07: hooks restore the caller's speed, lib/hlib_speed.asm; Knight conversion about 3x faster, pace +1.11 -> +0.11 %; 645401e4 = published Knight Tyme v1.1 .nxc --bare)",
   "software": "lockstep IDENTICAL on 4 recordings (33,534 frames), unit tests, negatives 19/19 (imported 2026-11-04 from Jon Attree's .nxc work)",
-  "hardware": "none (JNext, played by Jon Attree through the real loader 2026-11-03)",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-27, good",
   "next": "hardware test; opt-in: alt image 0 from the 128K ROM 0 (star map)"
  },
  "checks": [

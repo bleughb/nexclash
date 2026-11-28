@@ -77,7 +77,7 @@
   "engine_col": "jsw (jet_set_willy.md)",
   "build": "jet_set_willy_sprites.nex 5048ef71",
   "software": "Lockstep IDENTICAL on 3 script/search recordings from after the code sheet; unit PASS; negatives detected (no human recording); code sheet bypassed at the owner's request; recolour",
-  "hardware": "untested; JNext runs to gameplay",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-27, 1.2 starts and plays; JNext runs to gameplay",
   "next": "hardware test; a human's design answers"
  },
  "checks": [

@@ -98,7 +98,7 @@
   "engine_col": "gryzor (gryzor.md)",
   "build": "gryzor_sprites_outline.nex 827a770f (figures and bullets as sprites, black outline (owner 2026-11-05); whole alt ROM image with the hook gate in its 0xFF area; 28 MHz hooks, R kept, whole-loop plot hooks with the pace limiter, prepared patterns)",
   "software": "Verify IDENTICAL on 5 bot recordings (R compared); unit PASS incl. every-site clock matrix; 23 negatives detected; ROM path check pass; JNext 1.1.104 reaches play; pace ORIGINAL (+0.00/+0.39/+0.38 %); soak clean; flicker 2-18 out-of-step frames in 220 (open)",
-  "hardware": "untested",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-27, good",
   "next": "the owner plays the .nxc; hardware test; the 128K form for the later levels"
  },
  "checks": [

@@ -104,7 +104,7 @@
   "engine_col": "gunrunner (gunrunner.md)",
   "build": "v1.0; gunrunner_loading.nex f409ce60 and gunrunner_enhanced_loading.nex 1fef5dfc equal the published .nxc 1.0 bare builds, default and Enhanced (without the screen dabcb3ac, a73fe67d); default: the original game, no game byte changed, no hook, Sinclair's ROM as the whole alt ROM, no clash to remove and none claimed; Enhanced, off by default: the Spec256 set's colours (Jao Paulo) for the play window on a double-buffered Layer 2; top bank 47, fits a 1MB Next",
   "software": "TBD",
-  "hardware": "untested",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-27, good",
   "next": "hardware checklist; Enhanced pace in the slowest 20-update stretches (up to +6.59%); natural play past level 1"
  },
  "checks": [

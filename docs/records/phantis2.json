@@ -104,7 +104,7 @@
   "engine_col": "phantis (phantis.md)",
   "build": "v1.0; phantis2_sprites_loading.nex a326db4d equals the published .nxc 1.0 bare build (without the screen 9b080e19); original bitmap and clean attributes on the ULA, figures' ink on a double-buffered Layer 2; the copy waits for the beam and flips off the play area, so part 2 no longer tears; no Enhanced (no Spec256 set); the loading screen is a local input",
   "software": "4 recordings, 46,063 frames, 44,436 hooks with R and 48K RAM, 11,192 Layer 2 pictures against a model, 320 ABI cases, 10 of 10 broken builds; soak, flicker, beam, real loader. Pace in JNext: whole -1.73 to +0.33%, busy thirds up to +2.09%, slowest 20 updates up to +6.08% (over the 2% rule); two seeds leave lockstep at updates 167 and 361",
-  "hardware": "untested",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-27, good",
   "next": "hardware checklist; owner's play; the access code screen and natural completion"
  },
  "checks": [

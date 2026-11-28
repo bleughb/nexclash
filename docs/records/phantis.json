@@ -113,7 +113,7 @@
   "engine_col": "phantis (phantis.md)",
   "build": "v1.0; phantis1_sprites_loading.nex 1190d208 and phantis1_enhanced_loading.nex ae724697 equal the published .nxc 1.0 bare builds, default and Enhanced (without the screen 068e1f36, 76b119c0); original bitmap and clean attributes on the ULA, figures' ink on a double-buffered Layer 2 (the Game Over route); Enhanced (off by default): the graphics the Spec256 set holds in its colours (David Goti), the rest original; fits a 1MB Next; the colour table and loading screen are local inputs",
   "software": "default: 3 recordings, 48,034 frames, 60,657 hooks with R and 48K RAM, 11,203 Layer 2 pictures against a model, 320 ABI cases, 10 of 10 broken builds; Enhanced: the same recordings, 12 of 13 broken builds (clipped-row colour path never reached); soak, flicker, beam, real loader. Pace in JNext: default whole -0.64 to -0.08%, slowest 20 updates up to +6.75%; Enhanced whole -1.83 to -1.45%, busy thirds up to -2.83%, slowest 20 updates up to +4.33% (over the 2% rule)",
-  "hardware": "untested",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-27, good",
   "next": "hardware checklist; owner's play; paint for the graphics the set lacks (mock-up first); the clipped-row colour path"
  },
  "checks": [

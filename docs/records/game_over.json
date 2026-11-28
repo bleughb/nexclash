@@ -118,7 +118,7 @@
   "engine_col": "game_over (game_over.md)",
   "build": "v1.1; game_over_sprites_loading.nex cb0c403d equals the published .nxc 1.1 bare build; with the Spec256 sets (rework enhanced) Enhanced 548bf3db and Backdrop off b7c17340 equal --colours Enhanced [--toggle \"Backdrop off\"]; original bitmap and scenery attributes on the ULA, figures' ink on a double-buffered Layer 2, both worlds; Enhanced on a full-screen Layer 2 with a backdrop, off by default",
   "software": "6 recordings, 30,115 frames with R and 48K RAM, Layer 2 against a model; ABI cases, 9 of 9 broken builds; v1.1 review run: all three modes replayed (81,291 frames, 329,062 hooks with R), negatives 9/9 and 15/15, soaks, flicker, real loader equal to nxc.py. Pace in JNext: whole runs default -0.4 to -1.05%, Enhanced -1.3 to -2.2%; thirds within about 2% (Enhanced world 2 busy up to -2.33%, faster); room changes up to +6.7% default in world 2 (about 2 frames), one unexplained +4.94% 20-update stretch; 1 interrupt lost in 2,232 frames in one Enhanced run",
-  "hardware": "untested",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-27, good",
   "next": "hardware checklist; world 2 room changes; later rooms and natural completion; cheats"
  },
  "checks": [

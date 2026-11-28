@@ -78,7 +78,7 @@
   "engine_col": "midres (midnight_resistance.md)",
   "build": "midnight_resistance_sprites.nex 081de91a (2026-11-08: pace limiter on the screen copy and before the game's frame sync, lib/hlib_pace.asm; was 947dc8a9; hardware-tested 670f9403: every figure a sprite, also flipped and in the shop; Dean's painted colours: 444 graphics bytes; altrom + page 26 at slot 5, page 27 at slot 2; sprites hidden on every loop exit)",
   "software": "2 RZX IDENTICAL with the painted colour map, unit + interrupt + level / shop exit + full table + flipped + map PASS; JNext pace in lockstep, 6 seeds: quiet -1.59..+0.73%, busy -0.70..+0.95%",
-  "hardware": "670f9403 tests OK on a real Next (Dean, 2026-10-14)",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-27, good; 670f9403 tests OK on a real Next (Dean, 2026-10-14)",
   "next": "further painting on the PAINTING_SPRITES sheet (optional); level 2 RZX"
  },
  "checks": [

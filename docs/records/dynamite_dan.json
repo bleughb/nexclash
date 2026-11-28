@@ -73,7 +73,7 @@
   "engine_col": "dynamite_dan (dynamite_dan.md)",
   "build": "dynamite_dan_sprites.nex 1ab3348d (Dan as overlay sprites, bright cyan; the airship's hull and cables above him in room 43; whole alt ROM image; the snapshot's own BASIC start; R preserved; the plot hook at 28 MHz with the speed latch)",
   "software": "Verify IDENTICAL on 52 random-play recordings; unit PASS incl. every-site clock matrix; negatives detected; ROM path check pass; JNext 1.1.104 reaches play",
-  "hardware": "untested",
+  "hardware": "KS3 (System/Next 26.11a): played by the owner 2026-11-27, good",
   "next": "the owner plays the .nxc; hardware test"
  },
  "checks": [
