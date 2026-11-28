@@ -303,7 +303,7 @@ def check(ctx=None):
         print('learncheck: no Git merge base with origin/main; changed-game checks skipped')
     rdocs = record_docs()
     for g in sorted(glob.glob(os.path.join(ROOT, 'games', '*.md'))):
-        rel = os.path.relpath(g, ROOT)
+        rel = os.path.relpath(g, ROOT).replace(os.sep, '/')    # git's and the records' paths use '/' (Windows)
         t = open(g).read()
         stray = []
         lessons = _section(t, 'Lessons', stray)

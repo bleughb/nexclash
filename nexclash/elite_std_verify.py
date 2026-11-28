@@ -470,12 +470,12 @@ def _sd_machine(nex):
     class Mem(list):
         def __getitem__(s, a):
             m = st['mmu'][a >> 13]
-            return alt[a] if m == 0xFF else pages.setdefault(m, bytearray(8192))[a & 0x1FFF]
+            return alt[a] if m == 0xFF else (pages.get(m) or pages.setdefault(m, bytearray(8192)))[a & 0x1FFF]
 
         def __setitem__(s, a, v):
             m = st['mmu'][a >> 13]
             if m != 0xFF:
-                pages.setdefault(m, bytearray(8192))[a & 0x1FFF] = v
+                (pages.get(m) or pages.setdefault(m, bytearray(8192)))[a & 0x1FFF] = v
     return Mem([0] * 65536), st, _rw_simulator(), pages
 
 
