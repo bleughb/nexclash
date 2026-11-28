@@ -1,0 +1,152 @@
+{
+ "name": "darkman",
+ "order": 280,
+ "game": "Darkman",
+ "doc": "darkman.md",
+ "engine": "darkman",
+ "representative": false,
+ "reference": "darkman",
+ "verified_json": false,
+ "inputs": {
+  "snapshot": {
+   "name": "Darkman (1991)(Ocean)[128K].z80",
+   "path": "darkman/Darkman (1991)(Ocean)[128K].z80",
+   "md5": "1d778f5a9691fcf4dbec960078a76d91"
+  },
+  "recordings": [
+   {
+    "name": "DARKMAN1.RZX",
+    "path": "darkman/DARKMAN1.RZX",
+    "md5": "8080888a7eafb62affbc686ee4d10bb9"
+   },
+   {
+    "name": "DARKMAN2.RZX",
+    "path": "darkman/DARKMAN2.RZX",
+    "md5": "e9566f76bcb5921ed3219d383353994c"
+   },
+   {
+    "name": "target_level2_contact.rzx",
+    "path": "darkman/target_level2_contact.rzx",
+    "md5": "c43e53f112f7072202e695d809da71a8"
+   },
+   {
+    "name": "level3_reset_contact.rzx",
+    "path": "darkman/level3_reset_contact.rzx",
+    "md5": "25ecf5ef3635beb4e6aae6a0733cd499"
+   }
+  ]
+ },
+ "paired_starts": {
+  "DARKMAN1.RZX": {
+   "name": "DARKMAN1_start.z80",
+   "path": "darkman/DARKMAN1_start.z80",
+   "md5": "506154677af3a61237ce3cfc10bdefe5"
+  },
+  "DARKMAN2.RZX": {
+   "name": "DARKMAN2_start.z80",
+   "path": "darkman/DARKMAN2_start.z80",
+   "md5": "abf8eae5139664a3efd1a2217a904131"
+  }
+ },
+ "diagnostic_inputs": [
+  {
+   "name": "Darkman (1991)(Ocean)[128K].tzx",
+   "path": "darkman/Darkman (1991)(Ocean)[128K].tzx",
+   "md5": "df83ed0c07669720b9a98ec73e0ca2fd"
+  },
+  {
+   "name": "Darkman (1991)(Ocean Software)(128k).pok",
+   "path": "darkman/Darkman (1991)(Ocean Software)(128k).pok",
+   "md5": "330efabe6806734e3dcf2e31a9904420"
+  },
+  {
+   "name": "Darkman.scr",
+   "path": "darkman/Darkman.scr",
+   "md5": "41362d2840e91c42a1440549fea3ce4e"
+  }
+ ],
+ "modules": [
+  "z80tonex",
+  "nextboot"
+ ],
+ "own_modules": [],
+ "data": [],
+ "rebuild": {
+  "cmd": "convert",
+  "args": [
+   "--tail",
+   "0xba00"
+  ],
+  "rzx": []
+ },
+ "verify": null,
+ "outputs": {
+  "plain": {
+   "file": "darkman_plain.nex",
+   "md5": "60f01242d6da53e5f0ce34067dc5d2bc"
+  }
+ },
+ "repro": [],
+ "checks": [],
+ "excluded": "Stage 1. The automated recipe rebuilds the plain target conversion. A whole-game release renderer and verifier are pending.",
+ "status": {
+  "engine_col": "New engine (darkman.md)",
+  "build": "Original graphics trainer diagnostic. Sprite design in progress.",
+  "software": "76,678 archive frames. Seven diagnostic choices, 128 selections. OverSpec menu to play.",
+  "hardware": "Untested",
+  "next": "Verify the original multiload, per-screen figure lifetime and late foreground masking.",
+  "evidence": {
+   "functional": {
+    "level": "host",
+    "scope": "SkoolKit event pairs, release level 2 contact and level 3 reset. See games/darkman.md."
+   },
+   "display": {
+    "level": "host",
+    "scope": "Physical screen traces and masked overlay models in levels 1, 2, 4 and 5. Hardware sprite pixels unverified."
+   },
+   "integration": {
+    "level": "integrated",
+    "scope": "Trainer-only NXC on the TOSEC snapshot, boot model and OverSpec desktop menu to play. No sprite build."
+   },
+   "timing": {
+    "level": "host",
+    "scope": "111 unpatched level 1 update intervals. No patched hook timing."
+   }
+  }
+ },
+ "feasibility": {
+  "pacing": {
+   "evidence": [
+    "games/darkman.md#feasibility"
+   ],
+   "coverage": "DARKMAN1 frames after bookmark 5200, 350 recorded frames",
+   "result": "111 complete updates. Two accepted interrupts each. Median 206245 T per update."
+  },
+  "dependencies": {
+   "evidence": [
+    "games/darkman.md#feasibility"
+   ],
+   "coverage": "Page-select events on two screens and one level 5 render pass.",
+   "result": "3006 visible pixel differences on four level 2 page changes without page reuse. 408 conflicting pixels in 68 level 5 renders without foreground masking."
+  },
+  "decision": "Keep stage 1 open. Release code differs from recording code and later game paths require separate composition and replay coverage.",
+  "next_experiment": "Capture the original tape transition into the second load. Replay the page-specific and depth models against all original-release figure call sites."
+ },
+ "checked": {
+  "deps": {
+   "nexclash.py": "2ac99cf4fa2917e5",
+   "nexclash/build.py": "e632a2f1f49c8be6",
+   "nexclash/dizzy6.py": "d110f92d9d7d50f1",
+   "nexclash/engines.py": "b24e01a406607173",
+   "nexclash/nextboot.py": "f67deed5c0603d2a",
+   "nexclash/rzx.py": "90008c9ca09c51bc",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
+   "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
+   "skoolkit": "10.1",
+   "recipe": "569c6496e9624078",
+   "rom": "e50ee485fb4a21d2"
+  },
+  "date": "2026-11-28"
+ }
+}
