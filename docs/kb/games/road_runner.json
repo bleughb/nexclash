@@ -1,0 +1,215 @@
+{
+ "game": "road_runner",
+ "schema": 1,
+ "machine": "48K",
+ "engine": "unknown",
+ "inputs": {
+  "z80": "d20bb6338a7d18fef2f557e4176cdd0b",
+  "rzx": [
+   "6b7d57acd24cb428c54a15e0c98de3e8"
+  ],
+  "args": [
+   1500,
+   null,
+   null,
+   6,
+   false
+  ]
+ },
+ "frames": 1501,
+ "model": "several routines draw to the screen directly",
+ "pacing": "interrupts on",
+ "interrupts_accepted": 293,
+ "source_buffers": {},
+ "coverage_gaps": 0,
+ "plain": {
+  "file": "Road Runner and Wile E. Coyote (1991)(Hi-Tec Software).nex",
+  "tail": "WARNING: no proven-safe tail location; converter default used",
+  "boot": "OK (registers, RAM, ROM view, paging)"
+ },
+ "outcome": "intake: named 48K target is the two-scene demo",
+ "routines": [
+  {
+   "routine": 57031,
+   "role": "main loop (attribution blurred)",
+   "pixel_bytes": 221184,
+   "attr_bytes": 3072,
+   "block_copy_bytes": 0,
+   "calls": 4,
+   "T_median": 2714318,
+   "fingerprint": {
+    "n": 44,
+    "full": "d3a43bc65d",
+    "win": [
+     "01e591dc44",
+     "02cee0a028",
+     "0f4b08efb3",
+     "108155198c",
+     "16a3c1fac7",
+     "2354974565",
+     "27dea6de9c",
+     "4575f4bd08",
+     "5455c90052",
+     "5927990fd0",
+     "5b80db9dcf",
+     "5e9c14815b",
+     "69691f8851",
+     "6ae6913e56",
+     "723a08184f",
+     "727255b1e0",
+     "735b7ef9de",
+     "78aea19294",
+     "83229b332e",
+     "86195bb155",
+     "86687e8de5",
+     "8e48000c94",
+     "8e95e8331b",
+     "97ad524c2d",
+     "99b7235150",
+     "9c39abdb0a",
+     "a26f98d356",
+     "a405874425",
+     "a8092ab418",
+     "ac6abbbd7b",
+     "b87e09f3d8",
+     "c87477629d",
+     "d2f1aaba0e",
+     "d37188d1f0",
+     "db6b56ea8e",
+     "dced8892a3",
+     "ebb3784aba",
+     "f2f6af9650",
+     "f8ad954846"
+    ]
+   },
+   "callers": 4
+  },
+  {
+   "routine": 57297,
+   "role": "plotter",
+   "pixel_bytes": 6008,
+   "attr_bytes": 0,
+   "block_copy_bytes": 0,
+   "calls": 751,
+   "T_median": 975,
+   "fingerprint": {
+    "n": 28,
+    "full": "e8f2b6a3b6",
+    "win": [
+     "10f9e1f6aa",
+     "11194c5d04",
+     "127b445f87",
+     "2fa3eb402e",
+     "42a5268997",
+     "5b61c4ceba",
+     "8a188207e8",
+     "8a7844f6db",
+     "8ec0c345d8",
+     "90534398d4",
+     "99729220ea",
+     "9eeb12a258",
+     "b88db35880",
+     "b95e797d71",
+     "c3ddda208a",
+     "ce9e3e6a8b",
+     "e4b28b9b89",
+     "e4c7757f57",
+     "eb1b93a96b",
+     "f239006267",
+     "f52c532db7",
+     "f5cda5db3a",
+     "fdf06b6d34"
+    ]
+   },
+   "callers": 2
+  },
+  {
+   "routine": 57018,
+   "role": "attribute writer",
+   "pixel_bytes": 0,
+   "attr_bytes": 3072,
+   "block_copy_bytes": 3068,
+   "calls": 4,
+   "T_median": 16149,
+   "fingerprint": {
+    "n": 6,
+    "full": "9f4b1f28fa",
+    "win": [
+     "9f4b1f28fa"
+    ]
+   },
+   "callers": 1
+  },
+  {
+   "routine": 57454,
+   "role": "plotter",
+   "pixel_bytes": 2592,
+   "attr_bytes": 324,
+   "block_copy_bytes": 2916,
+   "calls": 6,
+   "T_median": 14766,
+   "fingerprint": {
+    "n": 16,
+    "full": "83b2abf6e8",
+    "win": [
+     "0257c2c217",
+     "1276f4cc9e",
+     "278a06a958",
+     "4f3efd62ef",
+     "68ec8c9d0b",
+     "85fca0a393",
+     "86c21ac2de",
+     "9ae09333c9",
+     "d9d61ad886",
+     "d9dea45e22",
+     "e21a0dbff0"
+    ]
+   },
+   "callers": 6
+  },
+  {
+   "routine": 57295,
+   "role": "plotter",
+   "pixel_bytes": 2744,
+   "attr_bytes": 0,
+   "block_copy_bytes": 0,
+   "calls": 343,
+   "T_median": 982,
+   "fingerprint": {
+    "n": 29,
+    "full": "5ba9315cb6",
+    "win": [
+     "10f9e1f6aa",
+     "11194c5d04",
+     "127b445f87",
+     "2fa3eb402e",
+     "42a5268997",
+     "5b61c4ceba",
+     "8a188207e8",
+     "8a7844f6db",
+     "8e42696f1e",
+     "8ec0c345d8",
+     "90534398d4",
+     "99729220ea",
+     "9eeb12a258",
+     "b88db35880",
+     "b95e797d71",
+     "c3ddda208a",
+     "ce9e3e6a8b",
+     "e4b28b9b89",
+     "e4c7757f57",
+     "eb1b93a96b",
+     "f239006267",
+     "f52c532db7",
+     "f5cda5db3a",
+     "fdf06b6d34"
+    ]
+   },
+   "callers": 2
+  }
+ ],
+ "title": "Road Runner and Wile E. Coyote",
+ "notes": [
+  "These measurements describe the named 48K TOSEC snapshot. The 128K RZX is the eight-scene release on the [48-128K] tape. See games/road_runner.md before selecting a target."
+ ]
+}
