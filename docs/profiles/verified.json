@@ -1059,10 +1059,10 @@
    "doc": "green_beret.md",
    "nex": {
     "plain": "283484a93a6eda05a4ecc5c7a9d1447b",
-    "sprites": "dd0badb0eb4a2d81fbc51fec7e6c7a19",
-    "sprites_loading": "b65abbdf8cb470307ee527b69a2f0205",
-    "enhanced": "6c011b764c43d774c43d8498ae3dfcc6",
-    "enhanced_loading": "915f4ee12d950aaf1961a4030a651261"
+    "sprites": "5c915f1b5ff3afa328f8854c495b40c5",
+    "sprites_loading": "1f09c8625f4a4bf4622b3365c9e36fab",
+    "enhanced": "a44a2eed1c413e412277b2865bcac317",
+    "enhanced_loading": "8fbabad3d9d8ad85439cd83c3c34a6bd"
    },
    "proof": "differential",
    "variants": [
@@ -1074,10 +1074,10 @@
      "proof": "differential",
      "nex": {
       "plain": "283484a93a6eda05a4ecc5c7a9d1447b",
-      "sprites": "dd0badb0eb4a2d81fbc51fec7e6c7a19",
-      "sprites_loading": "b65abbdf8cb470307ee527b69a2f0205",
-      "enhanced": "6c011b764c43d774c43d8498ae3dfcc6",
-      "enhanced_loading": "915f4ee12d950aaf1961a4030a651261"
+      "sprites": "5c915f1b5ff3afa328f8854c495b40c5",
+      "sprites_loading": "1f09c8625f4a4bf4622b3365c9e36fab",
+      "enhanced": "a44a2eed1c413e412277b2865bcac317",
+      "enhanced_loading": "8fbabad3d9d8ad85439cd83c3c34a6bd"
      }
     }
    ]
@@ -2727,4 +2727,4 @@
    ]
   }
  }
-}
+}

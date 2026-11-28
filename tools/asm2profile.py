@@ -44,7 +44,7 @@ def hook_profiles():
     return out
 
 
-def assemble(src, exe):
+def assemble(src, exe, defines=()):
     """-> ({key: bytes}, {symbol: value}). Key = SAVEBIN file name minus '<prefix>_' and '.bin'."""
     text = open(src).read()
     names = SAVEBIN.findall(text)
@@ -52,7 +52,7 @@ def assemble(src, exe):
         raise RuntimeError('%s has no SAVEBIN' % src)
     with tempfile.TemporaryDirectory() as tmp:
         # forward slashes: sjasmplus warns on '\' in a file name (Windows paths; 2026-10-31)
-        r = subprocess.run([exe, '--zxnext', '--msg=war', '--sym=hooks.sym', src.replace('\\', '/')], cwd=tmp,
+        r = subprocess.run([exe, *['-D' + d for d in defines], '--zxnext', '--msg=war', '--sym=hooks.sym', src.replace('\\', '/')], cwd=tmp,
                            capture_output=True, text=True)
         msg = r.stdout + r.stderr
         if r.returncode or 'error' in msg.lower() or 'warning' in msg.lower():
@@ -80,9 +80,19 @@ def run(name, exe, check, add_syms=()):
     path = os.path.join(PROFILES, name + '.json')
     text = open(path).read()
     prof = json.loads(text)
-    h = prof['hooks']
+    sections = ['hooks'] + [k for k in prof if k.endswith('_hooks') and 'source' in prof[k]]
+    results = [update_blocks(name if k == 'hooks' else name + '/' + k, prof[k], exe, check, add_syms)
+               for k in sections]
+    if not check:
+        out = json.dumps(prof, indent=1)
+        if out != text:
+            open(path, 'w').write(out)
+    return all(results)
+
+
+def update_blocks(name, h, exe, check, add_syms):
     src = os.path.join(ROOT, h['source'])
-    blocks, syms = assemble(src, exe)
+    blocks, syms = assemble(src, exe, h.get('defines', ()))
     problems = []
     for key, data in blocks.items():
         old = h.get(key)
@@ -119,9 +129,6 @@ def run(name, exe, check, add_syms=()):
         print('%-22s %s' % (name, 'IDENTICAL (%d blocks, %d symbols)' % (len(blocks), len(new_syms))
                              if not real else 'DIFFERS: ' + '; '.join(real)))
         return not real
-    out = json.dumps(prof, indent=1)
-    if out != text:
-        open(path, 'w').write(out)
     print('%-22s %s' % (name, 'written: ' + '; '.join(problems) if problems else 'unchanged'))
     return True
 

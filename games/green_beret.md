@@ -1,16 +1,22 @@
 # Green Beret (Imagine, 1986; 48K) - engine `green_beret` (pilot game: unattended, no hardware)
 
 ## Next session
-Stage 4. The owner played 1.2 on a KS3. The 1.3 default and optional Enhanced intros have emulator coverage. A physical test of this build is open.
+Stage 4. The owner played 1.2 on a KS3. The Spectrum grey ring and the combined Enhanced colour set have emulator coverage. Both await a physical Next test.
 Inputs: pilot run folder (green_beret.z80 md5 c1a76349, work/reference/green_beret/*.rzx)
 Start with: hardware checklist below; then a human's answers to "Defaults taken".
 Read: this file. Open: everything under "Open".
 
 Techniques: `detect.gameplay-screen-readers`, `detect.tracked-unit`, `patch.runtime-colour-map` (recipe and results: docs/records/green_beret.json)
 
-## Optional Enhanced stage intros (1.3 test, 2026-11-27)
+## Current colour choices
 
-Menu option 8 starts off. The default loading build remains `b65abbdf8cb470307ee527b69a2f0205`. Enhanced loading is `915f4ee12d950aaf1961a4030a651261`. Both retain the tape menu and the gameplay sprite treatment from 1.3.
+The normal build produces the plain conversion, Spectrum sprites and Enhanced sprites. Both sprite choices have a tape-loading-screen variant. The patch menu offers one Enhanced set. It combines the coloured stage intros with the owner’s arcade painting.
+
+Spectrum uses swatch 15 for the one-pixel grey ring, RGB333 444 (9-bit word $124). The 1.3 patterns used swatches 1 and 2 for all 22,686 opaque pixels. Four-connected exterior pixels touching black in any of eight directions get the ring. Padding preserves the 1,221 ring pixels beyond the source rectangles. The original plotters still run and retain the original gameplay data. All 134 isolated figures match the rule, including mines and shots. All 27,716 opaque Enhanced pixels and nine hardware palettes match the owner’s approved build.
+
+## First Enhanced intro build (1.3 test, 2026-11-27)
+
+Menu option 8 starts off. In this earlier intro-only test, the default loading build was `b65abbdf8cb470307ee527b69a2f0205`. Enhanced loading was `915f4ee12d950aaf1961a4030a651261`. Both retain the tape menu and the gameplay sprite treatment from 1.3.
 
 The screen uses scenery tiles. The renderer reads one brick at $77A0 and eight prisoner tiles at $77F0..$782F. The four gameplay plotters had zero hits during the first intro. A bank-7 tilemap holds 1,280 map bytes and eleven 32-byte patterns. The second ULA palette lets the original brick reveal, text masks and four shadow columns show through. The message uses the arcade's teal and stage names use the orange STAGE label. The stage table at $A304 supplies all four names.
 
@@ -85,13 +91,20 @@ The original plot code still runs, with its screen writes redirected: each plot 
 Sites: top of asm/green_beret_hooks.asm, SITES_ORIG in the module. Code 772 bytes in alt ROM image 1 at 0x386E, 492 in page 26. State in page 26 at 0x5800-0x5FFF: cache keys, stamps, class table, BUF; ISR touches none of it. Interrupts are off in 0xA5FE.
 Sprites: 4-bit 16x16, up to 2 x 2 per figure. Cache 32 entries of 4 patterns, keyed gfx, mask low, lines; the entry idle longest goes, never one on show (age < 2). Frame end hides the slots not plotted; the two screen wipes (0x64F4, 0x64E6) hide all. Clip x 16-239 (margin columns are black on black).
 Tail: 54 bytes at 0x8342 in both builds, put back before the game starts (restore_tail, Alien 8's method): the tail jumps to the alt ROM image's free span after the register block (0x38B8 plain, 0x3BCF sprites), which copies a backup over it and runs the tail's register restore again. That scenery-buffer row is NOT written before read: the screen copier (0xA9C7) shows it before the first draw at the start of play, so the old builds showed the tail's bytes for 0 to 26 frames (median 11, gb_nocheat; the snapshot holds zero there). rom_paths' tail proof (2026-11-04) caught it on 2026-11-23; work/tailtest.py compared RAM at checkpoints and missed it. No span is write-first in all four recordings. The plain build carries an alt ROM (Sinclair's) for this. Booted to the game PC 0x8273: plain RAM equals the snapshot, the sprite build differs only at the hook sites. First choice 0x9400 was graphics of stage 4: the stage-4 recording's scan caught it.
-Colour route: docs/COLOURS.md. Palette 1 white, 2 black, 3-15 Spectrum colours. Keys: graphics byte. Sheets: `sheets/`. Plane per painted image: per line 16 colour + 16 keep bytes in pages 28-51; index in page 27. Applied on upload.
+Colour route: Spectrum stores the padded patterns in pages 28 onward. Page 27 maps the source address to the pattern and its on-screen origin. Enhanced keeps the arcade colour planes and per-cache-entry palette offset. Its 15 opaque swatches per group include swatch 15 for opaque grey. Both sheets use a darker grey canvas for transparent pixels.
+
+## Painting sheets
+
+Build both choices with `python nexclash.py auto GAME.z80 --no-record --nex -o OUTPUT`. The owner's 5,225-entry painting is the Enhanced default in `docs/profiles/green_beret_arcade_colours.json`. Export its 1:1 sheets with `python -m nexclash.green_beret_art GAME.z80 OUTPUT`.
+
+Import the edited PNG with `python nexclash.py recolour OUTPUT/green_beret_enhanced.nex EDITED.png --layout OUTPUT/green_beret_enhanced_PAINTING_SPRITES_layout.json --game green_beret`. Substitute the actual build filename when the snapshot has a different name. Keep each PNG beside its layout. Use the refreshed pair and painted NEX for the next edit.
 
 ## Defaults taken (a human would have decided these)
 1. Every figure a sprite, from every caller of the four plotters. 2. Scenery, HUD, text on the ULA. 3. Depth: plot order, all sprites over all scenery. 4. Colours: figures have none of their own (ink black, body the cell's paper). Default chosen as Cobra: bright white body, black dark pixels; nothing painted. 5. No menus over the play area; GAME OVER is a ULA box in the sky, figures stay frozen as sprites.
 ALWAYS-ASK, decided here: solid: follows the mask everywhere, so in the sky (y < 82), where the original has no mask, bodies are opaque white rather than see-through. Bullets and mines: mines as sprites with body; bullets dark only. The weapon shot (0xAB60) stays on the ULA: behind figures here, in front in the original; its body is the cell's paper. CLOSE CALL for a human.
 
 ## Lessons
+- [local: padded sprite edge] Flood the exterior on a padded raster. The four plotters include black pixels on source boundaries. Isolating each emitted hardware figure catches lost margin pixels and palette bank errors on frames the recordings seldom draw.
 - [local: stage intro] The name is selected at $A1FF before the wall is built. The stage-4 recording starts after that selection and retains MISSILE BASE. Set $FFDF to 3 before $A1FF to see PRISON CAMP. The first HUD wipe is inside $A46A. Returning from that routine is too late to switch the display back.
 - [local: start screen] A snapshot saved after the tape's screen was overwritten loses what the original shows behind
   its menu; the build can put the tape's screen back in screen memory at the start (the boot check sees it through the
@@ -114,6 +127,7 @@ ALWAYS-ASK, decided here: solid: follows the mask everywhere, so in the sky (y <
 - detect.gameplay-screen-readers: helped. detect.tracked-unit: helped. patch.runtime-colour-map: helped, simplified to a keep plane.
 
 ## Stage log
+- 2026-11-27: Combined the two Enhanced treatments, carried the approved map unchanged, and added the Spectrum ring. Read the engine, art and intro modules and the hooks together to reconcile setup addresses, plane formats and verifier assumptions.
 - 2026-11-03 stages 0-3 in one session (pilot, unattended), about 1 h, ~55 tool calls, 0 user rounds.
 - 2026-11-23 maintenance: the full re-verify for the Codex review PR failed the tail proof; restore_tail in both builds, record MD5s, re-stamped.
 
@@ -139,5 +153,5 @@ Colour route: recolour on a throwaway painting 1.3 s; JNext showed it (jn/painte
   (green_beret-loading.scr in screen memory at the start, and in green_beret_sprites_loading.nex so the .nxc shows it
   while patching). Waiting on the owner's KS3 test. 1.2 played on the KS3 2026-11-27, good.
 - Stage 3's end (helicopters) was reached by cheat, not finished by the bot; the true end of the game unreached. Boss paths of stage 4 not reached.
-- A human's answers to "Defaults taken". Physical KS3 testing of the new Enhanced stage intros is open.
+- Physical KS3 test of the Spectrum ring, the Enhanced sprites and the intro-to-play transition. The stage 4 boss and the ending still need recordings.
 - 2026-11-27: 1.3: edge ring removed, tape loading screen at the start + _loading build; quick replay of gb_weap and gb_cheat (3,000 frames each) IDENTICAL, units PASS (106 edge-rule figures).
