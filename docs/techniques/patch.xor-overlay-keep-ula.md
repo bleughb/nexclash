@@ -28,12 +28,12 @@
 
 ## Use / do not use
 Leave the plotter writing the ULA as the original; put sprites exactly on each figure's ink, in
-front. Use when figures go in front and gameplay may read XOR figure pixels (the ULA is unchanged). Not when figures go behind scenery
-(the XOR hole shows) or the composition is not XOR.
+front. Use when figures go in front and gameplay may read XOR figure pixels (the ULA is unchanged); masked plots too, each
+sprite covering the whole mask opaque. Not when figures go behind scenery (the hole shows).
 
 **Assumptions.** Figure pixels change only by their own plots, or every other writer is hooked.
 
-**Validation gap.** Fireman OPUS and Cauldron only; no masked or partial XOR images.
+**Validation gap.** Fireman OPUS, Cauldron (XOR), Yie Ar Kung-Fu (masked); no partial XOR images yet.
 
 ## Recognise
 - XOR figures logic may read, wanted in front (Fireman).

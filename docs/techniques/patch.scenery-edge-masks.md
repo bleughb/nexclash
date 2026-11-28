@@ -29,7 +29,7 @@ Use when scenery is drawn on Layer 2 in front of sprites (NR 0x15 Layer 2 over s
 
 **Assumptions.** The level's scenery can be drawn offline from the game's own map (decoder checked against its initial draw); a cell's mask rarely depends on where it is used.
 
-**Validation gap.** CSpect only (R-Type levels 1 and 5 examined); per-level conflicts not reviewed in play; no board run.
+**Validation gap.** CSpect only (R-Type levels 1 and 5 examined); per-level conflicts not reviewed in play; no board run. Yie Ar Kung-Fu: a fixed graphic the game ORs over the figures each tick (Feedle's caves) needs no offline map: its ink alone on Layer 2, shown at the flip of the screen it was drawn on (replay-checked).
 
 ## Recognise
 Sprites "behind" scenery lose whole cells; the original's black between scenery details is paper, not a colour.

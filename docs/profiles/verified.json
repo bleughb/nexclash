@@ -2786,6 +2786,34 @@
      }
     }
    ]
+  },
+  "954472db58451ab0183075154cd70169": {
+   "game": "Yie Ar Kung-Fu (128K)",
+   "doc": "yie_ar_kung_fu.md",
+   "nex": {
+    "plain": "fa391314578494bfd3ec58e784cc8489",
+    "sprites": "8e1c14c4ba53051e47157d93d235a753",
+    "enhanced": "08202f53b44b02d0ea78fc34c67191d2",
+    "loading": "eb58ab251db00cd1ea508b41dc08a2b2",
+    "enhanced_loading": "82ff5e89b13f10a27864405403765741"
+   },
+   "proof": "differential",
+   "variants": [
+    {
+     "record": "yie_ar_kung_fu",
+     "game": "Yie Ar Kung-Fu (128K)",
+     "doc": "yie_ar_kung_fu.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "fa391314578494bfd3ec58e784cc8489",
+      "sprites": "8e1c14c4ba53051e47157d93d235a753",
+      "enhanced": "08202f53b44b02d0ea78fc34c67191d2",
+      "loading": "eb58ab251db00cd1ea508b41dc08a2b2",
+      "enhanced_loading": "82ff5e89b13f10a27864405403765741"
+     }
+    }
+   ]
   }
  }
 }
