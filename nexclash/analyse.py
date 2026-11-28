@@ -36,9 +36,16 @@ class _State:
 
 
 def analyse(prof, rzx_path, z80_sp, stop=None, progress=None):
-    """prof=None: access scan only (free memory, ROM use, stack low-water). 48K recordings only: a 128K one is refused."""
+    """prof=None: access scan only (free memory, ROM use, stack low-water). A 128K recording (SkoolKit's paged memory)
+    gets the access scan: 'rd' / 'wr' as the CPU addressed them (0xC000- whatever bank was paged) and 'rd128' / 'wr128'
+    by physical place (0x0000-0x3FFF ROM, then bank n at 0x4000 + n * 0x4000). The TID profile analysis (a flat
+    48K screen model) stays 48K: a profile with a 128K recording is refused."""
     from .machine import refuse_128k_rzx
-    refuse_128k_rzx(rzx_path, 'analyse (memory hooks over a flat 48K view)')
+    from .rzx import read_segments
+    segs = read_segments(rzx_path)
+    is128 = bool(segs) and len(segs[0][0].ram(-1)) > 49152
+    if prof and is128:
+        refuse_128k_rzx(rzx_path, 'analyse with a TID profile (a flat 48K screen model)')
     if prof:
         P0, E0 = prof['plotter'], prof['eraser']
         player = (P0, E0 + 53)
@@ -60,7 +67,17 @@ def analyse(prof, rzx_path, z80_sp, stop=None, progress=None):
     st.P = None; st.drawn = False; st.synced = False
     c = collections.Counter(); diffw = collections.Counter(); diffr = collections.Counter()
     RD = bytearray(65536); WR = bytearray(65536); ccache = {}
+    RD128 = bytearray(0x24000); WR128 = bytearray(0x24000); RBW128 = bytearray(0x24000)   # RBW: read before any write
     REG = [None]
+
+    def phys(m, a):                 # 128K: where address a is now (ROM, or bank n at 0x4000 + n * 0x4000)
+        if a < 0x4000:
+            return a
+        if a < 0x8000:
+            return 0x18000 + a - 0x4000             # bank 5
+        if a < 0xC000:
+            return 0xC000 + a - 0x8000              # bank 2
+        return 0x4000 + (m.o7ffd & 7) * 0x4000 + a - 0xC000
 
     class Mem(list):
         def __getitem__(s, a):
@@ -107,9 +124,32 @@ def analyse(prof, rzx_path, z80_sp, stop=None, progress=None):
                         apply_write(st.P, a, old, v, cls)
             list.__setitem__(s, a, v)
 
+    from skoolkit.pagingtracer import Memory as Paged
+
     class S(Simulator):
         def __init__(self, memory, registers=None, state=None, config=None):
-            super().__init__(Mem(memory), registers, state, config)
+            if isinstance(memory, Paged):           # 128K: track accesses on SkoolKit's own paged memory
+                base = type(memory)
+
+                class PM(base):
+                    def __getitem__(s, a):
+                        if type(a) is int and REG[0] is not None:
+                            RD[a] = 1
+                            p = phys(s, a)
+                            RD128[p] = 1
+                            if not WR128[p]:
+                                RBW128[p] = 1
+                        return base.__getitem__(s, a)
+
+                    def __setitem__(s, a, v):
+                        if type(a) is int and REG[0] is not None:
+                            WR[a] = 1
+                            WR128[phys(s, a)] = 1
+                        base.__setitem__(s, a, v)
+                memory.__class__ = PM
+                super().__init__(memory, registers, state, config)
+            else:
+                super().__init__(Mem(memory), registers, state, config)
             REG[0] = self.registers
             st.synced = False
             st.drawn = False
@@ -127,6 +167,20 @@ def analyse(prof, rzx_path, z80_sp, stop=None, progress=None):
     finally:
         rzxplay.Simulator, rzxplay.CSimulator = old
     REG[0] = None
+    rbw = None
+    if is128:
+        # By place, not by address: a byte of bank 5 or 2 read or written through 0xC000 counts at its fixed address
+        # too (0x4000- / 0x8000-), and 0xC000- holds every bank's accesses (any of them may be paged there)
+        def fold(m):
+            v = bytearray(65536)
+            v[0:0x4000] = m[0:0x4000]
+            v[0x4000:0x8000] = m[0x18000:0x1C000]
+            v[0x8000:0xC000] = m[0xC000:0x10000]
+            for b in range(8):
+                blk = m[0x4000 + b * 0x4000:0x8000 + b * 0x4000]
+                v[0xC000:] = bytes(x | y for x, y in zip(v[0xC000:], blk))
+            return v
+        RD, WR, rbw = fold(RD128), fold(WR128), fold(RBW128)
     # stack low-water mark below the snapshot's SP (contiguous stack writes)
     low, a, gap = z80_sp, z80_sp - 1, 0
     while a > z80_sp - 1024 and gap < 8:
@@ -144,5 +198,22 @@ def analyse(prof, rzx_path, z80_sp, stop=None, progress=None):
         'virtual_read_needed': c['PIXEL TESTS THAT DEPEND ON THE PLAYER'] > 0,
         'rom_used': rom_reads > 0, 'printer_buffer_touched': pb_touched,
         'stack_low_water': low, 'self_modified_sites': c['WRITES TO PATCH SITES'],
-        'rd': RD, 'wr': WR,
+        'rd': RD, 'wr': WR, 'machine': '128K' if is128 else '48K',
+        'rd128': RD128 if is128 else None, 'wr128': WR128 if is128 else None, 'rbw': rbw,
     }
+
+
+SCAN_KEYS = ('rd', 'wr', 'rbw', 'rd128', 'wr128')
+
+
+def merge_scans(c, x):
+    """Fold recording x's access scan into c (both analyse() results of the same game): a byte read, written or
+    read before written in ANY recording counts ('rbw' too: a tail on a byte one recording reads first is live data,
+    whatever another recording does there). A scan one side lacks (48K: None) is the other's."""
+    for k in SCAN_KEYS:
+        p, q = c.get(k), x.get(k)
+        if p is not None and q is not None:
+            c[k] = bytearray(a | b for a, b in zip(p, q))
+        elif q is not None:
+            c[k] = bytearray(q)
+    return c

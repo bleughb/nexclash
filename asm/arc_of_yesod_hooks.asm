@@ -1170,9 +1170,11 @@ e_beam: call ny_speed_in
         and 7
         jp 0xCF0A
 
-; DE -> the rows of a graphic 3 bytes wide (its height at DE - 2). Its 6 tiles (2 x 3; ink only, the graphic one pixel in from the left and the top, as
-; the build's patterns) are made in the shadow page above the colours and sent to the object's half patterns. A, BC, DE, HL lost.
+; DE -> the rows of a graphic 3 bytes wide (its height at DE - 2). Its 6 tiles (2 x 3; its ink, the graphic one pixel in from the left and the top, as
+; the build's patterns, in the colours of the painted tiles at DYN_PAINT) are made in the shadow page above the colours and sent to the object's half
+; patterns. A, BC, DE, HL lost.
 DYN_BUF EQU 0x8400
+DYN_PAINT EQU 0x8800            ; the build's painted tiles (nibble = colour; the ink's own where unpainted)
 dynload:
         dec de
         dec de
@@ -1234,6 +1236,19 @@ dynload:
         jr nc,.next
         inc h
 .next:  djnz .line
+        ld hl,DYN_BUF           ; ink (nibble F) AND the painted tiles: both page-aligned, 3 pages
+        ld de,DYN_PAINT
+        ld c,3
+.and:   ld a,(de)
+        and (hl)
+        ld (hl),a
+        inc e
+        inc l
+        jr nz,.and
+        inc d
+        inc h
+        dec c
+        jr nz,.and
         ld a,(V_K)
         ld e,a
         add a,a
@@ -1253,17 +1268,17 @@ dynload:
         jr nz,.t
         nextreg 0x54,4
         ret
-; A = 8 pixels -> 4 pattern bytes at HL (nibble 1 = ink). HL advances; BC, DE kept.
+; A = 8 pixels -> 4 pattern bytes at HL (nibble F = ink). HL advances; BC, DE kept.
 dynexp: push bc
         ld c,a
         ld b,4
 .l:     xor a
         rl c
         jr nc,.a
-        or 0x10
+        or 0xF0
 .a:     rl c
         jr nc,.b
-        or 0x01
+        or 0x0F
 .b:     ld (hl),a
         inc hl
         djnz .l

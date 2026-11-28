@@ -25,6 +25,8 @@ actor_close:
         ld (v_speed),a
         ret
 actor_cancel:
+        xor a
+        ld (v_clip),a             ; game over / new game leave the render pass
         ld a,(v_actor_active)
         or a
         ret z

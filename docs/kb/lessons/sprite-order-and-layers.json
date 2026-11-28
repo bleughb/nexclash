@@ -8,6 +8,12 @@
    "text": "NextReg $15 bit 6 = 0 (reset value, never set): the higher sprite number is drawn on top; up to 116 sprites in all.",
    "quote": "Sprite priority: NextReg $15 bit 6 = 0 (reset value, never set): the HIGHER sprite number is drawn",
    "shown_on": "unknown"
+  },
+  {
+   "game": "games/jack_the_nipper.md",
+   "text": "NR 0x15 = 0x41 (bit 6 set) put sprite 0 on top and reversed the depth; the verifier painted later sprites last whatever the setup said, so it passed; 0x01 and a renderer that reads the setup fixed both.",
+   "quote": "the depth reversed) and the verifier, painting later sprites last",
+   "shown_on": "analysis"
   }
  ],
  "level": "inferred",
