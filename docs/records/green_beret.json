@@ -85,26 +85,26 @@
   },
   "sprites": {
    "file": "green_beret_sprites.nex",
-   "md5": "5c915f1b5ff3afa328f8854c495b40c5"
+   "md5": "f9ee0661576e11216db9598d3d591bf4"
   },
   "sprites_loading": {
    "file": "green_beret_sprites_loading.nex",
-   "md5": "1f09c8625f4a4bf4622b3365c9e36fab"
+   "md5": "3bc3373216912fff9f31b76aaf187167"
   },
   "enhanced": {
    "file": "green_beret_enhanced.nex",
-   "md5": "a44a2eed1c413e412277b2865bcac317"
+   "md5": "efb07e67b9148eb57f6e6289e037b5e2"
   },
   "enhanced_loading": {
    "file": "green_beret_enhanced_loading.nex",
-   "md5": "8fbabad3d9d8ad85439cd83c3c34a6bd"
+   "md5": "75b25faf2d651d2177f7effd21496354"
   }
  },
  "repro": [],
  "status": {
   "title": "Green Beret",
   "engine_col": "green_beret (green_beret.md)",
-  "build": "Spectrum sprites with a one-pixel grey ring. Enhanced adds the owner's nine sprite palettes and the stage intro tilemap.",
+  "build": "Spectrum sprites have a one-pixel dark grey ring. Enhanced has black lines, transparent rims, the owner\u2019s arcade colours and the stage intro tilemap.",
   "software": "Four scripted recordings per colour choice. Exact figure rasters, intro transitions and boot checks.",
   "hardware": "KS3 (System/Next 26.11a): 1.2 played by the owner 2026-11-27, good; 1.3 (no white edge, menu on the loading screen) not yet",
   "next": "Owner's KS3 test of both colour choices."
@@ -149,9 +149,9 @@
  ],
  "checked": {
   "deps": {
-   "asm/green_beret_hooks.asm": "573c3fe88ba29a8e",
-   "docs/profiles/green_beret.json": "e003aeac2f6bae11",
-   "docs/profiles/green_beret_arcade_colours.json": "92ad06dd22c0435b",
+   "asm/green_beret_hooks.asm": "bcfe7194ccd5b9e5",
+   "docs/profiles/green_beret.json": "b60c368bded6f07c",
+   "docs/profiles/green_beret_arcade_colours.json": "84d2cbea18bbfa9c",
    "nexclash.py": "4a87a4de972a122f",
    "nexclash/analyse.py": "9068c7834f1f1923",
    "nexclash/build.py": "7a7bb03de0547247",
@@ -159,8 +159,8 @@
    "nexclash/dizzy5.py": "1123c301b84e7cbc",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/engines.py": "9666a7f032696532",
-   "nexclash/green_beret.py": "e15918015a24ac1a",
-   "nexclash/green_beret_art.py": "37456f81a51804ca",
+   "nexclash/green_beret.py": "7d1936866d526092",
+   "nexclash/green_beret_art.py": "6a7774b9599110e3",
    "nexclash/green_beret_intro.py": "4a5d02b1aa610b85",
    "nexclash/identify.py": "578e73ef2ca90c6a",
    "nexclash/machine.py": "9c057372f6e27d70",
@@ -180,16 +180,16 @@
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "40da8c314fe81c3b",
+   "recipe": "9d561c3c421b717c",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-27"
  },
  "verified": {
   "deps": {
-   "asm/green_beret_hooks.asm": "573c3fe88ba29a8e",
-   "docs/profiles/green_beret.json": "e003aeac2f6bae11",
-   "docs/profiles/green_beret_arcade_colours.json": "92ad06dd22c0435b",
+   "asm/green_beret_hooks.asm": "bcfe7194ccd5b9e5",
+   "docs/profiles/green_beret.json": "b60c368bded6f07c",
+   "docs/profiles/green_beret_arcade_colours.json": "84d2cbea18bbfa9c",
    "nexclash.py": "4a87a4de972a122f",
    "nexclash/analyse.py": "9068c7834f1f1923",
    "nexclash/build.py": "7a7bb03de0547247",
@@ -197,8 +197,8 @@
    "nexclash/dizzy5.py": "1123c301b84e7cbc",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/engines.py": "9666a7f032696532",
-   "nexclash/green_beret.py": "e15918015a24ac1a",
-   "nexclash/green_beret_art.py": "37456f81a51804ca",
+   "nexclash/green_beret.py": "7d1936866d526092",
+   "nexclash/green_beret_art.py": "6a7774b9599110e3",
    "nexclash/green_beret_intro.py": "4a5d02b1aa610b85",
    "nexclash/identify.py": "578e73ef2ca90c6a",
    "nexclash/machine.py": "9c057372f6e27d70",
@@ -218,7 +218,7 @@
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "40da8c314fe81c3b",
+   "recipe": "9d561c3c421b717c",
    "rom": "8c34d957fb2cbbd0"
   },
   "date": "2026-11-27"

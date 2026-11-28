@@ -934,8 +934,8 @@ setup:  nextreg 0x43,0x20
         nextreg 0x41,a
         inc hl
         djnz .pl
-        nextreg 0x44,0x92       ; slot 15: RGB333 444, identical to the arcade rim
-        nextreg 0x44,0
+        nextreg 0x44,0x6D       ; slot 15: dark grey ring, RGB333 333 ($0DB)
+        nextreg 0x44,1
         ENDIF
         nextreg 0x4B,0
         xor a

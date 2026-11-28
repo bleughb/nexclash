@@ -52,6 +52,7 @@ WIN = (16, 239, 0, 191)
 SKY = 104                   # above this line the blit does not restore the screen
 SPECCY = [0x00, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4, 0xB6, 0x00, 0x03, 0xE0, 0xE3, 0x1C, 0x1F, 0xFC, 0xFF]
 PALETTE = [0x00, 0xFF, 0x00, 0x03, 0xE0, 0xE7, 0x1C, 0x1F, 0xFC, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4]   # slot 15 uses RGB333
+RING_RGB = (109, 109, 109)  # RGB333 333, programmed by the Spectrum setup
 PC, TS, SP, IFF = 24, 25, 12, 26
 CMP = list(range(0, 13)) + [14] + list(range(16, 25)) + [26, 27]   # all but R, T, MEMPTR
 GAME_SP = 41276
@@ -687,7 +688,7 @@ def _png(mem_get, ps, ns, path):
             rp[x, y] = art.RGB[c >> 4][c & 15]
             continue
         if c == 15:
-            rp[x, y] = art.RGB[0][15]
+            rp[x, y] = RING_RGB
             continue
         v = PALETTE[c]
         rp[x, y] = ((v >> 5) * 255 // 7, ((v >> 2) & 7) * 255 // 7, (v & 3) * 85)
@@ -1292,7 +1293,8 @@ def unit_tests(patch, states, neg=None):
             fail('edge rule: figure pixels')
         c['edge rule figures'] += 1
         c['opaque figure pixels'] += len(want)
-        c['grey figure pixels'] += sum((v & 15) == 15 for v in want.values())
+        if not patch.enhanced:
+            c['grey ring pixels'] += sum(v == 15 for v in want.values())
 
     # Change actual pattern RAM or the actual slot palette, then repeat the same comparison.
     img = next(img for img in k0 if rasters[img] and
@@ -1508,8 +1510,8 @@ def negative_patches(patch):
 # ---------------------------------------------------------------------------------------------
 # Colour sheets and recolour (docs/COLOURS.md)
 # ---------------------------------------------------------------------------------------------
-NOTE = ('Green Beret graphics bytes and rim margin keys. Each bit is one pixel. Swatch 15 is opaque grey. '
-        'Canvas grey is transparent. See docs/COLOURS.md.')
+NOTE = ('Green Beret graphics bytes and rim margin keys. Each bit is one pixel. Swatch 15 is '
+        'dark grey in Spectrum and navy in Enhanced. Canvas grey is transparent. See docs/COLOURS.md.')
 RECOLOUR = {'game': 'green_beret', 'output': 'sprites', 'colours': 'docs/profiles/green_beret_colours.json', 'clear': True,
             'note': NOTE, 'outputs': ('sprites', 'sprites_loading', 'enhanced', 'enhanced_loading')}
 
@@ -1665,7 +1667,7 @@ def sheets(z80, out_dir, prefix='green_beret', colours=None, say=print, banked=F
     prof = load_profile()
     comps = [{'count': 1, 'group': art.group(i[0]) if banked else 0, 'parts': [image_part(get, i, banked)]} for i in images(prof)]
     cmap = load_colours(banked=banked) if colours is None else colours
-    rgb = art.RGB[0] if banked else cs.palette_rgb(PALETTE) + [art.RGB[0][15]]
+    rgb = art.RGB[0] if banked else cs.palette_rgb(PALETTE) + [RING_RGB]
     groups = art.RGB if banked else None
     if banked:
         comps.sort(key=lambda c: c['group'])

@@ -12,7 +12,9 @@ Techniques: `detect.gameplay-screen-readers`, `detect.tracked-unit`, `patch.runt
 
 The normal build produces the plain conversion, Spectrum sprites and Enhanced sprites. Both sprite choices have a tape-loading-screen variant. The patch menu offers one Enhanced set. It combines the coloured stage intros with the owner’s arcade painting.
 
-Spectrum uses swatch 15 for the one-pixel grey ring, RGB333 444 (9-bit word $124). The 1.3 patterns used swatches 1 and 2 for all 22,686 opaque pixels. Four-connected exterior pixels touching black in any of eight directions get the ring. Padding preserves the 1,221 ring pixels beyond the source rectangles. The original plotters still run and retain the original gameplay data. All 134 isolated figures match the rule, including mines and shots. All 27,716 opaque Enhanced pixels and nine hardware palettes match the owner’s approved build.
+Spectrum uses swatch 15 for the one-pixel dark grey ring, RGB333 333 (109, 109, 109). A ring pixel must be in the four-connected exterior and touch the original black ink in one of eight directions. Across 134 figures there are 12,490 ring pixels, including 1,221 beyond the source rectangles.
+
+Enhanced uses swatch 2 for black. The 8,962 navy pixels on the original ink turn black. The 3,176 navy pixels painted on non-ink keep their RGB in swatch 15. All 4,958 painted grey rim pixels are transparent. The two prone frames at `9880` and `98E0` include the owner’s corrections from the painting PNG.
 
 ## First Enhanced intro build (1.3 test, 2026-11-27)
 
@@ -91,7 +93,7 @@ The original plot code still runs, with its screen writes redirected: each plot 
 Sites: top of asm/green_beret_hooks.asm, SITES_ORIG in the module. Code 772 bytes in alt ROM image 1 at 0x386E, 492 in page 26. State in page 26 at 0x5800-0x5FFF: cache keys, stamps, class table, BUF; ISR touches none of it. Interrupts are off in 0xA5FE.
 Sprites: 4-bit 16x16, up to 2 x 2 per figure. Cache 32 entries of 4 patterns, keyed gfx, mask low, lines; the entry idle longest goes, never one on show (age < 2). Frame end hides the slots not plotted; the two screen wipes (0x64F4, 0x64E6) hide all. Clip x 16-239 (margin columns are black on black).
 Tail: 54 bytes at 0x8342 in both builds, put back before the game starts (restore_tail, Alien 8's method): the tail jumps to the alt ROM image's free span after the register block (0x38B8 plain, 0x3BCF sprites), which copies a backup over it and runs the tail's register restore again. That scenery-buffer row is NOT written before read: the screen copier (0xA9C7) shows it before the first draw at the start of play, so the old builds showed the tail's bytes for 0 to 26 frames (median 11, gb_nocheat; the snapshot holds zero there). rom_paths' tail proof (2026-11-04) caught it on 2026-11-23; work/tailtest.py compared RAM at checkpoints and missed it. No span is write-first in all four recordings. The plain build carries an alt ROM (Sinclair's) for this. Booted to the game PC 0x8273: plain RAM equals the snapshot, the sprite build differs only at the hook sites. First choice 0x9400 was graphics of stage 4: the stage-4 recording's scan caught it.
-Colour route: Spectrum stores the padded patterns in pages 28 onward. Page 27 maps the source address to the pattern and its on-screen origin. Enhanced keeps the arcade colour planes and per-cache-entry palette offset. Its 15 opaque swatches per group include swatch 15 for opaque grey. Both sheets use a darker grey canvas for transparent pixels.
+Colour route: Spectrum stores the padded patterns in pages 28 onward. Page 27 maps the source address to the pattern and its on-screen origin. Enhanced keeps the arcade colour planes and per-cache-entry palette offset. Each Enhanced group has 15 opaque swatches. Swatch 15 holds navy detail. Both sheets use canvas grey (100, 100, 100) for transparency.
 
 ## Painting sheets
 
