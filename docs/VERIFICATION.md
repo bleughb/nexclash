@@ -89,7 +89,7 @@ Every game's verified outputs (`selftest.py` rebuilds them; the record says how)
 - Cybernoid - The Fighting Machine (cybernoid): `cybernoid.nex` 7c7bd61154709c7c0ac37ef63e59e165, `cybernoid_sprites.nex` c08867f3174b9b8c73cbad5af84d25c7; verified 2026-11-22
 - Underwurlde (underwurlde): `underwurlde.nex` 8b57d05dd0dff7c43d5f461076957237, `underwurlde_sprites.nex` e45d07f5650fc6b718092e611cd5d9e7; verified never
 - Knight Lore (knight_lore): `knight_lore.nex` 3d886bf550b0de02cad356748288e315; verified never
-- Alien 8 (alien_8): `alien_8.nex` bf107e59d0a9d51820a067b119916a90, `alien_8_enhanced.nex` ddb88f4490fdc20a37774e9b28d60f69; verified never
+- Alien 8 (alien_8): `alien_8.nex` bf107e59d0a9d51820a067b119916a90, `alien_8_enhanced.nex` 185d218f6b0bd77d46ce5e10609ef6dc; verified never
 - Gunfright (gunfright): `gunfright.nex` a0893534af6db797084760dbe867e407, `gunfright_enhanced.nex` 90a75069a4dbec52349c574f101300f6; verified 2026-11-21
 - Army Moves (army_moves): `army_moves_sprites.nex` fd03197076dc02dd70516a8219e63c3d, `army_moves_sprites_loading.nex` a2edd6afce2aadb34e6153895fc8080c; verified 2026-11-20
 - Game Over (game_over): `game_over_sprites.nex` c2879a731b23ff57e6f47064fb4769e1, `game_over_sprites_loading.nex` df968f3774d4c577fd74ac1ae4f60d14; verified 2026-11-20

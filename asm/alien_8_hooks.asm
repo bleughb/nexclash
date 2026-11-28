@@ -329,13 +329,13 @@ clear_all:
         ld bc,191
         ld (hl),7
         ldir
-        nextreg 0x15,0
+.hide:  nextreg 0x15,0
         ld hl,sc_used
         ld de,sc_used+1
         ld bc,127
         ld (hl),0
         ldir
-        nextreg 0x50,25
+.work:  nextreg 0x50,25
         ld hl,1024
         ld de,1025
         ld bc,447
@@ -439,7 +439,7 @@ commit:
         call nz,sprite_fallback
         call dirty_reset
         ; Publish only after the complete backing image exists.
-        call sprite_blank
+.wait:  call sprite_blank
         ld a,(v_back)
         srl a
         nextreg 0x12,a
@@ -700,6 +700,61 @@ o_sound_on:
 tramp_end:
         ASSERT tramp_end<0x3DF0
         SAVEBIN "alien8_page.bin",0x2000,0x2000
+
+        ; Build the Enhanced hook page from the same assembled code. Only these
+        ; two clear branches differ. The default page above is the 1.5 binary.
+        ORG clear_all.hide
+        jp enhanced_clear
+        ORG clear_all.empty
+        jp enhanced_empty
+        ORG code_end
+enhanced_clear:
+        ; Keep sc_used protecting the patterns referenced by the displayed
+        ; attributes. Work records and both dirty-bank flags still reset.
+        ld hl,enhanced_room_wait
+        ld (commit.wait+1),hl
+        jp clear_all.work
+enhanced_empty:
+        nextreg 0x15,0
+        xor a
+        ld (v_mode),a
+        ld bc,0x123B
+        out (c),a
+        jp clear_all.floor
+
+enhanced_room_wait:
+        ; A749 fills the room attributes before CE85. Read an ordinary room
+        ; cell and the builder's ULA-matched ink table before the beam wait.
+        ld hl,sprite_blank
+        ld (commit.wait+1),hl
+        nextreg 0x50,25
+        ld a,(0x5800)
+        ld c,a
+        and 64
+        rrca
+        rrca
+        rrca
+        ld b,a
+        ld a,c
+        and 7
+        or b
+        add a,a
+        or 128
+        ld l,a
+        ld h,0
+        ld a,(hl)
+        push af
+        call sprite_blank
+        pop af
+        nextreg 0x43,0x10
+        nextreg 0x40,126
+        nextreg 0x41,a
+        nextreg 0x40,254
+        nextreg 0x41,a
+        nextreg 0x43,0x20
+        ret
+        ASSERT $<0x3200
+        SAVEBIN "alien8_enhanced_page.bin",0x2000,0x2000
 
         ORG 0xA000
         INCLUDE "alien_8_queue.asm"

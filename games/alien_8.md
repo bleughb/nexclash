@@ -1,10 +1,16 @@
 # Alien 8 (Ultimate Play The Game, 1985; 48K) - engine `alien_8` (pilot game: emulator only)
 
 ## Next session
-Stage: 4 (hardware). v1.5 (2026-11-26, branch knight-lore-clip): jattree/nxc#2 (TomCat, KS3, 1.3 and 1.4) showed
+Stage 4 (hardware). 1.6 Enhanced is ready for a KS3 check. Walk through a doorway in both directions and stop at
+its threshold. Check the painted robot, room ink, diagonal HUD and the 1.5 foreground ordering. The default build
+matches 1.5. The measured 1.5 and 1.6 idle and walking windows both exceed the old v27 2% target (Evidence).
+Test copy: ~/nxc-test/Alien 8 1.6 test (nxc 8b1b0bc7: 1.5's fields, key and cheats; Enhanced 185d218f; build_screen=nex;
+512 cheat/option combinations checked, the default identical to 1.5 in each). Publish after the owner's KS3 test.
+
+Earlier v1.5 (2026-11-26, branch knight-lore-clip): jattree/nxc#2 (TomCat, KS3, 1.3 and 1.4) showed
 objects drawn in the wrong order around the player, both modes: draws are now clipped to the rectangles the render pass
 copies (Renderer), and Enhanced keeps 1.4's 0xE7 for the undrawn magenta entries 29 / 157, so the repository builds
-what was published. Proof under Evidence. Next: the owner's KS3 test of the 1.5 copy, then publish.
+what was published. Proof under Evidence.
 Earlier: v1.2 (2026-11-07, owner approved, review .nxc not yet published): the default
 build's palette holds the Next's own ULA colours instead of 205/255 shades; nothing else changes (below). v1.1 published
 as .nxc 1.1 (2026-11-07), owner approved: runtime v27, actor
@@ -89,6 +95,15 @@ unsafe (items need linked world records) and are not offered.
   play-08, 18,000 frames, each mode: PASS, 2,877 publications, 3,828 player updates, 17 deaths, 3 game overs. The
   1.4 source fails at the first pass (26 pixels of a static object), and so does the clip turned off. The rest of
   the v27 suite (pace, soaks, ABI, IRQ) was not rerun.
+- v1.6 (same pilot, work/v16): play-08 passed 2,877 publications per mode. Enhanced matched 10,802 active
+  RZX frames and 147,943 rectangle-copy boundaries. The play area has 40,706 opaque pixels. The remaining
+  8,446 show the ULA. At room clear the current sprites, patterns, bank and ink persist until publication.
+  Four native doorway crossings matched the original trajectory. All 536 captured frames matched the source
+  picture scanline by scanline. Three native controls failed (hide sprites early, delay bank, transparent ink).
+  The synthetic 128-slot publication took 22,729 master cycles from the last raster poll, inside the 14-line reservation.
+- Native pace, 18 paired trials per release. In 1.6 Enhanced, idle was -3.26 to -1.13%, walking -0.04 to +2.78% and
+  whole trials -0.04 to +1.20% versus the original. The corresponding 1.5 Enhanced ranges were -3.28 to -1.18%,
+  -0.06 to +2.80% and -0.04 to +1.19%. The largest isolated cold update added 134.12 ms in 1.6.
 Known issues: a cold room entry or death redraw lags briefly, then is repaid; Infinite lives with Start 10 lives shows
 00 although the count is 10. Missing: hardware; natural completion; an in-repository verify and stamp.
 
@@ -123,6 +138,9 @@ tearing at publication; beeper effects. Record board and core. 1.5: walk the rob
 - [backlog C2 #47] `patch` on Alien 8 ends "not supported yet" and makes no .nxc: userflow looks for
   NAME_sprites.nex, this engine writes NAME.nex and NAME_enhanced.nex.
 
+- [local: room transitions] Check scanlines between game copies and publication. At a room clear, hidden-bank work
+  still needs the old live pattern protection. CB0F draws the HUD after the room, including both diagonal tips.
+
 ## Friction
 - reuse: [local: the Filmation renderer is per game; Knight Lore has its own copy]
 - retries: [local: v25's replay stopped on the harness's hook-count gate; v26's harness and proof are the valid ones]
@@ -149,3 +167,5 @@ in room 0x13; review .nxc 1.2 in the pilot (runs/alien_8/package-v1.2).
 Lessons); both builds boot-checked, rom_paths pass on the whole recording, 118 painted figures match its graphics. Not a
 replay proof (no in-repository verify); reference rebuild not run here (reference snapshot absent from specnext).
 2026-11-26: v1.5: draws clipped to the rectangles the render pass copies; screen-model replays; 0xE7 as 1.4.
+
+2026-11-27: v1.6 Enhanced: opaque play area, room ink and live sprite protection through the bank flip. Both builds boot-checked.

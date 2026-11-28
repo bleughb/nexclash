@@ -112,10 +112,39 @@ def tight(col, original):
     return out
 
 
+def hud_top(originals):
+    """First HUD row per column, from CB0F's bottom-up frame placements."""
+    top = [192] * 256
+    # CB5A describes the left panel. The right frame is its horizontal mirror.
+    diagonal = [(9, 16 + 16 * i, 48 - 8 * i) for i in range(5)]
+    for gid, x, bottom in [(7, 0, 48), (8, 96, 0), *diagonal]:
+        image = originals[gid]
+        for dx in range(image.width):
+            for dy in range(image.height):
+                if image.getpixel((dx, dy))[3]:
+                    top[x + dx] = top[255 - x - dx] = 192 - bottom - image.height + dy
+                    break
+    # The spare-robot icon at (112,0) and the two lives digits at (128,0).
+    top[112:128] = [192 - originals[12].height] * 16
+    top[128:144] = [184] * 16
+    return top
+
+
 def compile_assets(game, enhanced=True):
     """The renderer's pages from the game snapshot and the colour profile: {page: 8192 bytes}, report."""
     mem = Machine(str(game)).sim.memory
     records, originals = original_graphics(mem)
+    if enhanced:
+        # The game mirrors source graphics in place. Restore their orientation
+        # before using the original masks with the upright painting and HUD.
+        for r in records:
+            image = originals[r['id']]
+            if r['flags'] & 64:
+                image = image.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+            if r['flags'] & 128:
+                image = image.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
+            originals[r['id']] = image
+            r['flags'] &= 0x3f
     painted, floor = load_colours()
     for gid, im in painted.items(): assert im.size == originals[gid].size, hex(gid)
     accepted_painted = painted
@@ -147,6 +176,12 @@ def compile_assets(game, enhanced=True):
     directory = pages[24]; directory[6144:6160] = bytes(original_ink)
     directory[6160:6163] = bytes(FLOORS)
     pages[25][:512] = palettes
+    if enhanced:
+        # Layer 2 only. Sprite pattern 255 still means a transparent pixel.
+        # Black under every extracted sprite pixel, passthrough only on the HUD.
+        pages[25][253*2:254*2] = bytes((0xe3, 0))
+        for tag in (126, 254, 255):
+            pages[25][tag*2:tag*2+2] = bytes(2)
     static = {int(x, 16) for x in load_profile()['static_scenery_ids']}
     directory[6656:6912] = bytes(int(i in static) for i in range(256))
     pages[25][4096:4608] = palettes
@@ -194,9 +229,12 @@ def compile_assets(game, enhanced=True):
     for room, selector in rooms.items(): directory[6400 + room] = FLOORS[selector]
     # The approved square floor is a stable coordinate field; narrow rooms crop it at the original world bounds.
     def project(x, y): return (round(x + y - 128), round(167 - (y - x + 128) / 2))
+    boundary = hud_top(originals) if enhanced else [192] * 256
     for selector, (rx, ry) in enumerate(((64, 64), (32, 64), (64, 32))):
         mask = Image.new('1', (256, 192)); ImageDraw.Draw(mask).polygon([project(128 - rx, 128 + ry), project(128 + rx, 128 + ry), project(128 + rx, 128 - ry), project(128 - rx, 128 - ry)], fill=1)
-        raw = bytes(lookup[px[:3]] | 128 if px[3] and mask.getpixel((i % 256, i // 256)) else 255 for i, px in enumerate(floor.getdata()))
+        raw = bytes(253 if i // 256 >= boundary[i % 256] else
+                    lookup[px[:3]] | 128 if px[3] and mask.getpixel((i % 256, i // 256)) else 255
+                    for i, px in enumerate(floor.getdata()))
         for k in range(6): pages[FLOORS[selector] + k] = bytearray(raw[k * 8192:(k + 1) * 8192])
     pages[25][512:768] = bytes(i if i < len(paint_rgb) else 15 for i in range(256))    # 4-bit colour translation
     report = dict(enhanced=enhanced, colours_sha256=hashlib.sha256(COLOURS.read_bytes()).hexdigest(),
@@ -228,7 +266,7 @@ class AlienPatch:
     def __init__(self, game, enhanced=True, self_erase=True):
         prof = load_profile()['hooks']
         self.syms = {k: int(v, 16) for k, v in prof['syms'].items()}
-        self.page = bytes.fromhex(prof['page']); self.stub_extra = bytes.fromhex(prof['setup']); self.setup_call = 0xD000
+        self.page = bytes.fromhex(prof['enhanced_page' if enhanced else 'page']); self.stub_extra = bytes.fromhex(prof['setup']); self.setup_call = 0xD000
         self.slot1 = (26, 0x3DF0); self.altrom = (0x3B00, 0x3E04)
         self.tail_addr = 0x5B00; self.uses_printer_buffer = False; self.keep_printer_buffer = True; self.hook_page_data = b''
         self.self_erase = self_erase

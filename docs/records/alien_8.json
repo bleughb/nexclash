@@ -64,17 +64,17 @@
   },
   "enhanced": {
    "file": "alien_8_enhanced.nex",
-   "md5": "ddb88f4490fdc20a37774e9b28d60f69"
+   "md5": "185d218f6b0bd77d46ce5e10609ef6dc"
   }
  },
  "repro": [],
  "status": {
   "title": "Alien 8",
   "engine_col": "alien_8 (alien_8.md)",
-  "build": "v1.5; default alien_8.nex bf107e59 (original look, figures as hardware sprites over Layer 2, whole Sinclair alt ROM, original loading screen); Enhanced alien_8_enhanced.nex ddb88f44 (the owner's painting of every figure, dark grey floor). 1.5: draws clipped to the rectangles the original's render pass copies to the screen (jattree/nxc#2: objects behind drawn over those in front); Enhanced keeps 1.4's 0xE7 for entries 29 / 157",
-  "software": "pilot suite (outside selftest): 1.5 screen-model replay, 18,000-frame recording per mode, 2,877 publications each, the 1.4 source and a clip-off negative both caught; v27 suite (57,730 hook comparisons with R and 48K RAM; 88 ABI, 152 whole-sound, 1,504 IRQ cases; JNext pace 18 paired trials; 20,000-frame native soaks; real loader byte-exact) not rerun for 1.5; auto: both builds boot-checked with R",
+  "build": "v1.6 Enhanced 185d218f (opaque play area, live ULA HUD, room ink and sprites held until the first full publication). Default bf107e59 is byte-identical to 1.5. Both keep the 1.5 copy-rectangle clip.",
+  "software": "1.6 pilot: 18,000 recorded frames and 2,877 publications per mode. All 536 native frames around four doorway crossings matched. Three injected display faults caught. Both builds boot-checked. 18 paired pace trials: idle and walking exceed the historical 2% target in both 1.5 and 1.6. See games/alien_8.md for windows and v27 checks.",
   "hardware": "untested",
-  "next": "owner's KS3 test of 1.5, then publish; hardware checklist; an in-repository verify"
+  "next": "owner's KS3 test of 1.6 Enhanced at doorways, HUD, foreground order and cold redraw; an in-repository verify"
  },
  "checks": [
   "asm2profile:alien_8"
