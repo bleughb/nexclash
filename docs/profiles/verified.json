@@ -733,7 +733,7 @@
      "game": "Dynamite Dan",
      "doc": "dynamite_dan.md",
      "args": [],
-     "proof": "rebuild only",
+     "proof": "differential",
      "nex": {
       "plain": "772dc3336f75dc8ba1f28ac62871cb18",
       "sprites": "b4aa27d5f08f28e59fca5566173c68cd"
@@ -741,6 +741,21 @@
      "rework": true,
      "env": {
       "NEXCLASH_REWORK": "dynamite_dan_v11"
+     }
+    },
+    {
+     "record": "dynamite_dan rework v14",
+     "game": "Dynamite Dan",
+     "doc": "dynamite_dan.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "plain": "772dc3336f75dc8ba1f28ac62871cb18",
+      "sprites": "8587e047eb0248765b5f334a6e0efbea"
+     },
+     "rework": true,
+     "env": {
+      "NEXCLASH_REWORK": "dynamite_dan_v14"
      }
     }
    ]
@@ -2721,4 +2736,4 @@
    ]
   }
  }
-}
+}

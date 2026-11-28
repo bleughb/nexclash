@@ -26,16 +26,22 @@
   ]
  },
  "modules": [
-  "dynamite_dan"
+  "dynamite_dan",
+  "dynamite_dan_enemies"
  ],
  "own_modules": [
-  "dynamite_dan"
+  "dynamite_dan",
+  "dynamite_dan_enemies"
  ],
  "data": [
   "docs/profiles/dynamite_dan.json",
   "asm/dynamite_dan_hooks.asm",
   "asm/dynamite_dan_keys.asm",
-  "docs/profiles/dynamite_dan_keys.json"
+  "docs/profiles/dynamite_dan_keys.json",
+  "asm/dynamite_dan_enhanced.asm",
+  "asm/dynamite_dan_enemies.inc",
+  "docs/profiles/dynamite_dan_enhanced.json",
+  "docs/profiles/dynamite_dan_enhanced_colours.json"
  ],
  "shared_data": [],
  "rebuild": {
@@ -78,7 +84,8 @@
  },
  "checks": [
   "asm2profile:dynamite_dan",
-  "asm2profile:dynamite_dan_keys"
+  "asm2profile:dynamite_dan_keys",
+  "asm2profile:dynamite_dan_enhanced"
  ],
  "techniques": [
   {
@@ -139,71 +146,99 @@
  ],
  "checked": {
   "deps": {
-   "asm/dynamite_dan_hooks.asm": "ce3ec490046eed1a",
+   "asm/dynamite_dan_enemies.inc": "52f4c3ff1424cb5e",
+   "asm/dynamite_dan_enhanced.asm": "893167445ebd99a1",
+   "asm/dynamite_dan_hooks.asm": "f1d7992ac8c997a1",
    "asm/dynamite_dan_keys.asm": "bc50c100f6ecee5c",
    "docs/profiles/dynamite_dan.json": "cd9aee2ce45dff5e",
+   "docs/profiles/dynamite_dan_enhanced.json": "7923d79aa0f0a19f",
+   "docs/profiles/dynamite_dan_enhanced_colours.json": "34db32aa6159e6df",
    "docs/profiles/dynamite_dan_keys.json": "946c075a9cb80a4c",
-   "nexclash.py": "04157df11540c17d",
+   "nexclash.py": "4a87a4de972a122f",
+   "nexclash/analyse.py": "9068c7834f1f1923",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "b22123bdf2572c9b",
+   "nexclash/coloursheet.py": "485b2bb1d7e30784",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/dynamite_dan.py": "7da768df7e3df176",
-   "nexclash/engines.py": "2abd23b537c0b5d4",
-   "nexclash/hooklib.py": "24241497925658d6",
+   "nexclash/dynamite_dan.py": "b992b6f3a49eda9f",
+   "nexclash/dynamite_dan_enemies.py": "ef6d70632dd6d70f",
+   "nexclash/engines.py": "9666a7f032696532",
+   "nexclash/hooklib.py": "d5cfe5321e8ff038",
    "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
-   "nexclash/machine.py": "659903f13de0fcee",
-   "nexclash/nextboot.py": "9272cb3a8c980c98",
-   "nexclash/recolour.py": "6f27e87ef0c47a17",
-   "nexclash/records.py": "a8919d2869b77132",
-   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/machine.py": "9c057372f6e27d70",
+   "nexclash/nextboot.py": "f67deed5c0603d2a",
+   "nexclash/nxc.py": "d4c135babd8cd53e",
+   "nexclash/nxcout.py": "f1bf468312cb5367",
+   "nexclash/recolour.py": "ecf5cc7b4ed87a0b",
+   "nexclash/recorder.py": "e5b5892fa1da208b",
+   "nexclash/records.py": "6401367eddcf12a0",
+   "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
+   "nexclash/rzx.py": "90008c9ca09c51bc",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
-   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
    "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/userflow.py": "6779aabcf5d969cf",
+   "nexclash/verify.py": "e49b2afbdf721760",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "50684436558662bd",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "6e949923ec103df7",
+   "recipe": "743a5ee1734dfffa",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-20"
+  "date": "2026-11-27"
  },
  "verified": {
   "deps": {
-   "asm/dynamite_dan_hooks.asm": "ce3ec490046eed1a",
+   "asm/dynamite_dan_enemies.inc": "52f4c3ff1424cb5e",
+   "asm/dynamite_dan_enhanced.asm": "893167445ebd99a1",
+   "asm/dynamite_dan_hooks.asm": "f1d7992ac8c997a1",
    "asm/dynamite_dan_keys.asm": "bc50c100f6ecee5c",
    "docs/profiles/dynamite_dan.json": "cd9aee2ce45dff5e",
+   "docs/profiles/dynamite_dan_enhanced.json": "7923d79aa0f0a19f",
+   "docs/profiles/dynamite_dan_enhanced_colours.json": "34db32aa6159e6df",
    "docs/profiles/dynamite_dan_keys.json": "946c075a9cb80a4c",
-   "nexclash.py": "04157df11540c17d",
+   "nexclash.py": "4a87a4de972a122f",
+   "nexclash/analyse.py": "9068c7834f1f1923",
    "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "b22123bdf2572c9b",
+   "nexclash/coloursheet.py": "485b2bb1d7e30784",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/dynamite_dan.py": "7da768df7e3df176",
-   "nexclash/engines.py": "2abd23b537c0b5d4",
-   "nexclash/hooklib.py": "24241497925658d6",
+   "nexclash/dynamite_dan.py": "b992b6f3a49eda9f",
+   "nexclash/dynamite_dan_enemies.py": "ef6d70632dd6d70f",
+   "nexclash/engines.py": "9666a7f032696532",
+   "nexclash/hooklib.py": "d5cfe5321e8ff038",
    "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
-   "nexclash/machine.py": "659903f13de0fcee",
-   "nexclash/nextboot.py": "9272cb3a8c980c98",
-   "nexclash/recolour.py": "6f27e87ef0c47a17",
-   "nexclash/records.py": "a8919d2869b77132",
-   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/machine.py": "9c057372f6e27d70",
+   "nexclash/nextboot.py": "f67deed5c0603d2a",
+   "nexclash/nxc.py": "d4c135babd8cd53e",
+   "nexclash/nxcout.py": "f1bf468312cb5367",
+   "nexclash/recolour.py": "ecf5cc7b4ed87a0b",
+   "nexclash/recorder.py": "e5b5892fa1da208b",
+   "nexclash/records.py": "6401367eddcf12a0",
+   "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
+   "nexclash/rzx.py": "90008c9ca09c51bc",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
-   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
    "nexclash/sprites.py": "899f635303b25706",
+   "nexclash/userflow.py": "6779aabcf5d969cf",
+   "nexclash/verify.py": "e49b2afbdf721760",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "50684436558662bd",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "6e949923ec103df7",
+   "recipe": "743a5ee1734dfffa",
    "rom": "8c34d957fb2cbbd0"
   },
-  "date": "2026-11-20"
+  "date": "2026-11-27"
  },
  "rework": [
   {
@@ -230,7 +265,51 @@
     }
    },
    "proof": "v1.0's hooks as the base (its replay, 52 recordings, is unchanged); the 246 define-keys bytes, disjoint from the hooks: the original against the original with them, in lockstep on the same 52 recordings (192,925 IN reads served in order, all 22,425 main-loop passes compared, R included, all RAM outside the patch): IDENTICAL with Q and P and with QUIT X / PAUSE H set by the build's own define routine; 3 broken builds detected (play reading the old P, the old Q; R 4 off); 6,290 unit cases. Proof scripts in the pilot (runs/dynamite_dan/work3: lockstep.py, make_proof11.py), not in this repo",
-   "note": "Jon Attree's Dynamite Dan .nxc v1.1 default (published, github.com/jattree/nxc): QUIT and PAUSE definable on the game's own define-keys screen. asm/dynamite_dan_keys.asm (our code and data only) + the page text rewritten from the player's snapshot (dynamite_dan.keys_ram); laid over the sprite build's RAM banks, every other byte v1.0's. The .nxc's 'Original keys (Q,P fixed)' toggle is the base build (1ab3348d)."
+   "note": "Jon Attree's Dynamite Dan .nxc v1.1 default (published, github.com/jattree/nxc): QUIT and PAUSE definable on the game's own define-keys screen. asm/dynamite_dan_keys.asm (our code and data only) + the page text rewritten from the player's snapshot (dynamite_dan.keys_ram); laid over the sprite build's RAM banks, every other byte v1.0's. The .nxc's 'Original keys (Q,P fixed)' toggle is the base build (1ab3348d).",
+   "verify": {
+    "args": [
+     "--no-record"
+    ],
+    "rzx": [
+     "t1.rzx",
+     "n1.rzx"
+    ]
+   }
+  },
+  {
+   "name": "v14",
+   "version": "1.4",
+   "env": {
+    "NEXCLASH_REWORK": "dynamite_dan_v14"
+   },
+   "args": [],
+   "inputs": [],
+   "rebuild": {
+    "args": [
+     "--no-record"
+    ]
+   },
+   "verify": {
+    "args": [
+     "--no-record"
+    ],
+    "rzx": [
+     "t1.rzx",
+     "n1.rzx"
+    ]
+   },
+   "outputs": {
+    "plain": {
+     "file": "dynamite_dan.nex",
+     "md5": "772dc3336f75dc8ba1f28ac62871cb18"
+    },
+    "sprites": {
+     "file": "dynamite_dan_sprites.nex",
+     "md5": "8587e047eb0248765b5f334a6e0efbea"
+    }
+   },
+   "proof": "Registers including R and live RAM at each hook. Each enemy compared with its ULA plot and paint map. Every room and phase exercised in units. See games/dynamite_dan.md.",
+   "note": "Optional Enhanced set over the published define-keys build. 8 Dan frames and 182 unshifted enemy frames on one indexed sheet."
   }
  ]
 }

@@ -7,7 +7,7 @@ screen and never paints attributes, so Dan takes each cell's colour. 0xC880 odd:
 saved background (Dan flickers while hit). 0xDBED x 2 rows are plotted: 14 (13 on a floor), 12..1 sinking
 in water, so the sprites' clip window ends with the plot. Logic reads the screen and attributes under Dan.
 Overlay: the ULA is left exactly as the original draws it and two sprites cover Dan's ink.
-Enemies (0xE96B, cell-aligned, paint their own box) never cross scenery attributes: they stay on the ULA.
+Enhanced also overlays the four E96B enemy tables, keeping the ULA plot and collision reads intact.
 Airship (room 43): fixed scenery, so its hull and cables are static sprites above Dan, copies of the ULA.
 """
 import collections
@@ -28,6 +28,9 @@ TRANSP = 0xE3
 DAN_DEFAULT = 13               # palette index: bright cyan, the ink of an empty cell (attribute 0x45)
 # sheet palette, indices 1-15; 0 unused. Bright magenta is 0xE7, as 0xE3 is the transparent index.
 PALETTE = [0x00, 0x02, 0xA0, 0xA2, 0x14, 0x16, 0xB4, 0xB6, 0x00, 0x03, 0xE0, 0xE7, 0x1C, 0x1F, 0xFC, 0xFF]
+# Skin, skin shadow, leather, orange, steel, navy, olive, brass, ice, jade.
+PALETTE += [0xF5, 0xCD, 0x88, 0xF0, 0x92, 0x2A, 0x90, 0xD4, 0xBB, 0x56]
+ENHANCED = 'dynamite_dan_v14'
 SITES_ORIG = {0xD1CE: '3a80c8', 0xE801: '210040', 0xE820: '210040', 0xE60B: '368021b040'}
 SITE_SYM = {0xD1CE: 'e_dan', 0xE801: 'e_c1', 0xE820: 'e_c2', 0xE60B: 'e_end'}
 SITE_KIND = {0xD1CE: 'dan', 0xE801: 'cls', 0xE820: 'cls', 0xE60B: 'end'}
@@ -37,6 +40,7 @@ SEQUEL = (0xE60D, 0xE60B)      # the second original instruction of the 0xE60B s
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 COLOURS = os.path.join(_HERE, '..', 'docs', 'profiles', RECORD + '_colours.json')
+ENHANCED_COLOURS = COLOURS.replace('_colours', '_enhanced_colours')
 
 
 def _profile_path():
@@ -201,7 +205,10 @@ def colour_of(cmap, key, bit, byte):
         return None
     if len(e) > 3 and e[3] & (128 >> bit):
         return 'T'
-    return e[2][bit] or None
+    index = e[2][bit]
+    if not 0 <= index < len(PALETTE):
+        raise ValueError('%s pixel %d uses index %d outside the Dynamite Dan palette' % (key, bit, index))
+    return index or None
 
 
 def patterns(peek, cmap=None, xoff=None):
@@ -230,10 +237,10 @@ def patterns(peek, cmap=None, xoff=None):
     return bytes(out)
 
 
-def load_colours():
+def load_colours(enhanced=False):
     from . import coloursheet as cs
     from .recolour import build_colours_path
-    return cs.load(build_colours_path(COLOURS))
+    return cs.load(build_colours_path(ENHANCED_COLOURS if enhanced else COLOURS))
 
 
 # ---------------------------------------------------------------------------------------------
@@ -276,9 +283,13 @@ class PlainPatch:
 class DanPatch:
     name = 'Dynamite Dan: Dan -> overlay hardware sprites (altrom, stateless hooks)'
 
-    def __init__(self, prof=None, colours=None, start=None):
+    def __init__(self, prof=None, colours=None, start=None, enhanced=False):
         self.start = start
         self.fg = None
+        self.enhanced = enhanced
+        if enhanced and prof is None:
+            with open(_profile_path().replace('.json', '_enhanced.json')) as f:
+                prof = json.load(f)
         self.prof = prof or load_profile()
         h = self.prof['hooks']
         self.rom_code = bytes.fromhex(h['rom'])
@@ -290,7 +301,7 @@ class DanPatch:
         self.tail_addr = TAIL_ADDR
         self.max_tail = 256
         self.regblock = ROM_ORG + len(self.rom_code)
-        if self.regblock + 20 > 0x3B00:
+        if self.regblock + 20 > 0x3D00:
             raise ValueError('ROM hooks too long')
         self.slot1 = (ALT_PAGE, self.regblock)
         self.altrom = (ROM_ORG, self.regblock + 20)
@@ -298,6 +309,14 @@ class DanPatch:
         self.sites = []
         for a, old in SITES_ORIG.items():
             self.sites.append((a, bytes.fromhex(old), bytes([0xC3]) + self.syms[SITE_SYM[a]].to_bytes(2, 'little')))
+        self.kinds = dict(SITE_KIND)
+        self.next_pc = dict(SITE_NEXT)
+        if enhanced:
+            from .dynamite_dan_enemies import SITES
+            for a, (old, sym, kind) in SITES.items():
+                self.sites.append((a, bytes.fromhex(old), b'\xc3' + self.syms[sym].to_bytes(2, 'little')))
+                self.kinds[a] = kind
+                self.next_pc[a] = a + len(bytes.fromhex(old))
         self.extra_banks = {}
         self.pats = None
         self.colours = colours
@@ -317,7 +336,10 @@ class DanPatch:
         xoff = list(self.rom_code[self.syms['xoff'] - ROM_ORG:self.syms['xoff'] - ROM_ORG + NFRAMES])
         if xoff != frame_windows(peek):
             raise ValueError('frame windows %s, hooks hold %s' % (frame_windows(peek), xoff))
-        self.pats = patterns(peek, self.colours if self.colours is not None else load_colours(), xoff)
+        cmap = self.colours if self.colours is not None else load_colours(self.enhanced)
+        self.colours = cmap
+        self.windows = xoff
+        self.pats = patterns(peek, cmap, xoff)
         for a, old, new in self.sites:
             ram[a - 0x4000:a - 0x4000 + len(new)] = new
         snap.banks[5] = bytes(ram[0:16384])
@@ -331,6 +353,9 @@ class DanPatch:
         b11 = bytearray(self.pats + bytes(16384 - len(self.pats)))
         b11[FG_TABLE_AT:FG_TABLE_AT + len(table)] = table
         self.extra_banks = {11: bytes(b11), 12: self.page + bytes(8192)}
+        if self.enhanced:
+            from . import dynamite_dan_enemies as enemies
+            self.extra_banks.update(enemies.banks(peek, cmap))
 
 
 # ---------------------------------------------------------------------------------------------
@@ -350,20 +375,22 @@ def sprite_pixels(attr, pat):
         for k in range(16):
             b = pat[base + j * 16 + k]
             if b != TRANSP:
-                out[(x + k, y + j)] = b
+                out[(x + (15 - k if a2 & 8 else k), y + j)] = b
     return out
 
 
 class NextState:
-    def __init__(self, pats):
+    def __init__(self, pats, banks=None):
+        self.banks = banks or {}
+        self.pattern_cursor = 0
         self.nr = {}
-        self.attr = [[0, 0, 0, 0, 0] for _ in range(FG_SPR + FG_N)]
+        self.attr = [[0, 0, 0, 0, 0] for _ in range(51 if banks else FG_SPR + FG_N)]
         for i, (c, r) in enumerate(FG_TILES):
             x = 32 + c * 8
             self.attr[FG_SPR + i][:3] = [x & 255, 32 + r * 8, x >> 8]
         self.clip = [0, 255, 0, 191]
         self.clipi = 0
-        self.pat = bytes(pats) + bytes(16384 - len(pats))
+        self.pat = bytearray(pats) + bytearray(16384 - len(pats))
         self.events = []
         self.speed = 0              # NR 7 bits 1:0: the clock now (set to the incoming clock at each event)
         self.speed_in = 0           # the clock a hook is entered at (verify clock=, the every-site matrix)
@@ -409,6 +436,11 @@ def _machine(Sim, mem, regs, ns, slot='o'):
         def write_port(s, regs_, port, value, *x):
             if port == 0x243B:
                 ns.sel = value
+            elif ns.banks and port == 0x303B:
+                ns.pattern_cursor = (value & 63) * 256
+            elif ns.banks and port & 255 == 0x5B:
+                ns.pat[ns.pattern_cursor] = value
+                ns.pattern_cursor = (ns.pattern_cursor + 1) % 16384
             else:
                 ns.events.append(('out', port, value))
     sim.set_tracer(Tr())
@@ -430,7 +462,7 @@ def _run(sim, stop, limit=400000):
 CMP = list(range(0, 13)) + list(range(14, 25)) + [26, 27]   # every register, R (15) included; not T, MEMPTR
 
 
-def _overlays(patch, get, alt, canvases=()):
+def _overlays(patch, get, alt, canvases=(), ns=None):
     psite = {a + k: v for a, old, new in patch.sites for k, v in enumerate(new)}
 
     class O:
@@ -457,6 +489,10 @@ def _overlays(patch, get, alt, canvases=()):
         def __getitem__(s, a):
             if a < 0x4000:
                 return alt[a]
+            if ns and 0x4000 <= a < 0x6000:
+                pg = ns.nr.get(0x52, 10)
+                if pg != 10:
+                    return ns.banks[pg // 2][(pg % 2) * 8192 + a - 0x4000]
             v = psite.get(a)
             if v is not None:
                 return v
@@ -486,11 +522,11 @@ def event(patch, kind, site, get, R, ns, alt, Sim, check_ula=False):
     """One hook event: original and patched from the same state to the end of the site, plus (Dan) a
     canvas run of the ORIGINAL plotter on a blank screen and blank saved buffer, whose ink is what
     the sprites must show. -> (failures, ink pixels compared)."""
-    nxt = SITE_NEXT[site]
+    nxt = patch.next_pc[site]
     stop = lambda r: r[24] == nxt
     sp0 = R[12]
     f = []
-    O, P = _overlays(patch, get, alt)
+    O, P = _overlays(patch, get, alt, ns=ns)
     o, p = O(), P()
     so = _machine(Sim, o, list(R), NextState(b''))
     before = [list(a) for a in ns.attr]
@@ -507,7 +543,9 @@ def event(patch, kind, site, get, R, ns, alt, Sim, check_ula=False):
         f.append(('patched code wrote ROM',))
     if any(e[0] in ('in', 'out') for e in ns.events):
         f.append(('port access in hook',))
-    if any(e[1] not in (0x07, 0x19, 0x1C, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39) for e in ns.events):
+    if ns.nr.get(0x52, 10) != 10:
+        f.append(('ULA page not restored',))
+    if any((e[1] != 0x52 or not patch.enhanced) and e[1] not in (0x07, 0x19, 0x1C, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39) for e in ns.events):
         f.append(('NEXTREG other than sprite attributes and the speed',))
     if ns.speed != ns.speed_in:
         f.append(('exit speed is not the incoming one', ns.speed, ns.speed_in))
@@ -515,7 +553,7 @@ def event(patch, kind, site, get, R, ns, alt, Sim, check_ula=False):
         f.append(('port 0x243B left on another register', ns.sel))
     ns.n_sel = getattr(ns, 'n_sel', 0) + 1          # the next hook finds 0x243B on NR 8, 0x53 or 7 in turn: a read selects 7
     ns.sel = ns.sel_in = (0x08, 0x53, 0x07)[ns.n_sel % 3]
-    dead = range(sp0 - 64, sp0)                     # below SP: the hook's own pushes
+    dead = range(sp0 - 64, min(sp0, ro[12]))                     # below SP: the hook's own pushes
     keys = set(o.ov) | set(p.ov)
     md = [a for a in keys if a not in dead and o[a] != p[a]]
     if md:
@@ -532,7 +570,26 @@ def event(patch, kind, site, get, R, ns, alt, Sim, check_ula=False):
         drawn = _ink(oc.ov)
         got = ns.pixels(0, 1)
         npx = len(drawn)
-        if set(got) != drawn:
+        if patch.enhanced:
+            if ns.attr[11:] != before[11:] or ns.clip != [0, 255, 0, 191]:
+                f.append(('Dan plot changed enemy visibility or the global clip',))
+            wanted = {pos: PALETTE[DAN_DEFAULT] for pos in drawn}
+            frame = get(0xC875)
+            if not get(0xC880) & 1 and frame < 8:
+                start = frame_addr(get, frame)
+                for y in range(2, min(26, get(0xDBED)*2)):
+                    for x in range(patch.windows[frame], min(24, patch.windows[frame]+16)):
+                        a = start + 3*y + x//8
+                        colour = colour_of(patch.colours, '%04X' % a, x%8, get(a))
+                        pos = get(0xC873)*8+x, get(0xC872)+y
+                        if colour == 'T':
+                            wanted.pop(pos, None)
+                        elif colour:
+                            wanted[pos] = PALETTE[colour]
+            if got != wanted:
+                f.append(('painted Dan differs from original canvas and map', len(set(got.items()) ^ set(wanted.items()))))
+            npx = len(wanted)
+        elif set(got) != drawn:
             f.append(('sprite pixels differ from the original plot', len(set(got) ^ drawn)))
         room = get(0xCFCA)
         if room == AIRSHIP:
@@ -554,8 +611,27 @@ def event(patch, kind, site, get, R, ns, alt, Sim, check_ula=False):
         else:
             if any(ns.attr[i] != before[i] for i in range(FG_SPR, FG_SPR + FG_N)):
                 f.append(('airship foreground touched in another room',))
-    else:
-        if any(ns.attr[i][3] & 0x80 for i in range(FG_SPR + FG_N)):
+    elif kind in ('enemy', 'erase', 'load'):
+        from . import dynamite_dan_enemies as en
+        iy = R[10] * 256 + R[11]
+        room = en.MENU if iy >> 8 == 0xCA else get(0xCFCA)
+        base, groups = en.room_info(get, room)
+        if kind == 'load':
+            page = patch.extra_banks[(32 + room)//2]
+            page = page[(room % 2)*8192:]
+            count = page[0]
+            if ns.pat[27*256:(27+count)*256] != page[0x400:0x400+count*256]:
+                f.append(('room pattern upload differs', room))
+        else:
+            first = en.FIRST_SLOT + (iy - base)//8*4
+            if not 11 <= first <= 47 or (iy-base) % 8:
+                f.append(('unknown enemy record', room, iy))
+            elif (kind == 'erase' or get(iy+4) & 64) and any(a[3] & 128 for a in ns.attr[first:first+4]):
+                f.append(('erased enemy still visible', first))
+            if any(a != before[i] for i, a in enumerate(ns.attr) if not first <= i < first+4):
+                f.append(('another sprite changed',))
+    elif kind in ('cls', 'end'):
+        if any(a[3] & 0x80 for a in ns.attr):
             f.append(('sprite visible after screen clear',))
     return f, npx
 
@@ -587,10 +663,18 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, clock=0):
     alt = _alt(patch)
     site_bytes = {a + k for a, old, new in patch.sites for k in range(len(new))}
     st = {'frame': 0, 'on': False}
-    ns = NextState(patch.pats)
+    ns = NextState(patch.pats, patch.extra_banks if patch.enhanced else None)
     ns.speed_in = clock                              # the game's clock (NR 7): 0 = 3.5 MHz as recorded
     cnt = collections.Counter()
-    WATCH = set(SITE_KIND) | set(INTERIORS) | {SEQUEL[0]}
+    interiors = set(INTERIORS)
+    if patch.enhanced:
+        interiors.update((0xC838, 0xC839, 0xE54E, 0xE54F, 0xD2E8, 0xD2E9, 0xD2EA, 0xE96D, 0xE96E, 0xE96F))
+    WATCH = set(patch.kinds) | interiors | {SEQUEL[0]}
+    if patch.enhanced:
+        WATCH.add(0xE96C)  # second displaced instruction, reached only from E96B
+        WATCH.add(0xE9B9)  # after the unmodified ULA plot has written every cell
+    pending = []
+    paint_cache = {}
     states = []
 
     def fail(k, info=()):
@@ -616,7 +700,15 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, clock=0):
                     pc = R[24]
                     if pc in WATCH:
                         cnt[pc] += 1
-                        kind = SITE_KIND.get(pc)
+                        if pc == 0xE9B9 and pending:
+                            first, x, y, w, h, group, edits = pending.pop()
+                            from .dynamite_dan_enemies import check_picture
+                            err, total = check_picture(ns, first, x, y, w, h, get, edits)
+                            c['enemy pixels compared'] += total
+                            c['enemy table %d' % group] += 1
+                            if err:
+                                fail('enemy differs from plotted ULA', (first, x, y, w, h, err))
+                        kind = patch.kinds.get(pc)
                         if kind:
                             if collect and c['collected ' + kind] < collect:
                                 c['collected ' + kind] += 1
@@ -625,6 +717,20 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, clock=0):
                             if R[26]:
                                 fail('interrupts on at a hook site')
                             fl, npx = event(patch, kind, pc, get, R, ns, alt, _rw(), True)
+                            if kind == 'enemy':
+                                from . import dynamite_dan_enemies as en
+                                iy = R[10]*256 + R[11]
+                                room = en.MENU if iy >> 8 == 0xca else get(0xcfca)
+                                base, groups = en.room_info(get, room)
+                                if not get(iy+4) & 64:
+                                    index = (iy-base)//8
+                                    group = next(i for i in range(4) if index < sum(n for _,n in groups[:i+1]))
+                                    key = (groups[group][0], group, get(iy+4) & 7)
+                                    if key not in paint_cache:
+                                        paint_cache[key] = en.frame_paint(get, patch.colours, *key)
+                                    pending.append((11+index*4, R[4]*8, R[5]*8, R[2]*8, R[3]*8, group, paint_cache[key]))
+                                else:
+                                    c['suppressed enemy plots'] += 1
                             c[kind] += 1
                             c['%s 0x%04X' % (kind, pc)] += 1
                             c['sprite pixels compared'] += npx
@@ -650,11 +756,16 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, clock=0):
     try:
         rzxplay.main(['--python', '--quiet', '--no-screen', '--fps', '0'] +
                      (['--stop', str(stop)] if stop else []) + [rzx_path])
-    except SystemExit:
-        pass
+    except SystemExit as exc:
+        if exc.code not in (None, 0):
+            raise
     finally:
         rzxplay.RZXTracer.next_frame, rzxplay.Simulator, rzxplay.CSimulator = old
-    for a in INTERIORS:
+    if patch.enhanced and cnt[0xE96C] != cnt[0xE96B]:
+        c['0xE96C reached other than from 0xE96B!'] += 1
+    if pending and not stop:
+        c['recording ended inside an enemy plot!'] += 1
+    for a in interiors:
         if cnt[a]:
             c['jump into a patched instruction (0x%04X)!' % a] += 1
     if cnt[SEQUEL[0]] != cnt[SEQUEL[1]]:
@@ -676,7 +787,7 @@ def unit_tests(patch, states, negs=()):
     Sim = _rw()
 
     def one(pt, kind, site, R, mem, attrs, alt_=None, check_ula=False):
-        ns = NextState(pt.pats)
+        ns = NextState(pt.pats, pt.extra_banks if pt.enhanced else None)
         ns.attr = [list(a) for a in attrs]
         ns.speed_in = getattr(pt, 'clock', 0)        # a speed negative is entered at 7 MHz: at 3.5 it cannot differ
         return event(pt, kind, site, mem.__getitem__, R, ns, alt_ or _alt(pt), Sim, check_ula)
@@ -697,7 +808,7 @@ def unit_tests(patch, states, negs=()):
                                 c['  fail example'] += 1
                                 c['  fr %d x %d y %d inv %d rows %d %s' % (fr, x, y, inv, rows, fl[:2])] += 1
             at = [list(a) for a in attrs]
-            for i in range(FG_SPR + FG_N):
+            for i in range(len(at)):
                 at[i][3] |= 0x80
             r = list(R)
             r[24] = 0xE60B
@@ -721,9 +832,9 @@ def unit_tests(patch, states, negs=()):
                 if name != 'clear':
                     c['negative control %s' % ('detected' if fl else 'NOT DETECTED!')] += 1
                     c['negative control %s %s' % (name, 'detected' if fl else 'NOT DETECTED!')] += 1
-        else:
+        elif kind == 'cls':
             at = [list(a) for a in attrs]
-            for i in range(FG_SPR + FG_N):
+            for i in range(len(at)):
                 at[i][3] |= 0x80
             fl, _ = one(patch, kind, site, list(R), bytearray(mem), at)
             c['screen clear cases %s' % ('ok' if not fl else 'FAIL!')] += 1
@@ -747,7 +858,7 @@ def clock_matrix(patch, states):
 
     def run(n, k):
         kind, site, R, mem, attrs = states[n]
-        ns = NextState(patch.pats)
+        ns = NextState(patch.pats, patch.extra_banks if patch.enhanced else None)
         ns.attr = [list(a) for a in attrs]
         ns.speed_in = k
         fl, npx = event(patch, kind, site, bytes(mem).__getitem__, list(R), ns, alt, Sim)
@@ -795,6 +906,9 @@ def negative_patches(patch):
     out.append(('clear', rom(noclear)))
 
     def noclip(pg):
+        if patch.enhanced:
+            pg[patch.syms['clip_dan'] - 0x2000] = 0xC9
+            return
         a = patch.syms['e_dan'] - 0x2000
         k = bytes(pg[a:a + 250]).index(bytes.fromhex('873d47'))   # ADD A,A / DEC A / LD B,A in the clip
         pg[a + k] = 0
@@ -834,7 +948,18 @@ def colour_inputs_md5(peek):
     return hashlib.md5(bytes(peek(a) for a in range(0x633A, 0x65DA))).hexdigest()
 
 
-def colour_identity(peek):
+def colour_identity(peek, enhanced=None):
+    if enhanced is None:
+        enhanced = peek(0xE96B) == 0xC3
+    if enhanced:
+        from .dynamite_dan_enemies import geometry, frames
+        digest = hashlib.md5()
+        digest.update(bytes.fromhex(colour_inputs_md5(peek)))
+        for kind, f in frames(peek):
+            a, w, h = geometry(peek, kind)
+            digest.update(bytes(peek(a + f*w*h*8 + i) for i in range(w*h*8)))
+        return dict(schema=1, game=RECORD, engine=RECORD, keys='Dan and unshifted enemy graphics address/bit',
+                    inputs=digest.hexdigest(), geometry='four enemy tables v1')
     return {'schema': 1, 'game': RECORD, 'engine': RECORD,
             'keys': 'dynamite_dan-1: %04X graphics byte of a Dan frame, bit = pixel',
             'inputs': colour_inputs_md5(peek), 'geometry': None}
@@ -846,15 +971,29 @@ RECOLOUR = {'game': RECORD, 'output': 'sprites', 'colours': 'docs/profiles/%s_co
             'clear': True, 'note': NOTE}
 
 
+def map_note(cmap):
+    # Keep the old serialization, including its note, for the owner's 1.3 files.
+    if any(max(row[2]) > 15 or int(key, 16) >= 0xAE60 for key, row in cmap.items()):
+        return ('Dan and enemy graphics byte, eight palette indices. Wide rows use integer arrays. '
+                'Zero inherits the source colour. The optional fourth field is the transparent mask.')
+    return NOTE
+
+
+def default_map_for_nex(nex):
+    from .recolour import nex_peek
+    from .coloursheet import load
+    path = ENHANCED_COLOURS if nex_peek(nex)(0xE96B) == 0xC3 else COLOURS
+    return load(path)
+
+
 def recolour(nex, cmap):
-    """Built sprite .nex bytes + colour map -> (new .nex bytes, info): only bank 11 (patterns) changes;
-    the game never reads it. Refuses a .nex that is not this engine's build of the expected snapshot."""
+    """Rebuild Dan's patterns in bank 11 and the Enhanced room pages when present. Refuses a .nex that is not this engine's build of the expected snapshot."""
     from .recolour import banks, nex_peek, splice
     b = banks(nex)
     if not {5, 2, 0, 11, 12} <= set(b):
         raise ValueError('not a Dynamite Dan sprite build: banks missing')
     peek = nex_peek(nex)
-    p = DanPatch(colours={})
+    p = DanPatch(colours={}, enhanced=peek(0xE96B) == 0xC3)
     for a, old, new in p.sites:
         if bytes(peek(a + k) for k in range(len(new))) != new:
             raise ValueError("patch site 0x%04X does not hold this build's hook jump" % a)
@@ -862,11 +1001,15 @@ def recolour(nex, cmap):
         raise ValueError('alt ROM image / hook code differs from this version (rebuild with nexclash.py auto)')
     xoff = list(p.rom_code[p.syms['xoff'] - ROM_ORG:p.syms['xoff'] - ROM_ORG + NFRAMES])
     pats = patterns(peek, cmap, xoff)
-    out, changed = splice(nex, {11: pats + b[11][len(pats):]})
+    new = {11: pats + b[11][len(pats):]}
+    if p.enhanced:
+        from . import dynamite_dan_enemies as enemies
+        new.update(enemies.banks(peek, cmap))
+    out, changed = splice(nex, new)
     return out, {'banks changed': changed}
 
 
-def sheets(z80, out_dir, prefix=RECORD, colours=None, say=print):
+def sheets(z80, out_dir, prefix=RECORD, colours=None, say=print, enhanced=None):
     """<prefix>_PAINTING_SPRITES.png + _REFERENCE_ALL_SPRITES.png from the frames in the snapshot: all
     eight of Dan's frames, whole; every pixel of the 16-wide window is paintable (outlines too)."""
     from . import coloursheet as cs
@@ -893,14 +1036,19 @@ def sheets(z80, out_dir, prefix=RECORD, colours=None, say=print):
         part = {'id': 'dan:%d' % f, 'size': 1, 'w': 16, 'h': 24, 'x': 0, 'y': 0, 'mir': 0, 'pixels': px, 'entries': ent,
                 'dx': 0, 'dy': 0, 'dmir': 0, 'vmir': 0, 'group': 0}
         comps.append({'count': 1, 'group': 0, 'parts': [part]})
-    cmap = colours if colours is not None else load_colours()
+    if enhanced is None:
+        enhanced = os.environ.get('NEXCLASH_REWORK') == ENHANCED
+    if enhanced:
+        from . import dynamite_dan_enemies as enemies
+        comps += enemies.composites(peek)
+    cmap = colours if colours is not None else load_colours(enhanced)
     rgb = cs.palette_rgb(PALETTE)
     pre = os.path.join(out_dir, prefix)
-    ident = colour_identity(peek)
-    n1 = cs.write(cs.choose(comps, {}), pre + '_PAINTING_SPRITES.png', pre + '_PAINTING_SPRITES_layout.json',
-                  rgb, colours=cmap, paint_clear=True, identity=ident)
+    ident = colour_identity(peek, enhanced)
+    n1 = cs.write(comps if enhanced else cs.choose(comps, {}), pre + '_PAINTING_SPRITES.png', pre + '_PAINTING_SPRITES_layout.json',
+                  rgb, colours=cmap, paint_clear=True, identity=ident, all_swatches=True, width=384 if enhanced else 160)
     n2 = cs.write(comps, pre + '_REFERENCE_ALL_SPRITES.png', pre + '_REFERENCE_ALL_SPRITES_layout.json',
-                  rgb, colours=cmap, paint_clear=True, identity=ident)
+                  rgb, colours=cmap, paint_clear=True, identity=ident, all_swatches=True, width=384 if enhanced else 160)
     say('Sheets    : painting %d figures, reference %d' % (n1, n2))
 
 
@@ -990,19 +1138,25 @@ def auto(a, z80, name, out, say):
     bad = check(plain, src, pp, (conv[1], conv[1] + len(conv[2])))
     say('Plain     : %s  %s  boot %s  (tail 0x%04X)' % (
         os.path.basename(plain), md5(plain), 'OK' if not bad else 'MISMATCH %s' % str(bad[:3])[:200], TAIL_ADDR))
-    patch = DanPatch(start=st0)
+    enhanced = os.environ.get('NEXCLASH_REWORK') == ENHANCED
+    patch = DanPatch(start=st0, enhanced=enhanced)
     spr = os.path.join(out, name + '_sprites.nex')
     conv = zt.convert(src, spr, None, True, quiet=True, patch=patch)
     bad2 = check(spr, src, patch, (conv[1], conv[1] + len(conv[2])))
     say('Sprites   : %s  %s  boot %s' % (os.path.basename(spr), md5(spr),
                                           'OK' if not bad2 else 'MISMATCH %s' % str(bad2[:3])[:200]))
-    if os.environ.get('NEXCLASH_REWORK') == KEYS_REWORK:   # v1.1: QUIT and PAUSE definable (the published default)
+    if enhanced or os.environ.get('NEXCLASH_REWORK') == KEYS_REWORK:   # v1.1: QUIT and PAUSE definable (the published default)
         data = define_keys(open(spr, 'rb').read(), src)
         open(spr, 'wb').write(data)
         say('Keys      : v1.1 define keys (QUIT, PAUSE) laid over the RAM banks: %s  %s' % (os.path.basename(spr), md5(spr)))
+    if enhanced:
+        from . import coloursheet as cs
+        cmap = load_colours(True)
+        cs.save(cmap, os.path.splitext(spr)[0] + '_colours.json', map_note(cmap))
+        sheets(z80, out, name, cmap, say, enhanced=True)
     ok = not bad and not bad2
     states = []
-    negs = negative_patches(patch)
+    negs = negative_patches(patch) if a.rzx else []
     for r in list(a.rzx or []):
         c, ex, st = verify(patch, r, stop=getattr(a, 'quick', None), collect=3)
         states += st
@@ -1011,6 +1165,8 @@ def auto(a, z80, name, out, say):
         say('Verify    : %s  %d frames, Dan plots %d, clears 0xE801 %d, clears 0xE820 %d, end %d, %d sprite pixels -> %s' % (
             os.path.basename(r), c['frames'], c['dan'], c['cls 0xE801'], c['cls 0xE820'], c['end'],
             c['sprite pixels compared'], 'IDENTICAL' if not fails else 'FAILED %s' % fails))
+        if enhanced:
+            say('Enemies   : %s' % {k: v for k, v in c.items() if k.startswith(('enemy', 'erase', 'load', 'suppressed'))})
         for k, v in ex.items():
             say('            %s: %s' % (k, str(v)[:300]))
     if states:
@@ -1020,6 +1176,10 @@ def auto(a, z80, name, out, say):
         say('Unit      : Dan %d, clears %d, end %d, negative controls %d/%d -> %s' % (
             u['Dan cases ok'], u['screen clear cases ok'], u['end-of-game hide cases ok'], u['negative control detected'],
             u['negative control detected'] + u['negative control NOT DETECTED!'], 'PASS' if not uf else 'FAIL %s' % uf))
+        if enhanced:
+            from . import dynamite_dan_enemies as enemies
+            say('Enemy unit: %s' % enemies.unit_tests(patch, states[0]))
+        say('Clocks    : %d cases' % u['clock matrix cases'])
         for k, v in sorted(u.items()):
             if k.startswith('negative control ') and k not in ('negative control detected',):
                 say('            %s: %d' % (k, v))
