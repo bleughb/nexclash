@@ -91,44 +91,48 @@
  ],
  "checked": {
   "deps": {
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
    "asm/smashtv_hooks.asm": "0241dd2f3a6d2e84",
    "docs/profiles/smash_tv.json": "943a848aeabb6e5e",
-   "nexclash.py": "04157df11540c17d",
-   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash.py": "2ac99cf4fa2917e5",
+   "nexclash/build.py": "e632a2f1f49c8be6",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
-   "nexclash/engines.py": "2abd23b537c0b5d4",
-   "nexclash/nextboot.py": "9272cb3a8c980c98",
-   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/engines.py": "b24e01a406607173",
+   "nexclash/nextboot.py": "f67deed5c0603d2a",
+   "nexclash/rzx.py": "90008c9ca09c51bc",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
-   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
    "nexclash/smashtv.py": "e1a13abfd886482f",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80tonex.py": "50684436558662bd",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
-   "recipe": "1b4ecd3b00ec84ff",
-   "rom": "8c34d957fb2cbbd0"
+   "recipe": "5cf03c9fa427a4a5",
+   "rom": "sinclair"
   },
-  "date": "2026-11-20"
+  "date": "2026-11-28"
  },
  "verified": {
   "deps": {
+   "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
+   "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
    "asm/smashtv_hooks.asm": "0241dd2f3a6d2e84",
    "docs/profiles/smash_tv.json": "943a848aeabb6e5e",
-   "nexclash.py": "04157df11540c17d",
-   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash.py": "2ac99cf4fa2917e5",
+   "nexclash/build.py": "e632a2f1f49c8be6",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
-   "nexclash/engines.py": "2abd23b537c0b5d4",
-   "nexclash/nextboot.py": "9272cb3a8c980c98",
-   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/engines.py": "b24e01a406607173",
+   "nexclash/nextboot.py": "f67deed5c0603d2a",
+   "nexclash/rzx.py": "90008c9ca09c51bc",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
-   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
    "nexclash/smashtv.py": "e1a13abfd886482f",
    "nexclash/sprites.py": "899f635303b25706",
-   "nexclash/z80tonex.py": "50684436558662bd",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
-   "recipe": "1b4ecd3b00ec84ff",
-   "rom": "8c34d957fb2cbbd0"
+   "recipe": "5cf03c9fa427a4a5",
+   "rom": "sinclair"
   },
-  "date": "2026-11-20"
+  "date": "2026-11-28"
  }
 }

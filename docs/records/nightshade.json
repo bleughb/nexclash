@@ -110,25 +110,25 @@
    "asm/nightshade_hooks_enh.asm": "6fe802cce70caa41",
    "docs/profiles/nightshade.json": "6eb9643136e17e60",
    "docs/profiles/nightshade_enh.json": "3a034d88ddc0024b",
-   "nexclash.py": "04157df11540c17d",
-   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash.py": "2ac99cf4fa2917e5",
+   "nexclash/build.py": "e632a2f1f49c8be6",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
-   "nexclash/engines.py": "2abd23b537c0b5d4",
-   "nexclash/nextboot.py": "9272cb3a8c980c98",
-   "nexclash/nightshade.py": "6e12817aaef12c41",
+   "nexclash/engines.py": "b24e01a406607173",
+   "nexclash/nextboot.py": "f67deed5c0603d2a",
+   "nexclash/nightshade.py": "bdc59ba2702e34c3",
    "nexclash/nightshade_paint.py": "3dcc1065ee9f0495",
    "nexclash/nightshade_paint_source.json": "b8cfd025301a71d9",
    "nexclash/nightshade_paint_v2.py": "a42a1660bf68133f",
-   "nexclash/rzx.py": "e018e000440e0274",
-   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/rzx.py": "90008c9ca09c51bc",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "50684436558662bd",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "recipe": "8326d711a19953f7",
-   "rom": "8c34d957fb2cbbd0"
+   "rom": "sinclair"
   },
-  "date": "2026-11-21"
+  "date": "2026-11-28"
  },
  "verified": {
   "deps": {
@@ -136,24 +136,24 @@
    "asm/nightshade_hooks_enh.asm": "6fe802cce70caa41",
    "docs/profiles/nightshade.json": "6eb9643136e17e60",
    "docs/profiles/nightshade_enh.json": "3a034d88ddc0024b",
-   "nexclash.py": "04157df11540c17d",
-   "nexclash/build.py": "7a7bb03de0547247",
+   "nexclash.py": "2ac99cf4fa2917e5",
+   "nexclash/build.py": "e632a2f1f49c8be6",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
-   "nexclash/engines.py": "2abd23b537c0b5d4",
-   "nexclash/nextboot.py": "9272cb3a8c980c98",
-   "nexclash/nightshade.py": "6e12817aaef12c41",
+   "nexclash/engines.py": "b24e01a406607173",
+   "nexclash/nextboot.py": "f67deed5c0603d2a",
+   "nexclash/nightshade.py": "bdc59ba2702e34c3",
    "nexclash/nightshade_paint.py": "3dcc1065ee9f0495",
    "nexclash/nightshade_paint_source.json": "b8cfd025301a71d9",
    "nexclash/nightshade_paint_v2.py": "a42a1660bf68133f",
-   "nexclash/rzx.py": "e018e000440e0274",
-   "nexclash/simrun.py": "2778169fe43fd5de",
+   "nexclash/rzx.py": "90008c9ca09c51bc",
+   "nexclash/simrun.py": "17926b1a6f6a26e0",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/z80n.py": "7843b0da444ced1d",
-   "nexclash/z80tonex.py": "50684436558662bd",
+   "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "recipe": "8326d711a19953f7",
-   "rom": "8c34d957fb2cbbd0"
+   "rom": "sinclair"
   },
-  "date": "2026-11-21"
+  "date": "2026-11-28"
  }
 }
