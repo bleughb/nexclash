@@ -520,6 +520,7 @@ plot:   ld (w),a
         ld a,b
         ld (rows),a
         call record             ; every plot, drawn or not: the star hook needs what the original drew
+.cpc_redirect:
         ld a,(gfx+1)
         cp high GB
         ret c                   ; not a graphics address: the verifier counts a figure with no sprite
@@ -1026,6 +1027,7 @@ b_tick: T_IN
         call hlib_debt_open
         ld a,(nsp)
         ld c,a
+.hide_call:
         call hide
         ld a,(tick)
         inc a
@@ -1467,3 +1469,12 @@ setup_end:
 
         SAVEBIN "gz_page.bin",0x2000,page_end-0x2000
         SAVEBIN "gz_setup.bin",0xD000,setup_end-0xD000
+
+
+; Alternative blocks installed only for a locally built CPC colour set.
+cpc_redirect EQU plot.cpc_redirect
+        INCLUDE "gryzor_cpc.asm"
+        SAVEBIN "gz_cpcgate.bin",cpc_gate,cpc_gate_end-cpc_gate
+        SAVEBIN "gz_cpcdraw.bin",cpc_draw,cpc_index-cpc_draw
+        SAVEBIN "gz_cpcboot.bin",cpc_boot,cpc_templates-cpc_boot
+        SAVEBIN "gz_cpctick.bin",cpc_tick,cpc_tick_end-cpc_tick

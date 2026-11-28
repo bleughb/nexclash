@@ -1116,6 +1116,20 @@
       "sprites": "f956832d10fa5592423bfaf563beaaf2",
       "outline": "33c0296d5b725560557e3ae52551df31"
      }
+    },
+    {
+     "record": "gryzor rework cpc",
+     "game": "Gryzor",
+     "doc": "gryzor.md",
+     "args": [],
+     "proof": "differential",
+     "nex": {
+      "cpc": "c233f392e9c8822235cd18c42a0d7f2b"
+     },
+     "rework": true,
+     "env": {
+      "NEXCLASH_REWORK": "gryzor_cpc"
+     }
     }
    ]
   },

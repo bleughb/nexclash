@@ -1,0 +1,37 @@
+{
+ "sha256": "072c6077cc65dab990e2e2ae8419ff1f7c1a58ad442855ce1f3459bd14eecb81",
+ "runs": [
+  {
+   "file": "Gryzor_1987_Ocean_Software.dsk",
+   "offset": 42682,
+   "length": 1350,
+   "bank": 21,
+   "bank_offset": 2106,
+   "md5": "425ba2fc282c58160fc99de312cfd153"
+  },
+  {
+   "file": "Gryzor_1987_Ocean_Software.dsk",
+   "offset": 44288,
+   "length": 4608,
+   "bank": 21,
+   "bank_offset": 3456,
+   "md5": "12f49dd78c44880b8507569f44db1e4b"
+  },
+  {
+   "file": "Gryzor_1987_Ocean_Software.dsk",
+   "offset": 49152,
+   "length": 4608,
+   "bank": 21,
+   "bank_offset": 8064,
+   "md5": "6a694f4b5946656c8743f283b3bb5996"
+  },
+  {
+   "file": "Gryzor_1987_Ocean_Software.dsk",
+   "offset": 54016,
+   "length": 805,
+   "bank": 21,
+   "bank_offset": 12672,
+   "md5": "011ea61e8cc94c376c8891093538a78d"
+  }
+ ]
+}

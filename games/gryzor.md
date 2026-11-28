@@ -1,13 +1,44 @@
 # Gryzor (Ocean, 1987, 48K form) - engine `gryzor` (pilot game: unattended, emulator only)
 
 ## Next session
-Stage: 4 (hardware + colour)    State: imported into the repo 2026-11-05 (record gryzor, stamped); JNext only, never on a Next.
+Stage: 4 (hardware + colour)    State: 1.2 is the default. The owner tested 1.2 on a KS3. The optional CPC figures have emulator evidence only.
 Inputs: specnext/reference/gryzor/ (gryzor.z80 md5 fdab5fb6 = TOSEC "Gryzor (1987)(Ocean)(48K-128K).z80"; c1, c2, c3, n2,
 n3.rzx). Verify with NEXCLASH_NEXT_ROM = enNextZX.rom from the card.
 Start with: the hardware checklist below. Open: under "Open".
 
 Techniques: `detect.gameplay-screen-readers`, `patch.whole-altrom-image`, `patch.restore-speed`, `patch.preserve-r`,
 `patch.pace-limiter`, `optimise.pattern-cache` (recipe and results: docs/records/gryzor.json)
+
+## Optional CPC jungle figures (2026-11-27)
+
+Set `NEXCLASH_GRYZOR_CPC_DISK` to the owner's Ocean disk when running the usual
+`nexclash.py auto` command. The additional output is `gryzor_sprites_cpc.nex`.
+To build the local switchable menu from the published outline NEX, use:
+
+```sh
+python -m nexclash.gryzor_cpc gryzor_sprites_outline.nex "$disk" gryzor_cpc.nex \
+  --menu gryzor_menu.nex --patch "$published_patch" --snapshot "$snapshot" --menu-stub "$nxcstub"
+```
+
+In the menu, **5** toggles Enhanced colours and **Enter** starts the selected build.
+The initial selection plays the published black-outline game. The menu also carries the
+original three trainers. The direct CPC NEX fits the 1 MB layout. The menu uses the 2 MB layout.
+
+Four disk runs in `docs/profiles/gryzor_cpc_copy.json` supply 11,371 consecutive bytes in
+bank 21 at the original CPC addresses. Section 1 ends at the Spectrum tape prompt.
+The Next combines list entries, applies the Mode 0 lookup and uploads 77 patterns at boot.
+Pen zero is transparent. Horizontal scale is 2 and vertical scale is 1. The 201 draw keys
+in `nexclash/gryzor_cpc.py` select 47 pose templates. The Spectrum routines still supply
+coordinates, bullet origins and gameplay screen reads. The two overhead barrels reach
+four lines above the original tips with their feet on the same floor.
+
+The record also defines the `cpc` rework. A reference folder with the DSK alongside `gryzor.z80` runs its replay checks in the game selftest. To run the figure replay separately, use each of the five reference recordings. The unit command
+also checks the original Spectrum floor lines, disk provenance and four failure cases.
+
+```sh
+python -m nexclash.gryzor_cpc_verify "$disk" gryzor_cpc.nex "$recording"
+python -m nexclash.gryzor_cpc_units "$disk" gryzor_sprites_outline.nex gryzor_cpc.nex "$recording"
+```
 
 ## Import (2026-11-05)
 Ported from Jon Attree's .nxc work, 2026-11-05 (pilot clone runs/gryzor/nexclash, base d7abd1c, head eca24cb). The owner
@@ -154,7 +185,7 @@ every figure. Wading and drowning hidden, as the original. 48K form, so one sect
 ## Stays on the ULA
 Scenery, objects set in the rock and their eyes, stars, HUD, menu, text.
 
-## Hardware checklist (nothing here has run on hardware)
+## Hardware checklist (CPC set awaits hardware testing)
 1. Start: the menu; hold 0. Walk and jump: figures stay yellow with a black outline across the bands; scenery keeps its
    colours. Stars do not flicker around figures.
 2. Speed and sound against the plain .nex: walk, jump, fire; the game no slower, the shot notes as long.
@@ -167,7 +198,7 @@ tried on a board. The limiter needs NR 0x1E/0x1F (core 3.0+). Contention: the pa
 calibrated in JNext only.
 
 ## Open
-- Never run on hardware. JNext only.
+- The 1.2 patch records owner approval on KS3. The CPC set still needs a board test.
 - The owner's look: in the yellow forest the black outline meets the forest's black pattern and figures read less well
   than with the white one (out/gryzor_outline_before_after.png in the pilot folder); on cyan and green it reads well;
   on the black sky it is invisible and the yellow body reads as before. His call.
@@ -190,6 +221,8 @@ calibrated in JNext only.
   +0.23%); interrupts 24.38 a second both (original 24.35).
 
 ## Lessons
+- [local: CPC figure anchors] Compare the lowest marked pixel on the original black and white plot trials. This caught a one-line error on the low rifleman and the airborne runner. The overhead CPC rifle is four lines taller at the same foot line.
+
 - [none: the port changed nothing at the call sites; the 26-byte state and the matrix exclusion are in the section above]
 - [kb lesson.small-saving-hook-overhead: this game's loops] demonstrated: NOPing a plotter's stores saves only 3 T a byte, less than a hook's fixed entry and exit at 3.5 MHz (about 250 T), so a 28 MHz plot hook in front of the loop made the game slower (pace model +3,800 T a tick); replacing the whole loop, with its exit registers from the geometry, gave the window the loop's whole time (+36 T a tick).
 - [kb lesson.r-register-checks-local-vs-global: this game's RNG] demonstrated: the star routine's path depends on the figures in its bytes; a star hook that works out the original's bytes from the tick's plot list keeps R exact, and the pace runs stay in lockstep with the original with no fixture.
@@ -214,6 +247,8 @@ calibrated in JNext only.
 - detect.gameplay-screen-readers: helped: the star routine was the only reader that changes logic (through R).
 
 ## Stage log
+
+- 2026-11-27. Added the optional CPC jungle set. Five recordings covered 58,863 figure comparisons and 13,466 game-memory checks. The patch writer can reconstruct all 11,371 source bytes from the owner disk.
 - 2026-11-03: stages 0-3, one unattended session, no user rounds; white outline set after the owner's play.
 - 2026-11-05: import (pilot runs/gryzor/nexclash2 on refactor-final ecabb13): whole alt ROM image, 28 MHz hooks, R kept
   (star hook), whole-loop plot hooks with the limiter, prepared patterns, black outline, .nxc v1.0.

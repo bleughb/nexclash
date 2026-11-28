@@ -485,7 +485,7 @@ class _PMem:
         if a < 0x8000:
             p = s.ns.slots[(a >> 13)]
             if p not in STATE_PAGES:
-                if p >= STORE:
+                if p >= STORE or p in s.store:
                     st = s.store.get(p)
                     return st[a & 0x1FFF] if st else 0
                 off = (p - PLANE) * 0x2000 + (a & 0x1FFF)
@@ -753,7 +753,7 @@ def _rplus(r, n):
     return (r & 0x80) | ((r + n) & 0x7F)
 
 
-def verify(patch, rzx_path, stop=None, collect=0, progress=None, clock=0, clear=()):
+def verify(patch, rzx_path, stop=None, collect=0, progress=None, clock=0, clear=(), figure_check=None):
     """Replay the recording (see the module docstring). clock: NR 7 every hook is entered at (the game's speed option);
     clear: pattern nibbles the screen compare counts as see-through (an outline set). -> (Counter, examples, states)."""
     from . import rzx as RZ
@@ -774,6 +774,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, clock=0, clear=
     for t, n in changed:
         fail('bare play area changed after the objects', t, n)
     eng = Engine(patch, clock)
+    if figure_check:
+        figure_check.start(eng)
     s = patch.syms
     entries = {a: (s[v[0]], v[1], v[2], v[3], v[4]) for a, v in ENTRIES.items() if any(x[0] == a for x in patch.sites)}
     has_tick = any(x[0] in TICK_OPERANDS for x in patch.sites)
@@ -858,9 +860,12 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, clock=0, clear=
             regs = list(R)
             want, t_orig = _orig_loop(M, regs, pc)
             up0 = eng.ns.uploads
+            first_sprite = eng.page[s['nsp'] - 0x2000]
             rr, ov, t, done = run_hook('plot', get, regs, sym, end, o_m1=None)
             if eng.ns.uploads != up0:
                 c['plots that uploaded'] += 1
+            if figure_check:
+                figure_check.plot(eng, pc, regs, M, first_sprite, c, fail)
             acc = _accesses(pc, regs, M)
             pt = eng.page[s['ptT'] - 0x2000] | eng.page[s['ptT'] + 1 - 0x2000] << 8
             if pt - SC_T * acc != t_orig:
@@ -965,6 +970,8 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, clock=0, clear=
         if hashlib.md5(bytes(M[0x5800:0x10000])).digest() != dig0:
             fail('memory differs at a tick', i, pc)
         c['memory checks'] += 1
+        if figure_check and eng.page[s['nrec'] - 0x2000] >= 40:
+            fail('plot records full', i)
         if has_tick:
             regs = list(R)
             sp = (R[_R_SP] - 2) & 0xFFFF
@@ -981,6 +988,15 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, clock=0, clear=
                 if j not in (_R_PC, _R_R) and rr[j] != regs[j]:
                     fail('register changed by tick hook', j)
         c['tick T max'] = max(c['tick T max'], 0)
+        if figure_check:
+            if bytes(M[0x5aa0:0x5b00]) != bytes([0x6d])*96 and (M[46062] or M[46063]):
+                fail('water attributes changed', i)
+            figure_check.tick(eng, M, c, fail)
+            if eng.ns.bad:
+                fail('next state', eng.ns.bad[:3])
+                eng.ns.bad.clear()
+            eyes.clear()
+            return
         attrs = bytes(M[0x5800:0x5B00])
         got = composite(eng, zlib.decompress(scr0), attrs, c, clear)
         want = bytes(M[0x4000:0x5800])
@@ -1566,6 +1582,28 @@ def auto(a, z80, name, out, say):
         ok = ok and back and not prob
         say('Outline   : %s  %s  black outline (owner, 2026-11-05); %d nibbles 0 -> 1 in plane and store banks only; back to '
             'the default byte-exact: %s %s' % (os.path.basename(opath), md5(opath), n, back, prob or ''))
+        disk_path = os.environ.get('NEXCLASH_GRYZOR_CPC_DISK')
+        cpc_rework = os.environ.get('NEXCLASH_REWORK') == 'gryzor_cpc'
+        if disk_path or cpc_rework:
+            from pathlib import Path
+            from . import gryzor_cpc as cpc
+            disk = Path(disk_path or Path(z80).with_name(cpc.DISK_NAME)).read_bytes()
+            default = zt.automap_off(onex)
+            enhanced = Path(out, name + '_sprites_cpc.nex')
+            result = cpc.enhance(default, disk)
+            enhanced.write_bytes(result)
+            say('CPC       : %s  %s  jungle figures from owner disk' % (enhanced.name, md5(enhanced)))
+            if a.rzx:
+                from . import gryzor_cpc_verify as cv, gryzor_cpc_units as cu
+                check_cpc = cv.FigureCheck(disk, result)
+                cu.audit(disk, default, result, check_cpc)
+                cu.plot_units(check_cpc, Path(a.rzx[0]))
+                for recording in a.rzx:
+                    passed = cv.run(disk, result, Path(recording), getattr(a, 'quick', None), say=say)
+                    ok = ok and passed
+            if cpc_rework:
+                say('Result    : %s' % ('PASSED' if ok else 'FAILED'))
+                return ok
     states = []
     menu_rzx = None
     white = outline_map(15) if os.path.exists(OUTLINE) else None
