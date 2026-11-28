@@ -54,7 +54,7 @@
   ],
   "auto_record": false,
   "minutes": 15,
-  "note": "One archive recording of the first level block, from a cut in play. Each of the five hooks against the original from one state: every register with R, all game memory; after each tile pass the tile layer against the painted map for the hidden screen's 640 cells and Layer 2 against the painted panel; every fourth frame's tiles against the visible screen. The steady-speed build's hooks on the first 3,000 frames; unit cases; 6 broken builds. Blocks 1, 2 and 10 from their own snapshots: games/gauntlet.md."
+  "note": "The first level block from a cut in play. Registers including R and game RAM at the copy and projectile sites. Tile and panel cells at every pass. Every visible projectile mask, position and palette line against the original plotter. Steady speed on the first 3,000 frames. Units include both players, four classes, both enemy shooters, overlapping draws and an empty pass. Ten broken builds."
  },
  "outputs": {
   "plain": {
@@ -63,21 +63,21 @@
   },
   "sprites": {
    "file": "gauntlet_p1_sprites.nex",
-   "md5": "f3b03d0a507a3c88f3c9e37127ab04cd"
+   "md5": "c5220a48c8c9f888999e5c988fd01fd3"
   },
   "steady": {
    "file": "gauntlet_p1_steady.nex",
-   "md5": "86ee51d2857b3260738aaca66296c5b5"
+   "md5": "a99e3846f997d6a086ee74d2da03e1a5"
   }
  },
  "repro": [],
  "status": {
   "title": "Gauntlet",
   "engine_col": "gauntlet (gauntlet.md)",
-  "build": "gauntlet_p1_sprites.nex f33ade47 (nothing of the game changes: each 8 x 8 cell of the play window shown as a painted tile of the tile layer, the status panel painted on Layer 2; the original's pace) + steady 545fdeed (the game at 28 MHz, an update every 3 frames: the original takes 3 to 8); the whole game from the tape: record gauntlet_tape",
-  "software": "Verify IDENTICAL on the first block's recording, 15,698 frames, 3,202 updates (R compared): 2,459,136 cells against the painted map, Layer 2 against the painted panel after every pass; the steady build's hooks IDENTICAL on 3,000 frames; unit PASS (28 cases); 6 of 6 broken builds detected; ROM path check pass; the hooks take 0.016% of the recording's time less than the copies and the clear they stand for. Blocks 1, 2 and 10 from the tape prompt PASSED the same way",
-  "hardware": "untested (both builds start and run in OverSpec)",
-  "next": "the owner's review of the painting and of the steady speed; the heroes' shots (drawn at pixel positions) are not painted; hardware test"
+  "build": "1.3 test copy. Painted playfield, painted panel and flat-colour hardware projectiles. Original pace c5220a48 and Steady speed a99e3846.",
+  "software": "15,698 frames, 3,202 updates, 837 shot draws and 222 erased slots. All 2,459,136 cells matched. Extra block 2 coverage includes 46 compact rocks. One update exceeded the 5,000 T tolerance.",
+  "hardware": "1.3 awaits hardware testing. The owner played 1.2 on a KS3.",
+  "next": "Owner review of projectile colours and pace on hardware. A recording across the tape hand-over and a level change."
  },
  "checks": [
   "asm2profile:gauntlet"
@@ -145,72 +145,94 @@
  },
  "checked": {
   "deps": {
-   "asm/gauntlet_hooks.asm": "f9afbc5d04be04b7",
+   "asm/gauntlet_hooks.asm": "2a7a6a61861b99c7",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
-   "docs/profiles/gauntlet.json": "775094327c07ae60",
-   "nexclash.py": "d9b430cef7478a38",
-   "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
+   "docs/profiles/gauntlet.json": "756b3963c9ea80cd",
+   "nexclash.py": "2ac99cf4fa2917e5",
+   "nexclash/analyse.py": "6f5b53f1eef456ac",
+   "nexclash/build.py": "e632a2f1f49c8be6",
+   "nexclash/coloursheet.py": "485b2bb1d7e30784",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "8163679cd401837e",
-   "nexclash/gauntlet.py": "7e15af7af4c41cd7",
-   "nexclash/hooklib.py": "0bda486825c673e8",
+   "nexclash/engines.py": "b24e01a406607173",
+   "nexclash/gauntlet.py": "129c248bae35daae",
+   "nexclash/hooklib.py": "2c99cebaa18a206a",
    "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
-   "nexclash/nextboot.py": "d4d8a6b6c9055025",
-   "nexclash/recolour.py": "ed8eaa22008da1a7",
-   "nexclash/records.py": "a8919d2869b77132",
-   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/l2pal.py": "69b5300cc237cda8",
+   "nexclash/machine.py": "f681f6d4710f2169",
+   "nexclash/nextboot.py": "f67deed5c0603d2a",
+   "nexclash/nxc.py": "085c53b25bb6b406",
+   "nexclash/nxcout.py": "30fce34750b0313b",
+   "nexclash/recolour.py": "9c26165e33697acc",
+   "nexclash/recorder.py": "beda3d9e2cc08ed3",
+   "nexclash/records.py": "6401367eddcf12a0",
+   "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
+   "nexclash/rzx.py": "90008c9ca09c51bc",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "17926b1a6f6a26e0",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/tapeset.py": "86542e1752fb3110",
+   "nexclash/userflow.py": "6779aabcf5d969cf",
+   "nexclash/verify.py": "e49b2afbdf721760",
    "nexclash/z80n.py": "7843b0da444ced1d",
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "8949a9fc0799d2a9",
-   "rom": "sinclair"
+   "recipe": "6ee47875ad3ad85f",
+   "rom": "e50ee485fb4a21d2"
   },
-  "date": "2026-11-22"
+  "date": "2026-11-28"
  },
  "verified": {
   "deps": {
-   "asm/gauntlet_hooks.asm": "f9afbc5d04be04b7",
+   "asm/gauntlet_hooks.asm": "2a7a6a61861b99c7",
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
-   "docs/profiles/gauntlet.json": "775094327c07ae60",
-   "nexclash.py": "d9b430cef7478a38",
-   "nexclash/build.py": "7a7bb03de0547247",
-   "nexclash/coloursheet.py": "dfc6f6d6e095185c",
+   "docs/profiles/gauntlet.json": "756b3963c9ea80cd",
+   "nexclash.py": "2ac99cf4fa2917e5",
+   "nexclash/analyse.py": "6f5b53f1eef456ac",
+   "nexclash/build.py": "e632a2f1f49c8be6",
+   "nexclash/coloursheet.py": "485b2bb1d7e30784",
+   "nexclash/dizzy5.py": "1123c301b84e7cbc",
    "nexclash/dizzy6.py": "d110f92d9d7d50f1",
    "nexclash/dma.py": "b2bdb6ac2a1d5981",
    "nexclash/dma_check.py": "00d9acf9992a2488",
-   "nexclash/engines.py": "8163679cd401837e",
-   "nexclash/gauntlet.py": "7e15af7af4c41cd7",
-   "nexclash/hooklib.py": "0bda486825c673e8",
+   "nexclash/engines.py": "b24e01a406607173",
+   "nexclash/gauntlet.py": "129c248bae35daae",
+   "nexclash/hooklib.py": "2c99cebaa18a206a",
    "nexclash/hookprofile.py": "cac1335153f15daa",
+   "nexclash/identify.py": "578e73ef2ca90c6a",
    "nexclash/ikari_warriors.py": "23a8a92c15cb3d77",
-   "nexclash/nextboot.py": "d4d8a6b6c9055025",
-   "nexclash/recolour.py": "ed8eaa22008da1a7",
-   "nexclash/records.py": "a8919d2869b77132",
-   "nexclash/rzx.py": "e018e000440e0274",
+   "nexclash/l2pal.py": "69b5300cc237cda8",
+   "nexclash/machine.py": "f681f6d4710f2169",
+   "nexclash/nextboot.py": "f67deed5c0603d2a",
+   "nexclash/nxc.py": "085c53b25bb6b406",
+   "nexclash/nxcout.py": "30fce34750b0313b",
+   "nexclash/recolour.py": "9c26165e33697acc",
+   "nexclash/recorder.py": "beda3d9e2cc08ed3",
+   "nexclash/records.py": "6401367eddcf12a0",
+   "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
+   "nexclash/rzx.py": "90008c9ca09c51bc",
    "nexclash/simpool.py": "73ed4a6afdf8df3c",
    "nexclash/simrun.py": "17926b1a6f6a26e0",
    "nexclash/sprites.py": "899f635303b25706",
    "nexclash/tapeset.py": "86542e1752fb3110",
+   "nexclash/userflow.py": "6779aabcf5d969cf",
+   "nexclash/verify.py": "e49b2afbdf721760",
    "nexclash/z80n.py": "7843b0da444ced1d",
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "8949a9fc0799d2a9",
-   "rom": "sinclair"
+   "recipe": "6ee47875ad3ad85f",
+   "rom": "e50ee485fb4a21d2"
   },
-  "date": "2026-11-22"
+  "date": "2026-11-28"
  }
 }

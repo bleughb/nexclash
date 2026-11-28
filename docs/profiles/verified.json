@@ -1000,8 +1000,8 @@
    "doc": "gauntlet.md",
    "nex": {
     "plain": "24d0b7b932ccfef4119beb8d686d5283",
-    "sprites": "f3b03d0a507a3c88f3c9e37127ab04cd",
-    "steady": "86ee51d2857b3260738aaca66296c5b5"
+    "sprites": "c5220a48c8c9f888999e5c988fd01fd3",
+    "steady": "a99e3846f997d6a086ee74d2da03e1a5"
    },
    "proof": "differential",
    "variants": [
@@ -1013,8 +1013,8 @@
      "proof": "differential",
      "nex": {
       "plain": "24d0b7b932ccfef4119beb8d686d5283",
-      "sprites": "f3b03d0a507a3c88f3c9e37127ab04cd",
-      "steady": "86ee51d2857b3260738aaca66296c5b5"
+      "sprites": "c5220a48c8c9f888999e5c988fd01fd3",
+      "steady": "a99e3846f997d6a086ee74d2da03e1a5"
      }
     }
    ]
@@ -1023,8 +1023,8 @@
    "game": "Gauntlet",
    "doc": "gauntlet.md",
    "nex": {
-    "sprites": "6d5cc48a5cbe39322780d061f4c38bb2",
-    "steady": "2f074c37282bcef8ae1c46915590f236"
+    "sprites": "fe63f488250165387f446f2ae8f9ba34",
+    "steady": "8bfed38a9458c8b2c6e2417b9e3cc613"
    },
    "proof": "differential",
    "variants": [
@@ -1035,8 +1035,8 @@
      "args": [],
      "proof": "differential",
      "nex": {
-      "sprites": "6d5cc48a5cbe39322780d061f4c38bb2",
-      "steady": "2f074c37282bcef8ae1c46915590f236"
+      "sprites": "fe63f488250165387f446f2ae8f9ba34",
+      "steady": "8bfed38a9458c8b2c6e2417b9e3cc613"
      }
     }
    ]

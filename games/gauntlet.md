@@ -1,16 +1,22 @@
 # Gauntlet (US Gold, 1986; 48K code, the 128K's AY)
 
 ## Next session
-Stage: 3 (verified, stamped, published as an .nxc for the tape)   State: 2026-11-19: the whole game from both sides of
-the tape, starting at the title picture (record `gauntlet_tape`); the main game's hooks proven from a cut of level block 1
-in play (record `gauntlet`); all four heroes and the panel painted; a steady-speed toggle; runs in OverSpec; not on hardware
+Stage: 3. Version 1.3 test copy, 2026-11-28. Shots from all four heroes and both enemy shooters use hardware sprites.
+The tape build retains Steady speed and the eight version 1.2 trainers. Version 1.3 awaits a board test.
 Inputs (private, pilot runs/gauntlet/reference_files/gauntlet): gauntlet_start.z80 + .rzx (the archive's Main Title
 recording cut at frame 72) and the US Gold tape's two sides; gauntlet_p1.z80 + .rzx; gauntlet_b1, b2, b10;
 gauntlet_colours.json (the painted map); 28 more block recordings in the run folder
-Branch: add-gauntlet    Commit: this one    Checks: selftest --game gauntlet / gauntlet_tape --verify --stamp, doccheck
-Pending user answers: "Open" 2-4
-Start with: "Open" 1 (the shots), or the owner's review
-Read: "Build", "The whole game from the tape", "Open"
+Branch: gauntlet-shots-steady. Checks: selftest --game gauntlet / gauntlet_tape --verify --stamp, doccheck.
+Start with the owner's review of the tape test copy. See "Projectile sprites" and "Open".
+
+## Projectile sprites (1.3 test copy, 2026-11-28)
+
+- The game has two player shots at 0x8430 and 0x8450, plus up to 16 four-byte enemy records from 0x5B20. The hook at 0x8CB6 remembers the shooter's kind before an impact clears bit 6. The hooks at 0x8DFB and 0x8EBF save the live bitmap and destination before the original plot. The 8 by 8 rock uses the low byte of each word. The wider plot combines two pairs of lower source rows onto shared scanlines.
+- The original plot, its attribute writes, the game screen and the copies run as before. Before each shot the hook saves the scenery it touches in page 58. The tile pass uses the first saved copy of each cell, including when shots overlap. It uploads the next set of masks to unused patterns, switches the sprite attributes and hides surplus slots. The copy waits account for the extra drawing work.
+- The four player colours are Thor's red-orange, Thyra's ice blue, Merlin's gold and Questor's leaf green. All four RGB samples occur in their respective character paintings. The demon fireball is orange and the lobber's rock is sandstone. Impacts keep their shooter's colour.
+- The reference runs the game's two plotters on cleared cells, then compares those masks with the visible hardware slots. It checks the original composite cells at the copy and at interrupts. The main replay checked 837 shots, 222 erased slots and 2,364 interrupts with shots visible. Its 3,202 updates matched over 15,698 frames. One update was 197,458 T over the original. The extra block 2 run covered 94 shots in 1,900 frames, including 46 compact rocks.
+- OverSpec captures from blocks 2 and 10 show three and four shots. All 349 shot pixels and 718 surrounding painted pixels matched. In a separate two-player run the wall trainer lets both players' shots travel through a painted wall. A tape playthrough reached level 1 with Steady speed, Infinite health and Shoot through walls.
+- The private toolkit patch uses both US Gold tape sides and the original eight trainer blocks from the owner's 1.2 test copy. Both pace settings and all 256 trainer subsets rebuilt the expected complete NEX in 512 comparisons. Twenty simulated hand-overs covered each trainer individually, all off and all on at both speeds.
 
 ## Result (2026-11-19)
 Techniques: `patch.hybrid-display-replacement`, `patch.pace-limiter`, `patch.preserve-r`, `patch.restore-speed`
@@ -122,12 +128,11 @@ Nothing of the game changes; the Next's tile layer shows a painted tile over eac
 - 216 cells are painted differently in two pictures that share them (the first is kept).
 
 ## Hardware checklist
-Not built for hardware yet (the level blocks first).
+
+Version 1.2 was played on a KS3. For 1.3, check two-player fire across a wall, a lobber, a shared impact, a return to the title, and both pace settings.
 
 ## Open
-1. Shots: the heroes' and monsters' shots are drawn at pixel positions (not by the block plotters), so their cells are
-   endless in number and stay unpainted: Spectrum colours, a block of the wall's colours where one crosses a wall.
-   Sprites for the shots would fix it; the owner decides.
+1. The 1.3 test copy implements the owner's shot decision. Owner review and real Next testing are pending.
 2. Steady speed: 3 frames an update is the original's fastest; the owner has not tried it.
 3. The painted map holds the game's pictures: where it lives for a public patch (the .nxc carries the painted pages).
 4. The owner has not reviewed the painting (tiles, panel, the three later heroes) in play.
@@ -136,10 +141,12 @@ Not built for hardware yet (the level blocks first).
 7. Nothing has run on a board; no recording crosses the hand-over or a level change.
 
 ## Decisions
+- 2026-11-23 (owner): show the game's original hero and monster shots as flat-colour hardware sprites, keeping the game screen intact.
 - 2026-11-19 (owner): "Go ahead with you recommendation": everything painted, on the tile layer.
 - 2026-11-19 (owner): the slowdown "might be an opportunity to fix that in the nxc patch option": the steady build.
 
 ## Lessons
+- [local: projectile masks] Run the actual plotter on blank cells for its reference mask. The wide Gauntlet plotter advances C instead of D twice, so simply expanding consecutive source rows distorts its drawing.
 - [local: a clear's speed-up pays the pace] e_cl must run the clear at 28 MHz (its saved time pays for the tile
   pass) and give back the caller's speed within STACK (6 bytes): A kept for the clear, the speed below it, EX (SP),HL
   to restore it without touching the clear's outputs (F = 66, B = 0). The replay alone passed a fix that lost A:
@@ -178,5 +185,6 @@ Not built for hardware yet (the level blocks first).
 - patch.restore-speed: helped: the library in the wrappers.
 
 ## Stage log
+- 2026-11-28: 1.3 test copy. Read the engine and its hooks to locate the pre-copy display pass, trace both projectile writers and extend their same-state verifier. Generated both records' builds and the private tape patch.
 - 2026-11-18/19: stages 0-2 in one session (32 recordings replayed, the art set counted, a Codex painting pass, hooks,
   verifier, steady speed), about 4 h, about 60 tool calls, 3 user rounds.

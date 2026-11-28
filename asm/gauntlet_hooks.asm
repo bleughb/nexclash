@@ -1,7 +1,7 @@
 ; Gauntlet (US Gold, 1986; 48K, the 128K's AY): every cell of the play window as a painted tile of the Next's
 ; tile layer. Facts and design: games/gauntlet.md.
 ;
-; The game draws everything as plain 8 x 8-aligned blocks into a hidden copy of the screen (0xC000-0xDAFF) and
+; The game draws blocks and projectiles into a hidden copy of the screen (0xC000-0xDAFF) and
 ; sends it to the screen with three stack copies, interrupts off (0x9CDC: top third, attributes, the rest of the
 ; 20-row window). Nothing of the game changes:
 ;   e_c1 / e_c2 / e_c3  the three CALLs of the copies: 28 MHz, the game's own copy, then the rest of its own time
@@ -43,6 +43,17 @@ MAIN    EQU 0x8400              ; the main game's entry
 NBLK    EQU 31                  ; level blocks on the tape
 V_BLKN  EQU 0x0114              ; the block the last load gave
 FRAMES  EQU 0x8497              ; its frame counter (the interrupt handler's INC (IY+24))
+SHOTPAGE EQU 58                 ; scratch, mapped only with interrupts off
+SHOTMASK EQU 0x1B00             ; 18 records of 32 packed bitmap bytes
+SHOTFLAGS EQU 0x1D40            ; one flag per playfield cell
+DIRTY   EQU 0x0600              ; up to 72 saved bitmap addresses
+SHOTATTR EQU 0x06A0             ; 18 four-byte Next sprite descriptors
+V_SHOTS EQU 0x0115
+V_DIRTY EQU 0x0116
+V_HALF  EQU 0x0117
+V_SHOWN EQU 0x0118
+V_SMALL EQU 0x0119
+V_DEST  EQU 0x011B
 TBUF    EQU 0x0120              ; 32 bytes: a definition on its way between pages
 PBUF    EQU 0x0800              ; 8 x 256: the panel's rows as the screen has them (bytes 0x80-0xFF of each line)
 PPREV   EQU 0x1800              ; the same, as the last pass saw them
@@ -413,6 +424,7 @@ tilepass:
         pop hl
         pop bc
         djnz .row
+        call shotpass
         pop iy
         nextreg 0x52,10
         nextreg 0x53,11
@@ -693,6 +705,408 @@ alloc:  push hl
         pop hl
         ret
 
+; Keep the shooter's kind before either impact path clears bit 6 of (IX+3).
+; The readable sprite selector holds it until the draw. The game and its
+; interrupt handler use no Next registers. Selecting a slot changes no image.
+e_kind: push af
+        push bc
+        ld a,r
+        ld b,a
+        ld a,(ix+3)
+        nextreg 0x34,a
+        ld a,b
+        add a,120
+        xor b
+        and 127
+        xor b
+        ld r,a
+        pop bc
+        pop af
+        bit 6,(ix+3)
+        jp 0x8CBA
+
+; Both original plotters execute DI / LD SP,HL / LD A,D. HL is the live
+; drawing, DE its screen address. Resume with the original bitmap stack.
+        MACRO CAPTURE small, resume
+        di
+        nextreg 0x50,WORK
+        ld sp,HSTK
+        push af
+        ld a,r
+        ld (HLIB_V_R),a
+        push bc
+        push de
+        push hl
+        ld a,small
+        ld (V_SMALL),a
+        HLIB_SPEED_IN_ABC V_SPEED
+        nextreg 0x52,SHOTPAGE
+        call save_shot
+        ; Reclaim the two extra hooks' measured cost from the copy waits.
+        ; 1/16 scanline is 14.25 T at the original speed.
+        IF small
+        ld hl,62
+        ELSE
+        ld hl,74
+        ENDIF
+        call hlib_debt_add
+        nextreg 0x52,10
+        HLIB_SPEED_OUT_A V_SPEED
+        ld a,117
+        call hlib_r_set
+        pop hl
+        pop de
+        pop bc
+        pop af
+        HLIB_R_OUT
+        nextreg 0x50,255
+        ld sp,hl
+        ld a,d
+        jp resume
+        ENDM
+e_wide: CAPTURE 0,0x8DFE
+e_rock: CAPTURE 1,0x8EC2
+
+; Save a two-byte source row exactly as POP takes it. The compact rock
+; plotter uses only the first byte of each word. Pad both to 16 x 16.
+save_shot:
+        ld (V_DEST),de
+        ld a,(V_SHOTS)
+        cp 18                   ; two player records plus the game's 16 mobile records
+        ret nc
+        inc a
+        ld (V_SHOTS),a
+        dec a
+        push hl
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        ld bc,SHOTATTR
+        add hl,bc
+        ld a,e                  ; x in Next coordinates, including bit 8
+        rlca
+        rlca
+        rlca
+        and 0xF8
+        add a,32
+        ld (hl),a
+        inc hl
+        ld a,0
+        rla
+        ld b,a
+        ld a,e
+        and 0xE0
+        rrca
+        rrca
+        ld c,a
+        ld a,d
+        and 0x18
+        rlca
+        rlca
+        rlca
+        or c
+        add a,32
+        ld (hl),a
+        inc hl
+        ld a,ixh
+        cp 0x84
+        jr nz,.monster
+        ld a,ixl
+        cp 0x30
+        ld a,(0xFFFF)
+        jr z,.colour
+        ld a,(0xFFFE)
+        jr .colour
+.monster:
+        push bc
+        ld bc,0x243B
+        ld a,0x34
+        out (c),a
+        inc b
+        in a,(c)
+        pop bc
+        and 0x40
+        rlca
+        rlca
+        add a,4
+.colour:
+        and 7
+        rlca
+        rlca
+        rlca
+        rlca
+        or b
+        ld (hl),a
+        inc hl
+        ld a,(V_SHOTS)
+        dec a
+        ld c,a
+        ld a,(V_HALF)
+        or c
+        or 0x80
+        ld (hl),a
+        ld a,c
+        ld h,0
+        ld l,a
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld de,0x4000+SHOTMASK
+        add hl,de
+        ex de,hl
+        pop hl
+        ld a,(V_SMALL)
+        or a
+        jr nz,.small
+        xor a
+        call .four              ; wide plot starts two lines down
+        ld bc,16                ; six upper rows, then the first two lower rows
+        ldir
+        dec de                  ; the game uses INC C at 8E8C and 8E9E, so row pairs share Y
+        dec de
+        call .merge
+        ldi
+        ldi
+        dec de
+        dec de
+        call .merge
+        ldi
+        ldi
+        xor a
+        call .four
+        call .four
+        jr .background
+.small: ld b,8
+        xor a
+.row:   ldi
+        inc bc                  ; LDI decrements BC, keep the loop counter
+        inc hl
+        ld (de),a
+        inc de
+        djnz .row
+        ld b,16
+.pad:   ld (de),a
+        inc de
+        djnz .pad
+.background:
+        ld hl,(V_DEST)
+        call keep_cell
+        ld a,(V_SMALL)
+        or a
+        ret nz
+        inc l
+        call keep_cell
+        dec l
+        ld de,32
+        add hl,de
+        ld a,l                  ; advancing L past FF moves to the next screen third
+        and 0xE0
+        jr nz,.bottom
+        ld a,h
+        add a,7
+        ld h,a
+.bottom:call keep_cell
+        inc l
+        jp keep_cell
+.merge: REPT 2
+        ld a,(de)
+        or (hl)
+        inc hl
+        ld (de),a
+        inc de
+        ENDR
+        ret
+.four:  ld (de),a
+        inc de
+        ld (de),a
+        inc de
+        ld (de),a
+        inc de
+        ld (de),a
+        inc de
+        ret
+
+; Save the first scenery under each cell once, even when shots overlap.
+; The shadow page uses the hidden screen's layout. Its tail holds the flags.
+keep_cell:
+        push hl
+        ld a,h
+        rrca
+        rrca
+        rrca
+        and 3
+        ld h,a
+        ld de,0x4000+SHOTFLAGS
+        add hl,de
+        ld a,(hl)
+        or a
+        jr nz,.done
+        inc (hl)
+        ld de,0xD800-(0x4000+SHOTFLAGS)
+        add hl,de
+        ld a,(hl)
+        res 7,h
+        ld (hl),a
+        pop hl
+        push hl
+        ld a,(V_DIRTY)
+        ld e,a
+        inc a
+        inc a
+        ld (V_DIRTY),a
+        ld d,DIRTY >> 8
+        ld a,l
+        ld (de),a
+        inc e
+        ld a,h
+        ld (de),a
+        ld d,h
+        res 7,d
+        ld e,l
+        REPT 8
+        ld a,(hl)
+        ld (de),a
+        inc h
+        inc d
+        ENDR
+.done:  pop hl
+        ret
+
+; After the normal pass, look up the saved clean cells using the same tile
+; allocator. The game still copies its own, fully drawn screen to the ULA.
+shotpass:
+        ld a,(V_SHOTS)
+        or a
+        jp z,.commit
+        nextreg 0x56,SHOTPAGE
+        ld a,(V_DIRTY)
+        ld e,a
+        ld d,DIRTY >> 8
+.repair:dec e
+        ld a,(de)
+        ld h,a
+        dec e
+        ld a,(de)
+        ld l,a
+        push de
+        push hl
+        ld a,h
+        rrca
+        rrca
+        rrca
+        and 3
+        ld h,a
+        ld de,0xC000+SHOTFLAGS
+        add hl,de
+        ld (hl),0
+        ld de,0xD800-(0xC000+SHOTFLAGS)
+        add hl,de
+        push hl                 ; attribute
+        ld a,l
+        and 31
+        ld c,a
+        ld b,0
+        ld de,0xD800
+        or a
+        sbc hl,de
+        srl h
+        rr l
+        srl h
+        rr l
+        srl h
+        rr l
+        srl h
+        rr l
+        srl h
+        rr l                    ; cell row
+        ld d,l
+        ld e,80
+        mul d,e
+        ld hl,MAP0
+        add hl,de
+        add hl,bc
+        add hl,bc
+        push hl
+        pop iy
+        pop de
+        pop hl
+        call onecell
+        pop de
+        ld a,e
+        or a
+        jr nz,.repair
+        ; Upload to the half that was hidden throughout the previous update.
+        ld a,(V_HALF)
+        ld bc,0x303B
+        out (c),a
+        ld hl,0xC000+SHOTMASK
+        ld a,(V_SHOTS)
+.pattern:
+        push af
+        ld b,32
+.byte:  ld d,(hl)
+        inc hl
+        ld c,0x5B
+        REPT 8
+        rlc d
+        sbc a,a
+        and 1
+        out (c),a
+        ENDR
+        djnz .byte
+        pop af
+        dec a
+        jr nz,.pattern
+        nextreg 0x56,0
+.commit:
+        ld a,(V_SHOTS)
+        ld b,a
+        ld a,(V_SHOWN)
+        sub b
+        ld e,a
+        ld a,b
+        ld (V_SHOWN),a
+        ; Write the four attributes of each shot, then hide expired slots.
+        ld bc,0x303B
+        xor a
+        out (c),a
+        ld hl,SHOTATTR
+        ld a,(V_SHOTS)
+        or a
+        jr z,.hide
+        ld b,a
+        ld c,0x57
+.show:  REPT 3
+        ld a,(hl)
+        out (c),a
+        inc hl
+        ENDR
+.visible:ld a,(hl)
+        out (c),a
+        inc hl
+        djnz .show
+.hide:  ld a,e
+        or a
+        jr z,.done
+        jp m,.done
+        ld b,a
+        ld c,0x57
+        xor a
+.erase: REPT 4
+        out (c),a
+        ENDR
+        djnz .erase
+.done:  xor a
+        ld (V_DIRTY),a
+        ld (V_SHOTS),a
+        ld a,(V_HALF)
+        xor 32
+        ld (V_HALF),a
+        ret
+
 anyat:  DB 0xFF
         ALIGN 16
 BLKT:   DS NBLK * 5             ; a block: its page, its address there (0x4000 up), its bytes (the build fills it)
@@ -751,9 +1165,34 @@ setup:  ld hl,pbuf              ; the printer buffer as the snapshot has it (the
         nextreg 0x43,0x00
         nextreg 0x12,9          ; Layer 2 in bank 9
         nextreg 0x14,0xE3       ; the transparent colour
-        nextreg 0x15,0x00       ; S L U: Layer 2 over the ULA and the tile layer (shown by the first tile pass)
+        nextreg 0x43,0x20       ; sprite palette 0, opaque index 1 on each line
+        ld hl,shotpal
+        ld b,6
+        ld c,1
+.spal:  ld a,c
+        nextreg 0x40,a
+        ld a,(hl)
+        inc hl
+        nextreg 0x44,a
+        ld a,(hl)
+        inc hl
+        nextreg 0x44,a
+        ld a,c
+        add a,16
+        ld c,a
+        djnz .spal
+        nextreg 0x43,0
+        nextreg 0x4B,0          ; transparent sprite index
+        ld b,128                ; do not inherit visible slots from the loader
+        xor a
+.hide:  nextreg 0x34,a
+        nextreg 0x38,0
+        inc a
+        djnz .hide
+        nextreg 0x15,0x01       ; S L U: Layer 2 over the ULA and the tile layer (shown by the first tile pass)
 speed:  nextreg 0x07,0        ; speed: start-up (once, before the game) - (the steady-speed build: 3 = 28 MHz)
         ret
+shotpal: DS 12
 pal9:   DS 512
 pal2:   DS 512
 pbuf:   DS 256                  ; the snapshot's 0x5B00-0x5BFF (the build fills it in)
