@@ -131,12 +131,15 @@ def entries(m):
     return {k: v for k, v in m.items() if k != 'palette'}
 
 
-def shown_palette(m, mod):
+def shown_palette(m, mod, layout=None):
     """The 16 RGB colours a build with map m shows, for an engine whose maps carry a palette; else None."""
     if not mod.RECOLOUR.get('palette'):
         return None
     from . import coloursheet as cs
-    return [tuple(c) for c in cs.palette_rgb(mod.set_palette(m))]
+    palette = mod.set_palette(m)
+    if layout is not None and hasattr(mod, 'sheet_palette'):
+        palette = mod.sheet_palette(palette, layout)
+    return [tuple(c) for c in cs.palette_rgb(palette)]
 
 
 def save_map(m, path, note):
@@ -302,8 +305,11 @@ def run(nex_path, colours, layout=None, game=None, output=None, say=print, onto=
         merged, mconf = cs.merge(base, chg, meta, entries(cur))
         if 'palette' in cur:
             merged['palette'] = cur['palette']        # the build's palette stays; the sheet changes entries only
-        want = shown_palette(merged, mod)
-        if want is not None and [tuple(c) for c in cs.load_layout(lay)['palette']] != want:
+        sheet = cs.load_layout(lay)
+        if replace and mod.RECOLOUR.get('palette') and 'build_palette' in sheet:
+            merged['palette'] = sheet['build_palette']
+        want = shown_palette(merged, mod, sheet)
+        if want is not None and [tuple(c) for c in sheet['palette']] != want:
             raise ValueError('this sheet was drawn with another sprite palette than the build would show (%s): its '
                              'paint would land on other colours. Paint the sheet that came with this build, or give '
                              'the map as a colours .json' % where)
@@ -344,7 +350,7 @@ def run(nex_path, colours, layout=None, game=None, output=None, say=print, onto=
                 sn = os.path.basename(lp)[:-len('_layout.json')] if lp.endswith('_layout.json') else os.path.splitext(os.path.basename(lp))[0]
                 dst = '%s_%s' % (ostem, sn)
                 tp, tl = os.path.join(work, kind + '.png'), os.path.join(work, kind + '.json')
-                cs.redraw(lp, entries(merged), tp, tl, shown_palette(merged, mod))
+                cs.redraw(lp, entries(merged), tp, tl, shown_palette(merged, mod, cs.load_layout(lp)))
                 files[dst + '.png'], files[dst + '_layout.json'] = tp, tl
         else:
             missing.append('sheets: no layout (a colours .json without --layout) - none in this bundle')
@@ -369,7 +375,7 @@ def run(nex_path, colours, layout=None, game=None, output=None, say=print, onto=
             say('-> %s' % f)
     for m in missing:
         say('NOTE: %s' % m)
-    say('(copy %s to %s to make it the build default; then rebuild + verify)' % (os.path.basename(cj), mod.RECOLOUR['colours']))
+    say('(copy %s to %s to make it the build default; then rebuild + verify)' % (os.path.basename(cj), info.get('colour profile', mod.RECOLOUR['colours'])))
     return output
 
 

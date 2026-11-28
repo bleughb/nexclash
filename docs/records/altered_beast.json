@@ -44,7 +44,8 @@
  "data": [
   "docs/profiles/altered_beast.json",
   "asm/altered_beast_hooks.asm",
-  "docs/profiles/altered_beast_enhanced.json"
+  "docs/profiles/altered_beast_enhanced.json",
+  "asm/altered_beast_build.asm"
  ],
  "shared_data": [
   "asm/lib/hlib_speed.asm"
@@ -80,17 +81,17 @@
   },
   "enhanced": {
    "file": "altered_beast_enhanced.nex",
-   "md5": "a64bc996659bf73a54aba1483e8c435c"
+   "md5": "758514afbb7ba14c315ff682befed834"
   }
  },
  "repro": [],
  "status": {
   "title": "Altered Beast (128K)",
   "engine_col": "altered_beast (altered_beast.md)",
-  "build": "altered_beast_sprites.nex edea9ecd: every figure of the cell plotter a sprite, the game's cell colours, level 1 only (snapshot has no other level); blit from the clean copy; Enhanced set altered_beast_enhanced.nex a64bc996 (arcade colours, palette entries 1, 9, 12, 13)",
-  "software": "4 RZX IDENTICAL for the default and the Enhanced build each (32,291 frames, level 1, boss, two players, game over), 16 broken builds detected, unit tests on both, Enhanced palette negatives 4/4",
+  "build": "Default edea9ecd draws the game's colours. Enhanced 1.2 758514af uses eight sprite palette banks for level 1, including player two, zombies, wolves, hit flashes and the boss.",
+  "software": "4 RZX per sprite build (32,291 frames), 16 recording negatives, 6 palette negatives, unit checks for every bank and the two player modes.",
   "hardware": "KS3 (System/Next 26.11a): 1.1 played by the owner 2026-11-27: the player and the Enhanced colours look good; the scroll steps 8 pixels (the original's; options asked); game over stops at the tape wait",
-  "next": "owner: a scroll option (and game over back to the title?); level 2-5 need tape data this snapshot lacks"
+  "next": "Owner review of 1.2 colours and hit flash on KS3. Scroll options and game-over restart remain open."
  },
  "checks": [
   "asm2profile:altered_beast"
@@ -108,12 +109,13 @@
  ],
  "checked": {
   "deps": {
-   "asm/altered_beast_hooks.asm": "9487cc4527145dcc",
+   "asm/altered_beast_build.asm": "1e591c0405e28326",
+   "asm/altered_beast_hooks.asm": "f63e6702375bbfc3",
    "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
-   "docs/profiles/altered_beast.json": "5c94a63fa5d767c3",
-   "docs/profiles/altered_beast_enhanced.json": "18f352011ac88926",
+   "docs/profiles/altered_beast.json": "997f658922f804a6",
+   "docs/profiles/altered_beast_enhanced.json": "13d91a293a7605ee",
    "nexclash.py": "4a87a4de972a122f",
-   "nexclash/altered_beast.py": "becf3ac8a98096e9",
+   "nexclash/altered_beast.py": "2459345f52c8951b",
    "nexclash/analyse.py": "9068c7834f1f1923",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "dfc6f6d6e095185c",
@@ -126,7 +128,7 @@
    "nexclash/nxc.py": "d4c135babd8cd53e",
    "nexclash/nxcout.py": "f1bf468312cb5367",
    "nexclash/rainbow.py": "e247f602b7cecb7b",
-   "nexclash/recolour.py": "28ecc65866678e42",
+   "nexclash/recolour.py": "b1a5e5a8f402f057",
    "nexclash/recorder.py": "e5b5892fa1da208b",
    "nexclash/records.py": "6401367eddcf12a0",
    "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
@@ -139,19 +141,20 @@
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "2c281fde83228d56",
-   "rom": "sinclair"
+   "recipe": "d044e3e0b172cf77",
+   "rom": "e50ee485fb4a21d2"
   },
   "date": "2026-11-27"
  },
  "verified": {
   "deps": {
-   "asm/altered_beast_hooks.asm": "9487cc4527145dcc",
+   "asm/altered_beast_build.asm": "1e591c0405e28326",
+   "asm/altered_beast_hooks.asm": "f63e6702375bbfc3",
    "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
-   "docs/profiles/altered_beast.json": "5c94a63fa5d767c3",
-   "docs/profiles/altered_beast_enhanced.json": "18f352011ac88926",
+   "docs/profiles/altered_beast.json": "997f658922f804a6",
+   "docs/profiles/altered_beast_enhanced.json": "13d91a293a7605ee",
    "nexclash.py": "4a87a4de972a122f",
-   "nexclash/altered_beast.py": "becf3ac8a98096e9",
+   "nexclash/altered_beast.py": "2459345f52c8951b",
    "nexclash/analyse.py": "9068c7834f1f1923",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "dfc6f6d6e095185c",
@@ -164,7 +167,7 @@
    "nexclash/nxc.py": "d4c135babd8cd53e",
    "nexclash/nxcout.py": "f1bf468312cb5367",
    "nexclash/rainbow.py": "e247f602b7cecb7b",
-   "nexclash/recolour.py": "28ecc65866678e42",
+   "nexclash/recolour.py": "b1a5e5a8f402f057",
    "nexclash/recorder.py": "e5b5892fa1da208b",
    "nexclash/records.py": "6401367eddcf12a0",
    "nexclash/runchecks.py": "e3e9a15aa22d3fb7",
@@ -177,8 +180,8 @@
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "2c281fde83228d56",
-   "rom": "sinclair"
+   "recipe": "d044e3e0b172cf77",
+   "rom": "e50ee485fb4a21d2"
   },
   "date": "2026-11-27"
  },
@@ -188,7 +191,7 @@
    "check": "state.rzx-differential",
    "status": "pass",
    "build": "edea9ecd",
-   "scope": "4 RZX IDENTICAL for both sprite builds, unit tests, 16 negative controls, 4 Enhanced palette negatives",
+   "scope": "4 RZX per sprite build, 16 recording negatives, 6 palette negatives, bank-selection, mode and map units.",
    "evidence": "games/altered_beast.md"
   }
  ],

@@ -57,7 +57,7 @@
    "nex": {
     "plain": "3a40cd83e14bad535b3f147708b2284e",
     "sprites": "edea9ecd09412d385fc67cb8d28458bb",
-    "enhanced": "a64bc996659bf73a54aba1483e8c435c"
+    "enhanced": "758514afbb7ba14c315ff682befed834"
    },
    "proof": "differential",
    "variants": [
@@ -70,7 +70,7 @@
      "nex": {
       "plain": "3a40cd83e14bad535b3f147708b2284e",
       "sprites": "edea9ecd09412d385fc67cb8d28458bb",
-      "enhanced": "a64bc996659bf73a54aba1483e8c435c"
+      "enhanced": "758514afbb7ba14c315ff682befed834"
      }
     }
    ]
@@ -2723,4 +2723,4 @@
    ]
   }
  }
-}
+}

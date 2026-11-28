@@ -94,6 +94,8 @@ V_I1    EQU 0x8030
 V_P1    EQU 0x8031
 V_N1    EQU 0x8032
 V_Q1    EQU 0x8033
+V_BANK  EQU 0x8063
+V_DIR   EQU 0x8064
 V_ST    EQU 0x8034              ; stride between a cell's lines (1, or W for the opaque kind)
 V_KIND  EQU 0x8035
 V_MODE  EQU 0x8036
@@ -124,6 +126,7 @@ TP1     EQU 0x2300              ; second pair, paper mask
 
 ; 0x2000-0x23FF: written by altered_beast.py
         ORG 0x2400
+        IFNDEF AB_BANKED
         INCLUDE lib/hlib_speed.asm
 
 ; ---- the two masked plot loops: log the figure, the displaced LD A,(23939), back ----
@@ -150,6 +153,8 @@ TP1     EQU 0x2300              ; second pair, paper mask
         ld a,(H_)
         jp back
         ENDM
+
+        ENDIF
 
 e_pn:   PLOTLOG 0, 0xD039
 e_pm:   PLOTLOG 1, 0xCEEE
@@ -247,6 +252,11 @@ logp:   ld c,a
         inc de
         ld a,(LIM)
         ld (de),a
+        IFDEF AB_BANKED
+        inc de
+        ld a,(ix+23)                ; type belongs to this plot, before the object can change
+        ld (de),a
+        ENDIF
         pop de
         ret
 .full:  ld hl,V_DROP
@@ -478,6 +488,27 @@ part:   ld hl,(V_LP)
         inc hl
         ld a,(hl)
         ld (V_LM),a
+        IFDEF AB_BANKED
+        inc hl
+        ld l,(hl)
+        ld h,0x91                   ; type -> bank number, including the high type bit
+        ld a,(V_MODE)
+        or a
+        jr z,.typebank
+        cp 1
+        ld a,4                      ; hit flash
+        jr z,.setbank
+        ld a,1                      ; player two
+        jr .setbank
+.typebank:
+        ld a,(hl)
+.setbank:
+        add a,0x92                  ; one page directory per bank at 9200..99FF
+        ld (V_DIR),a
+        sub 0x92
+        swapnib
+        ld (V_BANK),a               ; sprite attribute 2 bits 7..4
+        ENDIF
         ld a,(V_W)                  ; guards: W 1-16
         or a
         jp z,.drop
@@ -592,7 +623,14 @@ key:    ld hl,V_KEY
         inc hl
         ld (hl),d
         inc hl
+        IFDEF AB_BANKED
+        ld a,(V_BANK)               ; cache hits must use the same bank-specific paint
+        ld b,a
+        ld a,(V_KIND)
+        or b
+        ELSE
         ld a,(V_KM)
+        ENDIF
         ld (hl),a
         inc hl
         ld a,(V_W)
@@ -1150,13 +1188,18 @@ bout:   ld a,h
         ld a,(V_COL)
         or a
         jr z,.def
+        IFNDEF AB_BANKED
         ld a,(V_MODE)               ; a hit flash or player two: the game's colours (a map would hide them)
         or a
         jr nz,.def
+        ENDIF
         pop hl
         push hl
         call colent
         jr c,.painted
+        IFDEF AB_BANKED
+        jr z,.adv                   ; complete row already uploaded by colent
+        ENDIF
 .def:   ld a,(V_G)
         and 0xF0
         ld b,a
@@ -1228,7 +1271,19 @@ colent: ld a,h
         rrca
         rrca
         and 63
+        IFDEF AB_BANKED
+        ld e,a                      ; 1 KiB of graphics per 8 KiB colour page
+        ld a,(V_DIR)
+        ld d,a
+        ld a,(de)
+        or a
+        jr nz,.mapped
+        pop de
+        jr .no                      ; empty directory slot
+.mapped:
+        ELSE
         add a,STORE
+        ENDIF
         nextreg 0x55,a
         ld a,h
         and 3
@@ -1241,11 +1296,18 @@ colent: ld a,h
         ld a,(hl)
         or a
         jr z,.nm
+        IFDEF AB_BANKED
+        ld c,a                      ; 1 = paint overrides, 2 = every pixel resolved
+        ENDIF
         inc hl
         ld a,(V_CK)                 ; check = the stored graphic
         cp (hl)
         jr nz,.nm
         inc hl
+        IFDEF AB_BANKED
+        dec c
+        jr nz,.complete
+        ENDIF
         ld de,V_NIB
         ld b,4
 .n:     ld a,(hl)
@@ -1270,8 +1332,48 @@ colent: ld a,h
         ret
 .nm:    nextreg 0x55,GP5
         pop de
-.no:    or a
+.no:
+        IFDEF AB_BANKED
+        ld a,1                      ; NC,NZ: no row, fall back to cell colours
+        ENDIF
+        or a
         ret
+
+        IFDEF AB_BANKED
+; All eight pixels are explicit in this painting. The stored four bytes already include
+; transparency and black. Upload in screen order, retaining the empty-tile test.
+.complete:
+        ld a,(V_KIND)
+        cp 1
+        ld b,4
+        ld c,0
+        jr z,.reverse
+.fwd:   ld a,(hl)
+        inc hl
+        out (0x5B),a
+        or c
+        ld c,a
+        djnz .fwd
+        jr .sent
+.reverse:
+        inc hl
+        inc hl
+        inc hl
+.rev:   ld a,(hl)
+        dec hl
+        swapnib
+        out (0x5B),a
+        or c
+        ld c,a
+        djnz .rev
+.sent:  ld hl,V_OR
+        or (hl)
+        ld (hl),a
+        nextreg 0x55,GP5
+        pop de
+        xor a                       ; NC,Z: uploaded
+        ret
+        ENDIF
 
 ; pixout: the 8 pixels of V_G / V_M with the colour entry -> 4 pattern bytes
 pixout: ld c,0                      ; C = screen pixel 0-7
@@ -1421,7 +1523,12 @@ emit:   ld a,(V_XL)
         inc hl
         ld a,d
         and 1
-        ld (hl),a                   ; attr 2: X8
+        IFDEF AB_BANKED
+        ld b,a
+        ld a,(V_BANK)
+        or b
+        ENDIF
+        ld (hl),a                   ; attr 2: palette offset and X8
         inc hl
         ld a,(V_P)
         ld c,a
@@ -1490,7 +1597,11 @@ setup:  nextreg 0x54,20             ; stub page alias at 0x8000, hook image page
         nextreg 0x43,0x20           ; sprite palette 0, auto-increment
         nextreg 0x40,0
         ld hl,pal
+        IFDEF AB_BANKED
+        ld b,128                    ; eight banks of sixteen entries
+        ELSE
         ld b,16
+        ENDIF
 .p:     ld a,(hl)
         nextreg 0x41,a
         inc hl
@@ -1510,6 +1621,3 @@ setup:  nextreg 0x54,20             ; stub page alias at 0x8000, hook image page
         nextreg 0x15,0x01           ; sprites on, SLU, higher number on top
         ret
 pal:                                ; 16 palette bytes appended by Python
-
-        SAVEBIN "ab_rom.bin",0x2400,rom_end-0x2400
-        SAVEBIN "ab_setup.bin",0xD000,pal-0xD000
