@@ -1,7 +1,7 @@
 """Gauntlet (US Gold, 1986; 48K code, the 128K's AY) engine 'gauntlet'. Additive module: reachable only through
 is_gauntlet(). Facts, design, results: games/gauntlet.md.
 
-The game draws everything as plain blocks on the 8-pixel grid into a hidden copy of the screen and sends it to the
+The game draws blocks and projectile pixels into a hidden copy of the screen and sends it to the
 screen with three stack copies. The build changes nothing of the game: before the first copy a hook looks every cell of
 the 32 x 20 play window up by its 8 bytes and its attribute and shows a painted tile of the Next's tile layer over it
 (asm/gauntlet_hooks.asm); the copies run at 28 MHz and their own time is waited out. "Steady speed" (an option of the
@@ -33,6 +33,12 @@ LPAGE = 40                              # from here: the tape's level blocks, on
 NBLK = 31
 SITES_ORIG = {PRE: ('cdfbb8', 'e_pre'), C1: ('cd3b9d', 'e_c1'), C2: ('cda39d', 'e_c2'), C3: ('cd3b9d', 'e_c3'), CL: ('cdffb4', 'e_cl')}
 SIGNATURE = (0x9CD7, bytes.fromhex('76f3cdfbb83e402100c0cd3b9d3e282100d8cda39d3e602100c8cd3b9d'))
+KIND, WIDE, ROCK = 0x8CB6, 0x8DFB, 0x8EBF
+SHOT_SITES = {KIND: ('ddcb0376', 'e_kind'), WIDE: ('f3f97a', 'e_wide'), ROCK: ('f3f97a', 'e_rock')}
+SHOTPAGE = 58
+# RGB samples from the painted character palette, then fire and stone.
+SHOT_RGB = [(219, 73, 36), (146, 219, 219), (255, 219, 73), (146, 219, 109),
+            (255, 146, 36), (182, 182, 146)]
 ISR = 0xDADA
 FRAMES = 0x8497                         # the game's frame counter
 ROWS, COLS = 20, 32                     # the play window, in cells
@@ -289,6 +295,7 @@ class Patch:
             heads, self.planes, pal, self.want, pal2 = colour_tables(colours, sy)
             work[sy['BKT']:sy['BKT'] + len(heads)] = heads
         self.planes.update(lpages)
+        self.planes[SHOTPAGE] = bytes(8192)
         self.work = bytes(work)
         self.palette = pal
         st = bytearray(bytes.fromhex(h['setup']))
@@ -299,6 +306,11 @@ class Patch:
         for i, c in enumerate(pal2):
             st[o + 2 * i], st[o + 2 * i + 1] = c >> 1, c & 1
         self.palette2 = pal2
+        o = sy['shotpal'] - 0xD000
+        for colour in SHOT_RGB:
+            value = rgb9(colour)
+            st[o:o + 2] = bytes((value >> 1, value & 1))
+            o += 2
         o = sy['pbuf'] - 0xD000
         st[o:o + 256] = mem[0x5B00:0x5C00]
         if steady:
@@ -306,6 +318,8 @@ class Patch:
         self.stub_extra = bytes(st)
         self.sites = [(a, bytes.fromhex(old), b'\xCD' + sy[sym].to_bytes(2, 'little')) for a, (old, sym) in SITES_ORIG.items()
                       if not (steady and a == CL)]
+        for site, (old, sym) in SHOT_SITES.items():
+            self.sites.append((site, bytes.fromhex(old), b'\xC3' + sy[sym].to_bytes(2, 'little') + bytes(len(old) // 2 - 3)))
         if blocks:
             self.sites += [(a, bytes.fromhex(old), bytes((op,)) + sy[sym].to_bytes(2, 'little')) for a, (old, sym, op) in TAPE_SITES.items()]
             self.sites.append((REWIND[0], bytes.fromhex(REWIND[1]), bytes.fromhex(REWIND[2])))
@@ -362,6 +376,10 @@ class State:
         self.table = {pg: bytearray(patch.planes.get(pg, bytes(8192))) for pg in (EPAGE, EPAGE + 1, EPAGE + 2, EPAGE4)}
         self.l2 = bytearray(b'\x55' * 8192)        # Layer 2's last page (lines 160-191), as anything left it
         self.l2x = bytearray(8192)                  # (its other pages: only cleared)
+        self.shadow = bytearray(patch.planes[SHOTPAGE])
+        self.attrs = [[0] * 5 for _ in range(128)]
+        self.sprite_select = 0
+        self.pattern = bytearray(16384)
         self.t = collections.Counter()
         self.line = 0.0
         self.t_in = 0.0
@@ -385,11 +403,15 @@ class View:
             return 'rom', None
         if a < 0x6000:
             p = nr.get(0x52, 10)
+            if p == SHOTPAGE:
+                return 'shadow', None
             return ('mem', None) if p == 10 else ('tile', None) if p == TPAGE else ('l2', p) if L2PAGE <= p < L2PAGE + 6 else ('def', p)
         if a < 0xC000:
             reg = 0x53 + (a - 0x6000) // 0x2000
             p = nr.get(reg, (11, 4, 5)[reg - 0x53])
             return ('table', p) if EPAGE <= p < EPAGE + 3 else ('def', p) if p in self.planes else ('mem', None)
+        if a < 0xE000 and nr.get(0x56) == SHOTPAGE:
+            return 'shadow', None
         if a >= 0xE000 and nr.get(0x57, 1) == EPAGE4:
             return 'table', EPAGE4
         return 'mem', None
@@ -400,6 +422,8 @@ class View:
         kind, p = self._page(a)
         if kind == 'mem':
             return self.mem[a]
+        if kind == 'shadow':
+            return self.st.shadow[a & 8191]
         if kind == 'rom':
             return self.rom[a]
         if kind == 'work':
@@ -416,6 +440,8 @@ class View:
         kind, p = self._page(a)
         if kind == 'mem':
             self.mem[a] = v
+        elif kind == 'shadow':
+            self.st.shadow[a & 8191] = v
         elif kind == 'work':
             self.st.work[a] = v
         elif kind == 'tile':
@@ -431,6 +457,8 @@ class View:
 class Model(hooklib.NextModel):
     def __init__(self, sim, st, speed=0):
         super().__init__(sim, speed, t_line=T_LINE, lines=LINES)
+        self.attrs, self.pattern = st.attrs, st.pattern
+        self.nr[0x34] = st.sprite_select
         self.real = st.line
 
 
@@ -470,6 +498,7 @@ def run_hook(patch, st, rom, mem, regs, site, stop, sp_stop, limit=6000000, on_h
     st.t[site] += model.now() - st.line
     st.t_in = st.line
     st.line = model.now()
+    st.sprite_select = model.nr[0x34]
     model.n = n
     for a, old, new in patch.sites:
         m2[a:a + len(old)] = old
@@ -513,6 +542,40 @@ def want_layer(patch, mem):
             w = patch.want.get(cell_at(mem, 0xC000, row, col))
             if w:
                 out[(row, col)] = w
+    return out
+
+
+def original_shot(rom, mem, regs, rock):
+    """Run the unmodified plotter over blank cells. Its bitmap writes are the reference mask."""
+    wide = regs[PC_] == WIDE
+    address = regs[4] * 256 + regs[5]
+    col = address & 31
+    row = ((address >> 8) & 24) + ((address & 255) >> 5)
+    size = 2 if wide else 1
+    cells = [(row + dy, col + dx) for dy in range(size) for dx in range(size)]
+    blank = bytearray(mem)
+    for y, x in cells:
+        offset = 0xC000 + ((y & 24) << 8) + ((y & 7) << 5) + x
+        blank[offset:offset + 2048:256] = bytes(8)
+    _, result = run_orig(rom, blank, regs, 0x8EB4 if wide else 0x8EE8)
+    mask = bytearray(256)
+    for y, x in cells:
+        lines, _ = cell_at(result, 0xC000, y, x)
+        for k, v in enumerate(lines):
+            start = ((y - row) * 8 + k) * 16 + (x - col) * 8
+            mask[start:start + 8] = bytes((v >> bit) & 1 for bit in range(7, -1, -1))
+    owner = regs[8] * 256 + regs[9]
+    colour = mem[0xFFFF] if owner == 0x8430 else mem[0xFFFE] if owner == 0x8450 else 4 + int(rock)
+    return (col * 8, row * 8, colour, bytes(mask)), cells
+
+
+def shot_sprites(st):
+    out = []
+    for x, y, flags, pat, ext in st.attrs:
+        if pat & 128:
+            start = (pat & 63) * 256
+            out.append((x + ((flags & 1) << 8) - 32, y - 32, flags >> 4,
+                        bytes(st.pattern[start:start + 256])))
     return out
 
 
@@ -578,6 +641,10 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, timing=False, o
         if mp[0x4000:sp - STACK] != mo[0x4000:sp - STACK] or mp[sp:] != mo[sp:]:
             fail('%s writes game memory' % name, [hex(a) for a in range(0x4000, 65536) if mp[a] != mo[a] and not sp - STACK <= a < sp][:8])
 
+    draws = []
+    backgrounds = {}
+    after_plot = {}
+
     def on(pc, sim):
         if box.get('dead'):
             return
@@ -591,6 +658,12 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, timing=False, o
         m, R = sim.memory, sim.registers
         if pc == ISR:
             c['frames seen'] += 1
+            if box.get('shot screen'):
+                c['interrupts with shots checked'] += 1
+                for cell, finished in box['shot screen'].items():
+                    if cell_at(m, 0x4000, *cell) != finished:
+                        fail('visible shot cell changed before the sprite commit', (c['frames seen'], cell))
+                        break
             if c['frames seen'] % every or not box.get('shown'):
                 return
             c['frames checked'] += 1
@@ -599,11 +672,16 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, timing=False, o
             for (row, col), (attr, d) in got.items():
                 o = (row & 0x18) << 8 | (row & 7) << 5 | col
                 key = (bytes(scr[o + (k << 8)] for k in range(8)), scr[0x1800 + row * 32 + col])
-                if patch.want.get(key) != (attr, d):
+                clean, composite = box.get('under shots', {}).get((row, col), (key, key))
+                if patch.want.get(clean if key == composite else key) != (attr, d):
                     c['frames a tile is not the screen cell\'s'] += 1
                     if len(ex['frames a tile is not its screen cell\'s']) < 5:
                         ex['frames a tile is not its screen cell\'s'].append((c['frames seen'], row, col))
                     break
+            return
+        if pc in (0x8EB4, 0x8EE8):
+            for cell in box.pop('plot cells', ()):
+                after_plot[cell] = cell_at(m, 0xC000, *cell)
             return
         regs = list(R)
         mem = bytearray(flat(m))
@@ -633,6 +711,27 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, timing=False, o
                 if bytes(mem[0xC000:0xD011]) != box['load']:
                     fail('the block is not what the tape loaded', box['blkn'])
                 box['load'] = None
+            return
+        if pc in SHOT_SITES:
+            end = pc + (4 if pc == KIND else 3)
+            target_sp = sp if pc == KIND else regs[6] * 256 + regs[7]
+            Ro, mo = run_orig(rom, mem, regs, end, target_sp)
+            Rp, mp, model = run_hook(patch, st, rom, mem, regs, pc, end, target_sp)
+            same('shot site %04X' % pc, Ro, mo, Rp, mp, sp)
+            if model.nr.get(0x52, 10) != 10 or model.nr[7] != (3 if patch.steady else 0):
+                fail('shot capture did not restore the machine', hex(pc))
+            box['uh'] = box.get('uh', 0) + st.line - st.t_in
+            box['uo'] = box.get('uo', 0) + Ro[T_] - regs[T_]
+            box['orig_t'] += Ro[T_] - regs[T_]
+            if pc == KIND:
+                box['rock'] = bool(mem[regs[8] * 256 + regs[9] + 3] & 64)
+            else:
+                shot, cells = original_shot(rom, mem, regs, box.get('rock', False))
+                draws.append(shot)
+                c['compact rock plots' if pc == ROCK else 'wide plots'] += 1
+                box['plot cells'] = cells
+                for cell in cells:
+                    backgrounds.setdefault(cell, cell_at(mem, 0xC000, *cell))
             return
         if pc == CL:
             if patch.steady:
@@ -697,6 +796,29 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, timing=False, o
         got = layer(st)
         want = want_layer(patch, mem)
         c['cells compared'] += (ROWS + 4) * COLS
+        box['under shots'] = {}
+        box['shot screen'] = after_plot.copy()
+        for cell, finished in after_plot.items():
+            if cell_at(mem, 0xC000, *cell) != finished:
+                fail('original erased a shot before the sprite commit', (c['tile passes'], cell))
+        after_plot.clear()
+        for cell, clean in backgrounds.items():
+            composite = cell_at(mem, 0xC000, *cell)
+            box['under shots'][cell] = (clean, composite)
+            want.pop(cell, None)
+            if clean in patch.want:
+                want[cell] = patch.want[clean]
+                c['painted scenery cells under shots'] += 1
+        visible = shot_sprites(st)
+        if visible != draws:
+            fail('sprites differ from the original shot drawings', (c['tile passes'], len(visible), len(draws),
+                 [(a[:3], b[:3], a[3] == b[3]) for a,b in zip(visible, draws) if a != b][:2]))
+        c['shots compared'] += len(draws)
+        c['shots erased'] += max(0, box.get('previous shots', 0) - len(draws))
+        c['max simultaneous shots'] = max(c['max simultaneous shots'], len(draws))
+        box['previous shots'] = len(draws)
+        draws.clear()
+        backgrounds.clear()
         wp, np_ = want_panel(patch, mem)
         c['painted panel cells shown'] += np_
         if bytes(st.l2) != wp:
@@ -717,7 +839,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, timing=False, o
         if on_show:
             on_show(c['tile passes'], mem, got, st)
 
-    fc, err = RZ.trace(rzx_path, {PRE, C1, C2, C3, CL, ISR} | ({LOAD, LOADED} if patch.blocks else set()), on, stop=stop)
+    fc, err = RZ.trace(rzx_path, {PRE, C1, C2, C3, CL, ISR, 0x8EB4, 0x8EE8} | set(SHOT_SITES) | ({LOAD, LOADED} if patch.blocks else set()), on, stop=stop)
     c['frames'] = fc
     if err:
         c['replay stopped!'] += 1
@@ -725,7 +847,7 @@ def verify(patch, rzx_path, stop=None, collect=0, progress=None, timing=False, o
     if c['frames a tile is not the screen cell\'s'] > 0.002 * c['frames checked'] + 1:
         fail('tiles shown over a screen that is not their cells', c['frames a tile is not the screen cell\'s'])
     c['T original copies'] = box['orig_t']
-    c['T hooks'] = int(sum(st.t[k] for k in (C1, C2, C3, CL)))
+    c['T hooks'] = int(sum(st.t[k] for k in (C1, C2, C3, CL, KIND, WIDE, ROCK)))
     # Pace: a screen with more than about 250 painted cells costs the pass up to 4,000 T more than the copies give back
     # (about a twentieth of a frame, once an update); over the recording the hooks take the copies' time to 0.5%.
     if any(T_COPY.values()) and not patch.steady and c['updates']:
@@ -843,6 +965,60 @@ def unit_tests(patch, states, neg=None):
                     if st.table[ent_at(ent_addr(i) + E_SLOT)[0]][ent_at(ent_addr(i) + E_SLOT)[1]] == slot
                     and st.work[sy['STAMPS'] + slot] == st.work[sy['V_STAMP']])
         ok('slots taken from cells off the screen', same and layer(st) == want and not stale)
+    # Both player records, every class, and both hostile shooters including
+    # the shared impact. The last pass fills all 18 slots on the same scenery.
+    if by[C1]:
+        source, copy_regs = by[C1][0]
+        mem = bytearray(source)
+        st = State(patch)
+        expected = []
+        clear_tiles = want_of(mem)
+        for index in range(18):
+            owner = (0x8430, 0x8450)[index] if index < 2 else 0x5B20 + 4 * (index - 2)
+            rock = index >= 2 and index % 2 == 1
+            site = ROCK if rock and index % 4 == 3 else WIDE
+            regs = list(copy_regs)
+            regs[8:10] = divmod(owner, 256)
+            regs[PC_] = KIND
+            mem[owner + 3] = 0xC0 if rock else 0x80 if index >= 2 else 0
+            run_hook(patch, st, rom, mem, regs, KIND, KIND + 4, regs[SP_])
+            mem[owner + 3] &= ~64                # impact can discard the shooter's kind
+            for hero in (range(4) if index < 2 else (0,)):
+                mem[0xFFFF - min(index, 1)] = hero
+                regs[PC_] = site
+                regs[6:8] = divmod(0xDD79 if site == ROCK else 0xD081, 256)
+                regs[4:6] = divmod(0xC0FE, 256)  # right edge, crosses a screen third
+                if index < 2 and hero < 3:
+                    trial = State(patch)
+                    run_hook(patch, trial, rom, mem, regs, site, site + 3, regs[6] * 256 + regs[7])
+                    run_c1(trial, mem, copy_regs)
+                    ok('player shot matches the plotter and selected class',
+                       shot_sprites(trial) == [original_shot(rom, mem, regs, rock)[0]])
+                else:
+                    _, _, model = run_hook(patch, st, rom, mem, regs, site, site + 3, regs[6] * 256 + regs[7])
+                    expected.append(original_shot(rom, mem, regs, rock)[0])
+                    ok('capture restores speed and pages', model.nr[7] == (3 if patch.steady else 0)
+                       and model.nr[0x50] == 255 and model.nr[0x52] == 10)
+                    # Let the real plotter write on top of every previous shot.
+                    _, mem = run_orig(rom, mem, regs, 0x8EE8 if site == ROCK else 0x8EB4)
+        ok('eighteen overlapping shots and clean scenery at the screen edge',
+           run_c1(st, mem, copy_regs) and shot_sprites(st) == expected and layer(st) == clear_tiles)
+        for address, word in ((0xDD79, 0), (0xDD99, 1), (0xDDB9, 2), (0xDDD9, 3)):
+            memory = bytearray(source)
+            regs[PC_] = ROCK
+            regs[6:8] = divmod(address, 256)
+            # Asymmetric source rows exercise both bytes of each stack word.
+            memory[address:address + 16] = bytes((n * 29 + word) & 255 for n in range(16))
+            trial = State(patch)
+            regs[PC_] = KIND
+            memory[owner + 3] = 0xC0
+            run_hook(patch, trial, rom, memory, regs, KIND, KIND + 4, regs[SP_])
+            regs[PC_] = ROCK
+            run_hook(patch, trial, rom, memory, regs, ROCK, ROCK + 3, address)
+            run_c1(trial, memory, copy_regs)
+            ok('compact rock shape from live source bytes', shot_sprites(trial) == [original_shot(rom, memory, regs, True)[0]])
+        ok('all eighteen slots hidden on the first empty copy',
+           run_c1(st, source, copy_regs) and not shot_sprites(st))
     for mem, regs in by[TITLE_SITE[0]][:1]:
         # the front end has returned to the loader: both blocks where the loader puts them, the main game with this
         # build's CALLs, nothing else touched, the stack not used, then the jump to the main game
@@ -910,13 +1086,16 @@ def _code_patch(patch, sym, new):
     return Patch(z80=patch.z80, colours=patch.colours, rom=bytes(rc), steady=patch.steady, blocks=patch.blocks, main=patch.main)
 
 
-NEG_STOP = {}
+NEG_STOP = {name: 100 for name in ('a shot remains after erase', 'a shot has the wrong colour', 'a shot is missed')}
 
 
 def negative_patches(patch):
     """Broken builds a verify run on a recording must catch: [(name, patch)]."""
     r = patch.rom_code[patch.syms['e_pre.n_r'] - ROM_ORG + 1]
-    return [('a tile\'s palette line is not written', _code_patch(patch, 'onecell.n_pal', b'\x00\x00\x00')),
+    return [('a shot remains after erase', _code_patch(patch, 'shotpass.erase', bytes(8))),
+            ('a shot has the wrong colour', _code_patch(patch, 'save_shot.colour', bytes((0xF6, 1)))),
+            ('a shot is missed', _code_patch(patch, 'shotpass.visible', bytes((0xAF,)))),
+            ('a tile\'s palette line is not written', _code_patch(patch, 'onecell.n_pal', b'\x00\x00\x00')),
             ('only half the chains are looked in', _code_patch(patch, 'find.n_bk', b'\xE6\x01')),
             ('a hidden panel cell is shown', _code_patch(patch, 'tilepass.n_vis', b'\xF6\x01')),
             ('the window\'s time is not read during the pass', _code_patch(patch, 'tilepass.n_tick', b'\x00\x00\x00')),
@@ -988,6 +1167,10 @@ def auto(a, z80, name, out, say):
                 os.path.basename(r), cc['frames'], cc['updates'], cc['tile passes'], cc['cells compared'], cc['painted cells shown'],
                 cc['most distinct tiles in a pass'], cc['cells left unpainted for want of a free definition'], cc['frames checked'],
                 cc['frames a tile is not the screen cell\'s'], 'IDENTICAL' if not fails else 'FAILED %s' % fails))
+        say('Shots     : %d compared, %d slots erased, %d simultaneous at most, %d painted scenery cells under shots' %
+            (cc['shots compared'], cc['shots erased'], cc['max simultaneous shots'], cc['painted scenery cells under shots']))
+        say('Shot draws: %d wide, %d compact, %d interrupts checked with shots on screen' %
+            (cc['wide plots'], cc['compact rock plots'], cc['interrupts with shots checked']))
         say('Pace      : %s  the copies and the clear %d T in the original, the hooks %d T (%+.3f%% of the recording\'s time); an update at most '
             '%d T over, %d T under; %d of %d more than 5000 T off' % (
                 os.path.basename(r), cc['T original copies'], cc['T hooks'], 100.0 * (cc['T hooks'] - cc['T original copies']) / max(1, cc['frames'] * LINES * T_LINE),
@@ -1023,7 +1206,7 @@ def auto(a, z80, name, out, say):
             negs = negative_patches(patch)
             for nm, q in negs:
                 cc, _, _ = verify(q, r0, stop=NEG_STOP.get(nm, quick or 2500))
-                if not any(k.endswith('!') for k in cc):
+                if (not cc['sprites differ from the original shot drawings!'] if nm in NEG_STOP else not any(k.endswith('!') for k in cc)):
                     missed.append(nm)
         ok = ok and not missed
         say('Negative  : %d broken builds (%s), %d detected%s' % (len(negs), os.path.basename(r0), len(negs) - len(missed),
