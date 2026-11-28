@@ -210,6 +210,9 @@ unpainted images unchanged, transparent pixels show the scenery (try CSpect firs
 - Bit-level check of the POINT readers (obs. 9) if a shadow design is ever wanted.
 
 ## Lessons
+- [card patch.xor-overlay-keep-ula §Failure lookup] v1.1 round 3: a deferred hide must have an end the game always
+  reaches. Pending sprites waited for the next draw; a screen scroll erases every figure and draws none until the new
+  screen is in, so the witch and the bats stood still through it (Jon, KS3). The scroll now hides them all.
 - [card patch.attribute-shadow §Use] Clash-free figures when logic reads painted cells: original
   attributes in a shadow page, plotter paints it, every attribute reader / writer hooked; verify
   that no code outside the hooks reads a differing cell (Q8; observed, quick 9,000 + hardware).
