@@ -7883,18 +7883,17 @@ sd_code_end:
         ORG 0x050E              ; after save_hook, in the old SA-BYTES and LD-BYTES entry code
 en_level:                       ; 718F, after the level block is unpacked
         ld a,i
-        push af
+        jp pe,.i                ; read twice: an interrupt during the first read reports "off"
+        ld a,i
+.i:     push af
         di
-        ld a,(0x7335)
-        sub '0'
-        ld c,a
-        srl a
-        add a,124
+        ld a,(0x7335)           ; the level digit '0'-'9' (0x30 is even: its bit 0 is the level's)
         ld hl,0x2000
-        bit 0,c
-        jr z,.even
+        srl a                   ; 0x18 + level / 2, carry = odd level
+        jr nc,.even
         ld h,0x30
-.even:  call en_apply
+.even:  add a,100               ; page 124 + level / 2
+        call en_apply
         pop af
         jp po,.off
         ei
