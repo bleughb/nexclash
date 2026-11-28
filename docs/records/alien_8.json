@@ -91,7 +91,7 @@
   "deps": {
    "asm/alien_8_actor.asm": "29804a589b612561",
    "asm/alien_8_dirty.asm": "55d24e8f9d21c395",
-   "asm/alien_8_hooks.asm": "eaca2b8796986fd2",
+   "asm/alien_8_hooks.asm": "825e149d283d02e5",
    "asm/alien_8_primitive.asm": "0c1b0f1a47a97b75",
    "asm/alien_8_queue.asm": "2bc3f31eb968847a",
    "asm/alien_8_sound_targets.asm": "d8ee46ece60ff798",
@@ -102,11 +102,11 @@
    "asm/lib/hlib_pace.asm": "d0ac06a049fc2853",
    "asm/lib/hlib_r.asm": "04f0e3d22e040e50",
    "asm/lib/hlib_speed.asm": "f49c57146d2ffd01",
-   "docs/profiles/alien_8.json": "4254ecb1b0e9035d",
+   "docs/profiles/alien_8.json": "d4606ce6c0f0eb80",
    "docs/profiles/alien_8_colours.json": "2b39715ca7c9365e",
    "docs/profiles/alien_8_sound_sites.json": "2d3b8fb82f926afa",
    "nexclash.py": "4a87a4de972a122f",
-   "nexclash/alien_8.py": "6468adeec3e18974",
+   "nexclash/alien_8.py": "3ab0afce0e9cb7e8",
    "nexclash/analyse.py": "9068c7834f1f1923",
    "nexclash/build.py": "7a7bb03de0547247",
    "nexclash/coloursheet.py": "dfc6f6d6e095185c",
@@ -137,9 +137,9 @@
    "nexclash/z80tonex.py": "b1466a71781976fa",
    "skoolkit": "10.1",
    "pillow": "13.0.0",
-   "recipe": "4944530553126103",
-   "rom": "sinclair"
+   "recipe": "d26b70ebeebc4587",
+   "rom": "e50ee485fb4a21d2"
   },
-  "date": "2026-11-26"
+  "date": "2026-11-27"
  }
 }
